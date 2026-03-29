@@ -1,62 +1,8 @@
 @import "tailwindcss";
+/* دقت کنید: ایمپورت توکن‌ها باید دقیقاً همینجا و در بالای فایل باشد */
+@import '../styles/tokens.css';
 
-/* ========== Reset ========== */
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  background: #030712; /* DNA background */
-}
-
-body {
-  font-family: "IRANSansX", system-ui, sans-serif;
-  background: #030712; /* DNA background */
-  color: rgba(230, 241, 255, 0.92);
-}
-
-/* IMPORTANT:
-   چون Header شما floating و position: fixed است،
-   body نباید padding-top بگیرد. این padding باعث گپ می‌شود.
-*/
-body {
-  padding-top: 0;
-}
-
-/* ========== Font ========== */
-/*@font-face {
-  font-family: "IRANSansX";
-  src: url("/fonts/IRANSansX-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "IRANSansX";
-  src: url("/fonts/IRANSansX-Medium.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "IRANSansX";
-  src: url("/fonts/IRANSansX-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Quinta";
-  src: url("/fonts/Quinta.woff2") format("woff2");
-  font-weight: 700;
-  font-display: swap;
-}
-
-/* Utilities */
-
+/* ========== Fonts ========== */
 @font-face {
   font-family: "Peyda";
   src: url("/fonts/PeydaWeb-Bold.woff2") format("woff2"),
@@ -66,14 +12,64 @@ body {
   font-display: swap;
 }
 
-html,
-body {
-  font-family: "Peyda";
+/* در فایل globals.css */
+@font-face {
+  font-family: "IRANSansX";
+  src: url("/fonts/IRANSansX-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
 }
 
+/* ========== Reset & Base ========== */
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  /* اعمال توکن‌های سیستم پرمیوم زرمان */
+  background-color: var(--color-bg-base);
+  color: var(--color-text-secondary);
+  font-family: "Peyda", var(--font-primary), system-ui, sans-serif;
+  line-height: var(--leading-relaxed);
+  
+  /* مهم: فعال‌سازی راست‌چین برای کل سایت */
+  direction: rtl; 
+  
+  /* جلوگیری از ایجاد فضای خالی به خاطر هدر Fixed */
+  padding-top: 0;
+}
+
+h1, h2, h3, h4 {
+  color: var(--color-text-primary);
+  line-height: var(--leading-tight);
+}
+
+/* ========== Utilities ========== */
 .dir-ltr { direction: ltr; }
 .dir-rtl { direction: rtl; }
 
 .zarman-lang-code {
   font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* ========== Scroll Margins (For Anchor Links) ========== */
+#about,
+#services,
+#how-it-works,
+#security,
+#faq,
+#contact {
+  scroll-margin-top: 110px;
+}
+
+/* این کد به مرورگر می‌گوید که هر جا فونت Peyda فراخوانی شد، 
+   برای اعداد (انگلیسی و فارسی) از فایل ایران‌سنس استفاده کند! */
+@font-face {
+  font-family: "Peyda";
+  src: url("/fonts/IRANSansX-Bold.woff2") format("woff2");
+  font-weight: 700;
+  unicode-range: U+0030-0039, U+06F0-06F9, U+0660-0669; /* کدهای اعداد */
 }

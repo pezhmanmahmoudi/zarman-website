@@ -1,0 +1,136 @@
+.section {
+  position: relative;
+  background:
+    linear-gradient(180deg, #030817 0%, #061022 100%);
+  padding: clamp(34px, 5vw, 56px) 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.container {
+  width: min(1280px, calc(100vw - 32px));
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  direction: rtl;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: rgba(155, 92, 255, 0.95);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.title {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(22px, 3vw, 34px);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  font-weight: 750;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.card {
+  position: relative;
+  min-height: 132px;
+  padding: 20px 18px 18px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 18px 40px -34px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  direction: rtl;
+  text-align: right;
+}
+
+.marker {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(155, 92, 255, 1) 0%, rgba(92, 99, 255, 1) 100%);
+  box-shadow:
+    0 0 16px rgba(155, 92, 255, 0.28);
+}
+
+.cardTitle {
+  margin: 0 0 10px;
+  color: #f8fafc;
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 650;
+}
+
+.cardText {
+  margin: 0;
+  color: rgba(183, 194, 212, 0.92);
+  font-size: 13.5px;
+  line-height: 1.95;
+  font-weight: 400;
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 28px 0 34px;
+  }
+
+  .container {
+    width: min(100vw - 20px, 100%);
+  }
+
+  .header {
+    margin-bottom: 18px;
+  }
+
+  .title {
+    font-size: clamp(20px, 6vw, 28px);
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .card {
+    min-height: unset;
+    padding: 16px 14px 15px;
+    border-radius: 18px;
+  }
+
+  .cardTitle {
+    font-size: 15px;
+    margin-bottom: 8px;
+  }
+
+  .cardText {
+    font-size: 13px;
+    line-height: 1.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .marker {
+    transition: none !important;
+  }
+}

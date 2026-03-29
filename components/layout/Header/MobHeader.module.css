@@ -1,0 +1,276 @@
+.headerPill {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  height: 60px;
+  z-index: 9999;
+
+  /* غلظت رنگ را از ۸۰ به ۹۵ درصد رساندیم تا کمتر محو شود */
+  background: color-mix(in srgb, var(--color-bg-surface) 95%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  border-radius: var(--radius-pill);
+  /* حاشیه پایینی را کمی قوی‌تر کردیم تا خط برش مشخص باشد */
+  border: 1px solid var(--color-border-ghost);
+  border-bottom: 1px solid var(--color-border-ghost-light); 
+  
+  /* سایه مشکی متمرکز برای ایجاد ارتفاع */
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), var(--highlight-top);
+  
+  visibility: hidden;
+  transition: background var(--transition-normal), border-color var(--transition-normal);
+}
+
+.headerPillActive {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.headerContent {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-3);
+}
+
+.logoContainer {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  transition: opacity var(--transition-fast);
+}
+
+.headerPillActive .logoContainer {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.logoImg {
+  width: auto;
+  height: 40px; 
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.burger {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-ghost);
+  background: transparent;
+
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+
+  cursor: pointer;
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.burger:active {
+  transform: scale(0.95);
+}
+
+.burgerLine {
+  width: 20px;
+  height: 2px;
+  background-color: var(--color-text-primary);
+  border-radius: var(--radius-pill);
+  transition: transform var(--transition-normal);
+}
+
+.burgerActive {
+  background: var(--color-border-ghost);
+}
+
+.burgerActive .burgerLine:nth-child(1) {
+  transform: translateY(3.5px) rotate(45deg);
+}
+
+.burgerActive .burgerLine:nth-child(2) {
+  transform: translateY(-3.5px) rotate(-45deg);
+}
+
+.ctaButton {
+  height: 38px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  background: var(--color-accent-primary);
+  transition: transform var(--transition-fast), opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.ctaButton:active {
+  transform: scale(0.96);
+}
+
+.headerPillActive .ctaButton {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* =========================================
+   Mobile Menu Overlay (Premium & Compact)
+   ========================================= */
+
+.menuOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background-color: var(--color-bg-base);
+  
+  /* یک نورپردازی پرمیوم، ظریف و بسیار کنترل‌شده در گوشه بالا (DNA برند) 
+     این باعث می‌شود صفحه بی‌روح نباشد اما شلوغ و آماتور هم نشود */
+  background-image: radial-gradient(circle at 100% 0%, rgba(79, 70, 229, 0.12) 0%, transparent 60%);
+  
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.menuInner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
+  /* کاهش فاصله از بالا برای جا شدن محتوا + امکان اسکرول در صورت نیاز */
+  padding: 85px var(--space-6) var(--space-6);
+  overflow-y: auto;
+}
+
+.menuHeader {
+  margin-bottom: var(--space-4); /* فاصله‌ها فشرده‌تر شد */
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-ghost);
+}
+
+.menuLabel {
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 1px;
+  color: var(--color-text-secondary);
+}
+
+.navLinks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1); /* فاصله‌های خالی اضافه بین لینک‌ها حذف شد */
+}
+
+.bigLink {
+  display: flex;
+  align-items: center;
+  /* حل مشکل فلش: قرار دادن عناصر در کنار هم به جای پخش کردن در دو طرف */
+  justify-content: flex-start;
+  gap: 12px;
+  text-decoration: none;
+  padding: var(--space-2) 0;
+  transition: transform var(--transition-fast);
+}
+
+.bigLink:active {
+  transform: translateX(-4px); /* انیمیشن تاچ ملایم‌تر شد */
+}
+
+.linkText {
+  /* سایز فونت کمی معقول‌تر شد تا در موبایل ظریف‌تر بنشیند */
+  font-size: 1.25rem; 
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  transition: color var(--transition-fast);
+}
+
+.linkArrow {
+  font-size: 18px;
+  color: var(--color-accent-primary);
+  opacity: 0;
+  /* فلش از سمت چپ به سمت راست (نزدیک متن) حرکت می‌کند */
+  transform: translateX(-10px);
+  transition: all var(--transition-normal);
+}
+
+.bigLink:active .linkArrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.bigLink:active .linkText {
+  color: var(--color-accent-primary);
+}
+
+.divider {
+  height: 1px;
+  background: var(--color-border-ghost);
+  margin: var(--space-4) 0; /* کاهش فاصله خط جداکننده */
+}
+
+.mobileActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.actionRow {
+  font-size: var(--text-body-sm); /* سایز کمی ظریف‌تر */
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: var(--space-2) 0;
+  transition: color var(--transition-fast);
+}
+
+.actionRow:hover,
+.actionRow:active {
+  color: var(--color-text-primary);
+}
+
+.menuFooter {
+  /* هل دادن فوتر به پایین‌ترین قسمت ممکن */
+  margin-top: auto; 
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-2); /* فاصله اضافی در پایین برای دستگاه‌های کوچک */
+  border-top: 1px solid var(--color-border-ghost);
+}
+
+.menuFooter p {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.menuFooterSub {
+  margin-top: var(--space-1) !important;
+  color: var(--color-text-secondary) !important;
+  font-size: var(--text-caption) !important;
+  font-weight: var(--font-weight-regular) !important;
+}
+
+@media (min-width: 1025px) {
+  .headerPill,
+  .menuOverlay {
+    display: none !important;
+  }
+}

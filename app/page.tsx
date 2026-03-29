@@ -1,30 +1,70 @@
-"use client";
+/*"use client";
 
-import { useState } from "react";
 import { ReactLenis } from "lenis/react";
-import Header from "@/components/header/Header";
 
-import Hero from "@/components/hero/Hero";
-import About from "@/components/about/About";
-import Services from "@/components/services/Services";
-import Aboutus from "@/components/AboutUs/AboutUs";
-import SecuritySection from "@/components/securitysection/SecuritySection";
+import Header from "@/components/layout/Header/Header";
+import Hero from "@/components/sections/Hero/Hero";
+import TrustStrip from "@/components/sections/TrustStrip/TrustStrip";
+import RateSection from "@/components/sections/RateSection/RateSection";
+import AboutSection from "@/components/sections/AboutSection/AboutSection";
+import HowItWorks from "@/components/sections/HowItWorks/HowItWorks";
+import ServicesSection from "@/components/sections/ServicesSection/ServicesSection";
+import WhyZarman from "@/components/sections/WhyZarman/WhyZarman";
+import SecuritySection from "@/components/sections/SecuritySection/SecuritySection";
+import FAQSection from "@/components/sections/FAQSection/FAQSection";
+import FinalCTA from "@/components/sections/FinalCTA/FinalCTA";
+import Footer from "@/components/layout/Footer/Footer";
 
 export default function Home() {
-  const [isReady, setIsReady] = useState(false);
-  const isLoggedIn = false;
-
   return (
     <ReactLenis root>
-      <Header isAuthenticated={isLoggedIn} isReady={isReady} />
+      <Header />
 
-      <div>
+      <main>
         <Hero />
-        <About />
-        <Services />
-        <Aboutus />
+        <TrustStrip />
+        <RateSection />
+        <AboutSection />
+        <HowItWorks />
+        <ServicesSection />
+        <WhyZarman />
         <SecuritySection />
-      </div>
+        <FAQSection />
+        <FinalCTA />
+      </main>
+
+      <Footer />
     </ReactLenis>
   );
 }
+
+
+
+*/
+
+
+"use client";
+
+import { ReactLenis } from "lenis/react";
+
+import Header from "@/components/layout/Header/Header";
+import Hero from "@/components/sections/Hero/Hero";
+import RateSection from "@/components/sections/RateSection/RateSection";
+import TrustStrip from "@/components/sections/TrustStrip/TrustStrip";
+/*import TrustStrip from "@/components/sections/TrustStrip/TrustStrip";
+import RateSection from "@/components/sections/RateSection/RateSection";
+import AboutSection from "@/components/sections/AboutSection/AboutSection"; */
+
+export default function Home() {
+  return (
+    <ReactLenis root>
+      <Header />
+      <main id="main-content">
+        <Hero />
+        
+        <RateSection />
+      </main>
+    </ReactLenis>
+  );
+}
+

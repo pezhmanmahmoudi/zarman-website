@@ -1,0 +1,146 @@
+/* Header.css — Zarman Premium Header */
+
+/* A11y: skip link */
+.h-skip {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+}
+.h-skip:focus {
+  left: var(--space-4);
+  top: var(--space-3);
+  width: auto;
+  height: auto;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-ghost-light);
+  color: var(--color-text-primary);
+  z-index: 10000;
+}
+
+/* Floating Container */
+.h-header {
+  position: fixed;
+  top: clamp(12px, 2vw, 24px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1200px, calc(100vw - 32px));
+  height: 64px;
+  z-index: 9999;
+  opacity: 1;
+}
+
+/* Background & Glass (Premium Restraint) */
+.h-inner {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  
+  /* Modern CSS alpha blending with our Surface Token */
+  background: color-mix(in srgb, var(--color-bg-surface) 75%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  border: 1px solid var(--color-border-ghost);
+  border-radius: var(--radius-pill);
+  
+  /* Machined metal/glass feel */
+  box-shadow: 
+    var(--shadow-md),
+    var(--highlight-top);
+    
+  transition: background var(--transition-normal), border-color var(--transition-normal);
+}
+
+.h-inner:hover {
+  background: color-mix(in srgb, var(--color-bg-surface) 85%, transparent);
+  border-color: var(--color-border-ghost-light);
+}
+
+/* Logo */
+.h-logo-wrap {
+  display: flex;
+  align-items: center;
+  z-index: 10;
+}
+
+.h-logo-img {
+  /* حداقل: 32 پیکسل (برای تبلت/لپ‌تاپ کوچک)
+    ایده‌آل: 4vw (بسته به عرض صفحه تغییر می‌کند)
+    حداکثر: 40 پیکسل (روی مانیتورهای بزرگ تا به لبه‌های هدر نچسبد)
+  */
+  height: clamp(50px, 4vw, 40px); 
+  width: auto;
+  display: block;
+  object-fit: contain;
+  /* در SVG نیازی به این دستور نداریم، اما بودنش هم ضرری ندارد */
+  image-rendering: -webkit-optimize-contrast; 
+}
+
+/* Auth title (dashboard) */
+.h-authTitle {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-body-md);
+  letter-spacing: 1px;
+}
+
+/* Nav centered */
+.h-nav {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  z-index: 5;
+}
+
+/* Links */
+.h-link {
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  position: relative;
+  padding: var(--space-2) 0;
+  transition: color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.h-link::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: var(--color-accent-primary);
+  transform: translateX(-50%);
+  transition: width var(--transition-normal);
+  border-radius: var(--radius-pill);
+}
+
+.h-link:hover,
+.h-link[aria-current="page"] {
+  color: var(--color-text-primary);
+}
+
+.h-link:hover::after,
+.h-link[aria-current="page"]::after {
+  width: 100%;
+}
+
+/* Auth wrapper */
+.h-auth {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  z-index: 10;
+}

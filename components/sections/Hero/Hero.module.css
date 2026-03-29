@@ -1,0 +1,238 @@
+/* Hero.module.css - Zarman Premium Standard */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  min-height: clamp(680px, 90dvh, 880px);
+  background: var(--color-bg-base);
+  display: flex;
+  align-items: center;
+}
+
+/* Background Architecture */
+.bgBase {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--color-bg-surface) 60%, transparent) 0%, transparent 70%);
+  z-index: 0;
+}
+
+.bgGlow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(600px 600px at 20% 40%, rgba(79, 70, 229, 0.08) 0%, transparent 80%);
+  z-index: 1;
+}
+
+.container {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: var(--container-max-width, 1200px);
+  margin: 0 auto;
+  /* حل مشکل رفتن زیر هدر: فاصله بالا داینامیک شده تا محتوا پایین‌تر بیاید */
+  padding: clamp(120px, 15vh, 160px) var(--space-6) 64px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(380px, 420px);
+  align-items: center;
+  gap: 64px;
+}
+
+/* Content Styles */
+.content {
+  text-align: right;
+  direction: rtl;
+  max-width: 640px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--color-text-secondary);
+  font-family: "Peyda", sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+.title {
+  margin: 0 0 16px;
+  font-family: "Peyda", sans-serif;
+  font-size: clamp(36px, 4.5vw, 56px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.titleAccent {
+  color: var(--color-accent-secondary);
+}
+
+.subtitle {
+  margin: 0 0 32px;
+  font-family: "Peyda", sans-serif;
+  color: var(--color-text-secondary);
+  font-size: 1.125rem;
+  line-height: 1.8;
+  max-width: 90%;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.btn {
+  min-height: 48px !important;
+  padding: 0 24px !important;
+  font-family: "Peyda", sans-serif !important;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-tertiary);
+  font-family: "Peyda", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Visual Board Styles */
+.visual {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rateBoard {
+  width: 100%;
+  background: color-mix(in srgb, var(--color-bg-surface) 50%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border-ghost);
+  border-radius: 20px;
+  padding: 40px 32px;
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  direction: rtl;
+}
+
+.boardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+
+.pulseDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-accent-support);
+  box-shadow: 0 0 8px var(--color-accent-support);
+  animation: pulse 2s infinite;
+}
+
+.status {
+  font-family: "Peyda", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.ratesGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.rateCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.rateDivider {
+  height: 1px;
+  width: 60%;
+  margin: 0 auto;
+  background: linear-gradient(90deg, transparent, var(--color-border-ghost), transparent);
+}
+
+.label {
+  font-family: "Peyda", sans-serif;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.value {
+  /* فقط برای اعداد: استفاده از ایران‌سنس */
+  font-family: "IRANSansX", sans-serif;
+  font-size: 2.75rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.currency {
+  /* بازگشت به فونت پیدا برای کلمه تومان */
+  font-family: "Peyda", sans-serif;
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+  margin-right: 8px;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+  .content {
+    text-align: center;
+    max-width: 100%;
+  }
+  .subtitle {
+    margin: 0 auto 32px;
+  }
+  .actions, .meta {
+    justify-content: center;
+  }
+  .visual {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .rateBoard {
+    padding: 32px 24px;
+  }
+  .value {
+    font-size: 2.25rem;
+  }
+}

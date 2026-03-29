@@ -1,0 +1,178 @@
+/* PriceChart.module.css - Zarman Premium Dark */
+
+.chartCard {
+  width: 100%;
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-ghost);
+  box-shadow: var(--shadow-md), var(--highlight-top);
+  padding: var(--space-6);
+  direction: rtl;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.kicker {
+  margin: 0 0 var(--space-1);
+  color: var(--color-accent-support); /* فیروزه‌ای */
+  font-family: "Peyda", sans-serif;
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-family: "Peyda", sans-serif;
+  font-size: var(--text-card-title);
+  line-height: var(--leading-tight);
+  font-weight: var(--font-weight-bold);
+}
+
+.lastPriceBox {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.lastPriceValue {
+  color: var(--color-text-primary);
+  font-family: "IRANSansX", sans-serif; /* فونت مخصوص اعداد */
+  font-size: 1.5rem;
+  line-height: 1;
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+.currency {
+  font-family: "Peyda", sans-serif;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-body-sm);
+}
+
+.currencySmall {
+  font-family: "Peyda", sans-serif;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-tertiary);
+  font-size: 0.75rem;
+}
+
+.description {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+  font-family: "Peyda", sans-serif;
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-relaxed);
+}
+
+/* بخش نمودار */
+.chartWrap {
+  width: 100%;
+  height: 180px;
+  margin-top: var(--space-6);
+  border-radius: var(--radius-lg);
+  /* پس‌زمینه بسیار محو فیروزه‌ای برای کادر نمودار */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent-support) 4%, transparent), transparent);
+  border: 1px solid var(--color-border-ghost);
+  padding: var(--space-3);
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.area {
+  /* گرادیانت زیر خط نمودار */
+  fill: color-mix(in srgb, var(--color-accent-support) 15%, transparent);
+}
+
+.line {
+  /* خط اصلی نمودار */
+  stroke: var(--color-accent-support);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* آمار پایین نمودار */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.stat {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-base); /* تیره‌تر از کارت اصلی برای ایجاد عمق */
+  border: 1px solid var(--color-border-ghost);
+  text-align: right;
+}
+
+.statLabel {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--color-text-secondary);
+  font-family: "Peyda", sans-serif;
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+}
+
+.statValue {
+  display: block;
+  color: var(--color-text-primary);
+  font-family: "IRANSansX", sans-serif; /* فونت مخصوص اعداد */
+  font-size: var(--text-body-md);
+  line-height: 1.5;
+  font-weight: var(--font-weight-bold);
+}
+
+.labels {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-top: var(--space-4);
+}
+
+.label {
+  color: var(--color-text-tertiary);
+  font-family: "Peyda", sans-serif;
+  font-size: 0.7rem;
+  text-align: center;
+  font-weight: var(--font-weight-medium);
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+  .labels {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .chartCard {
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+  }
+  .title {
+    font-size: 1.25rem;
+  }
+  .lastPriceValue {
+    font-size: 1.25rem;
+  }
+  .chartWrap {
+    height: 160px;
+    border-radius: var(--radius-md);
+  }
+}
