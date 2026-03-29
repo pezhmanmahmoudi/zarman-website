@@ -1,0 +1,141 @@
+.sectionContainer {
+  position: relative;
+  width: 100%;
+  background: #050a1c;
+  overflow: hidden;
+  padding: 90px 0;
+  direction: rtl;
+  isolation: isolate;
+}
+
+.backgroundGlow {
+  position: absolute;
+  top: 45%;
+  left: 20%;
+  width: 720px;
+  height: 720px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 65%);
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.backgroundGlow2 {
+  position: absolute;
+  top: 30%;
+  right: 10%;
+  width: 560px;
+  height: 560px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.10) 0%, transparent 70%);
+  filter: blur(85px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.contentWrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 44px;
+  position: relative;
+  z-index: 2;
+}
+
+@media (min-width: 1024px) {
+  .contentWrapper {
+    flex-direction: row;
+    gap: 90px;
+  }
+}
+
+.visualContainer {
+  flex: 1.15;
+  width: 100%;
+  height: 520px;
+  border-radius: 28px;
+  overflow: hidden;
+
+  /* subtle glass frame */
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 40px 90px rgba(0,0,0,0.55);
+}
+
+@media (max-width: 520px) {
+  .visualContainer { height: 420px; }
+}
+
+.textContainer {
+  flex: 0.85;
+  text-align: right;
+  color: #ffffff;
+}
+
+.subtitle {
+  color: rgba(168, 85, 247, 0.95);
+  font-weight: 700;
+  display: inline-block;
+  margin-bottom: 14px;
+  letter-spacing: -0.01em;
+}
+
+.title {
+  font-size: clamp(2.1rem, 5vw, 3.6rem);
+  font-weight: 950;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.gradientTitle {
+  background: linear-gradient(to left, #ffffff 20%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.description {
+  margin-top: 18px;
+  color: rgba(203, 213, 225, 0.82);
+  font-size: 1.08rem;
+  line-height: 1.9;
+  max-width: 620px;
+  margin-left: auto;
+}
+
+/* Badges (moved from tailwind to CSS for consistency) */
+.badges {
+  margin-top: 44px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: flex-start;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badgeIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+.badgeIconBlue { color: #60a5fa; background: rgba(59,130,246,0.10); }
+.badgeIconPurple { color: #c4b5fd; background: rgba(168,85,247,0.10); }
+
+.badgeLabel {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: rgba(226, 232, 240, 0.86);
+}

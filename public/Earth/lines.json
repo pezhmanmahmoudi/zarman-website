@@ -1,0 +1,77 @@
+{
+  "type": "Routes",
+  "pulls": [
+    {
+      "order": 1,
+      "startLat": "-33.8688",
+      "startLng": "151.2093",
+      "endLat": "25.2048",
+      "endLng": "55.2708",
+      "arcAlt": 0.14
+    },
+    {
+      "order": 2,
+      "startLat": "-33.8688",
+      "startLng": "151.2093",
+      "endLat": "51.5074",
+      "endLng": "-0.1278",
+      "arcAlt": 0.22
+    },
+    {
+      "order": 3,
+      "startLat": "-33.8688",
+      "startLng": "151.2093",
+      "endLat": "41.0082",
+      "endLng": "28.9784",
+      "arcAlt": 0.18
+    },
+    {
+      "order": 4,
+      "startLat": "35.6892",
+      "startLng": "51.3890",
+      "endLat": "41.0082",
+      "endLng": "28.9784",
+      "arcAlt": 0.10
+    },
+    {
+      "order": 5,
+      "startLat": "35.6892",
+      "startLng": "51.3890",
+      "endLat": "25.2048",
+      "endLng": "55.2708",
+      "arcAlt": 0.08
+    },
+    {
+      "order": 6,
+      "startLat": "35.6892",
+      "startLng": "51.3890",
+      "endLat": "-33.8688",
+      "endLng": "151.2093",
+      "arcAlt": 0.22
+    },
+    {
+      "order": 7,
+      "startLat": "35.6892",
+      "startLng": "51.3890",
+      "endLat": "43.6532",
+      "endLng": "-79.3832",
+      "arcAlt": 0.26
+    },
+    {
+      "order": 8,
+      "startLat": "-33.8688",
+      "startLng": "151.2093",
+      "endLat": "43.6532",
+      "endLng": "-79.3832",
+      "arcAlt": 0.28
+    },
+    {
+      "order": 9,
+      "startLat": "-33.8688",
+      "startLng": "151.2093",
+      "endLat": "48.8566",
+      "endLng": "2.3522",
+      "arcAlt": 0.22
+    }
+  ]
+}

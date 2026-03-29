@@ -1,0 +1,73 @@
+/* src/components/hero/Hero.module.css */
+
+.heroMaster {
+  position: relative;
+  width: 100%;
+  background: #ffffff; /* Clean white background */
+  overflow: hidden;
+  /* Centering the content vertically */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: 80px; /* Space for the ribbon */
+}
+
+/* =========================
+   Layout Containers
+   ========================= */
+.contentContainer {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(60px, 8vh, 100px) clamp(20px, 5vw, 40px);
+  position: relative;
+  z-index: 2;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(40px, 6vh, 60px);
+  direction: rtl;
+}
+
+/* Desktop: Side-by-side layout */
+@media (min-width: 900px) {
+  .grid {
+    flex-direction: row-reverse; /* Visual Left, Converter Right (RTL) */
+    justify-content: space-between;
+    align-items: center;
+    gap: 60px;
+  }
+}
+
+/* =========================
+   Columns
+   ========================= */
+.colVisual {
+  width: 100%;
+  max-width: 520px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.colConverter {
+  width: 100%;
+  max-width: 480px;
+  flex: 1;
+}
+
+.imgWrapper {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 620px;
+  margin: 0 auto;
+  
+  /* Initial state handled by GSAP, but good to hint browser */
+  will-change: transform, opacity, filter;
+  opacity: 0; 
+}

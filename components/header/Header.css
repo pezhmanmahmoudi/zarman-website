@@ -1,0 +1,174 @@
+/* Header.css — Zarman Premium Pill Header (RTL content, LTR layout) */
+
+:root {
+  /* DNA */
+  --h-bg: rgba(2, 6, 23, 0.80);
+  --h-bg-strong: rgba(2, 6, 23, 0.90);
+  --glass-alpha: 0.85;     /* 0.4 = خیلی شیشه‌ای | 0.85 = مات */
+  --glass-blur: 12px;      /* 12px تا 22px */
+
+  --h-ink: rgba(230, 241, 255, 0.92);
+  --h-muted: rgba(148, 163, 184, 0.95);
+  --h-border: rgba(255, 255, 255, 0.1);
+  --h-border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Accent (DNA aligned) */
+  --h-accent: rgba(99, 102, 241, 0.95);     /* indigo */
+  --h-accent-soft: rgba(99, 102, 241, 0.14);
+
+  /* Motion */
+  --h-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* A11y: skip link */
+.h-skip {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+}
+.h-skip:focus {
+  left: 16px;
+  top: 12px;
+  width: auto;
+  height: auto;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.9);
+  border: 1px solid var(--h-border-strong);
+  color: var(--h-ink);
+  z-index: 2000;
+}
+
+/* Floating Pill Container (Always Visible) */
+.h-header {
+  position: fixed;
+  top: clamp(10px, 1.6vw, 18px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1160px, calc(100vw - 24px));
+  height: clamp(54px, 6.2vw, 62px);
+  z-index: 9999;
+
+  /* ✅ no hide/show transitions needed now */
+  opacity: 1;
+}
+
+/* ✅ keep class but make it harmless (in case any component still passes it) */
+.h-header.hide {
+  transform: translateX(-50%);
+  opacity: 1;
+}
+
+/* Background & Glass */
+.h-inner {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 clamp(14px, 2.2vw, 22px);
+  background: rgba(2, 6, 23, var(--glass-alpha));
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+
+  border: 1px solid var(--h-border);
+  border-radius: 9999px;
+  box-shadow:
+    0 16px 46px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  direction: ltr !important;
+}
+
+.h-inner:hover {
+  background: var(--h-bg-strong);
+  border-color: var(--h-border-strong);
+}
+
+/* Logo */
+.h-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+}
+
+.h-logo-img {
+  height: clamp(28px, 3.2vw, 34px);
+  width: auto;
+  display: block;
+  transform: translateZ(0);
+}
+
+/* Auth title (dashboard) */
+.h-authTitle {
+  color: rgba(230, 241, 255, 0.92);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+/* Nav centered */
+.h-nav {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 2.6vw, 36px);
+  direction: rtl;
+  z-index: 5;
+}
+
+/* Links */
+.h-link {
+  font-size: clamp(14px, 1.05vw, 15px);
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  color: rgba(226, 232, 240, 0.86);
+  text-decoration: none;
+  position: relative;
+  padding: 8px 2px;
+  transition: color 220ms var(--h-ease);
+  white-space: nowrap;
+}
+
+.h-link::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 0;
+  height: 1.5px;
+  background-color: var(--h-accent);
+  transform: translateX(-50%);
+  transition: width 240ms var(--h-ease);
+  opacity: 0.95;
+}
+
+.h-link:hover {
+  color: rgba(230, 241, 255, 0.96);
+}
+
+.h-link:hover::after {
+  width: 100%;
+}
+
+/* Auth wrapper */
+.h-auth {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+  direction: rtl;
+}
+
+/* Header-specific button constraints */
+.hBtnTight {
+  min-height: 42px !important;
+  padding: 10px 16px !important;
+  font-size: 14px !important;
+  font-weight: 850 !important;
+}

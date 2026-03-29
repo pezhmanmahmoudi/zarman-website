@@ -1,0 +1,378 @@
+/* src/components/hero/ConverterFa.module.css */
+
+.wrapper {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  direction: rtl;
+  box-sizing: border-box;
+
+  /* =========================
+     DNA — match HERO (deep navy) + Services (clean glass)
+     ========================= */
+  --z-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Hero base */
+  --z-navy-0: #030612;
+  --z-navy-1: #050917;
+  --z-navy-2: #06102a; /* your hero/section base */
+  --z-navy-3: #0b1230;
+
+  /* Ink system */
+  --z-text: #0f172a;
+  --z-muted: rgba(71, 85, 105, 0.92);
+
+  /* Accents (controlled) */
+  --z-indigo: 99, 102, 241; /* #6366f1 */
+  --z-purple: 168, 85, 247; /* #a855f7 */
+
+  /* Surfaces */
+  --z-border: rgba(15, 23, 42, 0.10);
+  --z-border-soft: rgba(15, 23, 42, 0.08);
+  --z-hi: rgba(255, 255, 255, 0.90);
+
+  --z-focus: rgba(99, 102, 241, 0.22);
+}
+
+.wrapper *,
+.wrapper *::before,
+.wrapper *::after {
+  box-sizing: border-box;
+}
+
+/* =========================
+   Card — white glass with HERO-family navy haze (NOT lavender)
+   ========================= */
+.card {
+  position: relative;
+  border-radius: 32px;
+  padding: 26px;
+  overflow: hidden;
+
+  /* The key change: navy-based haze + restrained indigo accent */
+  background:
+    /* top hero-ish navy fog */
+    radial-gradient(900px 520px at 50% -14%,
+      rgba(6, 16, 42, 0.10) 0%,
+      rgba(255,255,255,0) 60%),
+    /* indigo accent (small, controlled) */
+    radial-gradient(720px 520px at 85% 18%,
+      rgba(var(--z-indigo), 0.10) 0%,
+      rgba(255,255,255,0) 62%),
+    /* deep base shadow tint (connect to hero) */
+    radial-gradient(900px 520px at 50% 120%,
+      rgba(3, 6, 18, 0.06) 0%,
+      rgba(255,255,255,0) 58%),
+    /* glass base */
+    linear-gradient(180deg,
+      rgba(255,255,255,0.86) 0%,
+      rgba(255,255,255,0.66) 100%);
+
+  border: 1px solid rgba(15, 23, 42, 0.10);
+
+  box-shadow:
+    0 28px 86px -40px rgba(6, 16, 42, 0.20),
+    0 12px 26px -20px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.92);
+
+  backdrop-filter: blur(20px) saturate(165%);
+  -webkit-backdrop-filter: blur(20px) saturate(165%);
+}
+
+/* Top polish */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom,
+    rgba(255,255,255,0.80),
+    rgba(255,255,255,0.00) 58%);
+  opacity: 0.55;
+}
+
+/* Micro-grid (very subtle) */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  background-image:
+    linear-gradient(to right, rgba(6,16,42,0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(6,16,42,0.10) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(circle at 50% 10%,
+    rgba(0,0,0,1) 0%,
+    rgba(0,0,0,0.25) 55%,
+    transparent 78%);
+}
+
+/* =========================
+   Header
+   ========================= */
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  margin-bottom: 22px;
+}
+
+.rateBox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+
+  /* Slightly more navy ink (connect to hero) */
+  color: rgba(6, 16, 42, 0.86);
+
+  background:
+    radial-gradient(280px 120px at 50% 0%,
+      rgba(6,16,42,0.06),
+      rgba(255,255,255,0) 60%),
+    rgba(15, 23, 42, 0.04);
+
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.70);
+}
+
+.liveRate {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--z-muted);
+}
+
+/* =========================
+   Inputs
+   ========================= */
+.inputRow {
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 8px;
+
+  font-size: 13.5px;
+  font-weight: 850;
+
+  /* Slightly darker for crisp mobile readability */
+  color: rgba(30, 41, 59, 0.92);
+}
+
+.fieldGroup {
+  display: flex;
+  align-items: stretch;
+  transform: translateZ(0);
+
+  border-radius: 18px;
+  padding: 4px;
+  position: relative;
+  overflow: hidden;
+
+  /* White field, but navy-tinted shadow */
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+
+  box-shadow:
+    0 16px 52px -44px rgba(6, 16, 42, 0.28),
+    inset 0 1px 0 rgba(255,255,255,0.88);
+
+  transition:
+    background 500ms var(--z-ease),
+    border-color 500ms var(--z-ease),
+    box-shadow 500ms var(--z-ease);
+}
+
+.primary:focus-within {
+  background: rgba(255,255,255,0.84);
+  border-color: rgba(var(--z-indigo), 0.55);
+  transform: translateY(-1px);
+  box-shadow:
+    0 22px 70px -56px rgba(var(--z-indigo), 0.30),
+    0 0 0 4px var(--z-focus),
+    inset 0 1px 0 rgba(255,255,255,0.94);
+}
+
+.locked {
+  background: rgba(255,255,255,0.74);
+}
+
+/* input */
+.fieldGroup input {
+  flex: 1;
+  min-width: 0;
+
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+
+  padding: 13px 14px;
+
+  font-size: 24px;
+  font-weight: 950;
+  color: var(--z-text);
+
+  direction: ltr;
+  text-align: left;
+}
+
+.locked input {
+  cursor: default;
+  pointer-events: none;
+
+  /* keep your purple result as accent */
+  color: rgba(var(--z-purple), 0.95);
+}
+
+/* =========================
+   SELECT — fixed chevron (no overlap) + remove chevron on locked
+   ========================= */
+.fieldGroup select {
+  flex-shrink: 0;
+
+  /* stable width so text doesn’t jump */
+  max-width: 170px;
+  min-width: 150px;
+
+  border: none;
+  outline: none;
+  background: transparent;
+
+  /* RTL: label sits right, chevron sits left */
+  direction: rtl;
+
+  /* IMPORTANT: left padding reserves space for chevron */
+  padding: 0 12px 0 44px;
+
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+
+  color: rgba(6, 16, 42, 0.86);
+  border-right: 1px solid rgba(15, 23, 42, 0.10);
+
+  cursor: pointer;
+
+  appearance: none;
+  -webkit-appearance: none;
+
+  /* Chevron (left side) */
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(6,16,42,0.58) 50%),
+    linear-gradient(135deg, rgba(6,16,42,0.58) 50%, transparent 50%);
+  background-position:
+    18px 50%,
+    24px 50%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+}
+
+/* locked select: no chevron (you requested) */
+.locked select {
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.86;
+
+  background-image: none;
+  padding: 0 12px;
+}
+
+/* =========================
+   Breakdown (ties to hero navy)
+   ========================= */
+.breakdown {
+  border-radius: 18px;
+  padding: 14px 16px;
+  margin: 14px 0 18px;
+
+  background:
+    radial-gradient(520px 260px at 15% 0%,
+      rgba(6,16,42,0.08),
+      rgba(255,255,255,0) 62%),
+    rgba(15, 23, 42, 0.04);
+
+  border: 1px dashed rgba(15, 23, 42, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.78);
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+
+  font-size: 13px;
+  line-height: 1.85;
+  color: rgba(71, 85, 105, 0.92);
+}
+
+.noteRow {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.85;
+}
+
+.noteGood { color: rgba(16, 185, 129, 0.95); }
+.noteWarn { color: rgba(217, 119, 6, 0.95); }
+
+/* CTA area (button placement) */
+.cta {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+
+
+
+/* =========================
+   Mobile tuning
+   ========================= */
+@media (max-width: 480px) {
+  .card {
+    padding: 18px;
+    border-radius: 26px;
+    backdrop-filter: blur(18px) saturate(155%);
+    -webkit-backdrop-filter: blur(18px) saturate(155%);
+  }
+
+  .header { margin-bottom: 18px; }
+
+  .fieldGroup input {
+    font-size: 20px;
+    padding: 12px 12px;
+  }
+
+  .fieldGroup select {
+    max-width: 150px;
+    min-width: 132px;
+    font-size: 11px;
+
+    padding: 0 10px 0 42px;
+    background-position: 16px 50%, 22px 50%;
+  }
+
+  .locked select {
+    padding: 0 10px;
+  }
+
+  .breakdown {
+    padding: 12px 14px;
+    margin: 12px 0 16px;
+  }
+}
+
+

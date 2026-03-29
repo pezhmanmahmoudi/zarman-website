@@ -1,0 +1,292 @@
+/* src/components/about/About.module.css */
+
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.section { 
+  --z-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --z-ink-deep: #0f172a;    
+  --z-text-main: #1e293b;   
+  --z-text-muted: #64748b;  
+  
+  position: relative;
+  width: 100%;
+  padding: clamp(10px, 3vh, 30px) 2px clamp(40px, 8vh, 80px);
+  background: #fff;
+  display: flex;
+  justify-content: center;
+  direction: rtl; 
+  overflow: clip;
+}
+
+/* DNA Subtle Top Glow */
+.section::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 600px;
+  background: radial-gradient(circle at 50% 0%, var(--z-indigo-glow), transparent 70%);
+  z-index: 1;
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  padding: 0 clamp(20px, 5vw, 40px);
+  z-index: 5;
+}
+
+/* ✅ FIXED: Clean White Background */
+.cardSurface {
+  position: relative;
+  border-radius: 44px;
+  overflow: hidden; 
+  z-index: 2;
+   background:
+
+    radial-gradient(900px 520px at 50% -10%,
+
+      rgba(99, 102, 241, 0.14),
+
+      rgba(255,255,255,0) 58%),
+
+    radial-gradient(820px 420px at 15% 35%,
+
+      rgba(139, 92, 246, 0.10),
+
+      rgba(255,255,255,0) 62%),
+
+    linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  border: 1px solid rgba(124, 58, 237, 0.14);
+   box-shadow:
+    0 44px 120px -48px rgba(2, 6, 23, 0.18),
+    0 22px 60px -36px rgba(99, 102, 241, 0.14),
+    inset 0 1px 0 rgba(255,255,255,0.88);
+} 
+
+.layoutGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: clamp(40px, 8vh, 80px) clamp(24px, 6vw, 60px);
+  min-height: 620px;
+  align-items: center;
+  gap: 20px;
+}
+
+/* =========================
+   Globe Area
+   ========================= */
+.globeArea {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+}
+
+.globeWrapper {
+  position: absolute;
+  left: clamp(-200px, -18vw, -140px); 
+  right: auto;
+  width: clamp(500px, 55vw, 700px);
+  height: clamp(500px, 55vw, 700px);
+  pointer-events: auto;
+}
+
+/* =========================
+   Content Area
+   ========================= */
+.contentArea {
+  position: relative;
+  z-index: 10;
+  text-align: right;
+  max-width: 460px;
+  margin-inline-end: 20px;
+}
+
+.highlightText {
+  /* ✅ TYPOGRAPHY & SPACING */
+  display: block;
+  font-size: clamp(20px, 1.5vw, 18px); /* Fluid size: small but legible */
+  font-weight: 800; /* Extra bold for emphasis */
+  margin-bottom: 18px;
+  text-align: center;
+  
+  /* ✅ COLORING (Matching the Framer Motion Example) */
+  color: #000000; /* Modern Purple-500 base color */
+  
+  /* ✅ OPTIONAL: Gradient version to match your Title */
+  /* If you want it to be a gradient like the example: 
+  background: linear-gradient(to left, #a855f7, #6366f1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  */
+
+  /* ✅ LETTER SPACING & DIRECTION */
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.mainTitle {
+  font-size: clamp(32px, 5vw, 54px); 
+  font-weight: 950;
+  line-height: 1.2; 
+  letter-spacing: -0.025em;
+  margin-bottom: 24px;
+
+  /* ✅ PREMIUM GRADIENT */
+  background: linear-gradient(
+    135deg, 
+    var(--z-ink-deep) 0%,   
+    #4f46e5 40%,   
+    #9333ea 70%,   
+    #2563eb 100%   
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding-bottom: 12px;
+}
+
+.bodyText {
+  font-size: clamp(16px, 1.1rem, 18px); 
+  line-height: 2; 
+  color: var(--z-text-main);
+  font-weight: 450; 
+  max-width: 100%;
+  margin-bottom: clamp(32px, 5vh, 48px);
+}
+
+.actions {
+  display: flex;
+  gap: clamp(10px, 1.5vw, 18px);
+  justify-content: flex-start;
+  margin-top: 2rem;
+}
+
+.primaryBtn, .secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: clamp(44px, 5.5vh, 54px);
+  padding: 0 clamp(20px, 3vw, 40px);
+  border-radius: 999px;
+  font-family: IRANSansX, sans-serif;
+  font-size: clamp(14px, 1.1vw, 17px);
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform 0.2s ease, background 0.3s ease, color 0.3s ease;
+}
+
+/* =========================
+   Border Beam
+   ========================= */
+.borderBeam {
+  position: absolute;
+  inset: -1.5px; 
+  padding: 3.2px; 
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 20; 
+  background: conic-gradient(
+    from var(--border-angle),
+    transparent 74%,
+    rgba(99, 102, 241, 0.8) 88%, 
+    rgba(139, 92, 246, 0.9) 94%,
+    transparent 100%
+  );
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: rotateBeam 8s linear infinite;
+  opacity: 1; 
+}
+
+@keyframes rotateBeam { to { --border-angle: 360deg; } }
+
+/* =========================
+   RESPONSIVE OVERRIDES
+   ========================= */
+
+@media (max-width: 1024px) {
+  .actions { gap: 12px; }
+}
+
+@media (max-width: 900px) {
+  .section { padding-inline: 0; background: #02040a; }
+  .card { padding: 0; }
+  .cardSurface { 
+    border-radius: 0; border: none; background: transparent; backdrop-filter: none; box-shadow: none; overflow: visible; 
+  }
+  .borderBeam { display: none; }
+  .layoutGrid { grid-template-columns: 1fr; grid-template-areas: "stack"; padding: 20px 24px; min-height: 550px; }
+  .globeArea { grid-area: stack; opacity: 1;  }
+  .globeWrapper { left: auto; right: -120px; width: 480px; height: 480px; }
+  
+  .contentArea { 
+    grid-area: stack; 
+    text-align: center; 
+    padding-top: 40px; 
+    max-width: 100%; 
+    margin-inline-end: 0; 
+  }
+
+  .mainTitle {
+    background: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
+    color: #ffffff; 
+    text-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    font-size: clamp(30px, 8vw, 42px);
+  }
+
+  .bodyText { 
+    color: #ffffff; 
+    margin: 0 auto 35px; 
+    font-weight: 500;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+
+  .actions { 
+    flex-direction: column; 
+    align-items: center;
+    width: 100%; 
+    gap: 20px;
+  }
+
+  .primaryBtn, .secondaryBtn {
+    width: 100%; 
+    max-width: 320px; 
+    height: 50px; 
+    font-size: 15px; 
+    padding: 0 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .actions { gap: 12px; }
+  .primaryBtn, .secondaryBtn { height: 52px; font-size: 16px; }
+}
+
+@media (max-width: 900px) {
+  .highlightText {
+    text-align: center; /* Center-aligned for mobile stack */
+    font-size: 20px;
+    margin-bottom: 15px;
+    color: #ffffff; /* Slightly lighter purple for dark mobile background */
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .borderBeam {
+    animation: none !important;
+  }
+}

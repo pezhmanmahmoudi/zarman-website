@@ -1,0 +1,170 @@
+/* Hero.mob.module.css */
+
+.mobSection {
+  position: relative;
+  width: 100%;
+  color: #ffffff;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding-inline: clamp(20px, 5vw, 35px);
+  direction: rtl; 
+  overflow-x: hidden;
+}
+
+.mobIntroArea {
+  position: relative;
+  /* Height determined by content + padding */
+  height: auto; 
+  min-height: 600px; 
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  /* Add padding at bottom to make room for the 'Z' box */
+  padding-bottom: 140px; 
+}
+
+.mobTopWrap {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  padding-top: max(env(safe-area-inset-top), 100px); 
+}
+
+.mobStack {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lineMask {
+  overflow: hidden;
+  height: fit-content;
+  width: 100%;
+  position: relative;
+  padding-block: 0.2em;
+}
+
+.mobLine {
+  width: 100%;
+  font-family: IRANSansX, sans-serif;
+  font-weight: 950;
+  text-align: right !important;
+  font-size: clamp(2rem, 9vw, 3rem);
+  line-height: 1.3;
+  will-change: transform, opacity;
+  background: #ffffff;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 10px 30px rgba(191, 219, 254, 0.25);
+}
+
+.mobBrand {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+  pointer-events: none;
+}
+
+.brandMask {
+  overflow: hidden;
+  width: fit-content;
+  display: flex;
+  justify-content: center; 
+  padding-inline: 4px;
+}
+
+.brandFa, .brandEn {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.brandFa span {
+  font-family: IRANSansX, sans-serif;
+  font-weight: 800;
+  font-size: clamp(0.9rem, 4vw, 1.1rem);
+  line-height: 1.4;
+  display: block;
+  color: #ffffff;
+  text-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
+.brandEn span {
+  font-family: "Inter", sans-serif;
+  font-weight: 300;
+  font-size: clamp(0.5rem, 2.2vw, 0.65rem);
+  letter-spacing: 0.35em;
+  color: #94a3b8;
+  line-height: 1.6;
+  display: block;
+  direction: ltr;
+}
+
+/* --- UI Elements --- */
+.placeholderWrapper {
+  position: absolute;
+  top: auto; 
+  bottom: clamp(30px, 8vh, 60px); 
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.placeholderBox {
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Inter", sans-serif;
+  font-weight: 900;
+  font-size: 1.8rem;
+  border-radius: 18px;
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.2),
+    0 0 15px rgba(255, 255, 255, 0.1) inset;
+}
+
+/* --- CLEANED SECOND PAGE WRAPPER --- */
+/* Strictly layout only. No colors or font styles. */
+.secondPageWrapper {
+  width: 100%;
+  padding-top: 40px; 
+  padding-bottom: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  position: relative;
+  z-index: 20;
+}
+
+/* Ensure the mobile styles are strictly applied up to 1024px */
+@media (max-width: 1024px) {
+  .mobSection {
+    display: flex;
+  }
+}
+
+/* Hide on Desktop */
+@media (min-width: 1025px) {
+  .mobSection {
+     display: none;
+  }
+}

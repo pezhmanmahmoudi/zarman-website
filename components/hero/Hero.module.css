@@ -1,0 +1,282 @@
+/* src/components/hero/Hero.module.css */
+
+/* =========================
+   DNA Tokens & Root Styles
+   ========================= */
+.heroMaster {
+    --z-ease: cubic-bezier(0.22, 1, 0.36, 1); /* Smoother, more "Apple-like" ease */
+    --z-indigo: 99, 102, 241;   
+    --z-purple: 168, 85, 247;   
+    --z-bg-dark: #050b14; /* Slightly deeper background for better contrast */
+    --z-bg-light: #ffffff;
+    --wave-size: 120%;
+    position: relative;
+    width: 100%;
+    min-height: clamp(800px, 100vh, 1100px);
+    background: var(--z-bg-dark);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+/* =========================
+   Upper Layer
+   ========================= */
+.blueLayer {
+  position: absolute;
+  inset: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 0;
+  
+    /* Optimized Gradient: Reduced complexity */
+    background: radial-gradient(1000px 800px at 50% 0%,
+      rgba(var(--z-indigo), 0.15) 0%,
+      rgba(49, 46, 129, 0.2) 40%,
+      rgba(5, 11, 20, 1) 100%
+    );
+    animation: nebulaPulse 12s ease-in-out infinite alternate;
+  }
+
+@keyframes nebulaPulse {
+  0% { opacity: 0.8; transform: scale(1); }
+    100% { opacity: 1; transform: scale(1.05); }
+}
+
+.bgGrid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  /* Masking is expensive, consider removing for low-end devices */
+  mask-image: radial-gradient(circle at 50% 46%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 38%, rgba(0,0,0,0.2) 66%, transparent 82%);
+}
+
+.bgVignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(var(--z-indigo), 0.12) 0%, rgba(6,16,42,0) 42%),
+    radial-gradient(circle at 50% 52%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.72) 80%);
+}
+
+/* =========================
+   Wave Pattern
+   ========================= */
+.pattern {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-radial-gradient(circle at 50% 118%, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.00) 58%);
+  background-size: var(--wave-size) var(--wave-size);
+  opacity: 0.32;
+  /* Removing transition here because GSAP handles the update smoothly */
+}
+
+/* =========================
+   Content
+   ========================= */
+.blueContent {
+    text-align: center;
+    position: relative;
+    z-index: 3;
+    padding: 0 24px;
+    max-width: 800px;
+    will-change: transform, opacity;
+  }
+
+.highlightText {
+  display: inline-block;
+  font-size: clamp(16px, 1.6vw, 20px);
+  font-weight: 800;
+  text-align: center;
+  color: #ffffff;
+  margin-bottom: clamp(10px, 1.8vh, 18px);
+  
+  
+}
+
+.title {
+  font-size: clamp(34px, 5vw, 56px);
+  font-weight: 950;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  margin-bottom: clamp(8px, 1.2vh, 14px);
+
+  background: linear-gradient(135deg, #ffffff 0%, #6366f1 45%, #a855f7 75%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  
+  
+}
+
+.subtitle {
+  font-size: clamp(15px, 2vw, 18px);
+  line-height: 1.8;
+  color: #b8c4da;
+  max-width: 60ch;
+  margin: 0 auto;
+  margin-top: clamp(2px, 0.6vh, 8px);
+  
+
+}
+
+/* =========================
+   Mouse Scroll Indicator
+   ========================= */
+.mouseScroll {
+  position: absolute;
+  bottom: clamp(150px, 25vh, 300px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 42px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 20px;
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+  backdrop-filter: blur(4px);
+}
+
+.mouseWheel {
+  width: 4px;
+  height: 8px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 2px;
+ 
+}
+
+@keyframes mouseDrop {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(12px); opacity: 0; }
+}
+
+/* =========================
+   Lower White Layer + Curve
+   ========================= */
+.whiteLayer {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  margin-top: clamp(85vh, 95vh, 100vh);
+  background: #ffffff;
+  padding-bottom: clamp(40px, 8vh, 100px);
+}
+
+.curveContainer {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  overflow: hidden;
+  margin-bottom: -1px;
+  pointer-events: none; /* Perf: Ignore mouse events on SVG */
+}
+
+.curveSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================
+   Panel Layout
+   ========================= */
+.panelContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 5vw, 40px);
+  position: relative;
+  top: clamp(20px, 4vh, 40px);
+  }
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(32px, 6vh, 52px);
+  direction: rtl;
+  padding: clamp(24px, 4vh, 34px) 0;
+}
+
+@media (min-width: 900px) {
+  .grid {
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    align-items: center;
+    gap: 60px;
+    padding: 44px 0;
+  }
+}
+
+.colVisual {
+  width: 100%;
+  max-width: 520px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.colConverter {
+  width: 100%;
+  max-width: 480px;
+  flex: 1;
+}
+
+.imgWrapper {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 620px;
+  margin: 0 auto;
+  background: transparent;
+  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.12);
+  border-radius: 18px;
+  opacity: 0; /* Handled by GSAP */
+  will-change: opacity, transform;
+}
+
+.imgWrapper.is-visible {
+  opacity: 1;
+}
+
+/* =========================
+   Mobile focus adjustments
+   ========================= */
+@media (max-width: 900px) {
+  .mouseScroll { display: none; }
+  .whiteLayer { margin-top: 90vh; }
+  .title { font-size: clamp(30px, 7.4vw, 40px); line-height: 1.12; }
+  .subtitle { font-size: 15.5px; line-height: 1.95; max-width: 40ch; }
+  .blueContent { padding-top: 10px; }
+}
+
+@media (max-width: 600px) {
+  .panelContent {
+    border-radius: 12px;
+    padding: 0 8px;
+    box-shadow: 0 2px 12px rgba(30, 41, 59, 0.08);
+  }
+  .title {
+    font-size: clamp(22px, 8vw, 32px);
+  }
+  .subtitle {
+    font-size: 14px;
+    max-width: 28ch;
+  }
+  .imgWrapper {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.10);
+  }
+}
+
