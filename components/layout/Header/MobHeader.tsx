@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import Button from "@/components/ui/Button/Button";
 
 import { publicNavItems } from "@/data/navigation";
 import styles from "./MobHeader.module.css";
@@ -22,24 +23,27 @@ type MobHeaderProps = {
   brandAriaLabel?: string;
   signupHref?: string;
   loginHref?: string;
-  contactHref?: string;
   navItems?: NavItem[];
 };
 
 export default function MobHeader({
-  isReady = false,
+  isReady = true,
   isAuthenticated = false,
   logoSrc = "/images/logo-horizontal-dark.svg",
   brandAriaLabel = "Zarman Exchange",
   signupHref = "/fa/register",
   loginHref = "/fa/login",
-  contactHref = "/fa#contact",
   navItems,
 }: MobHeaderProps) {
   const items = useMemo(() => navItems ?? publicNavItems, [navItems]);
 
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
+
+  // تنظیمات لینک واتس‌اپ
+  const whatsappNumber = "61412345678";
+  const whatsappMessage = encodeURIComponent("سلام، من از طریق وب‌سایت زرمان پیام می‌دهم و نیاز به راهنمایی دارم.");
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
   const rootRef = useRef<HTMLDivElement>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
@@ -50,59 +54,20 @@ export default function MobHeader({
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
-
-    if (!open) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, mounted]);
-
-  useEffect(() => {
-    if (!mounted) return;
-
-    if (open) {
-      const scrollY = window.scrollY;
-      document.body.dataset.scrollY = String(scrollY);
-      document.body.style.position = "fixed";
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.left = "0";
-      document.body.style.right = "0";
-      document.body.style.width = "100%";
-
-      return () => {
-        const savedScrollY = Number(document.body.dataset.scrollY || "0");
-        document.body.style.position = "";
-        document.body.style.top = "";
-        document.body.style.left = "";
-        document.body.style.right = "";
-        document.body.style.width = "";
-        delete document.body.dataset.scrollY;
-        window.scrollTo(0, savedScrollY);
-      };
-    }
+    if (!mounted || !open) return;
+    
+    const originalStyle = window.getComputedStyle(document.body).overflow;  
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = originalStyle; };
   }, [open, mounted]);
 
   useGSAP(
     () => {
       if (!isReady || !rootRef.current) return;
-
       gsap.fromTo(
         rootRef.current,
-        { y: -36, autoAlpha: 0 },
-        {
-          y: 0,
-          autoAlpha: 1,
-          duration: 0.7,
-          ease: "power4.out",
-          delay: 0.15,
-        }
+        { y: -80, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.6, ease: "power3.out" }
       );
     },
     { dependencies: [isReady, mounted] }
@@ -121,42 +86,23 @@ export default function MobHeader({
 
       if (open) {
         gsap.set(menu, { display: "flex", pointerEvents: "auto" });
-
-        tl.to(menu, {
-          opacity: 1,
-          duration: 0.28,
-          ease: "power2.out",
-        }).fromTo(
-          animatedItems,
-          { y: 22, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            stagger: 0.05,
-            duration: 0.42,
-            ease: "power3.out",
-          },
-          "-=0.1"
-        );
+        tl.to(menu, { opacity: 1, duration: 0.3, ease: "power2.out" })
+          .fromTo(
+            animatedItems,
+            { y: 20, opacity: 0 },
+            { y: 0, opacity: 1, stagger: 0.05, duration: 0.4, ease: "power3.out" },
+            "-=0.1"
+          );
       } else {
-        tl.to(animatedItems, {
-          y: 14,
-          opacity: 0,
-          stagger: 0.03,
-          duration: 0.18,
-          ease: "power2.in",
-        }).to(
-          menu,
-          {
-            opacity: 0,
-            duration: 0.22,
-            ease: "power2.in",
-            onComplete: () => {
-              gsap.set(menu, { display: "none", pointerEvents: "none" });
+        tl.to(animatedItems, { y: 10, opacity: 0, stagger: 0.02, duration: 0.2, ease: "power2.in" })
+          .to(
+            menu,
+            { opacity: 0, duration: 0.2, ease: "power2.in", onComplete: () => {
+                gsap.set(menu, { display: "none", pointerEvents: "none" });
+              }
             },
-          },
-          "-=0.05"
-        );
+            "-=0.1"
+          );
       }
     },
     { dependencies: [open] }
@@ -169,75 +115,44 @@ export default function MobHeader({
 
   return createPortal(
     <>
-      <div
-        ref={rootRef}
-        className={`${styles.headerPill} ${open ? styles.headerPillActive : ""}`}
-        dir="rtl"
-      >
+      <div ref={rootRef} className={`${styles.headerPill} ${open ? styles.headerPillActive : ""}`}>
         <div className={styles.headerContent}>
           <button
             type="button"
             className={`${styles.burger} ${open ? styles.burgerActive : ""}`}
             onClick={toggle}
             aria-label={open ? "بستن منو" : "باز کردن منو"}
-            aria-expanded={open}
-            aria-controls="mobile-menu-overlay"
           >
             <span className={styles.burgerLine}></span>
             <span className={styles.burgerLine}></span>
           </button>
 
-          <Link
-            href="/fa"
-            className={styles.logoContainer}
-            onClick={close}
-            aria-label={brandAriaLabel}
-          >
-            <Image
-              src={logoSrc}
-              alt="Zarman Logo"
-              width={100}
-              height={30}
-              className={styles.logoImg}
-              priority
-            />
+          <Link href="/fa" className={styles.logoContainer} onClick={close} aria-label={brandAriaLabel}>
+            <Image src={logoSrc} alt="Zarman Logo" width={110} height={32} className={styles.logoImg} priority />
           </Link>
 
+          {/* مشکل واریانت دکمه در اینجا حل شد و روی secondary تنظیم شد */}
           {isAuthenticated ? (
-            <Link href="/dashboard" className={styles.ctaButton} onClick={close}>
-              داشبورد
-            </Link>
+            <Button href="/dashboard" variant="secondary" size="sm" onClick={close}>
+              پنل
+            </Button>
           ) : (
-            <Link href={signupHref} className={styles.ctaButton} onClick={close}>
+            <Button href={signupHref} variant="primary" size="sm" onClick={close}>
               ثبت‌نام
-            </Link>
+            </Button>
           )}
         </div>
       </div>
 
-      <div
-        ref={menuContainerRef}
-        id="mobile-menu-overlay"
-        className={styles.menuOverlay}
-        dir="rtl"
-        role="dialog"
-        aria-modal="true"
-        aria-label="منوی موبایل"
-      >
-    
-            <div className={styles.menuInner}>
+      <div ref={menuContainerRef} id="mobile-menu-overlay" className={styles.menuOverlay} role="dialog" aria-modal="true">
+        <div className={styles.menuInner}>
           <div className={styles.menuHeader}>
             <span className={styles.menuLabel}>فهرست دسترسی</span>
           </div>
 
           <nav ref={linksRef} className={styles.navLinks} aria-label="ناوبری موبایل">
             {items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={styles.bigLink}
-                onClick={close}
-              >
+              <Link key={item.href} href={item.href} className={styles.bigLink} onClick={close}>
                 <span className={styles.linkText}>{item.label}</span>
                 <span className={styles.linkArrow}>←</span>
               </Link>
@@ -249,29 +164,27 @@ export default function MobHeader({
               {isAuthenticated ? (
                 <>
                   <Link href="/dashboard" className={styles.actionRow} onClick={close}>
-                    داشبورد
+                    رفتن به داشبورد
                   </Link>
-                  <Link href={contactHref} className={styles.actionRow} onClick={close}>
+                  <a href={whatsappUrl} className={styles.actionRow} target="_blank" rel="noopener noreferrer" onClick={close}>
                     تماس با پشتیبانی
-                  </Link>
+                  </a>
                 </>
               ) : (
                 <>
                   <Link href={loginHref} className={styles.actionRow} onClick={close}>
                     ورود به حساب کاربری
                   </Link>
-                  <Link href={contactHref} className={styles.actionRow} onClick={close}>
-                    تماس با ما
-                  </Link>
+                  <a href={whatsappUrl} className={styles.actionRow} target="_blank" rel="noopener noreferrer" onClick={close}>
+                    پشتیبانی در واتس‌اپ
+                  </a>
                 </>
               )}
             </div>
 
             <div className={styles.menuFooter}>
               <p>زرمان اکسچنج</p>
-              <p className={styles.menuFooterSub}>
-                تجربه‌ای روشن‌تر برای کاربران ایران–استرالیا
-              </p>
+              <p className={styles.menuFooterSub}>تجربه‌ای روشن‌تر برای کاربران ایران–استرالیا</p>
             </div>
           </nav>
         </div>

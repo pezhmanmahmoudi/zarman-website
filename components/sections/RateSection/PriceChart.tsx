@@ -84,7 +84,6 @@ export default function PriceChart() {
             {formatToman(computed.max)} بوده است.
           </desc>
 
-          {/* اختصاص رنگ‌ها از طریق CSS */}
           <path d={computed.areaPath} className={styles.area} />
           <polyline
             points={computed.points}

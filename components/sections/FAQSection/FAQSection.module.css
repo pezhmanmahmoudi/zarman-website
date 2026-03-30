@@ -1,0 +1,121 @@
+.section {
+  padding: var(--section-pad-major) 0;
+  background-color: var(--color-bg-base);
+  direction: rtl;
+}
+
+.container {
+  width: 100%;
+  max-width: 800px; /* عرض کمتر برای خوانایی بهتر متون طولانی */
+  margin: 0 auto;
+  padding: 0 var(--container-padding);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--space-12);
+}
+
+.eyebrow {
+  color: var(--color-accent-secondary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--text-section-title);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.faqList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.faqItem {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-ghost);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color var(--transition-normal), background-color var(--transition-normal);
+}
+
+.faqItem:hover {
+  border-color: var(--color-border-ghost-light);
+  background-color: var(--color-bg-surface-hover);
+}
+
+.isOpen {
+  border-color: rgba(79, 70, 229, 0.4);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.questionBtn {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: right;
+  color: var(--color-text-primary);
+}
+
+.questionText {
+  font-family: var(--font-primary);
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-snug);
+  padding-left: var(--space-4);
+}
+
+.icon {
+  font-family: monospace;
+  font-size: 1.5rem;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.isOpen .icon {
+  color: var(--color-accent-primary);
+}
+
+/* تکنیک مدرن CSS Grid برای انیمیشن ارتفاع آکاردئون */
+.answerWrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms var(--transition-normal);
+}
+
+.isOpen .answerWrapper {
+  grid-template-rows: 1fr;
+}
+
+.answerInner {
+  overflow: hidden;
+}
+
+.answerText {
+  padding: 0 var(--space-6) var(--space-6) var(--space-6);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-md);
+  line-height: var(--leading-relaxed);
+}
+
+@media (max-width: 768px) {
+  .section { padding: var(--section-pad-compact) 0; }
+  .questionText { font-size: var(--text-body-md); }
+  .questionBtn { padding: var(--space-4); }
+  .answerText { padding: 0 var(--space-4) var(--space-4); font-size: var(--text-body-sm); }
+}

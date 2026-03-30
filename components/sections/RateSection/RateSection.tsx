@@ -1,9 +1,8 @@
 "use client";
 
 import styles from "./RateSection.module.css";
-// فرض می‌کنیم ConverterFa در مسیر زیر قرار دارد
-import ConverterFa from "@/components/hero/ConverterFa"; 
-import PriceChart from "./PriceChart"; // مسیر را چک کنید که درست باشد
+import ConverterFa from "./ConverterFa"; 
+import PriceChart from "./PriceChart"; 
 
 export default function RateSection() {
   return (
@@ -27,11 +26,9 @@ export default function RateSection() {
         </div>
 
         <div className={styles.grid}>
-          {/* ستون راست: ماشین حساب */}
+          {/* ستون راست (در حالت راست‌چین): ماشین حساب */}
           <div className={styles.converterCol}>
-            <div className={styles.converterFrame}>
-              <ConverterFa />
-            </div>
+            <ConverterFa />
           </div>
 
           {/* ستون چپ: نمودار و پیام */}

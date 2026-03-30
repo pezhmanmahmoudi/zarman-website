@@ -18,47 +18,48 @@ function NetworkSphere() {
 
   return (
     <group>
-      {/* Inner Core: A glowing wireframe sphere */}
+      {/* Inner Core: Ultraviolet Glowing Sphere */}
       <Float speed={3} rotationIntensity={1} floatIntensity={2}>
         <Icosahedron ref={meshRef} args={[2, 2]}>
           <meshStandardMaterial 
             wireframe 
-            color="#a855f7" 
-            emissive="#9333ea" 
-            emissiveIntensity={2} 
+            color="#7C3AED" /* Zarman Ultraviolet */
+            emissive="#4F46E5" /* Zarman Indigo */
+            emissiveIntensity={1.5} 
           />
         </Icosahedron>
       </Float>
 
-      {/* Outer Shell: Larger, more subtle wireframe */}
+      {/* Outer Shell: Restrained Cyan Wireframe */}
       <Icosahedron ref={outerRef} args={[3.5, 1]}>
         <meshBasicMaterial 
           wireframe 
-          color="#3b82f6" 
+          color="#06B6D4" /* Zarman Cyan */
           transparent 
-          opacity={0.2} 
+          opacity={0.15} 
         />
       </Icosahedron>
 
-      {/* Connectivity "Nodes" / Data Points */}
+      {/* Connectivity "Nodes" */}
       <Sparkles 
-        count={60} 
+        count={80} 
         scale={6} 
         size={2} 
         speed={0.4} 
-        color="#a855f7" 
+        color="#7C3AED" 
       />
     </group>
   );
 }
 
-export default function NetworkVisuals() {
+export default function CardsVisuals() {
   return (
     <div className="w-full h-full min-h-[400px]">
       <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
-        <color attach="background" args={["#05050a"]} />
+        {/* Background matches Zarman's Midnight Void */}
+        <color attach="background" args={["#080B12"]} />
         <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} intensity={1} color="#9333ea" />
+        <pointLight position={[10, 10, 10]} intensity={1} color="#7C3AED" />
         <NetworkSphere />
         <Environment preset="city" />
       </Canvas>

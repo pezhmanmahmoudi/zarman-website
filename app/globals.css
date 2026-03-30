@@ -3,6 +3,20 @@
 @import '../styles/tokens.css';
 
 /* ========== Fonts ========== */
+
+/* ۱. تنظیمات اعداد (ترکیب با فونت پیدا) */
+/* این کد به مرورگر می‌گوید که هر جا فونت Peyda فراخوانی شد، 
+   برای اعداد (انگلیسی و فارسی) از فایل ایران‌سنس استفاده کند! */
+@font-face {
+  font-family: "Peyda";
+  src: url("/fonts/IRANSansX-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0030-0039, U+06F0-06F9, U+0660-0669, U+066C, U+002C;
+}
+
+/* ۲. فونت اصلی متن (پیدا) - وزن بولد */
 @font-face {
   font-family: "Peyda";
   src: url("/fonts/PeydaWeb-Bold.woff2") format("woff2"),
@@ -12,7 +26,17 @@
   font-display: swap;
 }
 
-/* در فایل globals.css */
+/* در صورت امکان، حتما وزن‌های 400 و 500 را هم برای متون بدنه اضافه کنید */
+/*
+@font-face {
+  font-family: "Peyda";
+  src: url("/fonts/PeydaWeb-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+*/
+
 @font-face {
   font-family: "IRANSansX";
   src: url("/fonts/IRANSansX-Bold.woff2") format("woff2");
@@ -22,6 +46,10 @@
 }
 
 /* ========== Reset & Base ========== */
+html {
+  scroll-behavior: smooth; /* اسکرول نرم بین سکشن‌ها */
+}
+
 html,
 body {
   margin: 0;
@@ -32,7 +60,9 @@ body {
   /* اعمال توکن‌های سیستم پرمیوم زرمان */
   background-color: var(--color-bg-base);
   color: var(--color-text-secondary);
-  font-family: "Peyda", var(--font-primary), system-ui, sans-serif;
+  
+  /* استفاده یکپارچه از متغیر توکن */
+  font-family: var(--font-primary);
   line-height: var(--leading-relaxed);
   
   /* مهم: فعال‌سازی راست‌چین برای کل سایت */
@@ -40,11 +70,17 @@ body {
   
   /* جلوگیری از ایجاد فضای خالی به خاطر هدر Fixed */
   padding-top: 0;
+
+  /* Premium Dark Mode Font Rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4 {
+h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-primary);
   line-height: var(--leading-tight);
+  margin-top: 0;
+  margin-bottom: var(--space-4);
 }
 
 /* ========== Utilities ========== */
@@ -55,7 +91,22 @@ h1, h2, h3, h4 {
   font-family: system-ui, -apple-system, sans-serif;
 }
 
+/* این جادوی تایپوگرافی فین‌تک است!
+  هر المنتی (مثل اینپوت‌ها، شماره تماس‌ها یا پسوردها) که چپ‌چین شود،
+  یا کلاس en-text بگیرد، فوراً فونت زیبای Inter را می‌گیرد.
+*/
+[dir="ltr"],
+.en-text {
+  font-family: var(--font-en-stack) !important;
+  letter-spacing: 0.5px;
+}
+
 /* ========== Scroll Margins (For Anchor Links) ========== */
+/* اعمال فاصله از بالا برای تمامی لینک‌های لنگردار (Anchor) */
+:target {
+  scroll-margin-top: 110px;
+}
+
 #about,
 #services,
 #how-it-works,
@@ -63,13 +114,4 @@ h1, h2, h3, h4 {
 #faq,
 #contact {
   scroll-margin-top: 110px;
-}
-
-/* این کد به مرورگر می‌گوید که هر جا فونت Peyda فراخوانی شد، 
-   برای اعداد (انگلیسی و فارسی) از فایل ایران‌سنس استفاده کند! */
-@font-face {
-  font-family: "Peyda";
-  src: url("/fonts/IRANSansX-Bold.woff2") format("woff2");
-  font-weight: 700;
-  unicode-range: U+0030-0039, U+06F0-06F9, U+0660-0669; /* کدهای اعداد */
 }

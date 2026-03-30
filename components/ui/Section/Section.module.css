@@ -1,0 +1,14 @@
+.section {
+  width: 100%;
+  position: relative;
+}
+
+.major {
+  padding-top: var(--section-pad-major);
+  padding-bottom: var(--section-pad-major);
+}
+
+.compact {
+  padding-top: var(--section-pad-compact);
+  padding-bottom: var(--section-pad-compact);
+}

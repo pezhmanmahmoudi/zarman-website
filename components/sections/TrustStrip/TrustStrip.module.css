@@ -1,136 +1,134 @@
 .section {
   position: relative;
-  background:
-    linear-gradient(180deg, #030817 0%, #061022 100%);
-  padding: clamp(34px, 5vw, 56px) 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: var(--color-bg-base);
+  /* خطوط جداکننده بسیار ملایم (Ghost Borders) برای جداسازی از هیرو و بخش بعدی */
+  border-top: 1px solid var(--color-border-ghost);
+  border-bottom: 1px solid var(--color-border-ghost);
+  padding: var(--space-12) 0; /* استفاده از اسپیسینگ ریتمیک */
 }
 
 .container {
-  width: min(1280px, calc(100vw - 32px));
+  width: 100%;
+  max-width: var(--container-max-width);
   margin: 0 auto;
+  padding: 0 var(--container-padding);
 }
 
 .header {
   text-align: center;
   direction: rtl;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-8);
 }
 
 .eyebrow {
-  margin: 0 0 8px;
-  color: rgba(155, 92, 255, 0.95);
-  font-size: 13px;
-  font-weight: 650;
+  margin: 0 0 var(--space-2);
+  color: var(--color-accent-secondary); /* Ultraviolet */
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.5px;
 }
 
 .title {
   margin: 0;
-  color: #f8fafc;
-  font-size: clamp(22px, 3vw, 34px);
-  line-height: 1.2;
-  letter-spacing: -0.03em;
-  font-weight: 750;
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--text-section-title);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+  font-weight: var(--font-weight-bold);
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: var(--space-4);
+  direction: rtl;
 }
 
 .card {
   position: relative;
-  min-height: 132px;
-  padding: 20px 18px 18px;
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow:
-    0 18px 40px -34px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  direction: rtl;
+  padding: var(--space-6) var(--space-4);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-ghost);
+  box-shadow: var(--highlight-top), var(--shadow-sm);
   text-align: right;
+  transition: transform var(--transition-normal), border-color var(--transition-normal);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-border-ghost-light);
 }
 
 .marker {
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-bottom: 14px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(155, 92, 255, 1) 0%, rgba(92, 99, 255, 1) 100%);
-  box-shadow:
-    0 0 16px rgba(155, 92, 255, 0.28);
+  width: 8px;
+  height: 8px;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent-secondary);
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.4); /* هاله ملایم الترا وایولت */
 }
 
 .cardTitle {
-  margin: 0 0 10px;
-  color: #f8fafc;
-  font-size: 16px;
-  line-height: 1.6;
-  font-weight: 650;
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-snug);
 }
 
 .cardText {
   margin: 0;
-  color: rgba(183, 194, 212, 0.92);
-  font-size: 13.5px;
-  line-height: 1.95;
-  font-weight: 400;
+  color: var(--color-text-secondary);
+  font-family: var(--font-primary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-relaxed);
+  font-weight: var(--font-weight-regular);
 }
 
+/* ==================
+   Responsive
+   ================== */
 @media (max-width: 1024px) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6);
   }
 }
 
 @media (max-width: 640px) {
   .section {
-    padding: 28px 0 34px;
-  }
-
-  .container {
-    width: min(100vw - 20px, 100%);
+    padding: var(--space-8) 0;
   }
 
   .header {
-    margin-bottom: 18px;
+    margin-bottom: var(--space-6);
   }
 
   .title {
-    font-size: clamp(20px, 6vw, 28px);
+    font-size: var(--text-card-title);
   }
 
   .grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: var(--space-4);
   }
 
   .card {
-    min-height: unset;
-    padding: 16px 14px 15px;
-    border-radius: 18px;
+    padding: var(--space-4);
   }
 
-  .cardTitle {
-    font-size: 15px;
-    margin-bottom: 8px;
-  }
-
-  .cardText {
-    font-size: 13px;
-    line-height: 1.85;
+  .marker {
+    margin-bottom: var(--space-2);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card,
-  .marker {
+  .card {
     transition: none !important;
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Button from "@/components/common/Button";
+import Button from "@/components/ui/Button/Button";
 
 export default function HeaderAuth({ className = "" }: { className?: string }) {
   return (
@@ -18,8 +18,11 @@ export default function HeaderAuth({ className = "" }: { className?: string }) {
         </div>
 
         <nav className="h-nav" aria-label="ناوبری داشبورد">
-          <Link href="/profile" className="h-link">
+          <Link href="/dashboard/profile" className="h-link">
             حساب کاربری
+          </Link>
+          <Link href="/dashboard/transactions" className="h-link">
+            تاریخچه تراکنش‌ها
           </Link>
         </nav>
 

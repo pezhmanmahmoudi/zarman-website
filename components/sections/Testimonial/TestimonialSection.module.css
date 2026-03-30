@@ -1,0 +1,146 @@
+/* TestimonialSection.module.css */
+
+.section {
+  padding: var(--section-pad-major) 0;
+  background-color: var(--color-bg-base);
+  direction: rtl;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: 0 var(--container-padding);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--space-12);
+}
+
+.eyebrow {
+  color: var(--color-accent-support); /* فیروزه‌ای */
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-3);
+  display: inline-block;
+  letter-spacing: 0.5px;
+}
+
+.title {
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--text-section-title);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  align-items: stretch; /* تضمین می‌کند تمام کارت‌ها هم‌ارتفاع باشند */
+}
+
+.card {
+  margin: 0; /* ریست کردن فاصله پیش‌فرض figure */
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-ghost);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8) var(--space-6);
+  box-shadow: var(--shadow-sm), var(--highlight-top);
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition-normal), border-color var(--transition-normal);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-border-ghost-light);
+}
+
+.quoteSvg {
+  width: 40px;
+  height: 40px;
+  color: rgba(79, 70, 229, 0.4); /* رنگ نیلی ملایم برای نقل قول */
+  margin-bottom: var(--space-6);
+}
+
+.textWrap {
+  margin: 0; /* ریست blockquote */
+  flex-grow: 1; /* باعث می‌شود بخش اطلاعات کاربر همیشه در پایین کارت بماند */
+}
+
+.text {
+  color: var(--color-text-secondary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-md);
+  line-height: var(--leading-relaxed);
+  margin: 0 0 var(--space-8) 0;
+}
+
+.authorBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-top: 1px solid var(--color-border-ghost);
+  padding-top: var(--space-4);
+  margin-top: auto;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  /* گرادیانت ترکیبی الترا وایولت و نیلی */
+  background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary));
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-bold);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.authorInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 2px 0;
+}
+
+.role {
+  color: var(--color-text-tertiary);
+  font-family: var(--font-primary);
+  font-size: var(--text-caption);
+}
+
+/* ==================
+   Responsive
+   ================== */
+@media (max-width: 1024px) {
+  .grid { 
+    grid-template-columns: repeat(2, minmax(0, 1fr)); 
+  }
+}
+
+@media (max-width: 768px) {
+  .section { 
+    padding: var(--section-pad-compact) 0; 
+  }
+  .grid { 
+    grid-template-columns: 1fr; 
+  }
+  .card { 
+    padding: var(--space-6) var(--space-5); 
+  }
+}

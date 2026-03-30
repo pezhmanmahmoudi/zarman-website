@@ -1,0 +1,362 @@
+/* components/common/Button.module.css */
+
+/* =========================
+   TOKENS
+   ========================= */
+.root {
+  --btn-radius: 999px;
+  --btn-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --btn-dur: 520ms;
+
+  --ink: rgba(2, 6, 23, 0.92);
+  --white: rgba(255, 255, 255, 0.98);
+}
+
+/* =========================
+   BASE BUTTON
+   ========================= */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  border: 0;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  text-decoration: none;
+  white-space: nowrap;
+
+  border-radius: var(--btn-radius);
+
+  min-height: 52px;
+  padding: 16px 28px;
+
+  
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1;
+
+  overflow: hidden;     /* CRITICAL: clip sheen inside the button */
+  isolation: isolate;   /* prevents blending bleeding into siblings */
+  background-clip: padding-box;
+
+  -webkit-tap-highlight-color: transparent;
+
+  transform: translateZ(0);
+  will-change: transform, filter, box-shadow, background-position;
+  transition:
+    transform var(--btn-dur) var(--btn-ease),
+    filter var(--btn-dur) var(--btn-ease),
+    box-shadow var(--btn-dur) var(--btn-ease),
+    background-position var(--btn-dur) var(--btn-ease),
+    border-color var(--btn-dur) var(--btn-ease),
+    color var(--btn-dur) var(--btn-ease),
+    opacity var(--btn-dur) var(--btn-ease);
+}
+
+/* Accessible focus ring */
+.btn:focus-visible {
+  box-shadow:
+    0 0 0 6px rgba(99, 102, 241, 0.16),
+    0 0 0 2px rgba(99, 102, 241, 0.38);
+}
+
+/* =========================
+   CONTENT
+   ========================= */
+.label {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* =========================
+   SIZES
+   ========================= */
+.sizeSm {
+  min-height: 44px;
+  padding: 12px 18px;
+  font-size: 14.5px;
+  font-weight: 850;
+}
+
+.sizeMd {
+  min-height: 52px;
+  padding: 16px 28px;
+  font-size: 16px;
+}
+
+.sizeLg {
+  min-height: 58px;
+  padding: 18px 34px;
+  font-size: 17px;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* =========================
+   VARIANTS
+   ========================= */
+.primary {
+  color: rgba(255, 255, 255, 0.96);
+  background:
+    radial-gradient(1000px 240px at 18% 22%,
+      rgba(120, 140, 255, 0.14) 0%,
+      rgba(0, 0, 0, 0) 58%),
+    linear-gradient(135deg,
+      #050917 0%,
+      #070c1c 22%,
+      #0b1230 48%,
+      #050917 76%,
+      #020413 100%);
+
+  background-size: 240% 240%;
+  background-position: 16% 24%;
+
+  box-shadow:
+    0 22px 62px -40px rgba(2, 6, 23, 0.78),
+    0 10px 24px -18px rgba(2, 6, 23, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.primary::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  pointer-events: none;
+
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.18) 36%,
+    rgba(255, 255, 255, 0) 62%
+  );
+  transform: translateX(-120%);
+  opacity: 0.62;
+}
+
+.secondary {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(12px) saturate(170%);
+  box-shadow:
+    0 16px 36px -26px rgba(2, 6, 23, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.secondary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(900px 260px at 70% 0%,
+    rgba(99, 102, 241, 0.12),
+    rgba(0, 0, 0, 0) 58%);
+  opacity: 0.35;
+}
+
+.ghost {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+}
+
+.ghost::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(900px 280px at 50% 0%,
+    rgba(99, 102, 241, 0.12),
+    rgba(0, 0, 0, 0) 60%);
+  opacity: 0;
+  transition: opacity var(--btn-dur) var(--btn-ease);
+}
+
+.soft {
+  color: var(--ink);
+  background: linear-gradient(180deg,
+    rgba(99, 102, 241, 0.10),
+    rgba(56, 189, 248, 0.08));
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  box-shadow: 0 18px 40px -30px rgba(99, 102, 241, 0.26);
+}
+
+/* =========================
+   HOVER / ACTIVE
+   ========================= */
+.btn:hover {
+  transform: none;
+  filter: saturate(5) contrast(1.05);
+}
+
+.primary:hover {
+  background-position: 78% 55%;
+  box-shadow:
+    0 30px 86px -56px rgba(2, 6, 23, 0.88),
+    0 14px 34px -24px rgba(2, 6, 23, 0.46);
+    
+}
+
+.primary:hover::before {
+  animation: sheenSlide 1.15s var(--btn-ease) both;
+  opacity: 0.85;
+}
+
+.secondary:hover {
+  /* override global hover filter for secondary */
+  filter: saturate(1.15) contrast(1.03);
+
+  /* premium neutral gradient (silver) */
+  background:
+    radial-gradient(500px 160px at 50% 0%,
+      rgba(255, 255, 255, 0.85),
+      rgba(255, 255, 255, 0) 70%),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 1) 0%,
+      rgba(245, 246, 248, 1) 55%,
+      rgba(238, 240, 243, 1) 100%
+    );
+
+  border-color: rgba(15, 23, 42, 0.18);
+
+  box-shadow:
+    0 22px 54px -34px rgba(2, 6, 23, 0.18),
+    0 0 0 1.5px rgb(141, 2, 255),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+
+/* Secondary: add a moving silver sheen like Primary */
+.secondary::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  pointer-events: none;
+
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.55) 36%,
+    rgba(255, 255, 255, 0) 62%
+  );
+
+  transform: translateX(-120%);
+  opacity: 0.0;
+}
+
+.secondary:hover::after {
+  opacity: 0.75;
+  animation: sheenSlide 1.15s var(--btn-ease) both;
+}
+
+.ghost:hover {
+  background: rgba(255, 255, 255, 0.70);
+  border-color: rgba(99, 102, 241, 0.22);
+}
+
+.ghost:hover::before { opacity: 0.45; }
+
+.soft:hover {
+  border-color: rgba(99, 102, 241, 0.28);
+  box-shadow: 0 26px 62px -44px rgba(99, 102, 241, 0.30);
+}
+
+.btn:active {
+  transform: translateY(0px) scale(0.99);
+}
+
+/* =========================
+   DISABLED / LOADING
+   ========================= */
+.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: grayscale(0.15);
+}
+
+.loading { cursor: progress; }
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: rgba(255, 255, 255, 0.9);
+  animation: spin 900ms linear infinite;
+}
+
+.secondarySpinner {
+  border-color: rgba(2, 6, 23, 0.18);
+  border-top-color: rgba(2, 6, 23, 0.62);
+}
+
+/* =========================
+   KEYFRAMES
+   ========================= */
+@keyframes sheenSlide {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* =========================
+   MOBILE / REDUCED MOTION
+   ========================= */
+@media (max-width: 480px) {
+  .btn {
+    min-height: 48px;
+    padding: 14px 16px;
+    font-size: 15.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .primary::before {
+    transition: none;
+    animation: none;
+  }
+
+  .btn:hover { transform: none; }
+}

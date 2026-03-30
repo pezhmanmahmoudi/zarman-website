@@ -1,0 +1,168 @@
+/* SpeedLiquiditySection.module.css - Zarman Premium Standard */
+
+.sectionContainer {
+  position: relative;
+  width: 100%;
+  background-color: var(--color-bg-base);
+  overflow: hidden;
+  padding: var(--section-pad-major) 0;
+  direction: rtl;
+  isolation: isolate;
+}
+
+/* هاله نوری بسیار ملایم آبی-فیروزه‌ای */
+.backgroundEffect {
+  position: absolute;
+  top: 40%;
+  left: 10%;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.05) 0%, transparent 65%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.contentWrapper {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: 0 var(--container-padding);
+  display: flex;
+  flex-direction: column-reverse; /* موبایل اول: ویژوال پایین متن */
+  align-items: center;
+  gap: var(--space-12);
+  position: relative;
+  z-index: 2;
+}
+
+@media (min-width: 1024px) {
+  .contentWrapper {
+    flex-direction: row; /* دسکتاپ: ویژوال سمت چپ، متن سمت راست */
+    gap: var(--space-16);
+  }
+}
+
+.visualContainer {
+  flex: 1.2;
+  width: 100%;
+  height: clamp(400px, 50vh, 550px);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  /* Premium Glass Frame هماهنگ با بقیه کارت‌ها */
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-ghost);
+  box-shadow: var(--shadow-md), var(--highlight-top);
+  direction: ltr; /*Three.js بوم نیاز به چپ‌چین دارد */
+}
+
+.textContainer {
+  flex: 0.8;
+  text-align: right;
+  direction: rtl;
+}
+
+.eyebrow {
+  color: var(--color-accent-secondary); /* بنفش الترا وایولت */
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.5px;
+  display: inline-block;
+  margin-bottom: var(--space-3);
+}
+
+.title {
+  font-family: var(--font-primary);
+  font-size: var(--text-section-title);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-4) 0;
+}
+
+.accentTitle {
+  color: var(--color-accent-support); /* فیروزه‌ای برای نقدینگی */
+}
+
+.description {
+  color: var(--color-text-secondary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-lg);
+  line-height: var(--leading-relaxed);
+  max-width: 600px;
+  margin: 0 0 var(--space-6) auto;
+}
+
+.featuresList {
+  margin: 0 0 var(--space-8) 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.featuresList li {
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-md);
+  font-weight: var(--font-weight-medium);
+  padding-right: var(--space-6);
+  position: relative;
+}
+
+/* نماد تیک پلاستیکی فیروزه‌ای */
+.featuresList li::before {
+  content: "✓";
+  position: absolute;
+  right: 0;
+  color: var(--color-accent-support);
+  font-weight: bold;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: flex-start;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .visualContainer {
+    height: 480px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sectionContainer {
+    padding: var(--section-pad-compact) 0;
+  }
+  .visualContainer { 
+    height: 380px; 
+    border-radius: var(--radius-lg);
+  }
+  .title {
+    font-size: clamp(26px, 6vw, 32px);
+  }
+  .textContainer {
+    text-align: center;
+  }
+  .description {
+    margin: 0 auto var(--space-6) auto;
+    text-align: center;
+    font-size: var(--text-body-md);
+  }
+  .featuresList {
+    align-items: center;
+    margin-bottom: var(--space-8);
+  }
+  .featuresList li {
+    padding-right: var(--space-6);
+    text-align: center;
+  }
+  .actions {
+    justify-content: center;
+  }
+}

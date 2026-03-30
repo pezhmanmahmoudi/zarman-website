@@ -2,9 +2,9 @@
 
 import React from "react";
 import { motion, Variants } from "framer-motion";
-import styles from "./Services.module.css";
+import styles from "./ServiceSection.module.css";
 
-// ✅ Unique alias name to avoid confusion with other globes
+// کامپوننت شبکه مرکزی
 import ServicesNetworkCore from "./NetworkGlobe";
 
 /* ===== Minimal premium SVG icons ===== */
@@ -76,25 +76,14 @@ const SERVICES: ServiceItem[] = [
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-/* ✅ AboutUs-like: different motions per block */
+/* Animations */
 const highlightAnim = {
-  initial: { opacity: 0, x: 22, filter: "blur(10px)" },
-  whileInView: { opacity: 1, x: 0, filter: "blur(0px)" },
-};
-
-const titleAnim = {
-  initial: { opacity: 0, y: 26, filter: "blur(12px)" },
+  initial: { opacity: 0, y: 15, filter: "blur(8px)" },
   whileInView: { opacity: 1, y: 0, filter: "blur(0px)" },
 };
 
-const textAnim = {
-  initial: { opacity: 0, y: 18, filter: "blur(10px)" },
-  whileInView: { opacity: 1, y: 0, filter: "blur(0px)" },
-};
-
-/* ✅ Cards: premium, subtle scale */
 const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 26, scale: 0.985, filter: "blur(10px)" },
+  hidden: { opacity: 0, y: 20, scale: 0.98, filter: "blur(8px)" },
   visible: {
     opacity: 1,
     y: 0,
@@ -106,31 +95,28 @@ const cardVariants: Variants = {
 
 export default function Services() {
   return (
-    <section id="zarman-services" className={styles.section}>
+    <section id="services" className={styles.section} aria-labelledby="services-title">
       <div className={styles.bgGrid} aria-hidden="true" />
       <div className={styles.bgVignette} aria-hidden="true" />
 
       <div className={styles.inner}>
-        {/* ===== Desktop header ===== */}
+        {/* ===== Header ===== */}
         <header className={styles.top}>
           <motion.span
             className={styles.highlightText}
             {...highlightAnim}
-            viewport={{ once: true}}
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: EASE }}
           >
             خدمات ویژه ما
           </motion.span>
 
           <motion.h2
+            id="services-title"
             className={styles.title}
             {...highlightAnim}
-            viewport={{ once: true}}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: EASE, delay: 0.1 }}
           >
             اکوسیستم مالی زرمان
           </motion.h2>
@@ -138,13 +124,10 @@ export default function Services() {
           <motion.p
             className={styles.subtitle}
             {...highlightAnim}
-            viewport={{ once: true}}
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: EASE, delay: 0.2 }}
           >
-            راهکارهای هوشمند برای انتقال سرمایه بین ایران و استرالیا؛ با ساختاری شفاف،
-                قابل پیگیری و پشتیبانی دقیق
+            راهکارهای هوشمند برای انتقال سرمایه بین ایران و استرالیا؛ با ساختاری شفاف، قابل پیگیری و پشتیبانی دقیق.
           </motion.p>
         </header>
 
@@ -153,7 +136,7 @@ export default function Services() {
           <div className={styles.rings} aria-hidden="true" />
           <div className={styles.verticalGuides} aria-hidden="true" />
 
-          {/* ✅ STATIC center (no motion / no whileInView) */}
+          {/* ===== Center Core (Static Network) ===== */}
           <div className={styles.center} aria-hidden="true">
             <div className={styles.centerCore}>
               <div className={styles.pulseInner} />
@@ -164,7 +147,7 @@ export default function Services() {
             </div>
           </div>
 
-          {/* Desktop Quadrants (TL, TR, BL, BR) */}
+          {/* ===== Desktop Quadrants ===== */}
           <div className={styles.quadDesktop}>
             {[1, 0, 2, 3].map((serviceIdx, i) => {
               const s = SERVICES[serviceIdx];
@@ -180,7 +163,7 @@ export default function Services() {
                   initial="hidden"
                   whileInView="visible"
                   viewport={{ once: true, amount: 0.35 }}
-                  transition={{ delay: 0.18 + i * 0.1 }}
+                  transition={{ delay: 0.15 + i * 0.1 }}
                 >
                   <div className={styles.iconOrb} aria-hidden="true">
                     <Icon />
@@ -192,50 +175,43 @@ export default function Services() {
             })}
           </div>
 
-          {/* ===== Mobile ===== */}
+          {/* ===== Mobile View ===== */}
           <div className={styles.mobileStack}>
             <div className={styles.mobileHero}>
               <div className={styles.mobileCenter} aria-hidden="true">
                 <div className={styles.mobileRings} />
                 <div className={styles.mobilePulseInner} />
                 <div className={styles.mobilePulseOuter} />
-
-                {/* ✅ STATIC network */}
                 <div className={styles.mobileCore}>
                   <ServicesNetworkCore />
                 </div>
               </div>
 
-              {/* ✅ Mobile text colors match desktop */}
               <motion.span
                 className={styles.highlightText}
                 {...highlightAnim}
-                viewport={{ once: true, amount: 0.6 }}
+                viewport={{ once: true }}
                 transition={{ duration: 0.78, ease: EASE }}
               >
                 خدمات ویژه ما              
               </motion.span>
               
-
               <motion.h3
                 className={styles.mobileTitle}
-                viewport={{ once: true}}
-                initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+                {...highlightAnim}
+                viewport={{ once: true }}
+                transition={{ duration: 0.78, ease: EASE, delay: 0.1 }}
               >
                 اکوسیستم مالی زرمان
               </motion.h3>
 
               <motion.p
                 className={styles.mobileText}
-                viewport={{ once: true}}
-                initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+                {...highlightAnim}
+                viewport={{ once: true }}
+                transition={{ duration: 0.78, ease: EASE, delay: 0.2 }}
               >
-                راهکارهای هوشمند برای انتقال سرمایه بین ایران و استرالیا؛ با ساختاری شفاف،
-                قابل پیگیری و پشتیبانی دقیق
+                راهکارهای هوشمند برای انتقال سرمایه بین ایران و استرالیا؛ با ساختاری شفاف، قابل پیگیری و پشتیبانی دقیق.
               </motion.p>
             </div>
 
@@ -249,8 +225,8 @@ export default function Services() {
                     variants={cardVariants}
                     initial="hidden"
                     whileInView="visible"
-                    viewport={{ once: true, amount: 0.3 }}
-                    transition={{ delay: 0.22 + idx * 0.1 }}
+                    viewport={{ once: true, amount: 0.2 }}
+                    transition={{ delay: 0.15 + idx * 0.1 }}
                   >
                     <div className={styles.mobileIcon} aria-hidden="true">
                       <Icon />

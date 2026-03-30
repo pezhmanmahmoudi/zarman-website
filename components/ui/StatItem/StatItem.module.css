@@ -1,0 +1,31 @@
+.statWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: right;
+}
+
+.value {
+  font-size: var(--text-display-l); /* Very large for impact */
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.labelGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: var(--text-body-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.subLabel {
+  font-size: var(--text-caption);
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}

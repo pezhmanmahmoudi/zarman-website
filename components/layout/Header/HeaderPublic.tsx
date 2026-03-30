@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import Button from "@/components/common/Button";
+import Button from "@/components/ui/Button/Button";
 import { publicNavItems } from "@/data/navigation";
 
 type HeaderPublicProps = {
@@ -28,9 +28,9 @@ export default function HeaderPublic({
             <Image
               src="/images/logo-horizontal-dark.svg"
               alt="Zarman Exchange"
-              className="h-logo-img" /* در موبایل: styles.logoImg */
-              width={600}  /* تناسب جدید */
-              height={160}  /* تناسب جدید */
+              className="h-logo-img"
+              width={160}  
+              height={40}  
               priority
             />
           </Link>
@@ -54,20 +54,11 @@ export default function HeaderPublic({
         </nav>
 
         <div className="h-auth" aria-label="ورود و ثبت‌نام">
-          <Button
-            href="/fa/register"
-            variant="primary"
-            size="sm"
-          >
-            ثبت‌نام
-          </Button>
-
-          <Button
-            href="/fa/login"
-            variant="secondary"
-            size="sm"
-          >
+          <Button href="/fa/login" variant="secondary" size="sm">
             ورود
+          </Button>
+          <Button href="/fa/register" variant="primary" size="sm">
+            ثبت‌نام
           </Button>
         </div>
       </div>

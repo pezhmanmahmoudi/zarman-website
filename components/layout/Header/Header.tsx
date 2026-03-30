@@ -28,7 +28,9 @@ export default function Header({
     if (!mounted) return;
 
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
+      // تغییر استراتژیک: 1024px باعث می‌شود در آیپد (عمودی) منوی موبایل لود شود
+      // و مشکل رفتن لوگو داخل منو برای همیشه حل شود.
+      setIsMobile(window.innerWidth <= 1024);
     };
 
     checkMobile();
@@ -39,10 +41,12 @@ export default function Header({
 
   if (!mounted) return null;
 
+  // رندر هدر موبایل/تبلت
   if (isMobile) {
     return <MobHeader isAuthenticated={isAuthenticated} isReady={isReady} />;
   }
 
+  // رندر هدر دسکتاپ
   const headerNode = isAuthenticated ? (
     <HeaderAuth className="h-header" />
   ) : (

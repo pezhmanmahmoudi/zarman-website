@@ -3,11 +3,16 @@
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import Button from "@/components/common/Button";
+import Button from "@/components/ui/Button/Button";
 import styles from "./Hero.module.css";
 
 export default function Hero() {
   const heroRef = useRef<HTMLElement | null>(null);
+
+  // تنظیمات واتس‌اپ
+  const whatsappNumber = "61426464296"; // شماره واتس‌اپ شرکت (بدون صفر اول و با کد 61)
+  const whatsappMessage = encodeURIComponent("سلام، من از طریق وب‌سایت زرمان پیام می‌دهم و برای انتقال وجه نیاز به راهنمایی دارم.");
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
   useGSAP(
     () => {
@@ -35,7 +40,7 @@ export default function Hero() {
 
   return (
     <section id="hero" ref={heroRef} className={styles.hero} aria-label="معرفی زرمان">
-      {/* Background Environment */}
+      {/* Background Environment - Controlled & Premium */}
       <div className={styles.bgBase} aria-hidden="true" />
       <div className={styles.bgGlow} aria-hidden="true" />
 
@@ -51,16 +56,28 @@ export default function Hero() {
               <span className={styles.titleAccent}>شفاف و سریع</span>
             </h1>
             <p className={styles.subtitle}>
-              ما تلاش میکنیم با تمرکز بر سرعت، شفافیت و پشتیبانی همیشگی، تجربه ثبت و پیگیری درخواست‌های مالی را برای شما آسان تر کنیم.
+              ما تلاش می‌کنیم با تمرکز بر سرعت، شفافیت و پشتیبانی همیشگی، تجربه ثبت و پیگیری درخواست‌های مالی را برای شما آسان‌تر و روشن‌تر کنیم.
             </p>
+            
             <div className={styles.actions}>
-              <Button href="/fa/register" variant="primary" className={styles.btn}>
+              {/* هدایت به صفحه ثبت نام */}
+              <Button href="/fa/register" variant="primary" size="lg" className={styles.btn}>
                 شروع ثبت‌نام
               </Button>
-              <Button href="/fa#contact" variant="secondary" className={styles.btn}>
+              
+              {/* هدایت مستقیم به واتس‌اپ در تب جدید */}
+              <Button 
+                href={whatsappUrl} 
+                variant="secondary" 
+                size="lg" 
+                className={styles.btn}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 تماس با ما
               </Button>
             </div>
+
             <div className={styles.meta}>
               <span>مطمئن و با امنیت بالا</span>
               <span className={styles.dot} />

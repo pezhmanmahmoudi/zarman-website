@@ -1,0 +1,179 @@
+/* Footer.module.css - Zarman Premium Light Footer */
+
+.footer {
+  background-color: #ffffff; 
+  border-top: 1px solid #e2e8f0; 
+  padding: var(--space-16) 0 var(--space-6) 0;
+  direction: rtl;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: 0 var(--container-padding);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 2.5fr 1fr 1.2fr 1fr;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
+}
+
+/* ==================
+   ستون برند (راست‌چین)
+   ================== */
+.brandCol {
+  padding-left: var(--space-12);
+  text-align: right;
+}
+
+.logoLink {
+  display: inline-block;
+  margin-bottom: var(--space-4);
+}
+
+.logoImg {
+  width: auto;
+  height: 120px; 
+  object-fit: contain;
+  display: block;
+}
+
+.brandDesc {
+  color: #475569; 
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+  max-width: 380px;
+}
+
+/* ==================
+   ستون لینک‌ها و ارتباطات (راست‌چین)
+   ================== */
+.linkCol {
+  text-align: right;
+}
+
+.colTitle {
+  color: #0f172a; 
+  font-family: var(--font-primary);
+  font-size: var(--text-body-md);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 var(--space-6) 0;
+}
+
+.linkList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.linkList a {
+  color: #64748b; 
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.linkList a:hover {
+  color: var(--color-accent-primary); 
+  font-weight: var(--font-weight-medium);
+}
+
+.contactItem {
+  color: #64748b;
+  font-family: var(--font-en-stack); /* 👈 اصلاح شد */
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  text-align: right; 
+  letter-spacing: 0.5px; /* کمی فاصله‌گذاری برای اعداد شماره تماس */
+}
+
+/* آدرس انگلیسی */
+.contactItemEn {
+  color: #64748b;
+  font-family: var(--font-en-stack); /* 👈 اصلاح شد */
+  font-size: 0.85rem;
+  line-height: 1.6;
+  text-align: right; 
+  margin-top: var(--space-3);
+}
+
+/* ==================
+   بخش کپی‌رایت (وسط‌چین)
+   ================== */
+.bottom {
+  border-top: 1px solid #e2e8f0;
+  padding-top: var(--space-6);
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.copyright {
+  color: #94a3b8; 
+  font-family: var(--font-en-stack); /* 👈 اصلاح شد */
+  font-size: var(--text-caption);
+  margin: 0;
+  direction: ltr; 
+}
+
+/* ==================
+   Responsive
+   ================== */
+@media (max-width: 1024px) {
+  .grid { 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: var(--space-12) var(--space-6); 
+  }
+  .brandCol { 
+    padding-left: 0; 
+    grid-column: span 3; 
+    margin-bottom: var(--space-4);
+  }
+  .brandDesc {
+    max-width: 500px;
+  }
+}
+
+@media (max-width: 768px) {
+  .footer { 
+    padding-top: var(--space-12); 
+  }
+  .grid { 
+    grid-template-columns: 1fr; 
+    gap: var(--space-10);
+  }
+  .brandCol { 
+    grid-column: span 1; 
+    text-align: center;
+  }
+  .logoLink {
+    display: flex;
+    justify-content: center;
+  }
+  .logoImg {
+    height: 90px; 
+  }
+  .brandDesc {
+    margin: 0 auto;
+    text-align: center;
+  }
+  .linkCol {
+    text-align: center;
+  }
+  .colTitle {
+    margin: 0 0 var(--space-4) 0;
+  }
+  .contactItem, .contactItemEn {
+    text-align: center;
+  }
+}

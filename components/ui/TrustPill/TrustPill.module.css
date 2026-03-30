@@ -1,0 +1,15 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-ghost);
+  box-shadow: var(--shadow-sm);
+}
+.text {
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}

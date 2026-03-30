@@ -1,14 +1,12 @@
-export type NavItem = {
-  label: string;
-  href: string;
-};
-
-export const publicNavItems: NavItem[] = [
-  { label: "خانه", href: "/fa" },
-  { label: "درباره زرمان", href: "/fa#about" },
-  { label: "خدمات زرمان", href: "/fa#services" },
-  { label: "نحوه انتقال", href: "/fa#how-it-works" },
-  { label: "امنیت و شفافیت", href: "/fa#security" },
-  { label: "سوالات متداول", href: "/fa#faq" },
-  { label: "تماس با ما", href: "/fa#contact" },
+export const publicNavItems = [
+  { label: 'خانه', href: '#hero' },
+  { label: 'درباره زرمان', href: '#about' },
+  { label: 'خدمات زرمان', href: '#services' },
+  { label: 'نحوه انتقال', href: '#how-it-works' },
+  { label: 'امنیت و شفافیت', href: '#security' },
+  { label: 'سوالات متداول', href: '#faq' },
+  { label: 'تماس با ما', href: '#contact' },
 ];
+
+// در صورت نیاز به اکسپورت با نام navigation برای سایر بخش‌ها
+export const navigation = publicNavItems;

@@ -5,23 +5,25 @@
   overflow: hidden;
   isolation: isolate;
   min-height: clamp(680px, 90dvh, 880px);
-  background: var(--color-bg-base);
+  background-color: var(--color-bg-base);
   display: flex;
   align-items: center;
+  direction: rtl; /* تضمین راست‌چین بودن ساختار پایه */
 }
 
 /* Background Architecture */
 .bgBase {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--color-bg-surface) 60%, transparent) 0%, transparent 70%);
+  background: radial-gradient(circle at 50% 0%, rgba(17, 22, 34, 0.8) 0%, transparent 70%); /* color-bg-surface variant */
   z-index: 0;
 }
 
 .bgGlow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(600px 600px at 20% 40%, rgba(79, 70, 229, 0.08) 0%, transparent 80%);
+  /* نور متمرکز و کنترل شده به جای مه آبی */
+  background: radial-gradient(800px 800px at 15% 40%, rgba(79, 70, 229, 0.05) 0%, transparent 80%);
   z-index: 1;
 }
 
@@ -29,87 +31,84 @@
   position: relative;
   z-index: 3;
   width: 100%;
-  max-width: var(--container-max-width, 1200px);
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  /* حل مشکل رفتن زیر هدر: فاصله بالا داینامیک شده تا محتوا پایین‌تر بیاید */
-  padding: clamp(120px, 15vh, 160px) var(--space-6) 64px;
+  padding: clamp(120px, 15vh, 160px) var(--container-padding) var(--space-16);
 }
 
 .layout {
   display: grid;
   grid-template-columns: 1fr minmax(380px, 420px);
   align-items: center;
-  gap: 64px;
+  gap: var(--space-16);
 }
 
 /* Content Styles */
 .content {
   text-align: right;
-  direction: rtl;
   max-width: 640px;
 }
 
 .eyebrow {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   color: var(--color-text-secondary);
-  font-family: "Peyda", sans-serif;
-  font-size: 1rem;
-  font-weight: 500;
-  letter-spacing: 1px;
+  font-family: var(--font-primary);
+  font-size: var(--text-body-md);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.5px;
 }
 
 .title {
-  margin: 0 0 16px;
-  font-family: "Peyda", sans-serif;
-  font-size: clamp(36px, 4.5vw, 56px);
-  line-height: 1.15;
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-primary);
+  font-size: var(--text-display-xl);
+  line-height: var(--leading-tight);
   letter-spacing: -0.02em;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
 }
 
 .titleAccent {
-  color: var(--color-accent-secondary);
+  color: var(--color-accent-secondary); /* Ultraviolet for subtle highlight */
 }
 
 .subtitle {
-  margin: 0 0 32px;
-  font-family: "Peyda", sans-serif;
+  margin: 0 0 var(--space-8);
+  font-family: var(--font-primary);
   color: var(--color-text-secondary);
-  font-size: 1.125rem;
-  line-height: 1.8;
+  font-size: var(--text-body-lg);
+  line-height: var(--leading-relaxed);
   max-width: 90%;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
 }
 
 .btn {
-  min-height: 48px !important;
-  padding: 0 24px !important;
-  font-family: "Peyda", sans-serif !important;
+  /* تنظیمات اضافی اگر کامپوننت Button نیاز به Overide داشت */
+  font-family: var(--font-primary) !important;
 }
 
 .meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   color: var(--color-text-tertiary);
-  font-family: "Peyda", sans-serif;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-family: var(--font-primary);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
 }
 
 .dot {
   width: 4px;
   height: 4px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-border-ghost-light);
 }
 
 /* Visual Board Styles */
@@ -120,13 +119,12 @@
 
 .rateBoard {
   width: 100%;
-  background: color-mix(in srgb, var(--color-bg-surface) 50%, transparent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background-color: var(--color-bg-surface);
+  /* شیشه ماشین‌کاری شده (Premium Fintech) */
   border: 1px solid var(--color-border-ghost);
-  border-radius: 20px;
-  padding: 40px 32px;
-  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8) var(--space-6);
+  box-shadow: var(--highlight-top), var(--shadow-md);
   direction: rtl;
 }
 
@@ -134,30 +132,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin-bottom: 32px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
 }
 
 .pulseDot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   background-color: var(--color-accent-support);
-  box-shadow: 0 0 8px var(--color-accent-support);
-  animation: pulse 2s infinite;
+  box-shadow: 0 0 12px var(--color-accent-support);
+  animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .status {
-  font-family: "Peyda", sans-serif;
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
 }
 
 .ratesGrid {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .rateCol {
@@ -165,60 +163,57 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 12px;
+  gap: var(--space-2);
 }
 
 .rateDivider {
   height: 1px;
-  width: 60%;
+  width: 50%;
   margin: 0 auto;
-  background: linear-gradient(90deg, transparent, var(--color-border-ghost), transparent);
+  background: linear-gradient(90deg, transparent, var(--color-border-ghost-light), transparent);
 }
 
 .label {
-  font-family: "Peyda", sans-serif;
-  font-size: 0.9rem;
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
   color: var(--color-text-secondary);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .value {
-  /* فقط برای اعداد: استفاده از ایران‌سنس */
-  font-family: "IRANSansX", sans-serif;
-  font-size: 2.75rem;
-  font-weight: 700;
+  font-family: "IRANSansX", var(--font-primary);
+  font-size: var(--text-display-l); /* استفاده از مقیاس تایپوگرافی درست */
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   line-height: 1;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
 }
 
 .currency {
-  /* بازگشت به فونت پیدا برای کلمه تومان */
-  font-family: "Peyda", sans-serif;
-  font-size: 1.125rem;
-  font-weight: 400;
+  font-size: var(--text-body-md);
+  font-weight: var(--font-weight-regular);
   color: var(--color-text-tertiary);
-  margin-right: 8px;
+  margin-right: var(--space-2);
 }
 
 @keyframes pulse {
   0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
+  50% { opacity: 0.3; transform: scale(0.85); }
   100% { opacity: 1; transform: scale(1); }
 }
 
-/* Responsive */
+/* Responsive Overrides */
 @media (max-width: 1024px) {
   .layout {
     grid-template-columns: 1fr;
-    gap: 48px;
+    gap: var(--space-12);
   }
   .content {
     text-align: center;
     max-width: 100%;
   }
   .subtitle {
-    margin: 0 auto 32px;
+    margin: 0 auto var(--space-8);
   }
   .actions, .meta {
     justify-content: center;
@@ -226,13 +221,25 @@
   .visual {
     justify-content: center;
   }
+  .rateBoard {
+    max-width: 480px; /* جلوگیری از کشیدگی بیش از حد در تبلت */
+  }
 }
 
 @media (max-width: 768px) {
+  .hero {
+    min-height: auto;
+  }
+  .container {
+    padding-top: calc(var(--section-pad-compact) + 60px);
+  }
   .rateBoard {
-    padding: 32px 24px;
+    padding: var(--space-6) var(--space-4);
+  }
+  .title {
+    font-size: var(--text-display-l);
   }
   .value {
-    font-size: 2.25rem;
+    font-size: var(--text-section-title); /* کوچک‌تر شدن اعداد در موبایل */
   }
 }

@@ -1,21 +1,18 @@
-/* RateSection.module.css - Zarman Premium Standard */
-
 .section {
   position: relative;
   background-color: var(--color-bg-base);
   padding: var(--section-pad-major) 0;
-  overflow: hidden;
 }
 
 .container {
   width: 100%;
-  max-width: var(--container-max-width, 1200px);
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: 0 var(--container-padding, 24px);
+  padding: 0 var(--container-padding);
 }
 
 .header {
-  max-width: 760px;
+  max-width: 680px;
   margin: 0 auto var(--space-12);
   text-align: center;
   direction: rtl;
@@ -23,42 +20,41 @@
 
 .eyebrow {
   margin: 0 0 var(--space-3);
-  color: var(--color-accent-support); /* فیروزه‌ای برای جلب توجه به بخش مالی */
-  font-family: "Peyda", var(--font-primary), sans-serif;
+  color: var(--color-accent-support);
+  font-family: var(--font-primary);
   font-size: var(--text-body-sm);
   font-weight: var(--font-weight-semibold);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .title {
   margin: 0 0 var(--space-4);
   color: var(--color-text-primary);
-  font-family: "Peyda", var(--font-primary), sans-serif;
-  font-size: clamp(30px, 4vw, 48px);
+  font-family: var(--font-primary);
+  font-size: var(--text-section-title);
   line-height: var(--leading-tight);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   font-weight: var(--font-weight-bold);
 }
 
 .subtitle {
   margin: 0;
   color: var(--color-text-secondary);
-  font-family: "Peyda", var(--font-primary), sans-serif;
+  font-family: var(--font-primary);
   font-size: var(--text-body-lg);
   line-height: var(--leading-relaxed);
-  font-weight: var(--font-weight-regular);
 }
 
 .grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.02fr) minmax(320px, 480px);
+  grid-template-columns: 1fr minmax(320px, 440px);
   gap: var(--space-8);
-  align-items: stretch;
+  align-items: flex-start;
+  direction: rtl;
 }
 
-.converterCol,
-.chartCol {
-  min-width: 0;
+.converterCol, .chartCol {
+  width: 100%;
 }
 
 .chartCol {
@@ -67,62 +63,43 @@
   gap: var(--space-6);
 }
 
-/* استایل مشترک کارت‌های این بخش */
-.converterFrame,
 .noteCard {
-  border-radius: var(--radius-xl);
-  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border-ghost);
-  box-shadow: var(--shadow-md), var(--highlight-top);
-}
-
-.converterFrame {
-  height: 100%;
-  padding: var(--space-6);
-}
-
-.noteCard {
-  padding: var(--space-6);
-  direction: rtl;
+  box-shadow: var(--shadow-sm), var(--highlight-top);
   text-align: right;
-  background: color-mix(in srgb, var(--color-bg-surface) 60%, transparent);
 }
 
 .noteTitle {
   margin: 0 0 var(--space-2);
   color: var(--color-text-primary);
-  font-family: "Peyda", var(--font-primary), sans-serif;
-  font-size: var(--text-body-lg);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-md);
   font-weight: var(--font-weight-semibold);
 }
 
 .noteText {
   margin: 0;
   color: var(--color-text-secondary);
-  font-family: "Peyda", var(--font-primary), sans-serif;
-  font-size: var(--text-body-md);
+  font-family: var(--font-primary);
+  font-size: var(--text-caption);
   line-height: var(--leading-relaxed);
-  font-weight: var(--font-weight-regular);
 }
 
-/* Responsive */
 @media (max-width: 1024px) {
   .grid {
     grid-template-columns: 1fr;
-    gap: var(--space-12);
+    gap: var(--space-8);
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .section {
     padding: var(--section-pad-compact) 0;
   }
   .title {
-    font-size: clamp(26px, 8vw, 34px);
-  }
-  .converterFrame,
-  .noteCard {
-    padding: var(--space-4);
-    border-radius: var(--radius-lg);
+    font-size: clamp(24px, 6vw, 32px);
   }
 }
