@@ -1,10 +1,9 @@
 export const publicNavItems = [
   { label: 'خانه', href: '#hero' },
+  { label: 'محاسبه گر', href: '#rates' },
   { label: 'درباره زرمان', href: '#about' },
-  { label: 'خدمات زرمان', href: '#services' },
   { label: 'نحوه انتقال', href: '#how-it-works' },
-  { label: 'امنیت و شفافیت', href: '#security' },
-  { label: 'سوالات متداول', href: '#faq' },
+  { label: 'خدمات زرمان', href: '#services' },
   { label: 'تماس با ما', href: '#contact' },
 ];
 

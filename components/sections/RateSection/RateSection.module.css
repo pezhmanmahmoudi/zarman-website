@@ -1,7 +1,11 @@
+/* RateSection.module.css */
+
 .section {
   position: relative;
-  background-color: var(--color-bg-base);
+  background-color: #ffffff; /* پس‌زمینه سفید خالص */
   padding: var(--section-pad-major) 0;
+  direction: rtl;
+  overflow: hidden;
 }
 
 .container {
@@ -15,21 +19,20 @@
   max-width: 680px;
   margin: 0 auto var(--space-12);
   text-align: center;
-  direction: rtl;
 }
 
 .eyebrow {
   margin: 0 0 var(--space-3);
-  color: var(--color-accent-support);
+  color: var(--color-accent-primary);
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0.5px;
 }
 
 .title {
   margin: 0 0 var(--space-4);
-  color: var(--color-text-primary);
+  color: #0f172a; /* Slate 900 - کاملاً تیره و خوانا روی سفید */
   font-family: var(--font-primary);
   font-size: var(--text-section-title);
   line-height: var(--leading-tight);
@@ -39,7 +42,7 @@
 
 .subtitle {
   margin: 0;
-  color: var(--color-text-secondary);
+  color: #475569; /* Slate 600 - طوسی تیره کلاسیک */
   font-family: var(--font-primary);
   font-size: var(--text-body-lg);
   line-height: var(--leading-relaxed);
@@ -47,59 +50,26 @@
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr minmax(320px, 440px);
+  /* اختصاص وزن 1.1 به کانورتور برای تعادل بصری بهتر */
+  grid-template-columns: 1.1fr 1fr;
   gap: var(--space-8);
-  align-items: flex-start;
-  direction: rtl;
+  /* هم‌ارتفاع کردن هر دو کارت تاریک */
+  align-items: stretch;
 }
 
 .converterCol, .chartCol {
   width: 100%;
 }
 
-.chartCol {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-}
-
-.noteCard {
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  background-color: var(--color-bg-surface);
-  border: 1px solid var(--color-border-ghost);
-  box-shadow: var(--shadow-sm), var(--highlight-top);
-  text-align: right;
-}
-
-.noteTitle {
-  margin: 0 0 var(--space-2);
-  color: var(--color-text-primary);
-  font-family: var(--font-primary);
-  font-size: var(--text-body-md);
-  font-weight: var(--font-weight-semibold);
-}
-
-.noteText {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-family: var(--font-primary);
-  font-size: var(--text-caption);
-  line-height: var(--leading-relaxed);
-}
-
 @media (max-width: 1024px) {
   .grid {
     grid-template-columns: 1fr;
-    gap: var(--space-8);
+    gap: var(--space-12);
   }
 }
 
 @media (max-width: 768px) {
-  .section {
-    padding: var(--section-pad-compact) 0;
-  }
-  .title {
-    font-size: clamp(24px, 6vw, 32px);
-  }
+  .section { padding: var(--section-pad-compact) 0; }
+  .title { font-size: clamp(26px, 7vw, 32px); }
+  .grid { gap: var(--space-8); }
 }

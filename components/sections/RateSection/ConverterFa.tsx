@@ -1,215 +1,197 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import styles from "./ConverterFa.module.css";
 import Button from "@/components/ui/Button/Button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowDownCircle, Info, UserCircle, AlertTriangle, ChevronDown } from "lucide-react";
+import { useRates } from "@/context/RateContext";
 
 type Currency = "AUD" | "IRT";
 
-const CONFIG = {
-  audToIRTRate: 103000,
-  threshold: 3000,
-  feePercent: 0.05,
-} as const;
-
-// تبدیل عدد انگلیسی به فارسی
 function toFaDigits(input: string) {
   return input.replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
 }
 
-// تبدیل عدد فارسی به انگلیسی
 function faToEnDigits(input: string) {
   const fa = "۰۱۲۳۴۵۶۷۸۹";
   return input.replace(/[۰-۹]/g, (d) => String(fa.indexOf(d)));
 }
 
-// گرفتن عدد خام از ورودی (فقط رقم)
 function getRawNumber(value: string) {
   let v = faToEnDigits(value);
-  v = v.replace(/,/g, "");
-  v = v.replace(/\D/g, "");
+  v = v.replace(/،/g, "").replace(/,/g, "").replace(/\D/g, "");
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
 
-// فرمت عدد + جداکننده + فارسی
-function formatNumberFa(num: number, frac = 0) {
-  const en = Number(num || 0).toLocaleString("en-US", {
-    maximumFractionDigits: frac,
-    minimumFractionDigits: 0,
-  });
-  return toFaDigits(en);
+// برای تومان اعشار نداریم، برای دلار استرالیا حداکثر ۲ رقم
+function formatNumberFa(num: number, isToman: boolean = false) {
+  const options = isToman ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
+  const en = Number(num || 0).toLocaleString("en-US", options);
+  return toFaDigits(en).replace(/,/g, "،");
 }
 
 export default function ConverterFa() {
-  const [amountText, setAmountText] = useState<string>("3000");
+  const [amountText, setAmountText] = useState<string>("۳،۰۰۰");
   const [from, setFrom] = useState<Currency>("AUD");
-  const [loading, setLoading] = useState(false);
+  const { currentRates } = useRates();
 
-  const inputRef = useRef<HTMLInputElement | null>(null);
-
+  const rate = from === "AUD" ? currentRates.sellAUD : currentRates.buyAUD;
   const to: Currency = from === "AUD" ? "IRT" : "AUD";
 
-  const rateText = useMemo(() => {
-    return toFaDigits(
-      `1 دلار استرالیا = ${CONFIG.audToIRTRate.toLocaleString("en-US")} تومان ایران`
-    );
-  }, []);
+  const amountNum = getRawNumber(amountText);
 
-  const computed = useMemo(() => {
-    const rawInput = getRawNumber(amountText);
-    const valueInAud = from === "AUD" ? rawInput : rawInput / CONFIG.audToIRTRate;
-
-    let feeAud = 0;
-    let feeLabel = "کارمزد";
-    let feeNote = "کارمزدی برای این مبلغ دریافت نمی‌شود.";
-    let feeNoteTone: "good" | "warn" = "good";
-
-    if (valueInAud < CONFIG.threshold && valueInAud > 0) {
-      feeAud = valueInAud * CONFIG.feePercent;
-      feeLabel = "کارمزد (۵٪)";
-      feeNote = `برای مبالغ کمتر از ${formatNumberFa(CONFIG.threshold, 0)} دلار استرالیا، کارمزد دریافت می‌شود.`;
-      feeNoteTone = "warn";
-    }
-
-    const netAud = Math.max(valueInAud - feeAud, 0);
-    const finalResult = to === "AUD" ? netAud : netAud * CONFIG.audToIRTRate;
-
-    return { feeAud, netAud, finalResult, feeLabel, feeNote, feeNoteTone };
-  }, [amountText, from, to]);
-
-  const onAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const el = e.target;
-
-    const cursorPosBefore = el.selectionStart ?? el.value.length;
-    const oldLength = el.value.length;
-
-    let plain = faToEnDigits(el.value);
-    plain = plain.replace(/,/g, "").replace(/\D/g, "");
-
-    if (plain === "") {
-      setAmountText("");
-      return;
-    }
-
-    const num = parseInt(plain, 10);
-    const formattedEn = num.toLocaleString("en-US", { maximumFractionDigits: 0 });
-    const formattedFa = toFaDigits(formattedEn);
-
-    setAmountText(formattedFa);
-
-    requestAnimationFrame(() => {
-      const input = inputRef.current;
-      if (!input) return;
-
-      const newLength = formattedFa.length;
-      const diff = newLength - oldLength;
-      const newPos = Math.max(cursorPosBefore + diff, 0);
-      input.setSelectionRange(newPos, newPos);
-    });
-  };
-
-  const resultText =
-    amountText.trim() === "" ? "۰" : formatNumberFa(computed.finalResult);
-
-  async function handleSubmit() {
-    if (loading) return;
-    setLoading(true);
-    try {
-      await new Promise((r) => setTimeout(r, 700));
-    } finally {
-      setLoading(false);
+  // بررسی اعمال کارمزد (فقط برای تراکنش‌های زیر ۱۰۰۰ دلار استرالیا)
+  let isFeeApplied = false;
+  if (amountNum > 0) {
+    if (from === "AUD") {
+      isFeeApplied = amountNum < 1000;
+    } else {
+      const rawAud = amountNum / rate;
+      isFeeApplied = rawAud > 0 && rawAud < 1000;
     }
   }
 
+  const resultText = useMemo(() => {
+    if (amountNum === 0) return "";
+
+    let finalValue = 0;
+
+    if (from === "AUD") {
+      // محاسبه دقیق (بدون حذف ۳ صفر)
+      const feeInAud = isFeeApplied ? 15 : 0;
+      const netAud = Math.max(0, amountNum - feeInAud);
+      finalValue = netAud * rate;
+    } else {
+      // تبدیل تومان به دلار
+      const rawAud = amountNum / rate;
+      const feeInAud = isFeeApplied ? 15 : 0;
+      finalValue = Math.max(0, rawAud - feeInAud);
+    }
+
+    return formatNumberFa(finalValue, to === "IRT");
+  }, [amountNum, from, rate, to, isFeeApplied]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === "") {
+      setAmountText("");
+      return;
+    }
+    const raw = getRawNumber(val);
+    setAmountText(formatNumberFa(raw, from === "IRT"));
+  };
+
+  const handleWhatsApp = () => {
+    const rateFa = formatNumberFa(rate, true);
+    let text = "";
+    
+    if (from === "AUD") {
+        text = `سلام، من می‌خواهم ${amountText} دلار استرالیا را با نرخ ${rateFa} تبدیل کنم که در وب‌سایت، مبلغ ${resultText} تومان محاسبه شده است. لطفا مرا راهنمایی کنید.`;
+    } else {
+        text = `سلام، من می‌خواهم ${amountText} تومان را با نرخ ${rateFa} تبدیل کنم که در وب‌سایت، مبلغ ${resultText} دلار استرالیا محاسبه شده است. لطفا مرا راهنمایی کنید.`;
+    }
+
+    window.open(`https://wa.me/61497851631?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
   return (
-    <div className={styles.card} aria-label="مبدل نرخ ارز زرمان">
+    <div className={styles.card}>
       <div className={styles.header}>
-        <div className={styles.rateBox}>نرخ تضمین‌شده (۲۴ ساعت)</div>
-        <div className={styles.liveRate}>{rateText}</div>
-      </div>
-
-      <div className={styles.inputRow}>
-        <label className={styles.label} htmlFor="z-amount">
-          شما می‌فرستید
-        </label>
-        <div className={`${styles.fieldGroup} ${styles.primary}`}>
-          <input
-            id="z-amount"
-            ref={inputRef}
-            type="text"
-            value={amountText}
-            onChange={onAmountChange}
-            placeholder="۰"
-            inputMode="numeric"
-            autoComplete="off"
-            aria-label="مبلغ ارسالی"
-          />
-          <select
-            value={from}
-            onChange={(e) => setFrom(e.target.value as Currency)}
-            aria-label="واحد پول مبدا"
-          >
-            <option value="AUD">دلار استرالیا</option>
-            <option value="IRT">تومان ایران</option>
-          </select>
+        <div className={styles.titleWrapper}>
+          <h2 className={styles.mainTitle}>ماشین‌حساب تبدیل ارز</h2>
+          <p className={styles.subTitle}>محاسبه آنلاین و لحظه‌ای نرخ حواله</p>
         </div>
-      </div>
-
-      <div className={styles.breakdown} aria-label="جزئیات کارمزد و مبلغ خالص">
-        <div className={styles.infoRow}>
-          <span>{computed.feeLabel}</span>
-          <span>{`${formatNumberFa(computed.feeAud)} دلار استرالیا`}</span>
-        </div>
-
-        <div className={styles.infoRow}>
-          <span>مبلغ خالص قابل تبدیل</span>
+        
+        <div className={styles.rateInfo}>
+          <span className={styles.pulse}></span>
           <span>
-            {from === "AUD"
-              ? `${formatNumberFa(computed.netAud)} دلار استرالیا`
-              : `${formatNumberFa(computed.netAud)} دلار استرالیا (معادل)`}
+            نرخ فعلی: ۱ دلار استرالیا = {formatNumberFa(rate, true)} تومان
           </span>
         </div>
+      </div>
 
-        <div
-          className={`${styles.noteRow} ${
-            computed.feeNoteTone === "warn" ? styles.noteWarn : styles.noteGood
-          }`}
-        >
-          {computed.feeNote}
+      <div className={styles.converterBody}>
+        {/* فیلد ارسال */}
+        <div className={styles.inputBox}>
+          <label className={styles.label}>شما ارسال می‌کنید</label>
+          <div className={styles.fieldGroup}>
+            {/* ۱. عدد در سمت راست (به دلیل راست‌چین بودن سایت، اولویت با رندر راست است) */}
+            <input
+              type="text"
+              value={amountText}
+              onChange={handleInputChange}
+              dir="ltr"
+              className={styles.faInput}
+              placeholder="۰"
+            />
+            
+            <div className={styles.divider}></div>
+            
+            {/* ۲. ارز در سمت چپ + زبانه (فلش) واضح */}
+            <div className={styles.selectWrapper}>
+              <select className={styles.currencySelect} value={from} onChange={(e) => setFrom(e.target.value as Currency)}>
+                <option value="AUD">دلار استرالیا</option>
+                <option value="IRT">تومان ایران</option>
+              </select>
+              <ChevronDown className={styles.selectChevron} size={16} strokeWidth={2.5} />
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.exchangeIconWrapper}>
+          <div className={styles.exchangeLine}></div>
+          <ArrowDownCircle className={styles.exchangeIcon} size={24} strokeWidth={1.5} />
+          <div className={styles.exchangeLine}></div>
+        </div>
+
+        {/* فیلد دریافت */}
+        <div className={styles.inputBox}>
+          <div className={styles.labelRow}>
+            <label className={styles.label}>گیرنده دریافت می‌کند</label>
+            {isFeeApplied && (
+              <span className={styles.feeWarning}>
+                <AlertTriangle size={14} />
+                این تراکنش دارای کارمزد ۱۵ دلار است
+              </span>
+            )}
+          </div>
+          <div className={`${styles.fieldGroup} ${styles.locked}`}>
+            <input
+              type="text"
+              value={resultText}
+              readOnly
+              dir="ltr"
+              className={styles.faInput}
+              placeholder="۰"
+            />
+            
+            <div className={styles.divider}></div>
+            
+            <div className={styles.selectWrapper}>
+              <select className={styles.currencySelect} value={to} disabled>
+                <option value="IRT">تومان ایران</option>
+                <option value="AUD">دلار استرالیا</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className={styles.inputRow}>
-        <label className={styles.label} htmlFor="z-result">
-          گیرنده دریافت می‌کند
-        </label>
-        <div className={`${styles.fieldGroup} ${styles.locked}`}>
-          <input
-            id="z-result"
-            type="text"
-            value={resultText}
-            readOnly
-            aria-label="مبلغ دریافتی"
-          />
-          <select value={to} disabled aria-label="واحد پول مقصد">
-            <option value="IRT">تومان ایران</option>
-            <option value="AUD">دلار استرالیا</option>
-          </select>
+      <div className={styles.notesContainer}>
+        <div className={styles.noteItem}>
+          <Info size={16} strokeWidth={2} />
+          <span>توجه: برای تراکنش‌های کمتر از ۱،۰۰۰ دلار، مبلغ ۱۵ دلار به عنوان کارمزد کسر می‌گردد که در کادر بالا محاسبه شده است.</span>
+        </div>
+        <div className={styles.noteItem}>
+          <UserCircle size={16} strokeWidth={2} />
+          <span>برای شخصی‌سازی قیمت و پیگیری وضعیت تراکنش، توصیه می‌شود وارد پروفایل کاربری خود شده و از پنل اختصاصی درخواست دهید.</span>
         </div>
       </div>
 
       <div className={styles.cta}>
-        <Button
-          variant="primary"
-          fullWidth
-          loading={loading}
-          rightIcon={<ArrowLeft />}
-          onClick={handleSubmit}
-          aria-label="ارسال درخواست انتقال"
-        >
-          ارسال درخواست
+        <Button variant="primary" fullWidth rightIcon={<ArrowLeft />} onClick={handleWhatsApp}>
+          ارسال درخواست در واتس‌اپ
         </Button>
       </div>
     </div>

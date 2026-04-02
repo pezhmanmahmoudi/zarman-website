@@ -101,17 +101,23 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.5px;
 }
 
+
+
 /* ========== Scroll Margins (For Anchor Links) ========== */
-/* اعمال فاصله از بالا برای تمامی لینک‌های لنگردار (Anchor) */
-:target {
-  scroll-margin-top: 110px;
+html {
+  scroll-behavior: smooth; /* اسکرول نرم */
+  
+  /* این خط جادویی، مشکل هدر ثابت را برای کل سایت و تمام لینک‌ها حل می‌کند */
+  scroll-padding-top: -101px !important; 
 }
 
+/* آیدی rates را به این لیست اضافه کنید */
+#rates,
 #about,
 #services,
 #how-it-works,
 #security,
 #faq,
 #contact {
-  scroll-margin-top: 110px;
+  scroll-margin-top: 110px; /* این عدد باعث می‌شود سکشن دقیقاً زیر هدر متوقف شود */
 }

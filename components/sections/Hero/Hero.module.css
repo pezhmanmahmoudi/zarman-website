@@ -8,21 +8,20 @@
   background-color: var(--color-bg-base);
   display: flex;
   align-items: center;
-  direction: rtl; /* تضمین راست‌چین بودن ساختار پایه */
+  direction: rtl; 
 }
 
-/* Background Architecture */
+/* Background Architecture (حفظ کدهای شما) */
 .bgBase {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 0%, rgba(17, 22, 34, 0.8) 0%, transparent 70%); /* color-bg-surface variant */
+  background: radial-gradient(circle at 50% 0%, rgba(17, 22, 34, 0.8) 0%, transparent 70%); 
   z-index: 0;
 }
 
 .bgGlow {
   position: absolute;
   inset: 0;
-  /* نور متمرکز و کنترل شده به جای مه آبی */
   background: radial-gradient(800px 800px at 15% 40%, rgba(79, 70, 229, 0.05) 0%, transparent 80%);
   z-index: 1;
 }
@@ -38,12 +37,12 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr minmax(380px, 420px);
+  grid-template-columns: 1fr minmax(380px, 440px); /* عرض کمی بیشتر برای جا دادن لوگو */
   align-items: center;
   gap: var(--space-16);
 }
 
-/* Content Styles */
+/* Content Styles (حفظ دقیق کدهای شما) */
 .content {
   text-align: right;
   max-width: 640px;
@@ -69,9 +68,79 @@
 }
 
 .titleAccent {
-  color: var(--color-accent-secondary); /* Ultraviolet for subtle highlight */
+  color: var(--color-accent-secondary); 
 }
 
+/* ====================================================
+   اصلاحات تول‌تیپ (باز شدن در زیر و فونت انگلیسی اختصاصی) 
+   ==================================================== */
+.tooltipWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+}
+
+.infoIcon {
+  color: var(--color-accent-secondary); /* رنگ بنفش زرمان */
+  opacity: 0.8;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.uluruEnText {
+  font-family: var(--font-en), sans-serif !important; /* فونت انگلیسی که دیشب کانفیگ کردیم */
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.tooltipText {
+  visibility: hidden;
+  width: 260px;
+  background-color: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  color: var(--color-text-primary);
+  text-align: right;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-ghost-light);
+  box-shadow: var(--shadow-md), 0 10px 30px rgba(0,0,0,0.3);
+  
+  /* موقعیت: در زیر متن باز می‌شود */
+  position: absolute;
+  z-index: 100;
+  top: 150%; 
+  right: 50%;
+  transform: translateX(50%);
+  
+  font-family: var(--font-primary);
+  font-size: var(--text-caption);
+  font-weight: 400;
+  line-height: 1.6;
+  
+  opacity: 0;
+  transition: all var(--transition-normal);
+}
+
+/* مثلث نشانگر در بالای تول‌تیپ */
+.tooltipText::after {
+  content: "";
+  position: absolute;
+  bottom: 100%; 
+  right: 50%;
+  transform: translateX(50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent rgba(15, 23, 42, 0.95) transparent;
+}
+
+.tooltipWrapper:hover .tooltipText {
+  visibility: visible;
+  opacity: 1;
+  top: 130%; /* حرکت نرم به سمت بالا در هنگام نمایش */
+}
+
+/* ادامه استایل‌های شما */
 .subtitle {
   margin: 0 0 var(--space-8);
   font-family: var(--font-primary);
@@ -89,7 +158,6 @@
 }
 
 .btn {
-  /* تنظیمات اضافی اگر کامپوننت Button نیاز به Overide داشت */
   font-family: var(--font-primary) !important;
 }
 
@@ -111,36 +179,39 @@
   background-color: var(--color-border-ghost-light);
 }
 
-/* Visual Board Styles */
+/* ====================================================
+   طراحی فوق پرمیوم بخش تابلو قیمت (The Split Card)
+   ==================================================== */
 .visual {
   display: flex;
   justify-content: flex-end;
-}
-
-.rateBoard {
   width: 100%;
-  background-color: var(--color-bg-surface);
-  /* شیشه ماشین‌کاری شده (Premium Fintech) */
-  border: 1px solid var(--color-border-ghost);
-  border-radius: var(--radius-xl);
-  padding: var(--space-8) var(--space-6);
-  box-shadow: var(--highlight-top), var(--shadow-md);
-  direction: rtl;
 }
 
-.boardHeader {
+.rateWidget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 480px;
+}
+
+.widgetHeader {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-8);
+  align-self: flex-start; /* در فضای RTL یعنی سمت راست چسبیده است */
+  background-color: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
 }
 
 .pulseDot {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-pill);
-  background-color: var(--color-accent-support);
+  background-color: var(--color-accent-support); /* رنگ سبز/فیروزه‌ای زرمان */
   box-shadow: 0 0 12px var(--color-accent-support);
   animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -148,14 +219,50 @@
 .status {
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent-support);
 }
 
-.ratesGrid {
+/* کارت اصلی که دو بخش لوگو و دیتا را در خود جا داده است */
+.splitCard {
+  display: flex;
+  flex-direction: row; /* در RTL، المان اول سمت راست، و دومی (لوگو) سمت چپ می‌نشیند */
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-ghost);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md), var(--highlight-top);
+  overflow: hidden;
+  min-height: 240px;
+}
+
+/* بخش سمت راست (اطلاعات قیمت) */
+.ratesData {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  padding: var(--space-6) var(--space-8);
   gap: var(--space-6);
+}
+
+/* کانتینر اختصاصی سمت چپ برای لوگو */
+.logoSection {
+  width: 150px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(0,0,0,0.2) 100%);
+  border-right: 1px solid var(--color-border-ghost); /* خط جداکننده از قیمت‌ها */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  position: relative;
+}
+
+.boardLogo {
+  width: 100%;
+  height: auto;
+  max-width: 100px;
+  /* درخشش پرمیوم به فایل SVG لوگو */
+  filter: drop-shadow(0 0 15px rgba(124, 58, 237, 0.4));
 }
 
 .rateCol {
@@ -168,7 +275,7 @@
 
 .rateDivider {
   height: 1px;
-  width: 50%;
+  width: 70%;
   margin: 0 auto;
   background: linear-gradient(90deg, transparent, var(--color-border-ghost-light), transparent);
 }
@@ -182,7 +289,7 @@
 
 .value {
   font-family: "IRANSansX", var(--font-primary);
-  font-size: var(--text-display-l); /* استفاده از مقیاس تایپوگرافی درست */
+  font-size: var(--text-display-l);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   line-height: 1;
@@ -221,9 +328,6 @@
   .visual {
     justify-content: center;
   }
-  .rateBoard {
-    max-width: 480px; /* جلوگیری از کشیدگی بیش از حد در تبلت */
-  }
 }
 
 @media (max-width: 768px) {
@@ -233,13 +337,23 @@
   .container {
     padding-top: calc(var(--section-pad-compact) + 60px);
   }
-  .rateBoard {
-    padding: var(--space-6) var(--space-4);
+  /* در موبایل، کارت دوتکه روی هم قرار می‌گیرد تا خراب نشود */
+  .splitCard {
+    flex-direction: column; 
+  }
+  .logoSection {
+    width: 100%;
+    border-right: none;
+    border-top: 1px solid var(--color-border-ghost);
+    padding: var(--space-6);
+  }
+  .boardLogo {
+    max-width: 80px;
   }
   .title {
     font-size: var(--text-display-l);
   }
   .value {
-    font-size: var(--text-section-title); /* کوچک‌تر شدن اعداد در موبایل */
+    font-size: var(--text-section-title);
   }
 }

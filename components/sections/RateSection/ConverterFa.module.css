@@ -1,150 +1,267 @@
+/* ConverterFa.module.css */
+
 .card {
   width: 100%;
+  height: 100%; 
+  display: flex;
+  flex-direction: column;
   border-radius: var(--radius-xl);
-  padding: var(--space-8);
-  background-color: var(--color-bg-surface);
-  border: 1px solid var(--color-border-ghost);
-  box-shadow: var(--shadow-md), var(--highlight-top);
+  padding: var(--space-6) var(--space-8);
+  background: #090e17; 
+  border: 1px solid #1d2d47; 
+  box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.03);
   direction: rtl;
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-6);
+  gap: var(--space-4); 
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08); 
 }
 
-.rateBox {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-pill);
-  background-color: rgba(6, 182, 212, 0.1);
-  color: var(--color-accent-support);
+.titleWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mainTitle {
+  margin: 0;
+  color: #ffffff; 
   font-family: var(--font-primary);
-  font-size: var(--text-caption);
-  font-weight: var(--font-weight-semibold);
-  border: 1px solid rgba(6, 182, 212, 0.2);
+  font-size: var(--text-section-title);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.5px;
 }
 
-.liveRate {
+.subTitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7); 
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
-  color: var(--color-text-secondary);
 }
 
-.inputRow {
+.rateInfo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  background-color: rgba(16, 185, 129, 0.1); 
+  border: 1px solid rgba(16, 185, 129, 0.2); 
+  border-radius: var(--radius-pill);
+  color: #34d399; 
+  font-family: var(--font-primary);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-medium);
+  width: fit-content;
+  margin: 0 auto; 
+}
+
+.pulse {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  position: relative;
+}
+
+.pulse::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background-color: rgba(16, 185, 129, 0.4);
+  animation: pulseAnim 2s infinite;
+}
+
+@keyframes pulseAnim {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.converterBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2); 
   margin-bottom: var(--space-4);
 }
 
+.inputBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .label {
-  display: block;
-  margin-bottom: var(--space-2);
+  color: rgba(255, 255, 255, 0.7);
   font-family: var(--font-primary);
-  font-size: var(--text-body-sm);
-  color: var(--color-text-primary);
+  font-size: var(--text-caption);
   font-weight: var(--font-weight-medium);
+  padding-right: var(--space-2);
+}
+
+.feeWarning {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #fbbf24; 
+  font-family: var(--font-primary);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  padding-left: var(--space-2);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .fieldGroup {
   display: flex;
-  align-items: stretch;
-  background-color: var(--color-bg-base); 
-  border: 1px solid var(--color-border-ghost);
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.03); 
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-lg);
-  padding: var(--space-2);
+  padding: 8px 12px; 
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.primary:focus-within {
-  border-color: var(--color-accent-primary);
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+.fieldGroup:focus-within {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
-.locked {
-  background-color: rgba(255, 255, 255, 0.02);
-}
-
-.fieldGroup input {
+/* اعداد راست‌چین و در سمت راست فیلد */
+.faInput {
   flex: 1;
-  min-width: 0;
-  border: none;
   background: transparent;
-  padding: var(--space-3) var(--space-4);
-  font-family: var(--font-primary); 
-  font-size: var(--text-card-title);
+  border: none;
+  color: #ffffff; 
+  font-family: "IRANSansX", "Peyda", sans-serif !important; 
+  font-size: 1.35rem; 
   font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
   outline: none;
-  direction: ltr;
-  text-align: left;
+  width: 100%;
+  text-align: left !important; /* عدد دقیقاً راست‌چین می‌شود */
+  direction: ltr !important; 
 }
 
-.locked input {
-  color: var(--color-accent-support); 
+.faInput::placeholder {
+  color: rgba(255, 255, 255, 0.2);
 }
 
-.fieldGroup select {
-  flex-shrink: 0;
-  min-width: 140px;
+.divider {
+  width: 1px;
+  height: 20px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin: 0 var(--space-3);
+}
+
+/* استایل‌های مربوط به زبانه و منوی انتخاب ارز */
+.selectWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.currencySelect {
   border: none;
   background: transparent;
   direction: rtl;
-  padding: 0 var(--space-2) 0 var(--space-6);
+  /* پدینگ بیشتر در سمت چپ برای جا دادن آیکون فلش */
+  padding: 0 0 0 24px; 
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
-  color: var(--color-text-secondary);
-  border-right: 1px solid var(--color-border-ghost);
+  font-weight: var(--font-weight-bold);
+  color: rgba(255, 255, 255, 0.8);
   outline: none;
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: left 8px center;
-  background-size: 16px;
+  -webkit-appearance: none;
 }
 
-.locked select {
-  cursor: default;
-  background-image: none;
-  padding-left: var(--space-2);
+.currencySelect option {
+  background-color: #090e17;
+  color: #ffffff;
+  font-weight: var(--font-weight-medium);
 }
 
-.breakdown {
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  margin: var(--space-4) 0;
-  background-color: rgba(255, 255, 255, 0.02);
-  border: 1px dashed var(--color-border-ghost-light);
+/* آیکون فلش (زبانه) واضح برای تغییر ارز */
+.selectChevron {
+  position: absolute;
+  left: 0;
+  color: #94a3b8;
+  pointer-events: none; /* کلیک‌ها از روی آیکون رد شده و منو باز می‌شود */
 }
 
-.infoRow {
+.locked .currencySelect { 
+  cursor: default; 
+  padding-left: 0;
+}
+
+.exchangeIconWrapper {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: var(--space-2);
-  font-family: var(--font-primary);
-  font-size: var(--text-caption);
-  color: var(--color-text-secondary);
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 4px 0; 
 }
 
-.noteRow {
-  margin-top: var(--space-2);
-  font-family: var(--font-primary);
-  font-size: 0.75rem;
-  line-height: var(--leading-relaxed);
+.exchangeLine {
+  width: 2px;
+  height: 10px;
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
-.noteGood { color: var(--color-accent-support); }
-.noteWarn { color: #F59E0B; } 
+.exchangeIcon {
+  color: #4f46e5; 
+}
+
+.notesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; 
+  margin-bottom: var(--space-6); 
+  padding: 12px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-lg);
+  margin-top: auto; 
+}
+
+.noteItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--font-primary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.noteItem svg {
+  color: #38bdf8; 
+  flex-shrink: 0;
+  margin-top: 1px;
+}
 
 .cta {
-  margin-top: var(--space-6);
+  width: 100%;
 }
 
 @media (max-width: 768px) {
-  .card { padding: var(--space-4); }
-  .fieldGroup input { font-size: var(--text-body-lg); }
-  .fieldGroup select { min-width: 110px; font-size: 0.8rem; }
+  .card { padding: var(--space-6); }
+  .faInput { font-size: 1.1rem; }
+  .currencySelect { font-size: 11px; }
 }
