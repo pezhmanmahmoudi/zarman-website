@@ -1,0 +1,46 @@
+.lockOverlay { position: absolute; inset: 0; z-index: 50; background: rgba(8, 11, 18, 0.85); backdrop-filter: blur(8px); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ffffff; text-align: center; padding: 36px; }
+.lockIcon { margin-bottom: 16px; color: #f59e0b; }
+.lockTitle { font-size: 1.45rem; margin: 0 0 10px 0; font-weight: 900; }
+.lockText { max-width: 560px; line-height: 1.95; color: rgba(255, 255, 255, 0.92); margin: 0; }
+.calculatorGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-bottom: 24px; }
+.calcBox { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.boxLabel { font-weight: 700; font-size: 0.9rem; color: var(--text-soft); }
+
+.inputGroup { display: flex; flex-direction: column; gap: 6px; margin-bottom: 22px; }
+.inputGroup label { font-size: 0.8rem; font-weight: 600; color: var(--text-soft); }
+
+/* اینپوت‌ها دقیقاً منطبق با صفحه رجیستر */
+.inputControl {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-input);
+  color: var(--text-main);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 16px !important; /* فیکس زوم آیفون */
+  font-weight: 500;
+  width: 100%;
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.inputControl::placeholder { color: var(--text-placeholder); }
+
+.inputControl:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15), inset 0 1px 2px rgba(0,0,0,0.02);
+}
+
+input.inputControl[dir="ltr"], div.inputControl[dir="ltr"] { text-align: left; }
+select.inputControl { cursor: pointer; }
+
+.resultBox { color: var(--accent); font-size: clamp(1.25rem, 2vw, 1.6rem); cursor: default; opacity: 0.96; display: flex; align-items: center; font-weight: 800; background-color: var(--bg-soft); }
+.warningInline { display: inline-flex; align-items: center; gap: 4px; color: var(--warning); font-size: 0.85rem; margin-top: 4px; font-weight: 800; line-height: 1.6; }
+.summaryBox { background: var(--bg-soft); border: 1px dashed var(--accent); padding: 20px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+.summaryText { min-width: 0; }
+.summaryRate { color: var(--accent); display: block; font-size: 1.1rem; line-height: 1.7; font-weight: 800; }
+.summaryHint { font-size: 0.86rem; color: var(--success); margin-top: 6px; display: block; line-height: 1.8; }
+
+@media (max-width: 1100px) { .calculatorGrid { grid-template-columns: 1fr; } .summaryBox { flex-direction: column; align-items: stretch; } }
+@media (max-width: 520px) { .summaryBox { padding: 16px; } .lockOverlay { padding: 22px; } .lockTitle { font-size: 1.2rem; } .lockText { font-size: 0.92rem; } }

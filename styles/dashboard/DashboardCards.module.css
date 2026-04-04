@@ -1,0 +1,48 @@
+.panelCard {
+  background: var(--bg-card);
+  border-radius: 24px;
+  padding: 32px;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  margin-bottom: 26px;
+  overflow: hidden;
+}
+
+.panelHeader { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 26px; }
+.panelTitle { margin: 0 0 24px 0; font-size: 1.35rem; font-weight: 800; display: flex; align-items: center; gap: 10px; color: var(--text-main); line-height: 1.4; }
+
+/* دکمه‌ها منطبق با صفحه رجیستر */
+.primaryButton {
+  background-color: var(--accent);
+  color: #ffffff;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  font-family: inherit;
+  min-height: 48px;
+  flex-shrink: 0;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--text-dim);
+}
+
+@media (max-width: 1100px) { .panelCard { padding: 24px; } }
+@media (max-width: 720px) { .panelTitle { font-size: 1.15rem; margin-bottom: 20px; } }
+@media (max-width: 520px) { .panelCard { padding: 18px; } }

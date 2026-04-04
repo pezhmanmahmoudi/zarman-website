@@ -70,7 +70,7 @@ export default function HowItWorks() {
       // انیمیشن آبشاری کارت‌های مراحل
       .fromTo(
         `.${styles.card}`,
-        { autoAlpha: 0, y: 40 },
+        { autoAlpha: 0, y: 0 },
         { autoAlpha: 1, y: 0, stagger: 0.15, duration: 1 },
         "-=0.4"
       )

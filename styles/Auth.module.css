@@ -1,26 +1,26 @@
-/* Auth.module.css - Zarman Premium Standard
-برای اینکه کدهای CSS در صفحات ورود و ثبت‌نام تکراری نشوند، یک فایل CSS مشترک برای این دو صفحه می‌سازیم که فرم شیشه‌ای و پس‌زمینه مورب را هندل می‌کند.
-*/
+/* styles/Auth.module.css */
 
 .pageWrapper {
+  /* 🚀 فورس کردن لایت‌مود دقیقاً مثل ثبت‌نام 🚀 */
+  color-scheme: light !important; 
+  background-color: #f1f5f9 !important; 
+  color: #0f172a !important;
+
   position: relative;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: var(--color-bg-base);
-  overflow: hidden;
   direction: rtl;
-  padding: var(--space-4);
+  padding: 40px 20px;
+  overflow: hidden;
 }
 
-/* افکت مورب و محو برای گرادیانت استرایپ */
 .gradientContainer {
   position: absolute;
-  inset: -30%; /* بزرگتر از صفحه تا هنگام چرخش لبه‌ها خالی نماند */
+  inset: 0;
   z-index: 0;
-  transform: rotate(-15deg) scale(1.2); /* افکت مورب */
-  opacity: 0.45; /* شفافیت ملایم برای جلوگیری از شلوغی */
   pointer-events: none;
 }
 
@@ -29,111 +29,66 @@
   z-index: 10;
   width: 100%;
   max-width: 440px;
-  background-color: rgba(17, 22, 34, 0.65); /* شیشه تاریک */
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--color-border-ghost-light);
-  border-radius: var(--radius-xl);
-  padding: var(--space-8);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), var(--highlight-top);
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 24px;
+  padding: 40px 32px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0,0,0,0.02); 
 }
 
-.header {
-  text-align: center;
-  margin-bottom: var(--space-8);
-}
+.header { text-align: center; margin-bottom: 32px; }
+.logo { display: inline-block; color: #4f46e5 !important; font-family: var(--font-primary); font-size: 1.8rem; font-weight: 800; margin-bottom: 12px; text-decoration: none; }
+.title { color: #0f172a !important; font-family: var(--font-primary); font-size: 1.5rem; font-weight: 800; margin: 0 0 6px 0; letter-spacing: -0.5px;}
+.subtitle { color: #475569 !important; font-family: var(--font-primary); font-size: 0.9rem; margin: 0; }
 
-.logo {
-  display: inline-block;
-  color: var(--color-text-primary);
-  font-family: var(--font-primary);
-  font-size: var(--text-card-title);
-  font-weight: var(--font-weight-bold);
-  margin-bottom: var(--space-4);
-  text-decoration: none;
-}
-
-.title {
-  color: var(--color-text-primary);
-  font-family: var(--font-primary);
-  font-size: var(--text-body-lg);
-  font-weight: var(--font-weight-bold);
-  margin: 0 0 var(--space-2) 0;
-}
-
-.subtitle {
-  color: var(--color-text-secondary);
-  font-family: var(--font-primary);
-  font-size: var(--text-body-sm);
-  margin: 0;
-}
-
-.formGroup {
-  margin-bottom: var(--space-4);
-  text-align: right;
-}
-
-.label {
-  display: block;
-  color: var(--color-text-secondary);
-  font-family: var(--font-primary);
-  font-size: var(--text-caption);
-  font-weight: var(--font-weight-medium);
-  margin-bottom: var(--space-2);
-}
+.formGroup { margin-bottom: 16px; text-align: right; }
+.label { display: block; color: #475569 !important; font-family: var(--font-primary); font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
 
 .input {
   width: 100%;
-  background-color: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--color-border-ghost);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
-  color: var(--color-text-primary);
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #0f172a !important;
   font-family: var(--font-primary);
-  font-size: var(--text-body-md);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
   outline: none;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
 }
 
 .input:focus {
-  border-color: var(--color-accent-primary);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
-  background-color: rgba(0, 0, 0, 0.4);
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15), inset 0 1px 2px rgba(0,0,0,0.02) !important;
+  background-color: #ffffff !important;
 }
 
-.input::placeholder {
-  color: var(--color-text-tertiary);
-}
+.input::placeholder { color: #94a3b8 !important; font-weight: 400; }
+.actions { margin-top: 24px; display: flex; flex-direction: column; gap: 16px; }
 
-.actions {
-  margin-top: var(--space-8);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.footerText {
+.errorMessage {
+  background-color: #fef2f2;
+  color: #ef4444;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  border: 1px solid #fca5a5;
   text-align: center;
-  color: var(--color-text-secondary);
-  font-family: var(--font-primary);
-  font-size: var(--text-caption);
-  margin-top: var(--space-6);
 }
 
-.footerLink {
-  color: var(--color-accent-support);
-  text-decoration: none;
-  font-weight: var(--font-weight-semibold);
-  margin-right: 4px;
+.footerText { text-align: center; color: #64748b !important; font-family: var(--font-primary); font-size: 0.85rem; margin-top: 32px; padding-top: 20px; border-top: 1px solid #e2e8f0 !important; }
+.footerLink { color: #4f46e5 !important; text-decoration: none; font-weight: 700; margin-right: 6px; }
+.footerLink:hover { text-decoration: underline; }
+
+@media (max-width: 640px) { 
+  .pageWrapper { padding: 20px 16px; }
+  .card { padding: 32px 24px; } 
 }
 
-.footerLink:hover {
-  text-decoration: underline;
-}
-
-@media (max-width: 480px) {
-  .card {
-    padding: var(--space-6) var(--space-4);
-    border-radius: var(--radius-lg);
-  }
+.input {
+  font-size: 16px !important; /* این مقدار قبلا 0.95rem بود */
 }

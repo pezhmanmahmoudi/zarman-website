@@ -1,0 +1,14 @@
+.profileHeader { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 28px; flex-wrap: wrap; }
+.uploadBtn { background: rgba(79, 70, 229, 0.1); color: var(--accent); padding: 10px 18px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border: 1px solid transparent; transition: all 0.2s ease; }
+.uploadBtn:hover { background: rgba(79, 70, 229, 0.15); border-color: rgba(79, 70, 229, 0.2); }
+.profileGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.uploadActions { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.fileName { color: var(--text-soft); font-size: 0.88rem; word-break: break-word; }
+.uploadStatus { margin: 0; color: var(--text-soft); line-height: 1.8; font-weight: 700; }
+
+.inputGroup { display: flex; flex-direction: column; gap: 6px; }
+.inputGroup label { font-size: 0.8rem; font-weight: 600; color: var(--text-soft); }
+.inputControl { background: var(--bg-soft); border: 1px solid var(--border-soft); color: var(--text-dim); padding: 10px 14px; border-radius: 10px; font-size: 16px; font-weight: 500; width: 100%; font-family: "Inter", system-ui, -apple-system, sans-serif; cursor: not-allowed; }
+
+@media (max-width: 1100px) { .profileGrid { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .uploadBtn { width: 100%; justify-content: center; } .profileHeader { align-items: stretch; } }

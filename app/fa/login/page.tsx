@@ -2,18 +2,37 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import styles from "@/styles/Auth.module.css";
+import { useRouter } from "next/navigation";
+import styles from "@/styles/Register.module.css"; // استفاده از استایل یکپارچه ثبت‌نام
+import { Eye, EyeOff, Home } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
+import { supabase } from "@/lib/supabase"; 
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setLoading(false);
+    setError("");
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+
+    if (error) {
+      setError("Email or password is incorrect.");
+      setLoading(false);
+    } else {
+      router.push("/fa/dashboard");
+    }
   };
 
   return (
@@ -22,54 +41,71 @@ export default function LoginPage() {
         <AuthGradient />
       </div>
 
-      <div className={styles.card}>
-        <div className={styles.header}>
-          <Link href="/" className={styles.logo}>
-            زرمان
+      <div className={styles.card} style={{ maxWidth: "480px" }}> {/* عرض متناسب برای لاگین */}
+        <div className={styles.topNav}>
+          <Link href="/" className={styles.backHome}>
+            <Home size={16} /> Back to Website
           </Link>
-          <h1 className={styles.title}>ورود به پنل کاربری</h1>
-          <p className={styles.subtitle}>خوش آمدید! وضعیت انتقال خود را پیگیری کنید.</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className={styles.formGroup}>
-            <label className={styles.label} htmlFor="contact">ایمیل یا شماره موبایل</label>
-            <input 
-              id="contact" 
-              type="text" 
-              className={styles.input} 
-              dir="ltr"
-              required 
-            />
-          </div>
+        <div className={styles.header}>
+          <h1 className={styles.title}>Welcome Back</h1>
+          <p className={styles.subtitle}>Enter your email and password to securely log in.</p>
+        </div>
 
-          <div className={styles.formGroup}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-2)" }}>
-              <label className={styles.label} htmlFor="password" style={{ marginBottom: 0 }}>رمز عبور</label>
-              <Link href="/fa/forgot-password" className={styles.footerLink} style={{ fontSize: "var(--text-caption)", marginRight: 0 }}>
-                فراموش کرده‌اید؟
-              </Link>
-            </div>
-            <input 
-              id="password" 
-              type="password" 
-              className={styles.input} 
-              dir="ltr"
-              required 
-            />
-          </div>
+        <div className={styles.formBody}>
+          <div className={styles.stepContent}>
+            {error && <div className={styles.errorText} style={{ textAlign: 'center', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '8px', border: '1px solid #fca5a5', marginTop: '10px' }}>{error}</div>}
 
-          <div className={styles.actions}>
-            <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
-              ورود
-            </Button>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className={styles.inputGroup}>
+                <label htmlFor="email">Email Address</label>
+                <input 
+                  id="email" 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  dir="ltr"
+                  placeholder="name@example.com"
+                  required 
+                />
+              </div>
+
+              <div className={styles.inputGroup}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label htmlFor="password" style={{ marginBottom: 0 }}>Password</label>
+                  <Link href="/fa/forgot-password" className={styles.footerLink} style={{ fontSize: "0.75rem", marginRight: 0, fontWeight: 600 }}>
+                    Forgot Password?
+                  </Link>
+                </div>
+                <div className={styles.passwordWrapper}>
+                  <input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"} 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    dir="ltr"
+                    required 
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className={styles.eyeBtn}>
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className={styles.btnWrapperRight} style={{ marginTop: '8px' }}>
+                <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
+                  Log in
+                </Button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
 
         <div className={styles.footerText}>
-          حساب کاربری ندارید؟ 
+          Don't have an account? 
           <Link href="/fa/register" className={styles.footerLink}>
-            ثبت‌نام کنید
+            Sign up
           </Link>
         </div>
       </div>

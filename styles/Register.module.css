@@ -1,0 +1,300 @@
+/* styles/Register.module.css */
+
+.pageWrapper {
+  color-scheme: light !important; 
+  background-color: #f1f5f9 !important; 
+  color: #0f172a !important;
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  direction: ltr; 
+  padding: 40px 20px;
+  font-family: system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+.gradientContainer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 680px; 
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 24px;
+  padding: 32px 40px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0,0,0,0.02); 
+}
+
+.topNav {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+}
+
+.backHome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b !important;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.backHome:hover { color: #0f172a !important; }
+
+.header {
+  text-align: center;
+  margin-bottom: 24px; 
+  margin-top: 16px;
+}
+
+.title {
+  color: #0f172a !important;
+  font-size: 1.75rem; 
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  color: #475569 !important;
+  font-size: 0.9rem;
+}
+
+/* ========== Progress Bar ========== */
+.progressContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+  gap: 12px;
+}
+
+.progressStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.progressStep.active { opacity: 1; }
+
+.stepCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #f8fafc !important;
+  border: 2px solid #cbd5e1 !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #64748b !important;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.progressStep.active .stepCircle {
+  background-color: rgba(79, 70, 229, 0.1) !important;
+  border-color: #4f46e5 !important;
+  color: #4f46e5 !important;
+}
+
+.stepLabel {
+  color: #475569 !important;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.progressStep.active .stepLabel { color: #0f172a !important; }
+
+.progressLine {
+  height: 2px;
+  width: 50px;
+  background-color: #e2e8f0 !important;
+  margin-bottom: 20px;
+}
+
+.progressLine.activeLine { background-color: #4f46e5 !important; }
+
+/* ========== Form Fields ========== */
+.stepContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; 
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } 
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; } 
+
+.sectionTitle {
+  color: #0f172a !important;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-top: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.inputGroup { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 6px; 
+  min-width: 0; 
+}
+
+.inputGroup label {
+  color: #475569 !important;
+  font-size: 0.8rem;
+  font-weight: 600; 
+}
+
+.req { color: #ef4444; margin-left: 2px; }
+
+/* 🚀 استایل اینپوت‌ها: قفل کردن فونت روی 16px برای جلوگیری از زوم در آیفون 🚀 */
+.inputGroup input, .inputGroup select {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px; 
+  padding: 10px 14px; 
+  color: #0f172a !important;
+  font-family: inherit;
+  font-size: 16px !important; 
+  font-weight: 500; 
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+  
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box; 
+}
+
+/* فیکس مخصوص فیلد تاریخ در سافاری / iOS */
+.inputGroup input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 0;
+}
+
+.inputGroup input:focus, .inputGroup select:focus {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15), inset 0 1px 2px rgba(0,0,0,0.02) !important;
+  background-color: #ffffff !important;
+}
+
+.inputGroup input::placeholder { color: #94a3b8 !important; }
+
+.errorBorder { border-color: #ef4444 !important; }
+.errorText { color: #ef4444 !important; font-size: 0.75rem; font-weight: 600; margin-top: -2px; }
+.readOnlyInput { background-color: #f1f5f9 !important; color: #94a3b8 !important; cursor: not-allowed; }
+.hintText { color: #64748b !important; font-size: 0.7rem; margin-top: -2px; line-height: 1.4; }
+
+
+/* Mobile & Password */
+.mobileInputWrapper { display: flex; gap: 8px; }
+
+/* 🚀 قفل کردن قطعی عرض کادر کشور با !important و اولویت بالاتر 🚀 */
+.inputGroup .countryCode { 
+  width: 140px !important; 
+  flex-shrink: 0 !important; 
+  cursor: pointer; 
+}
+
+.mobileInputWrapper input { flex: 1; }
+
+
+.passwordWrapper { position: relative; display: flex; align-items: center; }
+.passwordWrapper input { width: 100%; padding-right: 40px; }
+.eyeBtn {
+  position: absolute; right: 12px; background: none; border: none;
+  color: #94a3b8 !important; cursor: pointer;
+}
+.eyeBtn:hover { color: #0f172a !important; }
+
+/* ========== Upload Boxes ========== */
+.uploadBox {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 16px 12px; background-color: #f8fafc !important; border: 1px dashed #cbd5e1 !important; border-radius: 12px; cursor: pointer; transition: all 0.2s ease;
+}
+.uploadBox:hover { background-color: #e0e7ff !important; border-color: #4f46e5 !important; }
+.uploadIcon { color: #4f46e5 !important; }
+.uploadBox span { color: #475569 !important; font-size: 0.8rem; font-weight: 600; }
+.uploadHelper { color: #94a3b8 !important; font-size: 0.7rem; margin: 0; text-align: center; }
+.fileInput { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+.fileDone {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  color: #10b981 !important; font-size: 0.8rem; font-weight: 600; text-align: center; word-break: break-word;
+}
+
+/* ========== Checkboxes ========== */
+.policies {
+  display: flex; flex-direction: column; gap: 10px; margin-top: 8px;
+  background-color: #f8fafc !important; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0 !important;
+}
+.checkboxLabel { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.checkboxLabel input[type="checkbox"] { width: 16px; height: 16px; accent-color: #4f46e5; cursor: pointer; }
+.checkboxLabel span { color: #475569 !important; font-size: 0.8rem; font-weight: 500; }
+.checkboxLabel a { color: #4f46e5 !important; text-decoration: none; font-weight: 600; }
+
+/* ========== Notices ========== */
+.verifyBox {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 32px 24px; background-color: #f8fafc !important; border-radius: 20px; border: 1px dashed #cbd5e1 !important;
+}
+.verifyIcon { color: #4f46e5 !important; }
+
+/* ========== Buttons & Footer ========== */
+.btnWrapperRight { display: flex; justify-content: flex-end; margin-top: 16px; }
+.btnWrapperSpace { display: flex; justify-content: space-between; margin-top: 16px; }
+.footerText { text-align: center; color: #64748b !important; font-size: 0.85rem; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0 !important; }
+.footerLink { color: #4f46e5 !important; text-decoration: none; font-weight: 700; margin-left: 6px; }
+
+/* ========== Responsive Overrides ========== */
+
+/* 🚀 فیکس باگ بیرون‌زدگی فیلدها در آیپد 🚀 */
+@media (max-width: 992px) {
+  .row3 { 
+    grid-template-columns: 1fr 1fr; 
+  }
+  /* در تبلت، فیلد 'شهر' به تنهایی در ردیف دوم کل عرض را می‌گیرد */
+  .row3 > div:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .pageWrapper { padding: 20px 16px; }
+  .card { 
+    padding: 32px 24px; 
+    padding-top: 32px; 
+    border: 1px solid #e2e8f0 !important; 
+    border-radius: 24px; 
+    min-height: auto; 
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0,0,0,0.02);
+  }
+  .row, .row3 { grid-template-columns: 1fr; gap: 12px; }
+  /* در موبایل کد کشور دوباره جمع‌وجور می‌شود */
+  .topNav { position: relative; top: 0; left: 0; margin-bottom: 16px; }
+  .title { font-size: 1.5rem; }
+  .inputGroup .countryCode { width: 110px !important; }
+}

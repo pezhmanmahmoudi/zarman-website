@@ -5,18 +5,14 @@ import Image from "next/image";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
-import { Info } from "lucide-react"; // آیکون ظریف راهنما
+import { Info } from "lucide-react"; 
 import styles from "./Hero.module.css";
-// وارد کردن هوک نرخ‌های زنده از دیتاسنتری که دیشب ساختیم
 import { useRates } from "@/context/RateContext";
 
 export default function Hero() {
   const heroRef = useRef<HTMLElement | null>(null);
-
-  // دریافت اطلاعات زنده از دیتابیس
   const { currentRates, isLoading } = useRates();
 
-  // تنظیمات واتس‌اپ
   const whatsappNumber = "61497851631"; 
   const whatsappMessage = encodeURIComponent("سلام، من از طریق وب‌سایت زرمان پیام می‌دهم و برای انتقال وجه نیاز به راهنمایی دارم.");
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
@@ -32,9 +28,8 @@ export default function Hero() {
         .fromTo(`.${styles.subtitle}`, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.75 }, "-=0.5")
         .fromTo(`.${styles.actions}`, { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.7 }, "-=0.45")
         .fromTo(`.${styles.meta}`, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.6 }, "-=0.45")
-        
         .fromTo(
-          `.${styles.rateWidget}`, // انیمیشن روی کل ویجت جدید اعمال می‌شود
+          `.${styles.rateWidget}`, 
           { autoAlpha: 0, x: -32, scale: 0.96 },
           { autoAlpha: 1, x: 0, scale: 1, duration: 1.2 },
           "-=0.75"
@@ -45,7 +40,6 @@ export default function Hero() {
 
   return (
     <section id="hero" ref={heroRef} className={styles.hero} aria-label="معرفی زرمان">
-      {/* بک‌گراندها دقیقاً همون کد شماست */}
       <div className={styles.bgBase} aria-hidden="true" />
       <div className={styles.bgGlow} aria-hidden="true" />
 
@@ -56,13 +50,12 @@ export default function Hero() {
             <p className={styles.eyebrow}>صرافی زرمان</p>
             <h1 className={styles.title}>
               از 
-              {/* اعمال تول‌تیپ دقیقاً روی کلمه اولورو */}
               <span className={styles.tooltipWrapper}>
-                &nbsp;اولورو&nbsp;
+                اولورو
                 <Info size={16} className={styles.infoIcon} strokeWidth={2.5} />
-                
                 <span className={styles.tooltipText}>
-                  اولورو (<span className={styles.uluruEnText}>Uluru</span>)صخره‌ای مقدس و عظیم در قلب استرالیا، نماد دیرینه‌ی این سرزمین  </span>
+                  اولورو (<span className={styles.uluruEnText}>Uluru</span>) صخره‌ایست مقدس و عظیم در قلب استرالیا، نماد دیرینه‌ی این سرزمین
+                </span>
               </span>
               تا دماوند
               <br />
@@ -98,14 +91,11 @@ export default function Hero() {
               <span className={styles.dot} />
               <span>قابل اعتماد</span>
             </div>
-            {/* meta2 که مربوط به توضیح ستاره بود حذف شد چون در تول‌تیپ قرار گرفت */}
           </div>
 
           <div className={styles.visual}>
-            {/* ویجت پرمیوم جدید با ساختار اسپلیت (لوگو چپ، تابلو راست) */}
             <div className={styles.rateWidget} aria-label="نرخ لحظه‌ای ارز">
               
-              {/* هدر بالای ویجت */}
               <div className={styles.widgetHeader}>
                 <span className={styles.pulseDot}></span>
                 <span className={styles.status}>
@@ -113,10 +103,8 @@ export default function Hero() {
                 </span>
               </div>
 
-              {/* کارت اصلی ترکیبی */}
               <div className={styles.splitCard}>
                 
-                {/* بخش راست کارت: تابلوی قیمت‌ها */}
                 <div className={styles.ratesData}>
                   <div className={styles.rateCol}>
                     <span className={styles.label}>فروش دلار استرالیا</span>
@@ -141,7 +129,6 @@ export default function Hero() {
                   </div>
                 </div>
 
-                {/* بخش چپ کارت: کانتینر اختصاصی لوگو */}
                 <div className={styles.logoSection}>
                   <Image 
                     src="/images/Logo no text light.svg" 

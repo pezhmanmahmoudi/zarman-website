@@ -65,7 +65,7 @@ export default function TrustStrip() {
       // انیمیشن دوم برای تک‌تک کارت‌ها با وقفه کوچک و استگر
       .fromTo(
         `.${styles.grid} > .${styles.card}`,
-        { autoAlpha: 0, y: 30 },
+        { autoAlpha: 0, y: 0 },
         { autoAlpha: 1, y: 0, stagger: 0.15, duration: 1 },
         "-=0.4"
       );

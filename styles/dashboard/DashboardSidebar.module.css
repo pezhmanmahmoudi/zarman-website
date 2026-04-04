@@ -1,0 +1,74 @@
+.sidebar { background: var(--bg-card); border-left: 1px solid var(--border-soft); padding: 32px 24px; position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; z-index: 40; transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.28s ease; min-width: 0; }
+.sidebarHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 40px; }
+.sidebarCloseBtn { display: none; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border-soft); background: var(--bg-soft); color: var(--text-main); align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+
+/* تنظیمات چیدمان لوگو و فاصله‌ها */
+
+.sidebarHeader { 
+  display: flex; 
+  align-items: flex-start; 
+  justify-content: space-between; 
+  gap: 12px; 
+  padding-bottom: 32px; /* ایجاد فاصله در بالا */
+  border-bottom: 1px solid var(--border-soft); /* خط جداکننده بالا دقیقاً مثل خط پایین */
+}
+
+
+.logoArea { 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  text-align: center; 
+  width: 100%; 
+  gap: 6px; 
+  padding-bottom: 1px; /* فاصله از زیرنویس تا خط‌چین */
+  margin-bottom: 1px; /* فاصله از خط‌چین تا اولین دکمه منو */
+  position: relative;
+}
+
+
+
+.logoImage { 
+  object-fit: contain; 
+  margin-bottom: 6px;
+}
+
+.logoTitle { 
+  /* استفاده از فونت‌های استاندارد و هندسی انگلیسی برای استایل شرکتی */
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-size: 1.85rem; 
+  font-weight: 900; 
+  margin: 0; 
+ 
+  background: linear-gradient(to right, #d503ff, #0d00ff); 
+  -webkit-background-clip: text; 
+  -webkit-text-fill-color: transparent; 
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.logoSubtitle { 
+  /* جدا کردن فونت از بدنه فارسی */
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-size: 0.68rem; 
+  font-weight: 800; /* ضخیم‌تر برای خوانایی در سایز کوچک */
+  color: var(--text-soft); /* رنگ ملایم اما خواناتر از قبل */
+  letter-spacing: 0.22em; /* فاصله زیاد بین حروف برای القای حس لوکس (Tracking) */
+  margin: 0; 
+  text-transform: uppercase;
+}
+
+.navMenu { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.navItem { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; color: var(--text-dim); font-weight: 600; cursor: pointer; transition: all 0.2s ease; border: none; background: transparent; width: 100%; text-align: right; font-size: 0.95rem; font-family: inherit; }
+.navItem:hover { background-color: var(--bg-soft); color: var(--text-main); }
+.navItemActive { background-color: rgba(79, 70, 229, 0.1); color: var(--accent) !important; font-weight: 800; }
+:global([data-theme="dark"]) .navItemActive { background-color: rgba(79, 70, 229, 0.18); color: var(--accent) !important; }
+.sidebarFooter { border-top: 1px solid var(--border-soft); padding-top: 20px; margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+.logoutBtn { color: var(--danger) !important; }
+.logoutBtn:hover { background-color: rgba(239, 68, 68, 0.1) !important; }
+
+@media (max-width: 1100px) {
+  .sidebar { position: fixed; top: 0; right: 0; width: min(320px, 86vw); height: 100dvh; transform: translateX(100%); box-shadow: var(--shadow-card); }
+  .sidebarOpen { transform: translateX(0); }
+  .sidebarCloseBtn { display: inline-flex; }
+}

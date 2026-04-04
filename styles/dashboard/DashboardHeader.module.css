@@ -1,0 +1,12 @@
+.headerCard { background: var(--bg-card); backdrop-filter: blur(14px); padding: 25px 25px; border-radius: 20px; border: 1px solid var(--border-soft); display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; box-shadow: var(--shadow-card); }
+.headerContent { min-width: 0; }
+.headerEyebrow { color: var(--accent); font-weight: 800; font-size: 0.8rem; }
+.headerTitle { font-size: clamp(1.4rem, 2vw, 1.7rem); font-weight: 900; margin-top: 6px; margin-bottom: 0; line-height: 1.25; color: var(--text-main); }
+.headerDescription { color: var(--text-soft); margin-top: 8px; max-width: 680px; line-height: 1.7; margin-bottom: 0; font-size: 0.9rem; }
+.headerStatus { flex-shrink: 0; }
+.kycBadge { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 999px; font-weight: 800; font-size: 0.85rem; white-space: nowrap; }
+.kyc_success { background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.22); }
+.kyc_warning { background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.22); }
+
+@media (max-width: 1100px) { .headerCard { flex-direction: column; align-items: stretch; text-align: center; padding: 10px; } .headerStatus { align-self: center; } }
+@media (max-width: 720px) { .headerTitle { font-size: 1.35rem; } .headerDescription { font-size: 0.85rem; } .kycBadge { white-space: normal; justify-content: center; } }

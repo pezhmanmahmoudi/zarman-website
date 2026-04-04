@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
+
+
 // گرفتن کلیدها از فایل .env.local که ساختید
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;

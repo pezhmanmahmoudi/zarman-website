@@ -11,7 +11,7 @@
   direction: rtl; 
 }
 
-/* Background Architecture (حفظ کدهای شما) */
+/* Background Architecture */
 .bgBase {
   position: absolute;
   inset: 0;
@@ -37,24 +37,25 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr minmax(380px, 440px); /* عرض کمی بیشتر برای جا دادن لوگو */
+  grid-template-columns: 1fr minmax(380px, 440px);
   align-items: center;
   gap: var(--space-16);
 }
 
-/* Content Styles (حفظ دقیق کدهای شما) */
+/* Content Styles */
 .content {
   text-align: right;
   max-width: 640px;
 }
 
+
 .eyebrow {
   margin: 0 0 var(--space-3);
-  color: var(--color-text-secondary);
+  color: var(--color-accent-secondary); /* Ultraviolet */
   font-family: var(--font-primary);
   font-size: var(--text-body-md);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: 0.5px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.9px;
 }
 
 .title {
@@ -65,6 +66,8 @@
   letter-spacing: -0.02em;
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
+  position: relative;
+  z-index: 20; 
 }
 
 .titleAccent {
@@ -72,24 +75,28 @@
 }
 
 /* ====================================================
-   اصلاحات تول‌تیپ (باز شدن در زیر و فونت انگلیسی اختصاصی) 
+   Tooltip Styles
    ==================================================== */
 .tooltipWrapper {
   position: relative;
-  display: inline-flex;
-  align-items: center;
+  display: inline-block;
   cursor: help;
+  white-space: nowrap;
+  /* اضافه کردن یک فضای خالی کوچک در سمت چپ کلمه برای نشستن آیکون */
+  padding-left: 7px; 
 }
 
 .infoIcon {
-  color: var(--color-accent-secondary); /* رنگ بنفش زرمان */
-  opacity: 0.8;
-  margin-right: 4px;
-  vertical-align: middle;
+  color: var(--color-accent-secondary); 
+  opacity: 0.9;
+  /* شناور کردن آیکون برای جلوگیری از به هم ریختن متن */
+  position: absolute; 
+  top: -8px; /* کشیدن آیکون به سمت بالا */
+  left: 12px/* قرار دادن آیکون دقیقاً در سمت چپ (روی آخرین حرف و) */
 }
 
 .uluruEnText {
-  font-family: var(--font-en), sans-serif !important; /* فونت انگلیسی که دیشب کانفیگ کردیم */
+  font-family: var(--font-en), sans-serif !important; 
   font-weight: 500;
   letter-spacing: 0.5px;
 }
@@ -97,32 +104,33 @@
 .tooltipText {
   visibility: hidden;
   width: 260px;
-  background-color: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(12px);
+  background-color: rgba(15, 23, 42, 0.98); 
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   color: var(--color-text-primary);
-  text-align: right;
+  text-align: center;
   border-radius: var(--radius-md);
   padding: var(--space-4);
   border: 1px solid var(--color-border-ghost-light);
-  box-shadow: var(--shadow-md), 0 10px 30px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-md), 0 10px 40px rgba(0,0,0,0.5);
   
-  /* موقعیت: در زیر متن باز می‌شود */
   position: absolute;
-  z-index: 100;
-  top: 150%; 
+  z-index: 999;
+  top: 100%; 
   right: 50%;
   transform: translateX(50%);
+  margin-top: 20px; 
   
   font-family: var(--font-primary);
   font-size: var(--text-caption);
   font-weight: 400;
   line-height: 1.6;
+  white-space: normal;
   
   opacity: 0;
-  transition: all var(--transition-normal);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* مثلث نشانگر در بالای تول‌تیپ */
 .tooltipText::after {
   content: "";
   position: absolute;
@@ -131,16 +139,17 @@
   transform: translateX(50%);
   border-width: 6px;
   border-style: solid;
-  border-color: transparent transparent rgba(15, 23, 42, 0.95) transparent;
+  border-color: transparent transparent rgba(15, 23, 42, 0.98) transparent;
 }
 
 .tooltipWrapper:hover .tooltipText {
   visibility: visible;
   opacity: 1;
-  top: 130%; /* حرکت نرم به سمت بالا در هنگام نمایش */
+  margin-top: 10px; 
 }
 
-/* ادامه استایل‌های شما */
+/* ==================================================== */
+
 .subtitle {
   margin: 0 0 var(--space-8);
   font-family: var(--font-primary);
@@ -148,6 +157,8 @@
   font-size: var(--text-body-lg);
   line-height: var(--leading-relaxed);
   max-width: 90%;
+  position: relative;
+  z-index: 10;
 }
 
 .actions {
@@ -155,6 +166,8 @@
   flex-wrap: wrap;
   gap: var(--space-4);
   margin-bottom: var(--space-6);
+  position: relative;
+  z-index: 10;
 }
 
 .btn {
@@ -170,6 +183,8 @@
   font-family: var(--font-primary);
   font-size: var(--text-caption);
   font-weight: var(--font-weight-medium);
+  position: relative;
+  z-index: 10;
 }
 
 .dot {
@@ -180,7 +195,7 @@
 }
 
 /* ====================================================
-   طراحی فوق پرمیوم بخش تابلو قیمت (The Split Card)
+   The Split Card Widget
    ==================================================== */
 .visual {
   display: flex;
@@ -200,7 +215,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  align-self: flex-start; /* در فضای RTL یعنی سمت راست چسبیده است */
+  align-self: flex-start; 
   background-color: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.2);
   padding: 6px 16px;
@@ -211,7 +226,7 @@
   width: 8px;
   height: 8px;
   border-radius: var(--radius-pill);
-  background-color: var(--color-accent-support); /* رنگ سبز/فیروزه‌ای زرمان */
+  background-color: var(--color-accent-support); 
   box-shadow: 0 0 12px var(--color-accent-support);
   animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -223,10 +238,9 @@
   color: var(--color-accent-support);
 }
 
-/* کارت اصلی که دو بخش لوگو و دیتا را در خود جا داده است */
 .splitCard {
   display: flex;
-  flex-direction: row; /* در RTL، المان اول سمت راست، و دومی (لوگو) سمت چپ می‌نشیند */
+  flex-direction: row; 
   background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border-ghost);
   border-radius: var(--radius-xl);
@@ -235,7 +249,6 @@
   min-height: 240px;
 }
 
-/* بخش سمت راست (اطلاعات قیمت) */
 .ratesData {
   flex: 1;
   display: flex;
@@ -245,11 +258,10 @@
   gap: var(--space-6);
 }
 
-/* کانتینر اختصاصی سمت چپ برای لوگو */
 .logoSection {
   width: 150px;
   background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(0,0,0,0.2) 100%);
-  border-right: 1px solid var(--color-border-ghost); /* خط جداکننده از قیمت‌ها */
+  border-right: 1px solid var(--color-border-ghost); 
   display: flex;
   align-items: center;
   justify-content: center;
@@ -261,7 +273,6 @@
   width: 100%;
   height: auto;
   max-width: 100px;
-  /* درخشش پرمیوم به فایل SVG لوگو */
   filter: drop-shadow(0 0 15px rgba(124, 58, 237, 0.4));
 }
 
@@ -337,7 +348,6 @@
   .container {
     padding-top: calc(var(--section-pad-compact) + 60px);
   }
-  /* در موبایل، کارت دوتکه روی هم قرار می‌گیرد تا خراب نشود */
   .splitCard {
     flex-direction: column; 
   }
