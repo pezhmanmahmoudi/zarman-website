@@ -139,8 +139,8 @@ export default function HowItWorks() {
             <Button href="/fa/register" variant="primary" size="lg">
               شروع ثبت‌نام در زرمان
             </Button>
-            {/* 👈 استفاده از متغیری که در بالا ساختیم */}
-            <Button href={whatsappLink} target="_blank" variant="outline" size="lg">
+            {/* 👈 استفاده از استایل مجاز ghost برای رفع ارور تایپ‌اسکریپت */}
+            <Button href={whatsappLink} target="_blank" variant="ghost" size="lg">
               درخواست مشاوره
             </Button>
           </div>
