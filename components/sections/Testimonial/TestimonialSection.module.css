@@ -14,13 +14,16 @@
   padding: 0 var(--container-padding);
 }
 
+/* =========================================
+   هدر و آمار ستاره‌ها
+   ========================================= */
 .header {
   text-align: center;
   margin-bottom: var(--space-12);
 }
 
 .eyebrow {
-  color: var(--color-accent-support); /* فیروزه‌ای */
+  color: var(--color-accent-support); 
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
   font-weight: var(--font-weight-bold);
@@ -38,29 +41,50 @@
   margin: 0;
 }
 
+.headerStats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.starsContainer {
+  display: flex;
+  gap: 4px;
+  color: #fbbf24;
+}
+
+.headerStar {
+  width: 26px;
+  height: 26px;
+  stroke-width: 1.5;
+}
+
+.statsText {
+  color: var(--color-text-secondary);
+  font-family: "IRANSansX", "IRANSans", sans-serif;
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-ghost);
+}
+.statsText strong {
+  color: var(--color-text-primary);
+  font-weight: 800;
+}
+
 /* =========================================
-   اسکرول بی‌نهایت و افکت محو‌شدگی (Masking)
+   اسکرول بی‌نهایت و کاروسل
    ========================================= */
 .carouselMask {
   position: relative;
-  /* ارتفاع فیکس برای کاروسل تا بتواند اسکرول بخورد */
   height: 650px; 
   overflow: hidden;
-  /* ماسک قدرتمند CSS که بالا و پایین را به نرمی محو می‌کند */
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 15%,
-    black 85%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 15%,
-    black 85%,
-    transparent 100%
-  );
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
 }
 
 .columnsContainer {
@@ -70,7 +94,6 @@
   height: 100%;
 }
 
-/* متوقف کردن تمام انیمیشن‌ها وقتی ماوس روی کاروسل می‌رود */
 .columnsContainer:hover .track {
   animation-play-state: paused !important;
 }
@@ -87,15 +110,8 @@
   gap: var(--space-6);
 }
 
-/* انیمیشن رفتن به بالا */
-.scrollUp {
-  animation: marqueeUp 45s linear infinite;
-}
-
-/* انیمیشن رفتن به پایین */
-.scrollDown {
-  animation: marqueeDown 45s linear infinite;
-}
+.scrollUp { animation: marqueeUp 45s linear infinite; }
+.scrollDown { animation: marqueeDown 45s linear infinite; }
 
 @keyframes marqueeUp {
   0% { transform: translateY(0); }
@@ -120,7 +136,6 @@
   display: flex;
   flex-direction: column;
   transition: transform var(--transition-normal), border-color var(--transition-normal);
-  /* جلوگیری از کشیده شدن بیش از حد در اسکرول */
   height: fit-content; 
 }
 
@@ -129,16 +144,34 @@
   border-color: rgba(124, 58, 237, 0.3);
 }
 
-.quoteSvg {
-  width: 36px;
-  height: 36px;
-  color: rgba(124, 58, 237, 0.5); /* رنگ الترا وایولت زرمان */
+/* هدر کارت (ستاره‌ها و آیکون نقل قول) */
+.cardHeaderFlex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center; 
   margin-bottom: var(--space-6);
 }
 
+.quoteSvg {
+  width: 28px;
+  height: 28px;
+  color: rgba(124, 58, 237, 0.4); 
+  margin: 0;
+}
+
+.cardRating {
+  display: flex;
+  gap: 3px;
+}
+
+.starFilled { color: #fbbf24; }
+.starEmpty { color: var(--color-border-ghost); }
+
+/* محتوای متن */
 .textWrap {
   margin: 0; 
-  flex-grow: 1; 
+  flex-grow: 1; /* باعث می‌شود متن تمام فضای خالی بالا را پر کند */
+  margin-bottom: 24px; /* فاصله تضمینی بین متن و خط افقی */
 }
 
 .text {
@@ -146,16 +179,18 @@
   font-family: var(--font-primary);
   font-size: var(--text-body-md);
   line-height: var(--leading-relaxed);
-  margin: 0 0 var(--space-8) 0;
+  margin: 0;
+  text-align: right; 
 }
 
+/* 👈 باکس نویسنده (حل مشکل خط افقی و تداخل) */
 .authorBox {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  border-top: 1px solid var(--color-border-ghost);
-  padding-top: var(--space-5);
-  margin-top: auto;
+  gap: 16px;
+  border-top: 1px solid var(--color-border-ghost); /* خط جداکننده اینجا قرار می‌گیرد */
+  padding-top: 20px; /* فاصله داخلی از خط افقی به پایین */
+  margin-top: auto; /* باکس را به انتهای کارت می‌چسباند */
 }
 
 .avatar {
@@ -166,15 +201,18 @@
   display: grid;
   place-items: center;
   color: #fff;
-  font-family: var(--font-primary);
+  font-family: "Inter", var(--font-primary); 
   font-weight: var(--font-weight-bold);
   font-size: 1.1rem;
   flex-shrink: 0;
+  text-transform: uppercase;
 }
 
 .authorInfo {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  gap: 4px; /* فاصله بین نام و حجم */
 }
 
 .name {
@@ -182,39 +220,39 @@
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
   font-weight: var(--font-weight-bold);
-  margin: 0 0 4px 0;
+  margin: 0;
+  text-align: right;
 }
 
-.role {
+.volumeText {
   color: var(--color-text-tertiary);
   font-family: var(--font-primary);
-  font-size: var(--text-caption);
+  font-size: 0.8rem;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.volumeText strong {
+  color: var(--color-accent-secondary); 
+  font-family: "Inter", system-ui, sans-serif; 
+  font-weight: 800;
+  letter-spacing: 0.5px;
 }
 
 /* ==================
    Responsive
    ================== */
 @media (max-width: 1024px) {
-  .columnsContainer { 
-    grid-template-columns: repeat(2, minmax(0, 1fr)); 
-  }
-  /* ستون سوم در تبلت مخفی می‌شود تا شبکه شلوغ نشود */
-  .column:nth-child(3) {
-    display: none;
-  }
+  .columnsContainer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .column:nth-child(3) { display: none; }
   .carouselMask { height: 600px; }
 }
 
 @media (max-width: 768px) {
   .section { padding: var(--section-pad-compact) 0; }
-  .columnsContainer { 
-    grid-template-columns: 1fr; 
-  }
-  /* ستون دوم هم در موبایل مخفی می‌شود */
-  .column:nth-child(2) {
-    display: none;
-  }
-  /* در موبایل ارتفاع کمتر می‌شود */
+  .columnsContainer { grid-template-columns: 1fr; }
+  .column:nth-child(2) { display: none; }
   .carouselMask { height: 500px; }
   .card { padding: var(--space-6) var(--space-5); }
 }

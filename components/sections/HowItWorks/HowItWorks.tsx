@@ -12,7 +12,6 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-// متون شما با ویرایش زبانی پرمیوم و اصلاح غلط‌های املایی (احراز هویت)
 const steps = [
   {
     id: "step-1",
@@ -47,7 +46,6 @@ const steps = [
 export default function HowItWorks() {
   const sectionRef = useRef<HTMLElement | null>(null);
 
-  // انیمیشن‌های Masterclass با GSAP
   useGSAP(
     () => {
       const el = sectionRef.current;
@@ -61,20 +59,17 @@ export default function HowItWorks() {
         },
       });
 
-      // انیمیشن هدر
       tl.fromTo(
         `.${styles.header} > *`,
         { autoAlpha: 0, y: 20 },
         { autoAlpha: 1, y: 0, stagger: 0.15 }
       )
-      // انیمیشن آبشاری کارت‌های مراحل
       .fromTo(
         `.${styles.card}`,
         { autoAlpha: 0, y: 0 },
         { autoAlpha: 1, y: 0, stagger: 0.15, duration: 1 },
         "-=0.4"
       )
-      // انیمیشن بنر پایانی
       .fromTo(
         `.${styles.ctaBanner}`,
         { autoAlpha: 0, scale: 0.96, y: 20 },
@@ -85,6 +80,10 @@ export default function HowItWorks() {
     { scope: sectionRef }
   );
 
+  // 👈 متن آماده برای پیام واتس‌اپ
+  const whatsappMessage = "سلام. وقت بخیر. من برای ثبت‌نام و انجام تراکنش در صرافی زرمان نیاز به راهنمایی دارم.";
+  const whatsappLink = `https://wa.me/61497851631?text=${encodeURIComponent(whatsappMessage)}`;
+
   return (
     <section
       id="how-it-works"
@@ -93,7 +92,6 @@ export default function HowItWorks() {
       aria-labelledby="how-it-works-title"
     >
       <div className={styles.container}>
-        {/* هدر بخش */}
         <div className={styles.header}>
           <p className={styles.eyebrow}>مراحل انتقال</p>
           <h2 id="how-it-works-title" className={styles.title}>
@@ -104,13 +102,11 @@ export default function HowItWorks() {
           </p>
         </div>
 
-        {/* شبکه مراحل (بدون خطوط شلوغ و با استفاده از اعداد پس‌زمینه) */}
         <div className={styles.grid}>
           {steps.map((step) => {
             const Icon = step.icon;
             return (
               <article key={step.id} className={styles.card}>
-                {/* عدد بزرگ و محو در پس‌زمینه (Watermark) */}
                 <span className={styles.watermarkNumber} aria-hidden="true">
                   {step.number}
                 </span>
@@ -130,7 +126,6 @@ export default function HowItWorks() {
           })}
         </div>
 
-        {/* بنر تبدیل (Conversion Banner) پرمیوم */}
         <div className={styles.ctaBanner}>
           <div className={styles.ctaGlow} aria-hidden="true" />
           <div className={styles.ctaContent}>
@@ -144,8 +139,9 @@ export default function HowItWorks() {
             <Button href="/fa/register" variant="primary" size="lg">
               شروع ثبت‌نام در زرمان
             </Button>
-            <Button href="/fa#contact" variant="secondary" size="lg" className={styles.whatsappBtn}>
-              مشاوره در واتس‌اپ
+            {/* 👈 استفاده از متغیری که در بالا ساختیم */}
+            <Button href={whatsappLink} target="_blank" variant="outline" size="lg">
+              درخواست مشاوره
             </Button>
           </div>
         </div>

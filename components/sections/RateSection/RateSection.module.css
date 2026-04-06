@@ -51,7 +51,7 @@
 .grid {
   display: grid;
   /* اختصاص وزن 1.1 به کانورتور برای تعادل بصری بهتر */
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-8);
   /* هم‌ارتفاع کردن هر دو کارت تاریک */
   align-items: stretch;

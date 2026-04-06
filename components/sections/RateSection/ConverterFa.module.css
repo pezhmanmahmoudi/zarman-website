@@ -153,7 +153,7 @@
   font-weight: var(--font-weight-bold);
   outline: none;
   width: 100%;
-  text-align: left !important; /* عدد دقیقاً راست‌چین می‌شود */
+  text-align: left !important; 
   direction: ltr !important; 
 }
 

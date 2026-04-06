@@ -36,7 +36,7 @@ export default function ConverterFa() {
   const [from, setFrom] = useState<Currency>("AUD");
   const { currentRates } = useRates();
 
-  const rate = from === "AUD" ? currentRates.sellAUD : currentRates.buyAUD;
+  const rate = from === "AUD" ? currentRates.buyAUD : currentRates.sellAUD;
   const to: Currency = from === "AUD" ? "IRT" : "AUD";
 
   const amountNum = getRawNumber(amountText);

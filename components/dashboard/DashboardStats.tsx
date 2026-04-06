@@ -3,7 +3,7 @@ import { Wallet, FileText, ArrowDownLeft, ShieldCheck } from "lucide-react";
 import { formatAUD, formatNumberFa, formatToman } from "@/app/fa/dashboard/dashboard.utils";
 import styles from "@/styles/dashboard/DashboardStats.module.css";
 
-export function DashboardStats({ totalVolume, transactionCount, baseRate, loyaltyBonus }: any) {
+export function DashboardStats({ totalVolume, transactionCount, baseRate, loyaltyBonus, txType }: any) {
   return (
     <section className={styles.topStats}>
       <div className={styles.statCard}>
@@ -12,11 +12,11 @@ export function DashboardStats({ totalVolume, transactionCount, baseRate, loyalt
       </div>
       <div className={styles.statCard}>
         <div className={styles.statIcon}><FileText size={24} /></div>
-        <div><span className={styles.statLabel}>تعداد تراکنش‌ها</span><strong className={styles.statValue}>{formatNumberFa(transactionCount)}</strong></div>
+        <div><span className={styles.statLabel}>تعداد تراکنش‌های موفق</span><strong className={styles.statValue}>{formatNumberFa(transactionCount)}</strong></div>
       </div>
       <div className={styles.statCard}>
         <div className={styles.statIcon}><ArrowDownLeft size={24} /></div>
-        <div><span className={styles.statLabel}>نرخ پایه بازار</span><strong className={styles.statValue}>{formatToman(baseRate)}</strong></div>
+        <div><span className={styles.statLabel}>{txType === "sell_aud" ? "نرخ فروش دلار به زرمان" : "نرخ خرید دلار از زرمان"}</span><strong className={styles.statValue}>{formatToman(baseRate)}</strong></div>
       </div>
       <div className={styles.statCard}>
         <div className={`${styles.statIcon} ${styles.statIconAccent}`}><ShieldCheck size={24} /></div>

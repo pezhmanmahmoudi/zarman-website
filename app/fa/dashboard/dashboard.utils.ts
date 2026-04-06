@@ -39,21 +39,23 @@ export function formatDateValue(value?: string | null) {
   return date.toLocaleDateString("fa-IR");
 }
 
-export function extractBaseRateFromContext(rateContext: any) {
-  const candidates = [
-    rateContext?.midMarketRate, rateContext?.baseRate, rateContext?.rate,
-    rateContext?.liveRate, rateContext?.currentRate, rateContext?.latestRate,
-    rateContext?.rates?.midMarketRate, rateContext?.rates?.baseRate,
-    rateContext?.rates?.rate, rateContext?.rates?.audToIrr,
-    rateContext?.rates?.audToToman, rateContext?.rateData?.midMarketRate,
-    rateContext?.rateData?.baseRate, rateContext?.rateData?.rate,
-  ];
-  for (const candidate of candidates) {
-    if (typeof candidate === "number" && Number.isFinite(candidate) && candidate > 0) {
-      return candidate;
-    }
+export function extractBaseRateFromContext(rateContext: any): number {
+  // ۱. بررسی می‌کنیم آیا اصلاً دیتایی از سوپابیس آمده است یا خیر
+  if (!rateContext || !rateContext.rates || rateContext.rates.length === 0) {
+    console.warn("هشدار: نرخ‌ها از سوپابیس دریافت نشدند! استفاده از نرخ موقت.");
+    return 41250; // این فقط در صورتی اجرا می‌شود که اینترنت قطع باشد یا تیبل خالی باشد
   }
-  return 41250;
+
+  // ۲. پیدا کردن ردیف نرخ حواله استرالیا از دیتابیس
+  const audRate = rateContext.rates.find((r: any) => r.currency_code === 'AUD' || r.pair === 'AUD/IRR');
+  
+  
+  if (audRate && audRate.sell_aud) {
+    return Number(audRate.sell_aud); 
+  }
+
+  // در صورت پیدا نشدن دیتای دقیق
+  return 41250; 
 }
 
 export function normalizeLabel(key: string) {
