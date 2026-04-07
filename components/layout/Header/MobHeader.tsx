@@ -7,7 +7,6 @@ import Image from "next/image";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
-import { X } from "lucide-react"; // 👈 اضافه شدن آیکون ضربدر
 
 import { publicNavItems } from "@/data/navigation";
 import styles from "./MobHeader.module.css";
@@ -116,6 +115,7 @@ export default function MobHeader({
     <>
       <div ref={rootRef} className={`${styles.headerPill} ${open ? styles.headerPillActive : ""}`}>
         <div className={styles.headerContent}>
+          {/* 👈 این همان دکمه‌ای است که وقتی باز می‌شود، در جای خودش تبدیل به ضربدر می‌شود */}
           <button
             type="button"
             className={`${styles.burger} ${open ? styles.burgerActive : ""}`}
@@ -147,10 +147,7 @@ export default function MobHeader({
       <div ref={drawerRef} className={styles.menuDrawer} role="dialog" aria-modal="true">
         <div className={styles.menuInner}>
           <div className={styles.menuHeader}>
-            {/* 👈 اضافه شدن دکمه ضربدر در هدر منو */}
-            <button type="button" className={styles.drawerCloseBtn} onClick={close} aria-label="بستن منو">
-              <X size={24} />
-            </button>
+            {/* 👈 دکمه ضربدر اضافی حذف شد، متن دقیقاً به راست چسبید */}
             <span className={styles.menuLabel}>فهرست دسترسی</span>
           </div>
 

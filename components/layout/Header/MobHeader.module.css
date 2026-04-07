@@ -70,7 +70,7 @@
   gap: 5px;
   cursor: pointer;
   transition: transform var(--transition-fast), background var(--transition-fast);
-  z-index: 10001; /* دکمه همبرگری همیشه روی همه‌چیز می‌ماند */
+  z-index: 10001; /* 👈 بسیار مهم: دکمه همبرگری همیشه روی منوی کشویی می‌ماند */
 }
 
 .burger:active {
@@ -90,6 +90,7 @@
   border-color: var(--color-border-ghost-light);
 }
 
+/* انیمیشن تبدیل دو خط به ضربدر در اینجا اتفاق می‌افتد */
 .burgerActive .burgerLine:nth-child(1) {
   transform: translateY(3.5px) rotate(45deg);
 }
@@ -98,33 +99,10 @@
   transform: translateY(-3.5px) rotate(-45deg);
 }
 
-
-
-/* 👈 استایل دکمه ضربدر داخل منو */
-.drawerCloseBtn {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-ghost);
-  background: var(--color-bg-surface-hover);
-  color: var(--color-text-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.drawerCloseBtn:active {
-  transform: scale(0.92);
-  background: var(--color-bg-surface);
-}
-
 /* =========================================
-   Mobile Menu Overlay & Drawer (Premium Update)
+   Mobile Menu Overlay & Drawer
    ========================================= */
    
-/* لایه تاریک زیرین (برای لمس و بستن) */
 .menuOverlay {
   position: fixed;
   inset: 0;
@@ -134,22 +112,21 @@
   -webkit-backdrop-filter: blur(4px);
   display: none;
   opacity: 0;
-  cursor: pointer; /* نشانگر کلیک برای کاربر مشخص می‌کند که با لمس بسته می‌شود */
+  cursor: pointer;
 }
 
-/* پنل کشویی (Drawer) */
 .menuDrawer {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 85%; /* 👈 15% سمت چپ برای بستن خالی می‌ماند */
+  width: 85%; 
   max-width: 400px;
   z-index: 9999;
   background-color: var(--color-bg-base);
   border-left: 1px solid var(--color-border-ghost);
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
-  transform: translateX(100%); /* منو در ابتدا خارج از صفحه سمت راست است */
+  transform: translateX(100%); 
   display: flex;
   flex-direction: column;
 }
@@ -164,13 +141,13 @@
   overflow-y: auto;
 }
 
+/* 👈 رفع مشکل تراز نبودن فهرست دسترسی */
 .menuHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* 👈 تراز کردن ضربدر در یک سمت و لیبل در سمت دیگر */
   margin-bottom: var(--space-6);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--color-border-ghost);
+  text-align: right; /* متن را دقیقاً به راست می‌چسباند */
+  direction: rtl;
 }
 
 .menuLabel {
@@ -193,9 +170,14 @@
   justify-content: flex-start;
   gap: 12px;
   text-decoration: none;
-  padding: var(--space-4) 0; /* فاصله بیشتر برای تاچ بهتر */
+  padding: var(--space-4) 0; 
   direction: rtl;
   border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+/* 👈 رفع مشکل تداخل خطوط! حاشیه پایین را از آخرین آیتم منو حذف می‌کنیم */
+.bigLink:last-child {
+  border-bottom: none;
 }
 
 .linkText {
@@ -229,7 +211,6 @@
   margin: var(--space-6) 0; 
 }
 
-/* 👈 بخش دکمه‌های واضح پایین منو */
 .mobileActions {
   display: flex;
   flex-direction: column;
@@ -258,7 +239,6 @@
   font-weight: var(--font-weight-medium) !important;
 }
 
-/* پنهان کردن منوی موبایل در حالت دسکتاپ */
 @media (min-width: 1025px) {
   .headerPill,
   .menuOverlay,
@@ -266,7 +246,3 @@
     display: none !important;
   }
 }
-
-
-
-
