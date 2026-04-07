@@ -2,7 +2,6 @@
 import React from "react";
 import { motion } from "framer-motion";
 import styles from "./AboutUs.module.css";
-import WaveVisuals from "./WaveVisuals";
 
 export default function AboutUs() {
   return (
@@ -15,8 +14,8 @@ export default function AboutUs() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           transition={{ duration: 1.5 }}
+        
         >
-          <WaveVisuals />
         </motion.div>
 
         {/* TEXT CONTENT - Right Side (RTL) */}
