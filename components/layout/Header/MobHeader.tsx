@@ -7,6 +7,7 @@ import Image from "next/image";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
+import { X } from "lucide-react"; // 👈 اضافه شدن آیکون ضربدر
 
 import { publicNavItems } from "@/data/navigation";
 import styles from "./MobHeader.module.css";
@@ -29,7 +30,7 @@ type MobHeaderProps = {
 export default function MobHeader({
   isReady = true,
   isAuthenticated = false,
-  logoSrc = "/images/logo-horizontal-dark.svg",
+  logoSrc = "/images/Logo no text light.svg",
   brandAriaLabel = "Zarman Exchange",
   signupHref = "/fa/register",
   loginHref = "/fa/login",
@@ -40,13 +41,13 @@ export default function MobHeader({
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
 
-  // تنظیمات لینک واتس‌اپ
-  const whatsappNumber = "61412345678";
-  const whatsappMessage = encodeURIComponent("سلام، من از طریق وب‌سایت زرمان پیام می‌دهم و نیاز به راهنمایی دارم.");
+  const whatsappNumber = "61497851631";
+  const whatsappMessage = encodeURIComponent("سلام. وقت بخیر. من برای ثبت‌نام و انجام تراکنش در صرافی زرمان نیاز به راهنمایی دارم.");
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
   const rootRef = useRef<HTMLDivElement>(null);
-  const menuContainerRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,11 +55,13 @@ export default function MobHeader({
   }, []);
 
   useEffect(() => {
-    if (!mounted || !open) return;
-    
-    const originalStyle = window.getComputedStyle(document.body).overflow;  
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = originalStyle; };
+    if (!mounted) return;
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
   }, [open, mounted]);
 
   useGSAP(
@@ -75,34 +78,30 @@ export default function MobHeader({
 
   useGSAP(
     () => {
-      if (!menuContainerRef.current) return;
+      if (!overlayRef.current || !drawerRef.current) return;
 
-      const menu = menuContainerRef.current;
-      const animatedItems = linksRef.current
-        ? Array.from(linksRef.current.children)
-        : [];
-
+      const overlay = overlayRef.current;
+      const drawer = drawerRef.current;
+      const animatedItems = linksRef.current ? Array.from(linksRef.current.children) : [];
       const tl = gsap.timeline();
 
       if (open) {
-        gsap.set(menu, { display: "flex", pointerEvents: "auto" });
-        tl.to(menu, { opacity: 1, duration: 0.3, ease: "power2.out" })
+        gsap.set(overlay, { display: "block" });
+        tl.to(overlay, { opacity: 1, duration: 0.3, ease: "power2.out" })
+          .to(drawer, { x: "0%", duration: 0.4, ease: "power3.out" }, "-=0.3")
           .fromTo(
             animatedItems,
-            { y: 20, opacity: 0 },
-            { y: 0, opacity: 1, stagger: 0.05, duration: 0.4, ease: "power3.out" },
-            "-=0.1"
+            { x: 20, opacity: 0 },
+            { x: 0, opacity: 1, stagger: 0.05, duration: 0.3, ease: "power3.out" },
+            "-=0.2"
           );
       } else {
-        tl.to(animatedItems, { y: 10, opacity: 0, stagger: 0.02, duration: 0.2, ease: "power2.in" })
-          .to(
-            menu,
-            { opacity: 0, duration: 0.2, ease: "power2.in", onComplete: () => {
-                gsap.set(menu, { display: "none", pointerEvents: "none" });
-              }
-            },
-            "-=0.1"
-          );
+        tl.to(drawer, { x: "100%", duration: 0.3, ease: "power3.inOut" })
+          .to(overlay, { opacity: 0, duration: 0.3, ease: "power2.in", 
+            onComplete: () => {
+              gsap.set(overlay, { display: "none" });
+            }
+          }, "-=0.2");
       }
     },
     { dependencies: [open] }
@@ -131,7 +130,6 @@ export default function MobHeader({
             <Image src={logoSrc} alt="Zarman Logo" width={110} height={32} className={styles.logoImg} priority />
           </Link>
 
-          {/* مشکل واریانت دکمه در اینجا حل شد و روی secondary تنظیم شد */}
           {isAuthenticated ? (
             <Button href="/dashboard" variant="secondary" size="sm" onClick={close}>
               پنل
@@ -144,40 +142,48 @@ export default function MobHeader({
         </div>
       </div>
 
-      <div ref={menuContainerRef} id="mobile-menu-overlay" className={styles.menuOverlay} role="dialog" aria-modal="true">
+      <div ref={overlayRef} className={styles.menuOverlay} onClick={close} aria-hidden="true" />
+
+      <div ref={drawerRef} className={styles.menuDrawer} role="dialog" aria-modal="true">
         <div className={styles.menuInner}>
           <div className={styles.menuHeader}>
+            {/* 👈 اضافه شدن دکمه ضربدر در هدر منو */}
+            <button type="button" className={styles.drawerCloseBtn} onClick={close} aria-label="بستن منو">
+              <X size={24} />
+            </button>
             <span className={styles.menuLabel}>فهرست دسترسی</span>
           </div>
 
-          <nav ref={linksRef} className={styles.navLinks} aria-label="ناوبری موبایل">
-            {items.map((item) => (
-              <Link key={item.href} href={item.href} className={styles.bigLink} onClick={close}>
-                <span className={styles.linkText}>{item.label}</span>
-                <span className={styles.linkArrow}>←</span>
-              </Link>
-            ))}
+          <nav className={styles.navLinks} aria-label="ناوبری موبایل">
+            <div ref={linksRef}>
+              {items.map((item) => (
+                <Link key={item.href} href={item.href} className={styles.bigLink} onClick={close}>
+                  <span className={styles.linkText}>{item.label}</span>
+                  <span className={styles.linkArrow}>←</span>
+                </Link>
+              ))}
+            </div>
 
             <div className={styles.divider} />
 
             <div className={styles.mobileActions}>
               {isAuthenticated ? (
                 <>
-                  <Link href="/dashboard" className={styles.actionRow} onClick={close}>
+                  <Button href="/dashboard" variant="primary" fullWidth onClick={close}>
                     رفتن به داشبورد
-                  </Link>
-                  <a href={whatsappUrl} className={styles.actionRow} target="_blank" rel="noopener noreferrer" onClick={close}>
+                  </Button>
+                  <Button href={whatsappUrl} target="_blank" variant="secondary" fullWidth onClick={close}>
                     تماس با پشتیبانی
-                  </a>
+                  </Button>
                 </>
               ) : (
                 <>
-                  <Link href={loginHref} className={styles.actionRow} onClick={close}>
+                  <Button href={loginHref} variant="primary" fullWidth onClick={close}>
                     ورود به حساب کاربری
-                  </Link>
-                  <a href={whatsappUrl} className={styles.actionRow} target="_blank" rel="noopener noreferrer" onClick={close}>
+                  </Button>
+                  <Button href={whatsappUrl} target="_blank" variant="secondary" fullWidth onClick={close}>
                     پشتیبانی در واتس‌اپ
-                  </a>
+                  </Button>
                 </>
               )}
             </div>

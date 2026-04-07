@@ -6,7 +6,9 @@ import { createPortal } from "react-dom";
 import HeaderPublic from "./HeaderPublic";
 import HeaderAuth from "./HeaderAuth";
 import MobHeader from "./MobHeader";
-import "./Header.css";
+
+// 👈 ایمپورت به صورت گلوبال و معمولی انجام شد
+import "./Header.css"; 
 
 type HeaderProps = {
   isAuthenticated?: boolean;

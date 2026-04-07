@@ -26,11 +26,11 @@ export default function HeaderPublic({
         <div className="h-logo-wrap">
           <Link href="/fa" aria-label="Zarman Exchange — صفحه اصلی">
             <Image
-              src="/images/logo-horizontal-dark.svg"
+              src="/images/Logo no text light.svg"
               alt="Zarman Exchange"
               className="h-logo-img"
-              width={160}  
-              height={40}  
+              width={200}  
+              height={60}  
               priority
             />
           </Link>

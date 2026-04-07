@@ -1,4 +1,4 @@
-/* MobHeader.module.css */
+/* MobHeader.module.css - Modern Drawer UI */
 
 .headerPill {
   position: fixed;
@@ -53,7 +53,7 @@
 
 .logoImg {
   width: auto;
-  height: 32px; 
+  height: 45px; 
   object-fit: contain;
 }
 
@@ -70,6 +70,7 @@
   gap: 5px;
   cursor: pointer;
   transition: transform var(--transition-fast), background var(--transition-fast);
+  z-index: 10001; /* دکمه همبرگری همیشه روی همه‌چیز می‌ماند */
 }
 
 .burger:active {
@@ -97,25 +98,64 @@
   transform: translateY(-3.5px) rotate(-45deg);
 }
 
+
+
+/* 👈 استایل دکمه ضربدر داخل منو */
+.drawerCloseBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-ghost);
+  background: var(--color-bg-surface-hover);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.drawerCloseBtn:active {
+  transform: scale(0.92);
+  background: var(--color-bg-surface);
+}
+
 /* =========================================
-   Mobile Menu Overlay
+   Mobile Menu Overlay & Drawer (Premium Update)
    ========================================= */
+   
+/* لایه تاریک زیرین (برای لمس و بستن) */
 .menuOverlay {
   position: fixed;
   inset: 0;
   z-index: 9998;
-  background-color: var(--color-bg-base);
-  background-image: radial-gradient(circle at 100% 0%, rgba(79, 70, 229, 0.12) 0%, transparent 60%);
+  background-color: rgba(4, 6, 12, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: none;
   opacity: 0;
-  pointer-events: none;
+  cursor: pointer; /* نشانگر کلیک برای کاربر مشخص می‌کند که با لمس بسته می‌شود */
+}
+
+/* پنل کشویی (Drawer) */
+.menuDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 85%; /* 👈 15% سمت چپ برای بستن خالی می‌ماند */
+  max-width: 400px;
+  z-index: 9999;
+  background-color: var(--color-bg-base);
+  border-left: 1px solid var(--color-border-ghost);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  transform: translateX(100%); /* منو در ابتدا خارج از صفحه سمت راست است */
+  display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .menuInner {
   position: relative;
-  z-index: 2;
   width: 100%;
   height: 100%;
   display: flex;
@@ -125,10 +165,12 @@
 }
 
 .menuHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* 👈 تراز کردن ضربدر در یک سمت و لیبل در سمت دیگر */
   margin-bottom: var(--space-6);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--color-border-ghost);
-  text-align: right;
 }
 
 .menuLabel {
@@ -142,7 +184,7 @@
 .navLinks {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  flex-grow: 1;
 }
 
 .bigLink {
@@ -151,13 +193,14 @@
   justify-content: flex-start;
   gap: 12px;
   text-decoration: none;
-  padding: var(--space-3) 0;
+  padding: var(--space-4) 0; /* فاصله بیشتر برای تاچ بهتر */
   direction: rtl;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
 }
 
 .linkText {
   font-family: var(--font-primary);
-  font-size: var(--text-card-title); 
+  font-size: 1.3rem; 
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   transition: color var(--transition-fast);
@@ -186,32 +229,17 @@
   margin: var(--space-6) 0; 
 }
 
+/* 👈 بخش دکمه‌های واضح پایین منو */
 .mobileActions {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-}
-
-.actionRow {
-  font-family: var(--font-primary);
-  font-size: var(--text-body-md); 
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  text-align: right;
-  direction: rtl;
-  transition: color var(--transition-fast);
-}
-
-.actionRow:hover,
-.actionRow:active {
-  color: var(--color-text-primary);
+  gap: var(--space-3);
+  margin-top: var(--space-4);
 }
 
 .menuFooter {
   margin-top: auto; 
-  padding-top: var(--space-6);
-  border-top: 1px solid var(--color-border-ghost);
+  padding-top: var(--space-8);
   text-align: center;
 }
 
@@ -230,9 +258,15 @@
   font-weight: var(--font-weight-medium) !important;
 }
 
+/* پنهان کردن منوی موبایل در حالت دسکتاپ */
 @media (min-width: 1025px) {
   .headerPill,
-  .menuOverlay {
+  .menuOverlay,
+  .menuDrawer {
     display: none !important;
   }
 }
+
+
+
+

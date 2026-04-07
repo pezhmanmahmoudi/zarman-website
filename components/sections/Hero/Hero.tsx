@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -17,12 +17,22 @@ export default function Hero() {
   const whatsappMessage = encodeURIComponent("سلام، من از طریق وب‌سایت زرمان پیام می‌دهم و برای انتقال وجه نیاز به راهنمایی دارم.");
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useGSAP(
     () => {
+      // اگر صفحه هنوز لود نشده، انیمیشن اجرا نشود
+      if (!mounted) return;
+
       const tl = gsap.timeline({
         defaults: { ease: "power3.out" },
       });
 
+      // انیمیشن‌های ارجینال شما
       tl.fromTo(`.${styles.eyebrow}`, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.65 })
         .fromTo(`.${styles.title}`, { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.9 }, "-=0.35")
         .fromTo(`.${styles.subtitle}`, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.75 }, "-=0.5")
@@ -35,7 +45,7 @@ export default function Hero() {
           "-=0.75"
         );
     },
-    { scope: heroRef }
+    { scope: heroRef, dependencies: [mounted] }
   );
 
   return (
@@ -47,8 +57,9 @@ export default function Hero() {
         <div className={styles.layout}>
           
           <div className={styles.content}>
-            <p className={styles.eyebrow}>صرافی زرمان</p>
-            <h1 className={styles.title}>
+            {/* کلاس hiddenOnLoad باعث می‌شود قبل از انیمیشن GSAP چیزی چشمک نزند */}
+            <p className={`${styles.eyebrow} ${styles.hiddenOnLoad}`}>صرافی زرمان</p>
+            <h1 className={`${styles.title} ${styles.hiddenOnLoad}`}>
               از 
               <span className={styles.tooltipWrapper}>
                 اولورو
@@ -61,11 +72,11 @@ export default function Hero() {
               <br />
               <span className={styles.titleAccent}>تنها در چند ساعت...</span>
             </h1>
-            <p className={styles.subtitle}>
+            <p className={`${styles.subtitle} ${styles.hiddenOnLoad}`}>
               ما تلاش می‌کنیم با تمرکز بر سرعت، شفافیت و پشتیبانی همیشگی، تجربه ثبت و پیگیری درخواست‌های مالی را برای شما آسان‌تر و روشن‌تر کنیم.
             </p>
             
-            <div className={styles.actions}>
+            <div className={`${styles.actions} ${styles.hiddenOnLoad}`}>
               <Button href="/fa/register" variant="primary" size="lg" className={styles.btn}>
                 شروع ثبت‌نام
               </Button>
@@ -82,7 +93,7 @@ export default function Hero() {
               </Button>
             </div>
 
-            <div className={styles.meta}>
+            <div className={`${styles.meta} ${styles.hiddenOnLoad}`}>
               <span>سریع</span>
               <span className={styles.dot} />
               <span>شفاف</span>
@@ -94,8 +105,9 @@ export default function Hero() {
           </div>
 
           <div className={styles.visual}>
-            <div className={styles.rateWidget} aria-label="نرخ لحظه‌ای ارز">
+            <div className={`${styles.rateWidget} ${styles.hiddenOnLoad}`} aria-label="نرخ لحظه‌ای ارز">
               
+              {/* هدر تابلوی قیمت */}
               <div className={styles.widgetHeader}>
                 <span className={styles.pulseDot}></span>
                 <span className={styles.status}>
@@ -105,6 +117,17 @@ export default function Hero() {
 
               <div className={styles.splitCard}>
                 
+                {/* 👈 قرار دادن لوگو در ابتدا باعث می‌شود در دسکتاپ سمت راست و در موبایل بالا بیفتد */}
+                <div className={styles.logoSection}>
+                  <Image 
+                    src="/images/Logo no text light.svg" 
+                    alt="Zarman Exchange"
+                    width={100}
+                    height={100}
+                    className={styles.boardLogo}
+                  />
+                </div>
+
                 <div className={styles.ratesData}>
                   <div className={styles.rateCol}>
                     <span className={styles.label}>فروش دلار استرالیا</span>
@@ -127,16 +150,6 @@ export default function Hero() {
                       <span className={styles.currency}>تومان</span>
                     </strong>
                   </div>
-                </div>
-
-                <div className={styles.logoSection}>
-                  <Image 
-                    src="/images/Logo no text light.svg" 
-                    alt="Zarman Exchange"
-                    width={100}
-                    height={100}
-                    className={styles.boardLogo}
-                  />
                 </div>
 
               </div>
