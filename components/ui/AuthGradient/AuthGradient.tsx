@@ -16,7 +16,7 @@ export default function AuthGradient() {
       canvasRef.current.style.setProperty("--gradient-color-4", "#38f8df"); 
     }
 
-    gradient.initGradient("#auth-gradient-canvas");
+  (gradient as any) .initGradient("#auth-gradient-canvas");
 
     return () => {
       gradient.disconnect();
