@@ -80,7 +80,7 @@ export default function HowItWorks() {
     { scope: sectionRef }
   );
 
-  // 👈 متن آماده برای پیام واتس‌اپ
+  // پیام آماده برای انتقال به واتس‌اپ
   const whatsappMessage = "سلام. وقت بخیر. من برای ثبت‌نام و انجام تراکنش در صرافی زرمان نیاز به راهنمایی دارم.";
   const whatsappLink = `https://wa.me/61497851631?text=${encodeURIComponent(whatsappMessage)}`;
 
@@ -139,8 +139,8 @@ export default function HowItWorks() {
             <Button href="/fa/register" variant="primary" size="lg">
               شروع ثبت‌نام در زرمان
             </Button>
-            {/* 👈 استفاده از استایل مجاز ghost برای رفع ارور تایپ‌اسکریپت */}
-            <Button href={whatsappLink} target="_blank" variant="ghost" size="lg">
+            {/* 👈 استفاده اصولی از استایل secondary (روشن) که روی پس زمینه تیره عالی دیده می‌شود */}
+            <Button href={whatsappLink} target="_blank" variant="secondary" size="lg">
               درخواست مشاوره
             </Button>
           </div>

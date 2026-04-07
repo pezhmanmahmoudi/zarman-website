@@ -165,8 +165,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 32px;
-  margin-top: 80px; /* فاصله بهتر از کارت‌های بالایی */
-  padding: 28px 64px; /* 👈 پدینگ بسیار بازتر و استانداردتر */
+  margin-top: 80px;
+  padding: 28px 64px;
   border-radius: var(--radius-2xl, 24px);
   background: linear-gradient(135deg, var(--color-bg-surface, #0f172a) 0%, rgba(15, 23, 42, 0.95) 100%);
   border: 1px solid rgba(124, 58, 237, 0.3);
@@ -189,14 +189,14 @@
   flex: 1;
   position: relative;
   z-index: 2;
-  text-align: right; /* اطمینان از راست‌چین بودن متن */
+  text-align: right; 
 }
 
 .ctaTitle {
   margin: 0 0 16px;
   color: var(--color-text-primary, #ffffff);
   font-family: var(--font-primary);
-  font-size: clamp(1.5rem, 4vw, 2rem); /* 👈 سایز ریسپانسیو و جذاب */
+  font-size: clamp(1.5rem, 4vw, 2rem); 
   font-weight: 900;
   letter-spacing: -0.5px;
 }
@@ -230,8 +230,8 @@
 @media (max-width: 1024px) {
   .ctaBanner {
     flex-direction: column;
-    text-align: center; /* در تبلت و موبایل وسط‌چین می‌شود */
-    padding: 40px 32px;
+    text-align: center; 
+    padding: 28px 32px;
   }
   .ctaContent {
     text-align: center;
@@ -250,7 +250,6 @@
   .grid { grid-template-columns: 1fr; gap: var(--space-6); }
   .title { font-size: clamp(24px, 6vw, 32px); }
   
-  /* 👈 در موبایل دکمه‌ها زیر هم قرار می‌گیرند و کل عرض را پر می‌کنند */
   .ctaActions {
     flex-direction: column;
     width: 100%;

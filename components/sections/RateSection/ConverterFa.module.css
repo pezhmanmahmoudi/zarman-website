@@ -265,3 +265,16 @@
   .faInput { font-size: 1.1rem; }
   .currencySelect { font-size: 11px; }
 }
+
+
+@media (max-width: 1024px) {
+  .card { 
+    padding: var(--space-6); 
+    min-height: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .faInput { font-size: 1.1rem; }
+  .currencySelect { font-size: 11px; }
+}

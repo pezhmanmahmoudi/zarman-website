@@ -3,7 +3,6 @@ import { ShieldCheck, Clock, Menu } from "lucide-react";
 import styles from "@/styles/dashboard/DashboardHeader.module.css";
 import shellStyles from "@/styles/dashboard/DashboardShell.module.css";
 
-// کلمه firstName را در اینجا اضافه کردیم
 export function DashboardHeader({ firstName, isApproved, setMobileMenuOpen }: any) {
   return (
     <>
@@ -11,20 +10,17 @@ export function DashboardHeader({ firstName, isApproved, setMobileMenuOpen }: an
         <button className={shellStyles.mobileMenuBtn} onClick={() => setMobileMenuOpen(true)}>
           <Menu size={22} />
         </button>
-        <div className={shellStyles.mobileBrand}><strong>ZARMAN</strong><span>Dashboard</span></div>
+        {/* 👈 نوشته‌های Zarman Dashboard از نوار بالایی حذف شدند */}
       </div>
       
       <header className={styles.headerCard}>
         <div className={styles.headerContent}>
-          {/* تغییر متن بالای عنوان */}
           <span className={styles.headerEyebrow}>پنل مدیریت تراکنش کاربر</span>
           
-          {/* تغییر به Hi و استفاده از نام کوچک با چپ‌چین کردنِ متن انگلیسی اما قرارگیری در راست */}
           <h1 className={styles.headerTitle} dir="ltr" style={{ textAlign: "right", fontFamily: "inherit", color: "#bf00ff" }}>
             Hi {firstName}!
           </h1>
           
-          {/* استفاده از تگ <br /> برای شکستن خط دقیقاً در جایی که خواستید */}
           <p className={styles.headerDescription}>
             به پنل مدیریت تراکنش خوش آمدید.
             <br />
