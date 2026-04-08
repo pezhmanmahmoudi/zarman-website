@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { RateProvider } from "@/context/RateContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 
 // پیکربندی فونت بین‌المللی Inter برای متون و اعداد انگلیسی
 const inter = Inter({
@@ -32,6 +33,7 @@ export default function RootLayout({
           </main>
         </RateProvider>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
