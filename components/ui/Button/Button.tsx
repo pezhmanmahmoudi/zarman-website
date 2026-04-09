@@ -1,17 +1,11 @@
+// components/common/Button.tsx
 "use client";
 
 import Link from "next/link";
 import React from "react";
 import styles from "./Button.module.css";
 
-type ButtonVariant =
-  | "primary"
-  | "secondary"
-  | "ghost"
-  | "soft"
-  | "success"
-  | "danger";
-
+type ButtonVariant = "primary" | "secondary" | "ghost" | "soft";
 type ButtonSize = "sm" | "md" | "lg";
 
 type CommonProps = {
@@ -19,10 +13,13 @@ type CommonProps = {
   variant?: ButtonVariant;
   size?: ButtonSize;
   fullWidth?: boolean;
+
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+
   loading?: boolean;
   disabled?: boolean;
+
   className?: string;
 };
 
@@ -52,15 +49,12 @@ function variantClass(variant: ButtonVariant) {
   if (variant === "secondary") return styles.secondary;
   if (variant === "ghost") return styles.ghost;
   if (variant === "soft") return styles.soft;
-  if (variant === "success") return styles.success;
-  if (variant === "danger") return styles.danger;
   return styles.primary;
 }
 
 function spinnerToneClass(variant: ButtonVariant) {
-  if (variant === "primary" || variant === "danger") return "";
-  if (variant === "success") return styles.successSpinner;
-  return styles.secondarySpinner;
+  // فقط primary spinner سفید است؛ بقیه تیره
+  return variant === "primary" ? "" : styles.secondarySpinner;
 }
 
 export default function Button(props: ButtonProps) {
@@ -93,10 +87,7 @@ export default function Button(props: ButtonProps) {
   const content = (
     <>
       {loading ? (
-        <span
-          className={cx(styles.spinner, spinnerToneClass(variant))}
-          aria-hidden="true"
-        />
+        <span className={cx(styles.spinner, spinnerToneClass(variant))} aria-hidden="true" />
       ) : leftIcon ? (
         <span className={styles.icon} aria-hidden="true">
           {leftIcon}
@@ -113,6 +104,7 @@ export default function Button(props: ButtonProps) {
     </>
   );
 
+  // LINK
   if ("href" in props) {
     const { href, onClick, ...anchorProps } = rest as ButtonAsLink;
 
@@ -136,7 +128,10 @@ export default function Button(props: ButtonProps) {
     );
   }
 
+  // BUTTON
   const buttonProps = rest as ButtonAsButton;
+
+  // جلوگیری از submit ناخواسته (مخصوصاً اگر داخل form قرار بگیرد)
   const type = buttonProps.type ?? "button";
 
   return (
