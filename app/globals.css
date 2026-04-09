@@ -1,8 +1,12 @@
 @import "tailwindcss";
-@import "../styles/tokens.css";
+/* دقت کنید: ایمپورت توکن‌ها باید دقیقاً همینجا و در بالای فایل باشد */
+@import '../styles/tokens.css';
 
 /* ========== Fonts ========== */
 
+/* ۱. تنظیمات اعداد (ترکیب با فونت پیدا) */
+/* این کد به مرورگر می‌گوید که هر جا فونت Peyda فراخوانی شد، 
+   برای اعداد (انگلیسی و فارسی) از فایل ایران‌سنس استفاده کند! */
 @font-face {
   font-family: "Peyda";
   src: url("/fonts/IRANSansX-Bold.woff2") format("woff2");
@@ -12,6 +16,7 @@
   unicode-range: U+0030-0039, U+06F0-06F9, U+0660-0669, U+066C, U+002C;
 }
 
+/* ۲. فونت اصلی متن (پیدا) - وزن بولد */
 @font-face {
   font-family: "Peyda";
   src: url("/fonts/PeydaWeb-Bold.woff2") format("woff2"),
@@ -21,6 +26,7 @@
   font-display: swap;
 }
 
+/* در صورت امکان، حتما وزن‌های 400 و 500 را هم برای متون بدنه اضافه کنید */
 /*
 @font-face {
   font-family: "Peyda";
@@ -40,6 +46,9 @@
 }
 
 /* ========== Reset & Base ========== */
+html {
+  scroll-behavior: smooth; /* اسکرول نرم بین سکشن‌ها */
+}
 
 html,
 body {
@@ -47,135 +56,62 @@ body {
   padding: 0;
 }
 
-html {
-  scroll-behavior: smooth;
-  scroll-padding-top: 0 !important;
-}
-
 body {
+  /* اعمال توکن‌های سیستم پرمیوم زرمان */
   background-color: var(--color-bg-base);
   color: var(--color-text-secondary);
+  
+  /* استفاده یکپارچه از متغیر توکن */
   font-family: var(--font-primary);
   line-height: var(--leading-relaxed);
-  direction: rtl;
+  
+  /* مهم: فعال‌سازی راست‌چین برای کل سایت */
+  direction: rtl; 
+  
+  /* جلوگیری از ایجاد فضای خالی به خاطر هدر Fixed */
   padding-top: 0;
+
+  /* Premium Dark Mode Font Rendering */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-::selection {
-  background: rgba(124, 58, 237, 0.28);
-  color: #fff;
-}
-
-img,
-svg,
-video,
-canvas {
-  display: block;
-  max-width: 100%;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-input,
-textarea,
-select {
-  color: inherit;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-primary);
   line-height: var(--leading-tight);
   margin-top: 0;
   margin-bottom: var(--space-4);
-  font-weight: var(--font-weight-bold);
-}
-
-p {
-  margin-top: 0;
-  margin-bottom: var(--space-4);
-}
-
-small {
-  font-size: var(--text-caption);
-  color: var(--color-text-tertiary);
 }
 
 /* ========== Utilities ========== */
-
-.dir-ltr {
-  direction: ltr;
-}
-
-.dir-rtl {
-  direction: rtl;
-}
+.dir-ltr { direction: ltr; }
+.dir-rtl { direction: rtl; }
 
 .zarman-lang-code {
   font-family: system-ui, -apple-system, sans-serif;
 }
 
+/* این جادوی تایپوگرافی فین‌تک است!
+  هر المنتی (مثل اینپوت‌ها، شماره تماس‌ها یا پسوردها) که چپ‌چین شود،
+  یا کلاس en-text بگیرد، فوراً فونت زیبای Inter را می‌گیرد.
+*/
 [dir="ltr"],
-.en-text,
-input[type="email"],
-input[type="password"],
-input[type="tel"],
-input[type="url"] {
+.en-text {
   font-family: var(--font-en-stack) !important;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.5px;
 }
 
-/* ========== Theme Helpers ========== */
 
-.surface-light {
-  background: var(--color-bg-soft);
-  color: var(--color-text-on-light-secondary);
+
+/* ========== Scroll Margins (For Anchor Links) ========== */
+html {
+  scroll-behavior: smooth; /* اسکرول نرم */
+  
+  /* این خط جادویی، مشکل هدر ثابت را برای کل سایت و تمام لینک‌ها حل می‌کند */
+  scroll-padding-top: -101px !important; 
 }
 
-.surface-light h1,
-.surface-light h2,
-.surface-light h3,
-.surface-light h4,
-.surface-light h5,
-.surface-light h6 {
-  color: var(--color-text-on-light);
-}
-
-.surface-dark {
-  background: var(--color-bg-base);
-  color: var(--color-text-secondary);
-}
-
-/* ========== Accessible Focus ========== */
-
-:focus-visible {
-  outline: none;
-}
-
-/* ========== Scroll Margins for Anchors ========== */
-
+/* آیدی rates را به این لیست اضافه کنید */
 #rates,
 #about,
 #services,
@@ -183,5 +119,5 @@ input[type="url"] {
 #security,
 #faq,
 #contact {
-  scroll-margin-top: 110px;
+  scroll-margin-top: 110px; /* این عدد باعث می‌شود سکشن دقیقاً زیر هدر متوقف شود */
 }
