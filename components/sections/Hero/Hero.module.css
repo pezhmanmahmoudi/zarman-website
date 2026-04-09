@@ -1,7 +1,6 @@
-/* Hero.module.css - Zarman Premium Hero
-   System-aligned with new tokens
-*/
+/* Hero.module.css - Zarman Premium Standard */
 
+/* 👈 کلاس کمکی برای حل مشکل چشمک زدن هنگام لود صفحه */
 .hiddenOnLoad {
   visibility: hidden;
   opacity: 0;
@@ -15,43 +14,22 @@
   background-color: var(--color-bg-base);
   display: flex;
   align-items: center;
-  direction: rtl;
+  direction: rtl; 
 }
 
 /* Background Architecture */
 .bgBase {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(
-      1100px 700px at 50% -10%,
-      rgba(255, 255, 255, 0.03) 0%,
-      rgba(255, 255, 255, 0) 60%
-    ),
-    radial-gradient(
-      900px 500px at 50% 0%,
-      rgba(15, 23, 41, 0.78) 0%,
-      transparent 72%
-    );
+  background: radial-gradient(circle at 50% 0%, rgba(17, 22, 34, 0.8) 0%, transparent 70%); 
   z-index: 0;
 }
 
 .bgGlow {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(
-      720px 720px at 14% 38%,
-      rgba(124, 58, 237, 0.07) 0%,
-      transparent 75%
-    ),
-    radial-gradient(
-      560px 560px at 88% 16%,
-      rgba(22, 199, 132, 0.05) 0%,
-      transparent 78%
-    );
+  background: radial-gradient(800px 800px at 15% 40%, rgba(79, 70, 229, 0.05) 0%, transparent 80%);
   z-index: 1;
-  pointer-events: none;
 }
 
 .container {
@@ -65,36 +43,24 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr minmax(380px, 460px);
+  grid-template-columns: 1fr minmax(380px, 440px);
   align-items: center;
   gap: var(--space-16);
 }
 
-/* Content */
+/* Content Styles */
 .content {
   text-align: right;
-  max-width: 660px;
+  max-width: 640px;
 }
 
 .eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
   margin: 0 0 var(--space-3);
-  color: var(--color-brand-primary);
+  color: var(--color-accent-secondary); 
   font-family: var(--font-primary);
   font-size: var(--text-body-md);
   font-weight: var(--font-weight-bold);
-  letter-spacing: 0.4px;
-}
-
-.eyebrow::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-pill);
-  background: var(--color-brand-primary);
-  box-shadow: 0 0 14px rgba(124, 58, 237, 0.38);
+  letter-spacing: 0.9px;
 }
 
 .title {
@@ -102,44 +68,46 @@
   font-family: var(--font-primary);
   font-size: var(--text-display-xl);
   line-height: var(--leading-tight);
-  letter-spacing: -0.024em;
+  letter-spacing: -0.02em;
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   position: relative;
-  z-index: 20;
-  text-wrap: balance;
+  z-index: 20; 
 }
 
 .titleAccent {
-  color: var(--color-brand-primary);
+  color: var(--color-accent-secondary); 
 }
 
+/* ====================================================
+   Tooltip Styles (Original User Styles Preserved)
+   ==================================================== */
 .tooltipWrapper {
   position: relative;
   display: inline-block;
   cursor: help;
   white-space: nowrap;
-  padding-left: 7px;
+  padding-left: 7px; 
 }
 
 .infoIcon {
-  color: var(--color-brand-primary);
-  opacity: 0.92;
-  position: absolute;
-  top: -8px;
+  color: var(--color-accent-secondary); 
+  opacity: 0.9;
+  position: absolute; 
+  top: -8px; 
   left: 12px;
 }
 
 .uluruEnText {
-  font-family: var(--font-en-stack) !important;
+  font-family: var(--font-en), sans-serif !important; 
   font-weight: 500;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
 }
 
 .tooltipText {
   visibility: hidden;
   width: 260px;
-  background-color: rgba(15, 23, 42, 0.98);
+  background-color: rgba(15, 23, 42, 0.98); 
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   color: var(--color-text-primary);
@@ -147,32 +115,29 @@
   border-radius: var(--radius-md);
   padding: var(--space-4);
   border: 1px solid var(--color-border-ghost-light);
-  box-shadow: var(--shadow-md), 0 10px 40px rgba(0, 0, 0, 0.5);
-
+  box-shadow: var(--shadow-md), 0 10px 40px rgba(0,0,0,0.5);
+  
   position: absolute;
   z-index: 999;
-  top: 100%;
+  top: 100%; 
   right: 50%;
   transform: translateX(50%);
-  margin-top: 20px;
-
+  margin-top: 20px; 
+  
   font-family: var(--font-primary);
   font-size: var(--text-caption);
   font-weight: 400;
-  line-height: 1.7;
+  line-height: 1.6;
   white-space: normal;
-
+  
   opacity: 0;
-  transition:
-    opacity var(--transition-normal),
-    margin-top var(--transition-normal),
-    visibility var(--transition-normal);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tooltipText::after {
   content: "";
   position: absolute;
-  bottom: 100%;
+  bottom: 100%; 
   right: 50%;
   transform: translateX(50%);
   border-width: 6px;
@@ -183,8 +148,10 @@
 .tooltipWrapper:hover .tooltipText {
   visibility: visible;
   opacity: 1;
-  margin-top: 10px;
+  margin-top: 10px; 
 }
+
+/* ==================================================== */
 
 .subtitle {
   margin: 0 0 var(--space-8);
@@ -192,7 +159,7 @@
   color: var(--color-text-secondary);
   font-size: var(--text-body-lg);
   line-height: var(--leading-relaxed);
-  max-width: 92%;
+  max-width: 90%;
   position: relative;
   z-index: 10;
 }
@@ -230,7 +197,9 @@
   background-color: var(--color-border-ghost-light);
 }
 
-/* Visual / Rate Widget */
+/* ====================================================
+   The Split Card Widget
+   ==================================================== */
 .visual {
   display: flex;
   justify-content: flex-end;
@@ -242,27 +211,27 @@
   flex-direction: column;
   gap: var(--space-4);
   width: 100%;
-  max-width: 500px;
+  max-width: 480px;
 }
 
+/* 👈 وسط‌چین کردن دکمه "نرخ لحظه‌ای" */
 .widgetHeader {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--space-2);
-  align-self: center;
-  background-color: var(--color-success-soft);
-  border: 1px solid var(--color-success-border);
+  align-self: center; /* 👈 این خط اضافه شد تا همیشه وسط پنل قیمت بماند */
+  background-color: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
   padding: 6px 16px;
   border-radius: var(--radius-pill);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .pulseDot {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-pill);
-  background-color: var(--color-success);
-  box-shadow: 0 0 12px rgba(22, 199, 132, 0.5);
+  background-color: var(--color-accent-support); 
+  box-shadow: 0 0 12px var(--color-accent-support);
   animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -270,30 +239,20 @@
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
   font-weight: var(--font-weight-bold);
-  color: var(--color-success);
+  color: var(--color-accent-support);
 }
 
+/* 👈 استایل بهبود یافته پنل قیمت (بافت‌دار و لوکس‌تر) */
 .splitCard {
   display: flex;
-  flex-direction: row;
-  background:
-    radial-gradient(
-      420px 240px at 72% 18%,
-      rgba(124, 58, 237, 0.06) 0%,
-      transparent 62%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-bg-surface) 92%, white 8%) 0%,
-      var(--color-bg-surface) 100%
-    );
+  flex-direction: row; 
+  background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border-ghost);
   border-radius: var(--radius-xl);
-  box-shadow:
-    0 22px 46px -18px rgba(0, 0, 0, 0.42),
-    var(--highlight-top);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4), var(--highlight-top);
   overflow: hidden;
-  min-height: 248px;
+  min-height: 240px;
+  background-image: radial-gradient(circle at 70% 20%, rgba(124, 58, 237, 0.05) 0%, transparent 60%);
 }
 
 .ratesData {
@@ -305,20 +264,11 @@
   gap: var(--space-6);
 }
 
+/* 👈 لوگو به سمت راست منتقل شد (چون در HTML اول آمده) */
 .logoSection {
   width: 150px;
-  background:
-    radial-gradient(
-      160px 160px at 50% 18%,
-      rgba(124, 58, 237, 0.12) 0%,
-      rgba(124, 58, 237, 0) 75%
-    ),
-    linear-gradient(
-      135deg,
-      rgba(30, 47, 111, 0.22) 0%,
-      rgba(0, 0, 0, 0.16) 100%
-    );
-  border-left: 1px solid var(--color-border-ghost);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(0,0,0,0.2) 100%);
+  border-left: 1px solid var(--color-border-ghost); 
   display: flex;
   align-items: center;
   justify-content: center;
@@ -330,7 +280,7 @@
   width: 100%;
   height: auto;
   max-width: 100px;
-  filter: drop-shadow(0 0 16px rgba(124, 58, 237, 0.26));
+  filter: drop-shadow(0 0 15px rgba(124, 58, 237, 0.4));
 }
 
 .rateCol {
@@ -343,14 +293,9 @@
 
 .rateDivider {
   height: 1px;
-  width: 74%;
+  width: 70%;
   margin: 0 auto;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--color-border-ghost-light),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, var(--color-border-ghost-light), transparent);
 }
 
 .label {
@@ -377,42 +322,27 @@
 }
 
 @keyframes pulse {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.3;
-    transform: scale(0.85);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
-/* Responsive */
+/* Responsive Overrides */
 @media (max-width: 1024px) {
   .layout {
     grid-template-columns: 1fr;
     gap: var(--space-12);
   }
-
   .content {
     text-align: center;
     max-width: 100%;
   }
-
   .subtitle {
     margin: 0 auto var(--space-8);
-    max-width: 760px;
   }
-
-  .actions,
-  .meta {
+  .actions, .meta {
     justify-content: center;
   }
-
   .visual {
     justify-content: center;
   }
@@ -422,19 +352,18 @@
   .hero {
     min-height: auto;
   }
-
   .container {
-    padding-top: calc(var(--section-pad-compact) + 30px);
+    /* عدد 60 را به 20 یا 0 تغییر دهید تا در موبایل هم به بالا نزدیکتر شود */
+    padding-top: calc(var(--section-pad-compact) + 30px); 
   }
-
   .eyebrow {
-    margin-bottom: 24px;
+    /* 👈 حل مشکل برخورد تولتیپ با صرافی زرمان در موبایل */
+    margin-bottom: 24px; 
   }
-
   .splitCard {
-    flex-direction: column;
+    /* 👈 در موبایل لوگو به بالا منتقل می‌شود */
+    flex-direction: column; 
   }
-
   .logoSection {
     width: 100%;
     border-left: none;
@@ -442,20 +371,13 @@
     padding: var(--space-6);
     height: 120px;
   }
-
   .boardLogo {
     max-width: 80px;
   }
-
   .title {
     font-size: var(--text-display-l);
   }
-
   .value {
     font-size: var(--text-section-title);
-  }
-
-  .subtitle {
-    max-width: 100%;
   }
 }
