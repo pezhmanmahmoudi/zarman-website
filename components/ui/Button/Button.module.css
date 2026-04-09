@@ -1,20 +1,11 @@
 /* components/common/Button.module.css */
 
-/* =========================
-   TOKENS
-   ========================= */
 .root {
-  --btn-radius: 999px;
-  --btn-ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --btn-dur: 520ms;
-
-  --ink: rgba(2, 6, 23, 0.92);
-  --white: rgba(255, 255, 255, 0.98);
+  --btn-radius: var(--radius-pill);
+  --btn-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --btn-dur: var(--transition-normal);
 }
 
-/* =========================
-   BASE BUTTON
-   ========================= */
 .btn {
   position: relative;
   display: inline-flex;
@@ -22,66 +13,53 @@
   justify-content: center;
   gap: 10px;
 
-  border: 0;
-  cursor: pointer;
-  outline: none;
-  user-select: none;
-  text-decoration: none;
-  white-space: nowrap;
+  min-height: var(--button-height-md);
+  padding: 0 28px;
 
   border-radius: var(--btn-radius);
+  border: 1px solid transparent;
+  outline: none;
+  cursor: pointer;
+  text-decoration: none;
+  user-select: none;
+  white-space: nowrap;
+  vertical-align: middle;
 
-  min-height: 52px;
-  padding: 16px 28px;
-
-  
+  font-family: var(--font-primary);
   font-size: 16px;
-  font-weight: 900;
-  letter-spacing: -0.01em;
+  font-weight: var(--font-weight-bold);
   line-height: 1;
+  letter-spacing: -0.01em;
 
-  overflow: hidden;     /* CRITICAL: clip sheen inside the button */
-  isolation: isolate;   /* prevents blending bleeding into siblings */
-  background-clip: padding-box;
-
+  isolation: isolate;
+  overflow: hidden;
   -webkit-tap-highlight-color: transparent;
 
-  transform: translateZ(0);
-  will-change: transform, filter, box-shadow, background-position;
   transition:
-    transform var(--btn-dur) var(--btn-ease),
-    filter var(--btn-dur) var(--btn-ease),
-    box-shadow var(--btn-dur) var(--btn-ease),
-    background-position var(--btn-dur) var(--btn-ease),
-    border-color var(--btn-dur) var(--btn-ease),
+    background-color var(--btn-dur) var(--btn-ease),
     color var(--btn-dur) var(--btn-ease),
-    opacity var(--btn-dur) var(--btn-ease);
+    border-color var(--btn-dur) var(--btn-ease),
+    box-shadow var(--btn-dur) var(--btn-ease),
+    transform var(--btn-dur) var(--btn-ease),
+    opacity var(--btn-dur) var(--btn-ease),
+    filter var(--btn-dur) var(--btn-ease);
 }
 
-/* Accessible focus ring */
 .btn:focus-visible {
-  box-shadow:
-    0 0 0 6px rgba(99, 102, 241, 0.16),
-    0 0 0 2px rgba(99, 102, 241, 0.38);
+  box-shadow: var(--focus-ring-brand);
 }
 
-/* =========================
-   CONTENT
-   ========================= */
-.label {
-  position: relative;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
+.label,
 .icon {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.label {
+  gap: 10px;
 }
 
 .icon svg {
@@ -89,25 +67,22 @@
   height: 18px;
 }
 
-/* =========================
-   SIZES
-   ========================= */
+/* Sizes */
 .sizeSm {
-  min-height: 44px;
-  padding: 12px 18px;
-  font-size: 14.5px;
-  font-weight: 850;
+  min-height: var(--button-height-sm);
+  padding: 0 18px;
+  font-size: 14px;
 }
 
 .sizeMd {
-  min-height: 52px;
-  padding: 16px 28px;
+  min-height: var(--button-height-md);
+  padding: 0 28px;
   font-size: 16px;
 }
 
 .sizeLg {
-  min-height: 58px;
-  padding: 18px 34px;
+  min-height: var(--button-height-lg);
+  padding: 0 34px;
   font-size: 17px;
 }
 
@@ -115,248 +90,233 @@
   width: 100%;
 }
 
-/* =========================
-   VARIANTS
-   ========================= */
+/* Variants */
+
+/* Primary = only strongest action */
 .primary {
-  color: rgba(255, 255, 255, 0.96);
+  color: var(--color-action-on-primary);
   background:
-    radial-gradient(1000px 240px at 18% 22%,
-      rgba(120, 140, 255, 0.14) 0%,
-      rgba(0, 0, 0, 0) 58%),
-    linear-gradient(135deg,
-      #050917 0%,
-      #070c1c 22%,
-      #0b1230 48%,
-      #050917 76%,
-      #020413 100%);
+    radial-gradient(
+      140% 180% at 20% 0%,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(255, 255, 255, 0) 42%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-action-primary) 92%, white 8%) 0%,
+      var(--color-action-primary) 100%
+    );
 
-  background-size: 240% 240%;
-  background-position: 16% 24%;
-
+  border-color: rgba(255, 255, 255, 0.08);
   box-shadow:
-    0 22px 62px -40px rgba(2, 6, 23, 0.78),
-    0 10px 24px -18px rgba(2, 6, 23, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.primary::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.primary::before {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: inherit;
-  pointer-events: none;
-
-  background: linear-gradient(
-    115deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.18) 36%,
-    rgba(255, 255, 255, 0) 62%
-  );
-  transform: translateX(-120%);
-  opacity: 0.62;
-}
-
-.secondary {
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  backdrop-filter: blur(12px) saturate(170%);
-  box-shadow:
-    0 16px 36px -26px rgba(2, 6, 23, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
-}
-
-.secondary::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: radial-gradient(900px 260px at 70% 0%,
-    rgba(99, 102, 241, 0.12),
-    rgba(0, 0, 0, 0) 58%);
-  opacity: 0.35;
-}
-
-.ghost {
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0);
-  border: 1px solid rgba(15, 23, 42, 0.10);
-}
-
-.ghost::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: radial-gradient(900px 280px at 50% 0%,
-    rgba(99, 102, 241, 0.12),
-    rgba(0, 0, 0, 0) 60%);
-  opacity: 0;
-  transition: opacity var(--btn-dur) var(--btn-ease);
-}
-
-.soft {
-  color: var(--ink);
-  background: linear-gradient(180deg,
-    rgba(99, 102, 241, 0.10),
-    rgba(56, 189, 248, 0.08));
-  border: 1px solid rgba(99, 102, 241, 0.18);
-  box-shadow: 0 18px 40px -30px rgba(99, 102, 241, 0.26);
-}
-
-/* =========================
-   HOVER / ACTIVE
-   ========================= */
-.btn:hover {
-  transform: none;
-  filter: saturate(5) contrast(1.05);
+    var(--shadow-md),
+    0 10px 26px -16px rgba(30, 47, 111, 0.55),
+    var(--highlight-top);
 }
 
 .primary:hover {
-  background-position: 78% 55%;
+  background:
+    radial-gradient(
+      140% 180% at 20% 0%,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0) 42%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-action-primary-hover) 90%, white 10%) 0%,
+      var(--color-action-primary-hover) 100%
+    );
+
   box-shadow:
-    0 30px 86px -56px rgba(2, 6, 23, 0.88),
-    0 14px 34px -24px rgba(2, 6, 23, 0.46);
-    
+    var(--shadow-lg),
+    0 14px 34px -20px rgba(30, 47, 111, 0.60),
+    var(--highlight-top);
 }
 
-.primary:hover::before {
-  animation: sheenSlide 1.15s var(--btn-ease) both;
-  opacity: 0.85;
+.primary:active {
+  background: var(--color-action-primary-active);
+}
+
+/* Secondary = neutral supporting action */
+.secondary {
+  color: var(--color-action-secondary-text);
+  background: var(--color-action-secondary-bg);
+  border-color: var(--color-action-secondary-border);
+  box-shadow:
+    var(--shadow-soft-light),
+    var(--highlight-top-light);
 }
 
 .secondary:hover {
-  /* override global hover filter for secondary */
-  filter: saturate(1.15) contrast(1.03);
-
-  /* premium neutral gradient (silver) */
-  background:
-    radial-gradient(500px 160px at 50% 0%,
-      rgba(255, 255, 255, 0.85),
-      rgba(255, 255, 255, 0) 70%),
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 1) 0%,
-      rgba(245, 246, 248, 1) 55%,
-      rgba(238, 240, 243, 1) 100%
-    );
-
-  border-color: rgba(15, 23, 42, 0.18);
-
+  background: var(--color-action-secondary-bg-hover);
+  border-color: rgba(15, 23, 42, 0.16);
   box-shadow:
-    0 22px 54px -34px rgba(2, 6, 23, 0.18),
-    0 0 0 1.5px rgb(141, 2, 255),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
+    0 18px 34px -24px rgba(15, 23, 42, 0.14),
+    var(--highlight-top-light);
 }
 
-
-/* Secondary: add a moving silver sheen like Primary */
-.secondary::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: inherit;
-  pointer-events: none;
-
-  background: linear-gradient(
-    115deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.55) 36%,
-    rgba(255, 255, 255, 0) 62%
-  );
-
-  transform: translateX(-120%);
-  opacity: 0.0;
+.secondary:focus-visible {
+  box-shadow:
+    0 0 0 3px rgba(15, 23, 42, 0.08),
+    0 0 0 6px rgba(15, 23, 42, 0.04),
+    var(--highlight-top-light);
 }
 
-.secondary:hover::after {
-  opacity: 0.75;
-  animation: sheenSlide 1.15s var(--btn-ease) both;
+/* Ghost = subtle inline action */
+.ghost {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.02);
+  border-color: var(--color-border-ghost);
+  box-shadow: var(--highlight-top);
 }
 
 .ghost:hover {
-  background: rgba(255, 255, 255, 0.70);
-  border-color: rgba(99, 102, 241, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--color-border-ghost-light);
 }
 
-.ghost:hover::before { opacity: 0.45; }
+/* Soft = branded but not strongest CTA */
+.soft {
+  color: var(--color-brand-primary);
+  background: var(--color-brand-soft);
+  border-color: rgba(124, 58, 237, 0.22);
+  box-shadow:
+    0 10px 24px -18px rgba(124, 58, 237, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
 
 .soft:hover {
-  border-color: rgba(99, 102, 241, 0.28);
-  box-shadow: 0 26px 62px -44px rgba(99, 102, 241, 0.30);
+  background: rgba(124, 58, 237, 0.18);
+  border-color: rgba(124, 58, 237, 0.30);
+}
+
+/* Success = money / positive / confirmed */
+.success {
+  color: #052e22;
+  background:
+    radial-gradient(
+      120% 160% at 18% 0%,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0) 38%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-success) 88%, white 12%) 0%,
+      var(--color-success) 100%
+    );
+
+  border-color: var(--color-success-border);
+  box-shadow:
+    0 14px 30px -20px rgba(22, 199, 132, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.success:hover {
+  background:
+    radial-gradient(
+      120% 160% at 18% 0%,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0) 38%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-success-hover) 88%, white 12%) 0%,
+      var(--color-success-hover) 100%
+    );
+}
+
+.success:focus-visible {
+  box-shadow: var(--focus-ring-success);
+}
+
+/* Danger = destructive action */
+.danger {
+  color: #fff;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-danger) 88%, white 12%) 0%,
+    var(--color-danger) 100%
+  );
+  border-color: var(--color-danger-border);
+  box-shadow: 0 12px 28px -18px rgba(239, 68, 68, 0.36);
+}
+
+.danger:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-danger-hover) 88%, white 12%) 0%,
+    var(--color-danger-hover) 100%
+  );
+}
+
+/* Interaction */
+.btn:hover {
+  transform: translateY(-1px);
 }
 
 .btn:active {
-  transform: translateY(0px) scale(0.99);
+  transform: translateY(0) scale(0.985);
 }
 
-/* =========================
-   DISABLED / LOADING
-   ========================= */
 .disabled {
   cursor: not-allowed;
-  opacity: 0.55;
-  filter: grayscale(0.15);
+  opacity: 0.52;
+  filter: saturate(0.82);
+  transform: none !important;
 }
 
-.loading { cursor: progress; }
+.loading {
+  cursor: progress;
+}
 
 .spinner {
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.32);
+  border-top-color: rgba(255, 255, 255, 0.95);
   animation: spin 900ms linear infinite;
 }
 
 .secondarySpinner {
-  border-color: rgba(2, 6, 23, 0.18);
-  border-top-color: rgba(2, 6, 23, 0.62);
+  border-color: rgba(15, 23, 42, 0.18);
+  border-top-color: rgba(15, 23, 42, 0.7);
 }
 
-/* =========================
-   KEYFRAMES
-   ========================= */
-@keyframes sheenSlide {
-  0% { transform: translateX(-120%); }
-  100% { transform: translateX(120%); }
+.successSpinner {
+  border-color: rgba(5, 46, 34, 0.18);
+  border-top-color: rgba(5, 46, 34, 0.8);
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* =========================
-   MOBILE / REDUCED MOTION
-   ========================= */
 @media (max-width: 480px) {
   .btn {
     min-height: 48px;
-    padding: 14px 16px;
-    font-size: 15.5px;
+    padding: 0 18px;
+    font-size: 15px;
+  }
+
+  .sizeLg {
+    min-height: 54px;
+    padding: 0 24px;
+    font-size: 16px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .btn,
-  .primary::before {
+  .spinner {
     transition: none;
     animation: none;
   }
 
-  .btn:hover { transform: none; }
+  .btn:hover,
+  .btn:active {
+    transform: none;
+  }
 }
