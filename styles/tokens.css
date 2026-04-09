@@ -1,9 +1,6 @@
 /* Zarman Exchange - Premium Fintech Design Tokens
-   Version: 2.1.0
+   Version: 2.0.0
    Architecture: Semantic + Role-based CSS Variables
-   Notes:
-   - Backward-compatible with legacy component tokens
-   - Hero.module.css compatibility preserved
 */
 
 :root {
@@ -12,34 +9,30 @@
      ========================================= */
 
   /* Core Backgrounds */
-  --color-bg-base: #060913;
-  --color-bg-elevated: #0a1020;
-  --color-bg-surface: #0f1729;
-  --color-bg-surface-hover: #162038;
+  --color-bg-base: #060913;                 /* page background */
+  --color-bg-elevated: #0a1020;             /* elevated sections */
+  --color-bg-surface: #0f1729;              /* cards / panels / nav */
+  --color-bg-surface-hover: #162038;        /* hover on dark cards */
+  --color-bg-soft: #f3f6fb;                 /* light mode page */
+  --color-bg-soft-surface: #ffffff;         /* light mode cards */
 
-  /* Optional light helpers */
-  --color-bg-soft: #f3f6fb;
-  --color-bg-soft-surface: #ffffff;
-
-  /* Brand / Accent */
-  --color-brand-primary: #7c3aed;
+  /* Brand / Action */
+  --color-brand-primary: #7c3aed;           /* purple brand accent */
   --color-brand-primary-hover: #6d28d9;
   --color-brand-soft: rgba(124, 58, 237, 0.14);
 
-  /* Primary action */
-  --color-action-primary: #1e2f6f;
+  --color-action-primary: #1e2f6f;          /* trustworthy deep indigo */
   --color-action-primary-hover: #243984;
   --color-action-primary-active: #1a285e;
   --color-action-on-primary: #ffffff;
 
-  /* Secondary action */
   --color-action-secondary-bg: rgba(255, 255, 255, 0.94);
   --color-action-secondary-bg-hover: #ffffff;
   --color-action-secondary-text: #0f172a;
   --color-action-secondary-border: rgba(15, 23, 42, 0.10);
 
-  /* Success / Money / Live rates */
-  --color-success: #16c784;
+  /* Success / Money */
+  --color-success: #16c784;                 /* rates / positive money signal */
   --color-success-hover: #12b374;
   --color-success-soft: rgba(22, 199, 132, 0.14);
   --color-success-border: rgba(22, 199, 132, 0.28);
@@ -75,21 +68,6 @@
 
   /* Overlays */
   --color-overlay-dark: rgba(4, 8, 18, 0.72);
-
-  /* =========================================
-     1.1 LEGACY / COMPATIBILITY TOKENS
-     For existing components like Hero.module.css
-     ========================================= */
-
-  /* Old accent tokens mapped to new system */
-  --color-accent-primary: var(--color-action-primary);
-  --color-accent-primary-hover: var(--color-action-primary-hover);
-
-  /* Purple brand highlight */
-  --color-accent-secondary: var(--color-brand-primary);
-
-  /* Success / live rates / positive financial values */
-  --color-accent-support: var(--color-success);
 
   /* =========================================
      2. TYPOGRAPHY SYSTEM
@@ -167,9 +145,6 @@
   --glow-success: 0 0 60px -26px rgba(22, 199, 132, 0.28);
   --glow-action: 0 0 70px -28px rgba(30, 47, 111, 0.34);
 
-  /* Legacy glow token compatibility */
-  --glow-indigo: var(--glow-action);
-
   /* =========================================
      6. MOTION
      ========================================= */
@@ -195,7 +170,7 @@
     0 0 0 6px rgba(22, 199, 132, 0.10);
 }
 
-/* Optional light theme helpers */
+/* Light surfaces helper theme */
 [data-theme="light"] {
   --color-bg-base: #eef2f7;
   --color-bg-elevated: #f3f6fb;
