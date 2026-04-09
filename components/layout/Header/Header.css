@@ -66,6 +66,9 @@
   align-items: center;
   flex-shrink: 0;
   z-index: 10;
+  /* 👈 کنترل مرکزی برای غیرفعال کردن کلیک و هایلایت شدن لوگو */
+  pointer-events: none; 
+  user-select: none;
 }
 
 .h-logo-img {

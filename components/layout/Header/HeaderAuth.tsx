@@ -11,10 +11,11 @@ export default function HeaderAuth({ className = "" }: { className?: string }) {
       </a>
 
       <div className="h-inner">
-        <div className="h-logo-wrap">
-          <Link href="/dashboard" aria-label="رفتن به داشبورد">
-            <span className="h-authTitle">ZARMAN DASHBOARD</span>
-          </Link>
+        <div className="h-logo-wrap" aria-label="لوگوی داشبورد زرمان">
+          {/* 👈 استایل‌های خطی پاک شدند چون حالا CSS مرکزی این کار را انجام می‌دهد */}
+          <div className="h-authTitle">
+            ZARMAN DASHBOARD
+          </div>
         </div>
 
         <nav className="h-nav" aria-label="ناوبری داشبورد">

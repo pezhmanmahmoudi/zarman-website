@@ -1,10 +1,24 @@
-/* Footer.module.css - Zarman Premium Light Footer */
+/* Footer.module.css - Zarman Premium Dark & Centered */
 
 .footer {
-  background-color: #ffffff; 
-  border-top: 1px solid #e2e8f0; 
+  background-color: var(--color-bg-base); /* استفاده از رنگ تیره سایت */
+  border-top: 1px solid var(--color-border-ghost); 
   padding: var(--space-16) 0 var(--space-6) 0;
   direction: rtl;
+  position: relative;
+  overflow: hidden;
+}
+
+/* یک هاله نوری بسیار محو در بک‌گراند فوتر برای زیبایی */
+.footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 1px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.4) 0%, transparent 100%);
 }
 
 .container {
@@ -14,55 +28,81 @@
   padding: 0 var(--container-padding);
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: 2.5fr 1fr 1.2fr 1fr;
-  gap: var(--space-8);
-  margin-bottom: var(--space-16);
-}
-
 /* ==================
-   ستون برند (راست‌چین)
+   بخش برند (بالا)
    ================== */
-.brandCol {
-  padding-left: var(--space-12);
-  text-align: right;
+.brandSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: var(--space-16);
 }
 
 .logoLink {
   display: inline-block;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-6);
+  transition: opacity var(--transition-normal);
+}
+
+.logoLink:hover {
+  opacity: 0.8;
 }
 
 .logoImg {
   width: auto;
-  height: 120px; 
+  height: 90px; 
   object-fit: contain;
   display: block;
 }
 
 .brandDesc {
-  color: #475569; 
+  color: var(--color-text-secondary); 
   font-family: var(--font-primary);
-  font-size: var(--text-body-sm);
+  font-size: var(--text-body-md);
   line-height: var(--leading-relaxed);
   margin: 0;
-  max-width: 380px;
+  max-width: 600px;
 }
 
 /* ==================
-   ستون لینک‌ها و ارتباطات (راست‌چین)
+   بخش لینک‌ها (میانی)
    ================== */
+.linksGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
+}
+
 .linkCol {
-  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .colTitle {
-  color: #0f172a; 
+  color: var(--color-text-primary); 
   font-family: var(--font-primary);
-  font-size: var(--text-body-md);
+  font-size: var(--text-body-lg);
   font-weight: var(--font-weight-bold);
   margin: 0 0 var(--space-6) 0;
+  position: relative;
+  padding-bottom: var(--space-3);
+}
+
+/* خط ظریف زیر عنوان ستون‌ها */
+.colTitle::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 2px;
+  background-color: var(--color-accent-primary);
+  border-radius: var(--radius-pill);
 }
 
 .linkList {
@@ -72,108 +112,88 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.linkList a {
-  color: #64748b; 
-  font-family: var(--font-primary);
-  font-size: var(--text-body-sm);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-.linkList a:hover {
-  color: var(--color-accent-primary); 
-  font-weight: var(--font-weight-medium);
-}
-
-.contactItem {
-  color: #64748b;
-  font-family: var(--font-en-stack); /* 👈 اصلاح شد */
-  font-size: var(--text-body-sm);
-  font-weight: 500;
-  text-align: right; 
-  letter-spacing: 0.5px; /* کمی فاصله‌گذاری برای اعداد شماره تماس */
-}
-
-/* آدرس انگلیسی */
-.contactItemEn {
-  color: #64748b;
-  font-family: var(--font-en-stack); /* 👈 اصلاح شد */
-  font-size: 0.85rem;
-  line-height: 1.6;
-  text-align: right; 
-  margin-top: var(--space-3);
-}
-
-/* ==================
-   بخش کپی‌رایت (وسط‌چین)
-   ================== */
-.bottom {
-  border-top: 1px solid #e2e8f0;
-  padding-top: var(--space-6);
-  text-align: center;
-  display: flex;
-  justify-content: center;
   align-items: center;
 }
 
+.linkList a {
+  color: var(--color-text-secondary); 
+  font-family: var(--font-primary);
+  font-size: var(--text-body-md);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.linkList a:hover {
+  color: var(--color-accent-secondary); 
+  transform: translateY(-1px);
+}
+
+/* استایل تماس */
+.contactItem {
+  color: var(--color-text-secondary);
+  font-family: var(--font-en-stack);
+  font-size: var(--text-body-md);
+  letter-spacing: 0.5px;
+}
+
+.contactItemEn {
+  color: var(--color-text-tertiary);
+  font-family: var(--font-en-stack);
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-relaxed);
+  margin-top: var(--space-2);
+}
+
+/* ==================
+   بخش کپی‌رایت (پایین)
+   ================== */
+.bottom {
+  border-top: 1px solid var(--color-border-ghost);
+  padding-top: var(--space-8);
+  text-align: center;
+}
+
 .copyright {
-  color: #94a3b8; 
-  font-family: var(--font-en-stack); /* 👈 اصلاح شد */
-  font-size: var(--text-caption);
+  color: var(--color-text-tertiary); 
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-relaxed);
   margin: 0;
-  direction: ltr; 
+}
+
+.mobileBreak {
+  display: none;
 }
 
 /* ==================
    Responsive
    ================== */
 @media (max-width: 1024px) {
-  .grid { 
+  .linksGrid { 
     grid-template-columns: repeat(3, 1fr); 
-    gap: var(--space-12) var(--space-6); 
-  }
-  .brandCol { 
-    padding-left: 0; 
-    grid-column: span 3; 
-    margin-bottom: var(--space-4);
-  }
-  .brandDesc {
-    max-width: 500px;
+    gap: var(--space-6); 
   }
 }
 
 @media (max-width: 768px) {
   .footer { 
-    padding-top: var(--space-12); 
-  }
-  .grid { 
-    grid-template-columns: 1fr; 
-    gap: var(--space-10);
-  }
-  .brandCol { 
-    grid-column: span 1; 
-    text-align: center;
-  }
-  .logoLink {
-    display: flex;
-    justify-content: center;
-  }
-  .logoImg {
-    height: 90px; 
+    padding: var(--space-12) 0 var(--space-8) 0; 
   }
   .brandDesc {
-    margin: 0 auto;
-    text-align: center;
+    font-size: var(--text-body-sm);
+    padding: 0 var(--space-4);
   }
-  .linkCol {
-    text-align: center;
+  .linksGrid { 
+    grid-template-columns: 1fr; 
+    gap: var(--space-12);
   }
   .colTitle {
-    margin: 0 0 var(--space-4) 0;
+    font-size: var(--text-body-md);
   }
-  .contactItem, .contactItemEn {
-    text-align: center;
+  .linkList a, .contactItem {
+    font-size: var(--text-body-sm);
+  }
+  .mobileBreak {
+    display: block; /* در موبایل متن کپی‌رایت را می‌شکند تا زیباتر شود */
   }
 }

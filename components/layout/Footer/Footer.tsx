@@ -7,48 +7,50 @@ export default function Footer() {
   return (
     <footer className={styles.footer} aria-label="پاورقی سایت">
       <div className={styles.container}>
-        <div className={styles.grid}>
-          
-          {/* ستون اول: برند و معرفی */}
-          <div className={styles.brandCol}>
-            <Link href="/fa" aria-label="Zarman Exchange — صفحه اصلی" className={styles.logoLink}>
-              <Image
-                /* مهم: برای فوتر سفید، باید از لوگوی نسخه تیره/رنگی استفاده کنید */
-                src="/images/logo-vertical-light-bg.svg" 
-                alt="لوگوی زرمان اکسچنج"
-                width={200}
-                height={120}
-                className={styles.logoImg}
-              />
-            </Link>
-            <p className={styles.brandDesc}>
-              پلتفرم نوین خدمات ارزی و انتقال سرمایه میان ایران و استرالیا. 
-              طراحی شده برای امنیت، شفافیت و سرعت در تک‌تک تراکنش‌های مالی شما.
-            </p>
-          </div>
+        
+        {/* بخش بالایی: برند و معرفی (وسط‌چین) */}
+        <div className={styles.brandSection}>
+          <Link href="#hero" aria-label="بازگشت به بالای صفحه" className={styles.logoLink}>
+            <Image
+              src="/images/logo-vertical-light-bg.svg" /* 👈 آدرس تصویر قبلی شما برگردانده شد */
+              alt="لوگوی زرمان اکسچنج"
+              width={220}
+              height={100}
+              className={styles.logoImg}
+            />
+          </Link>
+          <p className={styles.brandDesc}>
+            پلتفرم نوین خدمات ارزی و انتقال سرمایه میان ایران و استرالیا. <br />
+            طراحی شده برای امنیت، شفافیت و سرعت در تک‌تک تراکنش‌های مالی شما.
+          </p>
+        </div>
 
-          {/* ستون دوم: دسترسی سریع */}
+        {/* بخش میانی: لینک‌ها (سه ستون وسط‌چین) */}
+        <div className={styles.linksGrid}>
+          
+          {/* ستون اول: دسترسی سریع */}
           <div className={styles.linkCol}>
             <h4 className={styles.colTitle}>دسترسی سریع</h4>
             <ul className={styles.linkList}>
-              <li><Link href="#hero">ماشین‌حساب نرخ</Link></li>
+              {/* 👈 لینک ماشین حساب تصحیح شد */}
+              <li><Link href="#rates">ماشین‌حساب نرخ</Link></li>
               <li><Link href="#services">خدمات ما</Link></li>
               <li><Link href="#how-it-works">نحوه انتقال</Link></li>
               <li><Link href="#faq">سوالات متداول</Link></li>
             </ul>
           </div>
 
-          {/* ستون سوم: قوانین و مقررات */}
+          {/* ستون دوم: قوانین و مقررات */}
           <div className={styles.linkCol}>
             <h4 className={styles.colTitle}>قوانین و مقررات</h4>
             <ul className={styles.linkList}>
-              <li><Link href="/terms">شرایط و ضوابط استفاده</Link></li>
-              <li><Link href="/privacy">حریم خصوصی</Link></li>
-              <li><Link href="/aml-policy">مبارزه با پولشویی (AML/CTF)</Link></li>
+              <li><Link href="/en/legal/terms">شرایط و ضوابط استفاده</Link></li>
+              <li><Link href="/en/legal/privacy-policy">حریم خصوصی</Link></li>
+              <li><Link href="/en/legal/dvs-notice">اطلاعیه تایید هویت (DVS)</Link></li>
             </ul>
           </div>
 
-          {/* ستون چهارم: ارتباط با ما */}
+          {/* ستون سوم: ارتباط با ما */}
           <div className={styles.linkCol}>
             <h4 className={styles.colTitle}>ارتباط با ما</h4>
             <ul className={styles.linkList}>
@@ -63,11 +65,12 @@ export default function Footer() {
 
         </div>
 
-        {/* بخش کپی‌رایت پایین */}
+        {/* بخش پایینی: کپی‌رایت */}
         <div className={styles.bottom}>
           <p className={styles.copyright}>
-            © {new Date().getFullYear()} Zarman Exchange Pty Ltd
-            .تمامی حقوق محفوظ است
+            © {new Date().getFullYear()} Zarman Exchange Pty Ltd.
+            <br className={styles.mobileBreak} />
+            کلیه حقوق مادی، معنوی و محتوای این وب‌سایت محفوظ و متعلق به صرافی زرمان می‌باشد.
           </p>
         </div>
       </div>

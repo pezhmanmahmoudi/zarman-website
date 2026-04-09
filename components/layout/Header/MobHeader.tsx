@@ -63,18 +63,20 @@ export default function MobHeader({
     return () => { document.body.style.overflow = ""; };
   }, [open, mounted]);
 
+  // Header initial load animation
   useGSAP(
     () => {
       if (!isReady || !rootRef.current) return;
       gsap.fromTo(
         rootRef.current,
-        { y: -80, autoAlpha: 0 },
-        { y: 0, autoAlpha: 1, duration: 0.6, ease: "power3.out" }
+        { y: -100, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.8, ease: "expo.out" } // انیمیشن نرم‌تر و لوکس‌تر برای هدر
       );
     },
     { dependencies: [isReady, mounted] }
   );
 
+  // Drawer open/close animations
   useGSAP(
     () => {
       if (!overlayRef.current || !drawerRef.current) return;
@@ -86,17 +88,23 @@ export default function MobHeader({
 
       if (open) {
         gsap.set(overlay, { display: "block" });
-        tl.to(overlay, { opacity: 1, duration: 0.3, ease: "power2.out" })
-          .to(drawer, { x: "0%", duration: 0.4, ease: "power3.out" }, "-=0.3")
+        tl.to(overlay, { opacity: 1, duration: 0.4, ease: "power2.out" })
+          // تغییر ease به expo.out برای حس سرعت و دقت فین‌تکی
+          .to(drawer, { x: "0%", duration: 0.6, ease: "expo.out" }, "-=0.4")
+          // تغییر انیمیشن آیتم‌ها: به جای حرکت از کنار، از پایین به بالا می‌آیند
           .fromTo(
             animatedItems,
-            { x: 20, opacity: 0 },
-            { x: 0, opacity: 1, stagger: 0.05, duration: 0.3, ease: "power3.out" },
-            "-=0.2"
+            { y: 24, opacity: 0 },
+            { y: 0, opacity: 1, stagger: 0.06, duration: 0.5, ease: "back.out(1.2)" },
+            "-=0.4"
           );
       } else {
-        tl.to(drawer, { x: "100%", duration: 0.3, ease: "power3.inOut" })
-          .to(overlay, { opacity: 0, duration: 0.3, ease: "power2.in", 
+        // انیمیشن بسته شدن سریع‌تر و تیزتر
+        tl.to(drawer, { x: "100%", duration: 0.4, ease: "power3.in" })
+          .to(overlay, { 
+            opacity: 0, 
+            duration: 0.3, 
+            ease: "power2.in", 
             onComplete: () => {
               gsap.set(overlay, { display: "none" });
             }
@@ -115,7 +123,6 @@ export default function MobHeader({
     <>
       <div ref={rootRef} className={`${styles.headerPill} ${open ? styles.headerPillActive : ""}`}>
         <div className={styles.headerContent}>
-          {/* 👈 این همان دکمه‌ای است که وقتی باز می‌شود، در جای خودش تبدیل به ضربدر می‌شود */}
           <button
             type="button"
             className={`${styles.burger} ${open ? styles.burgerActive : ""}`}
@@ -132,7 +139,7 @@ export default function MobHeader({
 
           {isAuthenticated ? (
             <Button href="/dashboard" variant="secondary" size="sm" onClick={close}>
-              پنل
+              پنل کاربری
             </Button>
           ) : (
             <Button href={signupHref} variant="primary" size="sm" onClick={close}>
@@ -147,7 +154,6 @@ export default function MobHeader({
       <div ref={drawerRef} className={styles.menuDrawer} role="dialog" aria-modal="true">
         <div className={styles.menuInner}>
           <div className={styles.menuHeader}>
-            {/* 👈 دکمه ضربدر اضافی حذف شد، متن دقیقاً به راست چسبید */}
             <span className={styles.menuLabel}>فهرست دسترسی</span>
           </div>
 

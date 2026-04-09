@@ -132,9 +132,9 @@ export default function Services() {
         </header>
 
         <div className={styles.stage}>
-          <div className={styles.crosshair} aria-hidden="true" />
-          <div className={styles.rings} aria-hidden="true" />
+          {/* خطوط راهنمای کناری حفظ شدند، فقط خطوط متقاطع وسط حذف شدند */}
           <div className={styles.verticalGuides} aria-hidden="true" />
+          <div className={styles.rings} aria-hidden="true" />
 
           {/* ===== Center Core (Static Network) ===== */}
           <div className={styles.center} aria-hidden="true">

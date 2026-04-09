@@ -3,6 +3,12 @@ import styles from "./FinalCTA.module.css";
 import Button from "@/components/ui/Button/Button";
 
 export default function FinalCTA() {
+  // متن پیش‌فرض برای پیام واتس‌اپ
+  const whatsappText = "سلام. وقت بخیر. من برای ثبت‌نام و انجام تراکنش در صرافی زرمان نیاز به راهنمایی دارم.";
+  
+  // ساخت لینک نهایی به همراه متن اِنکُد شده
+  const whatsappUrl = `https://wa.me/61497851631?text=${encodeURIComponent(whatsappText)}`;
+
   return (
     <section id="contact" className={styles.section} aria-label="ثبت نام نهایی">
       <div className={styles.container}>
@@ -18,7 +24,14 @@ export default function FinalCTA() {
               <Button href="/fa/register" variant="primary" size="lg">
                 ایجاد حساب کاربری
               </Button>
-              <Button href="#contact" variant="secondary" size="lg">
+              
+              <Button 
+                href={whatsappUrl} 
+                variant="secondary" 
+                size="lg"
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
                 نیاز به مشاوره دارم
               </Button>
             </div>

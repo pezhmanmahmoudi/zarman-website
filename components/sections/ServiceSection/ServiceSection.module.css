@@ -52,7 +52,7 @@
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.5px;
   margin-bottom: var(--space-3);
-  color: var(--color-accent-secondary); /* Ultraviolet */
+  color: var(--color-accent-secondary);
 }
 
 .title {
@@ -80,10 +80,13 @@
   min-height: clamp(400px, 60vh, 560px);
 }
 
-.crosshair { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
-.crosshair::before, .crosshair::after { content: ""; position: absolute; opacity: 0.8; background: var(--color-border-ghost); }
-.crosshair::before { left: 5%; right: 5%; top: 50%; height: 1px; transform: translateY(-50%); }
-.crosshair::after { top: 5%; bottom: 5%; left: 50%; width: 1px; transform: translateX(-50%); }
+.verticalGuides { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.verticalGuides::before, .verticalGuides::after {
+  content: ""; position: absolute; top: 0; bottom: 10%; width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--color-border-ghost-light), transparent);
+}
+.verticalGuides::before { left: 2%; }
+.verticalGuides::after { right: 2%; }
 
 .rings {
   position: absolute;
@@ -105,14 +108,6 @@
 }
 .rings::before { width: 320px; height: 320px; opacity: 0.6; }
 .rings::after { width: 450px; height: 450px; opacity: 0.3; }
-
-.verticalGuides { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
-.verticalGuides::before, .verticalGuides::after {
-  content: ""; position: absolute; top: 0; bottom: 10%; width: 1px;
-  background: linear-gradient(to bottom, transparent, var(--color-border-ghost-light), transparent);
-}
-.verticalGuides::before { left: 2%; }
-.verticalGuides::after { right: 2%; }
 
 /* Center Core */
 .center {
@@ -208,15 +203,12 @@
 
 /* Mobile Layout */
 .mobileStack { display: none; }
-/* 👈 حذف فاصله اضافه از بالا */
 .mobileHero { text-align: center; max-width: 560px; margin: 0 auto; padding-top: 0; }
 
 .mobileCenter {
   position: relative;
-  /* 👈 بزرگتر شدن محفظه گلوب برای آیپد */
-  width: 280px; height: 280px;
-  /* 👈 کشیدن کل المان به سمت بالا با مارجین منفی */
-  margin: -10px auto var(--space-8);
+  width: 320px; height: 320px;
+  margin: 0 auto var(--space-8);
   isolation: isolate;
 }
 
@@ -225,6 +217,18 @@
   background: radial-gradient(circle at 50% 50%, rgba(124, 58, 237, 0.15), transparent 60%);
   z-index: 1;
 }
+
+/* Added Static Rings to Mobile */
+.mobileRings::before, .mobileRings::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-ghost-light);
+}
+.mobileRings::before { width: 240px; height: 240px; opacity: 0.5; }
+.mobileRings::after { width: 320px; height: 320px; opacity: 0.2; }
 
 .mobilePulseInner, .mobilePulseOuter {
   position: absolute; left: 50%; top: 50%;
@@ -245,8 +249,7 @@
 
 .mobileCore {
   position: absolute; left: 50%; top: 50%;
-  /* 👈 گلوب بسیار بزرگتر و باشکوه‌تر شد */
-  width: 140px; height: 140px;
+  width: 170px; height: 170px; /* گوی بزرگتر برای آیپد/موبایل بزرگ */
   transform: translate(-50%, -50%);
   border-radius: var(--radius-pill);
   background-color: var(--color-bg-surface);
@@ -313,7 +316,8 @@
 
 /* Responsive Overrides */
 @media (max-width: 980px) {
-  .top, .crosshair, .rings, .verticalGuides, .center, .quadDesktop { display: none; }
+  .top, .rings, .center, .quadDesktop, .verticalGuides { display: none; }
+  .bgGrid { display: none; } /* پنهان کردن پترن خطی پشتی در موبایل */
   .stage { min-height: auto; }
   .mobileStack { display: block; }
 }
@@ -322,9 +326,12 @@
   .section { padding: var(--section-pad-compact) 0; }
   .mobileTitle { font-size: clamp(24px, 7vw, 32px); }
   
-  /* 👈 کوچک شدن گلوب فقط در گوشی‌های موبایل */
-  .mobileCenter { width: 200px; height: 200px; margin-top: 0; }
-  .mobileCore { width: 90px; height: 90px; }
+  .mobileCenter { width: 260px; height: 260px; margin-top: 0; }
+  .mobileCore { width: 130px; height: 130px; } /* گوی بزرگتر برای گوشی */
+  
+  /* تنظیم سایز رینگ‌های ثابت در گوشی */
+  .mobileRings::before { width: 180px; height: 180px; }
+  .mobileRings::after { width: 240px; height: 240px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -94,9 +94,7 @@
   height: 100%;
 }
 
-.columnsContainer:hover .track {
-  animation-play-state: paused !important;
-}
+/* 👈 بخش مربوط به هاور (animation-play-state: paused) از اینجا حذف شد تا حرکت متوقف نشود */
 
 .column {
   display: flex;
