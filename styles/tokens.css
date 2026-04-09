@@ -1,209 +1,140 @@
 /* Zarman Exchange - Premium Fintech Design Tokens
-   Version: 2.0.0
-   Architecture: Semantic + Role-based CSS Variables
+  Version: 1.1.0 (Added English Font Stack)
+  Architecture: Semantic CSS Variables
 */
 
 :root {
   /* =========================================
-     1. COLOR SYSTEM
+     1. COLOR SYSTEM (Dark Mode Native)
      ========================================= */
-
-  /* Core Backgrounds */
-  --color-bg-base: #060913;                 /* page background */
-  --color-bg-elevated: #0a1020;             /* elevated sections */
-  --color-bg-surface: #0f1729;              /* cards / panels / nav */
-  --color-bg-surface-hover: #162038;        /* hover on dark cards */
-  --color-bg-soft: #f3f6fb;                 /* light mode page */
-  --color-bg-soft-surface: #ffffff;         /* light mode cards */
-
-  /* Brand / Action */
-  --color-brand-primary: #7c3aed;           /* purple brand accent */
-  --color-brand-primary-hover: #6d28d9;
-  --color-brand-soft: rgba(124, 58, 237, 0.14);
-
-  --color-action-primary: #1e2f6f;          /* trustworthy deep indigo */
-  --color-action-primary-hover: #243984;
-  --color-action-primary-active: #1a285e;
-  --color-action-on-primary: #ffffff;
-
-  --color-action-secondary-bg: rgba(255, 255, 255, 0.94);
-  --color-action-secondary-bg-hover: #ffffff;
-  --color-action-secondary-text: #0f172a;
-  --color-action-secondary-border: rgba(15, 23, 42, 0.10);
-
-  /* Success / Money */
-  --color-success: #16c784;                 /* rates / positive money signal */
-  --color-success-hover: #12b374;
-  --color-success-soft: rgba(22, 199, 132, 0.14);
-  --color-success-border: rgba(22, 199, 132, 0.28);
-
-  /* Warning / Pending */
-  --color-warning: #f59e0b;
-  --color-warning-hover: #d97706;
-  --color-warning-soft: rgba(245, 158, 11, 0.14);
-  --color-warning-border: rgba(245, 158, 11, 0.26);
-
-  /* Danger */
-  --color-danger: #ef4444;
-  --color-danger-hover: #dc2626;
-  --color-danger-soft: rgba(239, 68, 68, 0.12);
-  --color-danger-border: rgba(239, 68, 68, 0.22);
-
-  /* Info */
-  --color-info: #38bdf8;
-  --color-info-soft: rgba(56, 189, 248, 0.14);
-
-  /* Typography */
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #a7b4c8;
-  --color-text-tertiary: #71819a;
-  --color-text-on-light: #0f172a;
-  --color-text-on-light-secondary: #64748b;
-
-  /* Borders */
-  --color-border-ghost: rgba(255, 255, 255, 0.08);
-  --color-border-ghost-light: rgba(255, 255, 255, 0.14);
-  --color-border-strong: rgba(255, 255, 255, 0.18);
-  --color-border-soft-dark: rgba(15, 23, 42, 0.08);
-
-  /* Overlays */
-  --color-overlay-dark: rgba(4, 8, 18, 0.72);
-
+  
+  /* Backgrounds */
+  --color-bg-base: #080B12;           /* Midnight Void - Main Page Background */
+  --color-bg-surface: #111622;        /* Deep Slate Navy - Cards, Modals, Header */
+  --color-bg-surface-hover: #1A2133;  /* Elevated Navy - Interactive Row/Card Hover */
+  
+  /* Accents */
+  --color-accent-primary: #4F46E5;    /* Indigo Electric - Primary CTAs, Active States */
+  --color-accent-primary-hover: #4338CA; 
+  --color-accent-secondary: #7C3AED;  /* Ultraviolet - Subtle Highlights, Focused Glows */
+  --color-accent-support: #7C3AED;    /* Restrained Cyan - Rates, Positive Charts, Success */
+  
+  /* Typography Colors */
+  --color-text-primary: #FFFFFF;      /* Crisp White - H1/H2, Core Values, Active Rates */
+  --color-text-secondary: #94A3B8;    /* Muted Steel - Body Text, Labels, Subtitles */
+  --color-text-tertiary: #64748B;     /* Placeholder text, Disabled states */
+  
+  /* Borders & Dividers */
+  --color-border-ghost: rgba(255, 255, 255, 0.08);       /* Default subtle structural lines */
+  --color-border-ghost-light: rgba(255, 255, 255, 0.15); /* Hover state for borders */
+  
   /* =========================================
-     2. TYPOGRAPHY SYSTEM
+     2. TYPOGRAPHY SYSTEM (Persian-First + English Inter)
+     Assuming base 16px (1rem = 16px)
      ========================================= */
-
+  
+  /* Font Families */
   --font-primary: "Peyda", "IRANSansX", system-ui, -apple-system, sans-serif;
+  
+  /* ترکیب متغیر --font-en (که از layout.tsx می‌آید) با فونت‌های پشتیبان سیستم */
   --font-en-stack: var(--font-en), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  
+  /* Font Sizes */
+  --text-display-xl: 4rem;      /* ~64px - Hero Main */
+  --text-display-l: 3.25rem;    /* ~52px - Large impact */
+  --text-section-title: 2.5rem; /* ~40px - H2 Section Titles */
+  --text-card-title: 1.5rem;    /* ~24px - H3 Card Titles */
+  --text-body-lg: 1.125rem;     /* ~18px - Lead paragraphs */
+  --text-body-md: 1rem;         /* ~16px - Standard body */
+  --text-body-sm: 0.9375rem;    /* ~15px - Small UI elements, inputs */
+  --text-caption: 0.8125rem;    /* ~13px - Meta text, dates, tight spaces */
 
-  --text-display-xl: 4rem;
-  --text-display-l: 3.25rem;
-  --text-section-title: 2.5rem;
-  --text-card-title: 1.5rem;
-  --text-body-lg: 1.125rem;
-  --text-body-md: 1rem;
-  --text-body-sm: 0.9375rem;
-  --text-caption: 0.8125rem;
-
+  /* Font Weights (Controlled - No unnecessary boldness) */
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-  --font-weight-heavy: 800;
+  --font-weight-bold: 700;      /* Use sparingly */
 
-  --leading-tight: 1.15;
-  --leading-snug: 1.3;
-  --leading-normal: 1.55;
-  --leading-relaxed: 1.8;
+  /* Line Heights */
+  --leading-tight: 1.15;        /* For Display & Section Titles */
+  --leading-snug: 1.3;          /* For Card Titles */
+  --leading-relaxed: 1.8;       /* For Persian Body Text readability */
 
   /* =========================================
-     3. SPACING & LAYOUT
+     3. SPACING & LAYOUT SYSTEM (Rhythmic)
      ========================================= */
+  
+  /* Micro Spacing (Internal Component padding/margins) */
+  --space-1: 0.25rem;  /* 4px */
+  --space-2: 0.5rem;   /* 8px */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-12: 3rem;    /* 48px */
+  --space-16: 4rem;    /* 64px */
 
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
-  --space-16: 4rem;
+  /* Macro Spacing (Section Vertical Padding) - To be adjusted via Media Queries */
+  --section-pad-compact: 5rem;  /* 80px base */
+  --section-pad-major: 8.75rem; /* 140px base for desktop */
 
-  --section-pad-compact: 5rem;
-  --section-pad-major: 8.75rem;
-
+  /* Container Widths */
   --container-max-width: 1200px;
-  --container-padding: 1.5rem;
+  --container-padding: 1.5rem;  /* 24px side padding on mobile/tablet */
 
   /* =========================================
-     4. RADII
+     4. RADII & SHAPES (Structured, not toy-like)
      ========================================= */
-
-  --radius-xs: 0.375rem;
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.25rem;
-  --radius-2xl: 1.5rem;
-  --radius-pill: 9999px;
+  
+  --radius-sm: 0.375rem; /* 6px - Small badges, inputs */
+  --radius-md: 0.5rem;   /* 8px - Buttons, Inner cards */
+  --radius-lg: 0.75rem;  /* 12px - Main feature cards */
+  --radius-xl: 1rem;     /* 16px - Large containers, Dialogs */
+  --radius-pill: 9999px; /* Only for specific UI tags, NEVER for hero shapes */
 
   /* =========================================
-     5. SHADOWS / HIGHLIGHTS / GLOWS
+     5. ELEVATION & GLOWS (Strictly Controlled)
      ========================================= */
+  
+  /* Box Shadows - Dark UI needs subtle black shadows, not blurry gray ones */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  
+  /* Inner Highlights - Creates the "machined glass" premium feel */
+  --highlight-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
-  --shadow-md: 0 10px 24px -16px rgba(0, 0, 0, 0.42);
-  --shadow-lg: 0 24px 56px -32px rgba(0, 0, 0, 0.55);
-  --shadow-soft-light: 0 12px 30px -20px rgba(15, 23, 42, 0.12);
-
-  --highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --highlight-top-light: inset 0 1px 0 rgba(255, 255, 255, 0.85);
-
-  --glow-brand: 0 0 70px -24px rgba(124, 58, 237, 0.34);
-  --glow-success: 0 0 60px -26px rgba(22, 199, 132, 0.28);
-  --glow-action: 0 0 70px -28px rgba(30, 47, 111, 0.34);
+  /* Focused Glow - Used via pseudo-elements, NOT standard box-shadow */
+  --glow-indigo: 0 0 80px -20px rgba(79, 70, 229, 0.3);
 
   /* =========================================
-     6. MOTION
+     6. MOTION & TRANSITIONS (Smooth & Professional)
      ========================================= */
-
+  
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 420ms cubic-bezier(0.22, 1, 0.36, 1);
-
-  /* =========================================
-     7. COMPONENT TOKENS
-     ========================================= */
-
-  --button-height-sm: 44px;
-  --button-height-md: 52px;
-  --button-height-lg: 58px;
-
-  --focus-ring-brand:
-    0 0 0 3px rgba(124, 58, 237, 0.22),
-    0 0 0 6px rgba(124, 58, 237, 0.10);
-
-  --focus-ring-success:
-    0 0 0 3px rgba(22, 199, 132, 0.22),
-    0 0 0 6px rgba(22, 199, 132, 0.10);
+  --transition-slow: 400ms cubic-bezier(0.22, 1, 0.36, 1); /* For structural reveals */
 }
 
-/* Light surfaces helper theme */
-[data-theme="light"] {
-  --color-bg-base: #eef2f7;
-  --color-bg-elevated: #f3f6fb;
-  --color-bg-surface: #ffffff;
-  --color-bg-surface-hover: #f8fafc;
+/* =========================================
+   Responsive Overrides for Macro Spacing
+   ========================================= */
 
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #64748b;
-  --color-text-tertiary: #94a3b8;
-
-  --color-border-ghost: rgba(15, 23, 42, 0.08);
-  --color-border-ghost-light: rgba(15, 23, 42, 0.12);
-  --shadow-md: 0 14px 34px -22px rgba(15, 23, 42, 0.12);
-  --shadow-lg: 0 26px 64px -34px rgba(15, 23, 42, 0.16);
-  --highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-@media (max-width: 1024px) {
+@media (max-width: 1024px) { /* Tablet */
   :root {
-    --section-pad-major: 6.5rem;
-    --section-pad-compact: 4.5rem;
-    --text-display-xl: 3rem;
-    --text-section-title: 2rem;
+    --section-pad-major: 6.5rem;   /* 104px */
+    --section-pad-compact: 4.5rem; /* 72px */
+    --text-display-xl: 3rem;       /* ~48px */
+    --text-section-title: 2rem;    /* ~32px */
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px) { /* Mobile */
   :root {
-    --section-pad-major: 5rem;
-    --section-pad-compact: 4rem;
-    --text-display-xl: 2.25rem;
-    --text-display-l: 2rem;
-    --text-section-title: 1.75rem;
-    --text-body-lg: 1rem;
+    --section-pad-major: 5rem;     /* 80px */
+    --section-pad-compact: 4rem;   /* 64px */
+    --text-display-xl: 2.25rem;    /* ~36px */
+    --text-display-l: 2rem;        /* ~32px */
+    --text-section-title: 1.75rem; /* ~28px */
+    --text-body-lg: 1rem;          /* ~16px */
   }
 }
