@@ -11,7 +11,8 @@ import Link from "next/link";
 // 👇 تغییر اساسی در اینجا انجام شد. کلمات دقیقاً با page.tsx یکسان شدند
 type DashboardSidebarProps = {
   activeTab: "hub" | "history" | "profile" | "feedback";
-  setActiveTab: (tab: "hub" | "history" | "profile" | "feedback") => void;
+  // 👈 این خط باید دقیقاً اینطور باشد، نه (tab: string)
+  setActiveTab: (tab: "hub" | "history" | "profile" | "feedback") => void; 
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
   theme: "light" | "dark";
