@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase"; 
 import { useRates } from "@/context/RateContext"; 
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { processTransactionSecurely } from "@/app/actions/transaction.actions"; // 👈 ایمپورت تابع امنیتی سرور
+import { processTransactionSecurely } from "@/app/actions/transaction.actions"; 
 
 import shellStyles from "@/styles/dashboard/DashboardShell.module.css";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
@@ -37,7 +37,6 @@ export default function ZarmanDashboard() {
 
   useEffect(() => { window.localStorage.setItem("zarman-dashboard-theme", theme); }, [theme]);
 
-  // 🧠 ماشین حساب پیش‌نمایش (تطبیق داده شده با منطق درصدی اسپرد سرور) 🧠
   const baseRate = useMemo(() => {
     const rates = rateContext?.currentRates;
     if (!rates?.sellAUD || !rates?.buyAUD) return null; 
@@ -61,10 +60,9 @@ export default function ZarmanDashboard() {
 
   const loyaltyBonus = useMemo(() => {
     if (spread === 0 || approvedVolume === 0) return 0;
-    // این اعداد صرفا برای پیش‌نمایش کاربر است، محاسبه قطعی در سرور انجام می‌شود
     const volumeSteps = Math.floor(approvedVolume / 1000);
     const rawDiscountPercent = volumeSteps * 0.01;
-    const finalDiscountPercent = Math.min(rawDiscountPercent, 0.50); // سقف 50%
+    const finalDiscountPercent = Math.min(rawDiscountPercent, 0.50); 
     return spread * finalDiscountPercent;
   }, [approvedVolume, spread]);
 
@@ -72,7 +70,6 @@ export default function ZarmanDashboard() {
     if (baseRate === null) return null;
     return txType === "buy_aud" ? baseRate - loyaltyBonus : baseRate + loyaltyBonus; 
   }, [baseRate, txType, loyaltyBonus]);
-  // -------------------------------------------------------------
 
   const isApproved = String(profile?.kyc_status || "").replace(/['"]/g, '').trim().toLowerCase() === "approved";
   
@@ -115,13 +112,11 @@ export default function ZarmanDashboard() {
     ];
   }, [profile]);
 
-  // 🛡️ تغییر بزرگ امنیتی: کلاینت دیگر Insert نمی‌کند. فقط Action را صدا می‌زند 🛡️
   const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud") => {
     if (!profile || !profile.id || !isApproved || rawAmount <= 0) return null;
     
-    // ارسال درخواست به سرور ایزوله (Server Action)
     const result = await processTransactionSecurely({
-      userId: profile.id,
+      userId: profile.id as string, // 🛡️ استفاده از as string برای خفه کردن تایپ‌اسکریپت
       rawAmount: rawAmount,
       txType: currentTxType
     });
@@ -131,12 +126,9 @@ export default function ZarmanDashboard() {
       return null;
     }
 
-    // 👈 رفع ارور: با اضافه کردن || null به تایپ‌اسکریپت تضمین می‌دهیم که undefined خروجی نمی‌دهیم
-    // استفاده از as any موقتاً سخت‌گیری تطبیق دقیقِ تایپ‌های سرور و کلاینت را نرم می‌کند
     return (result?.data as any) || null; 
   };
 
-  
   const handleDeleteRequest = (txId: string | number) => {
     setDeleteConfirmId(txId);
   };

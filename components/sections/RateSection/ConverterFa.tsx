@@ -24,7 +24,6 @@ function getRawNumber(value: string) {
   return Number.isFinite(n) ? n : 0;
 }
 
-// برای تومان اعشار نداریم، برای دلار استرالیا حداکثر ۲ رقم
 function formatNumberFa(num: number, isToman: boolean = false) {
   const options = isToman ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
   const en = Number(num || 0).toLocaleString("en-US", options);
@@ -34,43 +33,43 @@ function formatNumberFa(num: number, isToman: boolean = false) {
 export default function ConverterFa() {
   const [amountText, setAmountText] = useState<string>("۳،۰۰۰");
   const [from, setFrom] = useState<Currency>("AUD");
-  const { currentRates } = useRates();
+  const { currentRates, isLoading } = useRates();
 
-  const rate = from === "AUD" ? currentRates.buyAUD : currentRates.sellAUD;
+  // 🛡️ اگر نرخ وجود نداشت، مقدار 0 در نظر گرفته می‌شود تا جلوی ارور null گرفته شود
+  const rawRate = from === "AUD" ? currentRates.buyAUD : currentRates.sellAUD;
+  const safeRate = rawRate || 0; 
   const to: Currency = from === "AUD" ? "IRT" : "AUD";
 
   const amountNum = getRawNumber(amountText);
 
-  // بررسی اعمال کارمزد (فقط برای تراکنش‌های زیر ۱۰۰۰ دلار استرالیا)
+  // بررسی اعمال کارمزد
   let isFeeApplied = false;
-  if (amountNum > 0) {
+  if (amountNum > 0 && safeRate > 0) {
     if (from === "AUD") {
       isFeeApplied = amountNum < 1000;
     } else {
-      const rawAud = amountNum / rate;
+      const rawAud = amountNum / safeRate;
       isFeeApplied = rawAud > 0 && rawAud < 1000;
     }
   }
 
   const resultText = useMemo(() => {
-    if (amountNum === 0) return "";
+    if (amountNum === 0 || safeRate === 0) return "";
 
     let finalValue = 0;
 
     if (from === "AUD") {
-      // محاسبه دقیق (بدون حذف ۳ صفر)
       const feeInAud = isFeeApplied ? 15 : 0;
       const netAud = Math.max(0, amountNum - feeInAud);
-      finalValue = netAud * rate;
+      finalValue = netAud * safeRate;
     } else {
-      // تبدیل تومان به دلار
-      const rawAud = amountNum / rate;
+      const rawAud = amountNum / safeRate;
       const feeInAud = isFeeApplied ? 15 : 0;
       finalValue = Math.max(0, rawAud - feeInAud);
     }
 
     return formatNumberFa(finalValue, to === "IRT");
-  }, [amountNum, from, rate, to, isFeeApplied]);
+  }, [amountNum, from, safeRate, to, isFeeApplied]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -83,7 +82,8 @@ export default function ConverterFa() {
   };
 
   const handleWhatsApp = () => {
-    const rateFa = formatNumberFa(rate, true);
+    if (safeRate === 0) return; // اگر نرخ قطع بود دکمه کار نکند
+    const rateFa = formatNumberFa(safeRate, true);
     let text = "";
     
     if (from === "AUD") {
@@ -106,17 +106,17 @@ export default function ConverterFa() {
         <div className={styles.rateInfo}>
           <span className={styles.pulse}></span>
           <span>
-            نرخ فعلی: ۱ دلار استرالیا = {formatNumberFa(rate, true)} تومان
+            {isLoading || safeRate === 0 
+              ? "در حال دریافت نرخ..." 
+              : `نرخ فعلی: ۱ دلار استرالیا = ${formatNumberFa(safeRate, true)} تومان`}
           </span>
         </div>
       </div>
 
       <div className={styles.converterBody}>
-        {/* فیلد ارسال */}
         <div className={styles.inputBox}>
           <label className={styles.label}>شما ارسال می‌کنید</label>
           <div className={styles.fieldGroup}>
-            {/* ۱. عدد در سمت راست (به دلیل راست‌چین بودن سایت، اولویت با رندر راست است) */}
             <input
               type="text"
               value={amountText}
@@ -125,10 +125,7 @@ export default function ConverterFa() {
               className={styles.faInput}
               placeholder="۰"
             />
-            
             <div className={styles.divider}></div>
-            
-            {/* ۲. ارز در سمت چپ + زبانه (فلش) واضح */}
             <div className={styles.selectWrapper}>
               <select className={styles.currencySelect} value={from} onChange={(e) => setFrom(e.target.value as Currency)}>
                 <option value="AUD">دلار استرالیا</option>
@@ -145,7 +142,6 @@ export default function ConverterFa() {
           <div className={styles.exchangeLine}></div>
         </div>
 
-        {/* فیلد دریافت */}
         <div className={styles.inputBox}>
           <div className={styles.labelRow}>
             <label className={styles.label}>گیرنده دریافت می‌کند</label>
@@ -159,15 +155,13 @@ export default function ConverterFa() {
           <div className={`${styles.fieldGroup} ${styles.locked}`}>
             <input
               type="text"
-              value={resultText}
+              value={safeRate === 0 ? "—" : resultText}
               readOnly
               dir="ltr"
               className={styles.faInput}
               placeholder="۰"
             />
-            
             <div className={styles.divider}></div>
-            
             <div className={styles.selectWrapper}>
               <select className={styles.currencySelect} value={to} disabled>
                 <option value="IRT">تومان ایران</option>
@@ -190,7 +184,7 @@ export default function ConverterFa() {
       </div>
 
       <div className={styles.cta}>
-        <Button variant="primary" fullWidth rightIcon={<ArrowLeft />} onClick={handleWhatsApp}>
+        <Button variant="primary" fullWidth rightIcon={<ArrowLeft />} onClick={handleWhatsApp} disabled={safeRate === 0}>
           ارسال درخواست در واتس‌اپ
         </Button>
       </div>

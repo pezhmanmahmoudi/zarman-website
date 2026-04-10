@@ -25,14 +25,10 @@ export default function Hero() {
 
   useGSAP(
     () => {
-      // اگر صفحه هنوز لود نشده، انیمیشن اجرا نشود
       if (!mounted) return;
 
-      const tl = gsap.timeline({
-        defaults: { ease: "power3.out" },
-      });
+      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-      // انیمیشن‌های ارجینال شما
       tl.fromTo(`.${styles.eyebrow}`, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.65 })
         .fromTo(`.${styles.title}`, { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.9 }, "-=0.35")
         .fromTo(`.${styles.subtitle}`, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.75 }, "-=0.5")
@@ -57,7 +53,6 @@ export default function Hero() {
         <div className={styles.layout}>
           
           <div className={styles.content}>
-            {/* کلاس hiddenOnLoad باعث می‌شود قبل از انیمیشن GSAP چیزی چشمک نزند */}
             <p className={`${styles.eyebrow} ${styles.hiddenOnLoad}`}>صرافی زرمان</p>
             <h1 className={`${styles.title} ${styles.hiddenOnLoad}`}>
               از 
@@ -65,7 +60,7 @@ export default function Hero() {
                 اولورو
                 <Info size={16} className={styles.infoIcon} strokeWidth={2.5} />
                 <span className={styles.tooltipText}>
-                  اولورو (<span className={styles.uluruEnText}>Uluru</span>) صخره‌ایست مقدس و عظیم در قلب استرالیا، نماد دیرینه‌ی این سرزمین
+                  اولورو (<span className={styles.uluruEnText}>Uluru</span>) صخره‌ایست مقدس و عظیم در قلب استرالیا
                 </span>
               </span>
               تا دماوند
@@ -80,34 +75,21 @@ export default function Hero() {
               <Button href="/fa/register" variant="primary" size="lg" className={styles.btn}>
                 شروع ثبت‌نام
               </Button>
-              
-              <Button 
-                href={whatsappUrl} 
-                variant="secondary" 
-                size="lg" 
-                className={styles.btn}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <Button href={whatsappUrl} variant="secondary" size="lg" className={styles.btn} target="_blank" rel="noopener noreferrer">
                 تماس با ما
               </Button>
             </div>
 
             <div className={`${styles.meta} ${styles.hiddenOnLoad}`}>
-              <span>سریع</span>
-              <span className={styles.dot} />
-              <span>شفاف</span>
-              <span className={styles.dot} />
-              <span>شخصی سازی قیمت</span>
-              <span className={styles.dot} />
+              <span>سریع</span><span className={styles.dot} />
+              <span>شفاف</span><span className={styles.dot} />
+              <span>شخصی سازی قیمت</span><span className={styles.dot} />
               <span>قابل اعتماد</span>
             </div>
           </div>
 
           <div className={styles.visual}>
             <div className={`${styles.rateWidget} ${styles.hiddenOnLoad}`} aria-label="نرخ لحظه‌ای ارز">
-              
-              {/* هدر تابلوی قیمت */}
               <div className={styles.widgetHeader}>
                 <span className={styles.pulseDot}></span>
                 <span className={styles.status}>
@@ -116,26 +98,25 @@ export default function Hero() {
               </div>
 
               <div className={styles.splitCard}>
-                
-                {/* 👈 قرار دادن لوگو در ابتدا باعث می‌شود در دسکتاپ سمت راست و در موبایل بالا بیفتد */}
                 <div className={styles.logoSection}>
-                  <Image 
-                    src="/images/Logo no text light.svg" 
-                    alt="Zarman Exchange"
-                    width={100}
-                    height={100}
-                    className={styles.boardLogo}
-                  />
+                  <Image src="/images/Logo no text light.svg" alt="Zarman Exchange" width={100} height={100} className={styles.boardLogo} />
                 </div>
 
                 <div className={styles.ratesData}>
                   <div className={styles.rateCol}>
                     <span className={styles.label}>فروش دلار استرالیا</span>
                     <strong className={styles.value}>
-                      {isLoading 
-                        ? "---" 
-                        : currentRates.sellAUD.toLocaleString("fa-IR")} 
-                      <span className={styles.currency}>تومان</span>
+                      {isLoading ? (
+                        <span style={{ fontSize: '1rem' }}>در حال دریافت...</span>
+                      ) : currentRates.sellAUD ? (
+                        <>
+                          {/* 🛡️ اضافه شدن علامت تعجب برای رفع ارور تایپ‌اسکریپت */}
+                          {currentRates.sellAUD!.toLocaleString("fa-IR")} 
+                          <span className={styles.currency}>تومان</span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: '1.2rem', color: '#f59e0b' }}>تماس بگیرید</span>
+                      )}
                     </strong>
                   </div>
 
@@ -144,19 +125,23 @@ export default function Hero() {
                   <div className={styles.rateCol}>
                     <span className={styles.label}>خرید دلار استرالیا</span>
                     <strong className={styles.value}>
-                      {isLoading 
-                        ? "---" 
-                        : currentRates.buyAUD.toLocaleString("fa-IR")} 
-                      <span className={styles.currency}>تومان</span>
+                      {isLoading ? (
+                        <span style={{ fontSize: '1rem' }}>در حال دریافت...</span>
+                      ) : currentRates.buyAUD ? (
+                        <>
+                          {/* 🛡️ اضافه شدن علامت تعجب برای رفع ارور تایپ‌اسکریپت */}
+                          {currentRates.buyAUD!.toLocaleString("fa-IR")} 
+                          <span className={styles.currency}>تومان</span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: '1.2rem', color: '#f59e0b' }}>تماس بگیرید</span>
+                      )}
                     </strong>
                   </div>
                 </div>
-
               </div>
-              
             </div>
           </div>
-
         </div>
       </div>
     </section>

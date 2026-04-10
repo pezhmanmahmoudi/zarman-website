@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Calculator, AlertTriangle, Lock, MessageSquare, ChevronDown, ServerCrash, Loader2 } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
-import { Profile } from "@/app/fa/dashboard/dashboard.types";
+import { Profile } from "@/app/fa/dashboard/dashboard.types"; 
 
 function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]); }
 function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹"; return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d))); }
@@ -49,7 +49,6 @@ type RequestHubProps = {
   onSaveTransaction: (rawAmount: number, txType: "buy_aud" | "sell_aud") => Promise<ServerTransactionResult | null>;
 };
 
-// 👇 باگ اینجا بود! کلمه default حذف شد تا ایمپورتِ فایل page.tsx درست کار کند
 export function DashboardRequestHub({ 
   isApproved, txType, setTxType, amountStr, setAmountStr, 
   loyaltyBonus, tailoredRate, baseRate, displayFullName, profile,
@@ -90,11 +89,14 @@ export function DashboardRequestHub({
 
       const actionLabel = txType === "sell_aud" ? "فروش AUD (مشتری دلار می‌دهد)" : "خرید AUD (مشتری تومان می‌دهد)";
       
+      // 👈 محاسبه مجموع تخفیف برای ارسال به واتس‌اپ
+      const totalLoyalty = serverData.loyaltyBonus * serverData.rawAmount;
+
       const fmtAmount = formatNumberWA(serverData.rawAmount, false);
       const fmtResult = formatNumberWA(serverData.equivalentToman, true);
       const fmtTailored = formatNumberWA(serverData.tailoredRate, true);
       const fmtBase = formatNumberWA(serverData.baseRate, true);
-      const fmtLoyalty = formatNumberWA(serverData.loyaltyBonus, true);
+      const fmtLoyaltyTotal = formatNumberWA(totalLoyalty, true); // 👈 ارسال جمع کل تخفیف
       
       let feeText = "بدون کارمزد";
       if (serverData.appliedFee > 0) {
@@ -109,7 +111,7 @@ export function DashboardRequestHub({
         "- مقدار: " + fmtAmount + " AUD\n" +
         "--------------------------\n" +
         "- نرخ پایه بازار: " + fmtBase + " تومان\n" +
-        "- تخفیف وفاداری: " + fmtLoyalty + " تومان\n" +
+        "- مجموع تخفیف وفاداری: " + fmtLoyaltyTotal + " تومان\n" +
         "- نرخ اختصاصی نهایی: " + fmtTailored + " تومان\n" +
         "- کارمزد: " + feeText + "\n" +
         "--------------------------\n" +
@@ -200,9 +202,12 @@ export function DashboardRequestHub({
           <strong className={styles.summaryRate}>
             نرخ اختصاصی شما: {isRateOffline ? "—" : formatNumberUI(tailoredRate, true)} تومان
           </strong>
+          {/* 👈 این بخش کاملاً هوشمند شد تا مجموع تخفیف را محاسبه و نمایش دهد */}
           {(loyaltyBonus > 0 && !isRateOffline) && (
             <span className={styles.summaryHint}>
-              شامل {formatNumberUI(loyaltyBonus, true)} تومان سود وفاداری.
+              {rawAmount > 0 
+                ? `شامل ${formatNumberUI(loyaltyBonus * rawAmount, true)} تومان سود وفاداری در این تراکنش.`
+                : `شما ${formatNumberUI(loyaltyBonus, true)} تومان سود وفاداری روی هر دلار دارید.`}
             </span>
           )}
         </div>
