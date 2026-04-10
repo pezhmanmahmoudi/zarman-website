@@ -14,10 +14,10 @@
   --color-bg-surface-hover: #1A2133;  /* Elevated Navy - Interactive Row/Card Hover */
   
   /* Accents */
-  --color-accent-primary: #4F46E5;    /* Indigo Electric - Primary CTAs, Active States */
-  --color-accent-primary-hover: #4338CA; 
-  --color-accent-secondary: #7C3AED;  /* Ultraviolet - Subtle Highlights, Focused Glows */
-  --color-accent-support: #7C3AED;    /* Restrained Cyan - Rates, Positive Charts, Success */
+  --color-accent-primary: #3848f5;    /* Indigo Electric - Primary CTAs, Active States */
+  --color-accent-primary-hover: #3848f5; 
+  --color-accent-secondary: #3848f5;  /* Ultraviolet - Subtle Highlights, Focused Glows */
+  --color-accent-support: #3848f5;    /* Restrained Cyan - Rates, Positive Charts, Success */
   
   /* Typography Colors */
   --color-text-primary: #FFFFFF;      /* Crisp White - H1/H2, Core Values, Active Rates */

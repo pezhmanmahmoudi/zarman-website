@@ -60,24 +60,15 @@ function formatDateForXAxis(date: string, timeframe: Timeframe) {
   }
 }
 
-/* ======================================================================
-   حل مشکل سپریتور و اعداد فارسی برای فونت‌های ایران‌سنس و پیدا
-   ====================================================================== */
 function formatPrice(num: number) {
-  // 1. اول عدد را با استاندارد انگلیسی سه رقم سه رقم جدا می‌کنیم
   const enFormatted = Number(num).toLocaleString("en-US");
   const faDigits = "۰۱۲۳۴۵۶۷۸۹";
   
   return enFormatted
-    // 2. اعداد انگلیسی را به فارسی تبدیل می‌کنیم
     .replace(/\d/g, (d) => faDigits[Number(d)])
-    // 3. کامای انگلیسی یا جداکننده نامعتبر را با ویرگولِ زیبای فارسی جایگزین می‌کنیم
     .replace(/,/g, "،");
 }
 
-/* ======================================================================
-   الگوریتم هوشمند برای تولید اعداد رُند (Nice Ticks) در محور عمودی
-   ====================================================================== */
 function calculateNiceTicks(rawMin: number, rawMax: number, maxTicks = 6) {
   if (rawMin === rawMax) {
     return { 
@@ -134,7 +125,8 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
 };
 
 export default function PriceChart() {
-  const [timeframe, setTimeframe] = useState<Timeframe>("3M");
+  // 👈 تنها تغییر: پیش‌فرض برای ظاهر زیبای چارت روی 1W تنظیم شد
+  const [timeframe, setTimeframe] = useState<Timeframe>("1W");
   const { chartDataDaily, isLoading } = useRates();
 
   const chartData = useMemo<PreparedChartPoint[]>(() => {

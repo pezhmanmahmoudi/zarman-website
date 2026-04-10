@@ -1,74 +1,489 @@
-.sidebar { background: var(--bg-card); border-left: 1px solid var(--border-soft); padding: 32px 24px; position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; z-index: 999; transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.28s ease; min-width: 0; }
-.sidebarHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 40px; }
-.sidebarCloseBtn { display: none; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border-soft); background: var(--bg-soft); color: var(--text-main); align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+/* DashboardSidebar.module.css */
 
-/* تنظیمات چیدمان لوگو و فاصله‌ها */
-
-.sidebarHeader { 
-  display: flex; 
-  align-items: flex-start; 
-  justify-content: space-between; 
-  gap: 12px; 
-  padding-bottom: 32px; /* ایجاد فاصله در بالا */
-  border-bottom: 1px solid var(--border-soft); /* خط جداکننده بالا دقیقاً مثل خط پایین */
+.sidebar {
+  background: var(--bg-card);
+  border-left: 1px solid var(--border-soft);
+  padding: 32px 24px;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.3s ease;
+  min-width: 0;
 }
 
+.sidebarHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
 
-.logoArea { 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  text-align: center; 
-  width: 100%; 
-  gap: 6px; 
-  padding-bottom: 1px; /* فاصله از زیرنویس تا خط‌چین */
-  margin-bottom: 1px; /* فاصله از خط‌چین تا اولین دکمه منو */
+.logoArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  gap: 6px;
+  padding-bottom: 1px;
+  margin-bottom: 1px;
   position: relative;
 }
 
-
-
-.logoImage { 
-  object-fit: contain; 
+.logoImage {
+  object-fit: contain;
   margin-bottom: 6px;
 }
 
-.logoTitle { 
-  /* استفاده از فونت‌های استاندارد و هندسی انگلیسی برای استایل شرکتی */
+.logoTitle {
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  font-size: 1.85rem; 
-  font-weight: 900; 
-  margin: 0; 
- 
-  background: linear-gradient(to right, #d503ff, #0d00ff); 
-  -webkit-background-clip: text; 
-  -webkit-text-fill-color: transparent; 
+  font-size: 1.85rem;
+  font-weight: 900;
+  margin: 0;
+  background: linear-gradient(to right, #d503ff, #0d00ff);
+  -webkit-background-clip: text;
+  /* 👈 این خط اضافه شد تا اخطار برطرف شود */
+  background-clip: text; 
+  -webkit-text-fill-color: transparent;
   letter-spacing: 1px;
   line-height: 1;
 }
 
-.logoSubtitle { 
-  /* جدا کردن فونت از بدنه فارسی */
+.logoSubtitle {
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  font-size: 0.68rem; 
-  font-weight: 800; /* ضخیم‌تر برای خوانایی در سایز کوچک */
-  color: var(--text-soft); /* رنگ ملایم اما خواناتر از قبل */
-  letter-spacing: 0.22em; /* فاصله زیاد بین حروف برای القای حس لوکس (Tracking) */
-  margin: 0; 
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text-soft);
+  letter-spacing: 0.22em;
+  margin: 0;
   text-transform: uppercase;
 }
 
-.navMenu { display: flex; flex-direction: column; gap: 8px; flex: 1; }
-.navItem { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; color: var(--text-dim); font-weight: 600; cursor: pointer; transition: all 0.2s ease; border: none; background: transparent; width: 100%; text-align: right; font-size: 0.95rem; font-family: inherit; }
-.navItem:hover { background-color: var(--bg-soft); color: var(--text-main); }
-.navItemActive { background-color: rgba(79, 70, 229, 0.1); color: var(--accent) !important; font-weight: 800; }
-:global([data-theme="dark"]) .navItemActive { background-color: rgba(79, 70, 229, 0.18); color: var(--accent) !important; }
-.sidebarFooter { border-top: 1px solid var(--border-soft); padding-top: 20px; margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
-.logoutBtn { color: var(--danger) !important; }
-.logoutBtn:hover { background-color: rgba(239, 68, 68, 0.1) !important; }
+.sectionLabel {
+  font-family: var(--font-primary);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-soft);
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-4);
+  padding: 0 var(--space-2);
+  text-align: right;
+  direction: rtl;
+}
 
+.divider {
+  height: 1px;
+  background-color: var(--color-border-ghost);
+  margin: var(--space-6) var(--space-2);
+  flex-shrink: 0;
+}
+
+.navMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 14px var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: right;
+  font-size: var(--text-body-lg);
+  font-family: var(--font-primary);
+  direction: rtl;
+}
+
+.navItem span {
+  flex: 1;
+}
+
+.navItem:hover {
+  color: var(--color-accent-primary);
+  background-color: rgba(124, 58, 237, 0.06);
+}
+
+.navItem:active {
+  background-color: var(--color-border-ghost);
+  transform: scale(0.985);
+}
+
+.navItemActive {
+  background-color: rgba(124, 58, 237, 0.1);
+  color: #38bdf8 !important;
+}
+
+:global([data-theme="dark"]) .navItemActive {
+  background-color: rgba(124, 58, 237, 0.18);
+  color: #38bdf8 !important;
+}
+
+.sidebarFooter {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.logoutBtn {
+  color: #ef4444 !important;
+}
+
+.logoutBtn:hover {
+  color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.08);
+}
+
+/* =========================
+   Desktop close button hidden
+   ========================= */
+.burger {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+  flex-shrink: 0;
+}
+
+.burger:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.burger:active {
+  transform: scale(0.92);
+}
+
+.burgerLine {
+  width: 22px;
+  height: 2px;
+  background-color: var(--text-main);
+  border-radius: 999px;
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.25s ease,
+    background-color 0.3s ease;
+  transform-origin: center;
+}
+
+.burgerActive {
+  background: transparent;
+  border-color: transparent;
+}
+
+.burgerActive .burgerLine:nth-child(1) {
+  transform: translateY(4px) rotate(45deg);
+}
+
+.burgerActive .burgerLine:nth-child(2) {
+  transform: translateY(-4px) rotate(-45deg);
+}
+
+/* =========================
+   Global mobile trigger button
+   ========================= */
+.mobileMenuTrigger {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--color-border-ghost);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  z-index: 10001;
+  transition:
+    transform 0.22s ease,
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.mobileMenuTrigger:hover {
+  transform: translateY(-1px);
+}
+
+.mobileMenuTrigger:active {
+  transform: scale(0.95);
+}
+
+.mobileMenuTriggerLine {
+  width: 22px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--text-main);
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.25s ease,
+    background-color 0.3s ease;
+}
+
+.mobileMenuTriggerActive .mobileMenuTriggerLine:nth-child(1) {
+  transform: translateY(4px) rotate(45deg);
+}
+
+.mobileMenuTriggerActive .mobileMenuTriggerLine:nth-child(2) {
+  transform: translateY(-4px) rotate(-45deg);
+}
+
+/* =========================
+   Backdrop
+   ========================= */
+.mobileBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(2, 6, 23, 0.34),
+      rgba(2, 6, 23, 0.62)
+    );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.mobileBackdropVisible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* =========================
+   Mobile / Tablet drawer
+   ========================= */
 @media (max-width: 1100px) {
-  .sidebar { position: fixed; top: 0; right: 0; width: min(320px, 86vw); height: 100dvh; transform: translateX(100%); box-shadow: var(--shadow-card); }
-  .sidebarOpen { transform: translateX(0); }
-  .sidebarCloseBtn { display: inline-flex; }
+  .mobileMenuTrigger {
+    display: inline-flex;
+  }
+
+  .burger {
+    display: inline-flex;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: min(86vw, 400px);
+    max-width: 400px;
+    height: 100dvh;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.96) 0%,
+        rgba(250, 250, 255, 0.96) 100%
+      );
+    border-left: 1px solid var(--color-border-ghost);
+    border-radius: 28px 0 0 28px;
+    box-shadow:
+      -24px 0 60px rgba(2, 6, 23, 0.22),
+      -6px 0 18px rgba(2, 6, 23, 0.08);
+    transform: translateX(104%);
+    opacity: 0;
+    padding: 28px 20px 28px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  :global([data-theme="dark"]) .sidebar {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(15, 23, 42, 0.97) 0%,
+        rgba(17, 24, 39, 0.97) 100%
+      );
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  .sidebarHeader {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .logoArea {
+    padding-top: 4px;
+  }
+
+  .logoImage {
+    width: 96px;
+    height: auto;
+    margin-bottom: 4px;
+  }
+
+  .logoTitle {
+    font-size: 1.55rem;
+  }
+
+  .logoSubtitle {
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+  }
+
+  .sectionLabel {
+    font-size: 0.86rem;
+    margin-bottom: 12px;
+  }
+
+  .divider {
+    margin: 20px 8px;
+  }
+
+  .navMenu {
+    gap: 8px;
+  }
+
+  .navItem {
+    min-height: 52px;
+    padding: 14px 12px;
+    border-radius: 16px;
+    font-size: 1.06rem;
+  }
+
+  .sidebarFooter {
+    gap: 8px;
+    padding-bottom: 10px;
+  }
+}
+
+/* =========================
+   Smaller mobiles
+   ========================= */
+@media (max-width: 640px) {
+  .mobileMenuTrigger {
+    top: 14px;
+    right: 14px;
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+  }
+
+  .sidebar {
+    width: min(90vw, 360px);
+    border-radius: 24px 0 0 24px;
+    padding: 24px 16px 24px;
+  }
+
+  .logoImage {
+    width: 88px;
+  }
+
+  .logoTitle {
+    font-size: 1.42rem;
+  }
+
+  .logoSubtitle {
+    font-size: 0.58rem;
+  }
+
+  .navItem {
+    min-height: 50px;
+    font-size: 1rem;
+    gap: 10px;
+  }
+
+  .sectionLabel {
+    padding: 0 6px;
+  }
+}
+
+/* =========================
+   Desktop behavior
+   ========================= */
+@media (min-width: 1101px) {
+  .mobileBackdrop {
+    display: none;
+  }
+
+  .mobileMenuTrigger {
+    display: none;
+  }
+
+  .sidebar {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* =========================
+   Custom Scrollbar
+   ========================= */
+.sidebar::-webkit-scrollbar,
+.sidebarScroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track,
+.sidebarScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb,
+.sidebarScroll::-webkit-scrollbar-thumb {
+  background-color: var(--border-input);
+  border-radius: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover,
+.sidebarScroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-placeholder);
+}
+
+:global([data-theme="dark"]) .sidebar::-webkit-scrollbar-thumb,
+:global([data-theme="dark"]) .sidebarScroll::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+:global([data-theme="dark"]) .sidebar::-webkit-scrollbar-thumb:hover,
+:global([data-theme="dark"]) .sidebarScroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }

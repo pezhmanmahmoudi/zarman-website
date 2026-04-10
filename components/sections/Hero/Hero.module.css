@@ -214,32 +214,34 @@
   max-width: 480px;
 }
 
-/* 👈 وسط‌چین کردن دکمه "نرخ لحظه‌ای" */
+/* 👈 وسط‌چین کردن و پس‌زمینه سبز ملایم */
 .widgetHeader {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  align-self: center; /* 👈 این خط اضافه شد تا همیشه وسط پنل قیمت بماند */
-  background-color: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  align-self: center; 
+  background-color: rgba(16, 185, 129, 0.15); /* پس‌زمینه هاله سبز */
+  border: 1px solid rgba(16, 185, 129, 0.3); /* حاشیه سبز ظریف */
   padding: 6px 16px;
   border-radius: var(--radius-pill);
 }
 
+/* 👈 نقطه چشمک‌زن سبز */
 .pulseDot {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-pill);
-  background-color: var(--color-accent-support); 
-  box-shadow: 0 0 12px var(--color-accent-support);
+  background-color: #10b981; /* رنگ سبز زنده */
+  box-shadow: 0 0 12px #10b981; /* سایه درخشان سبز */
   animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 👈 متن سبز رنگ */
 .status {
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
   font-weight: var(--font-weight-bold);
-  color: var(--color-accent-support);
+  color: #10b981; /* رنگ سبز زنده */
 }
 
 /* 👈 استایل بهبود یافته پنل قیمت (بافت‌دار و لوکس‌تر) */
@@ -329,6 +331,13 @@
 
 /* Responsive Overrides */
 @media (max-width: 1024px) {
+  .hero {
+    min-height: auto; /* لغو وسط‌چین عمودی برای کنترل دقیق‌تر */
+  }
+  .container {
+    padding-top: 130px; /* 👈 این عدد را کم و زیاد کنید تا فاصله بالا در تبلت تنظیم شود */
+  }
+  
   .layout {
     grid-template-columns: 1fr;
     gap: var(--space-12);
@@ -353,15 +362,12 @@
     min-height: auto;
   }
   .container {
-    /* عدد 60 را به 20 یا 0 تغییر دهید تا در موبایل هم به بالا نزدیکتر شود */
-    padding-top: calc(var(--section-pad-compact) + 30px); 
+    padding-top: 130px; /* 👈 این عدد را کم و زیاد کنید تا فاصله بالا در موبایل تنظیم شود */
   }
   .eyebrow {
-    /* 👈 حل مشکل برخورد تولتیپ با صرافی زرمان در موبایل */
     margin-bottom: 24px; 
   }
   .splitCard {
-    /* 👈 در موبایل لوگو به بالا منتقل می‌شود */
     flex-direction: column; 
   }
   .logoSection {

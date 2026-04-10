@@ -34,7 +34,6 @@
   min-height: 52px;
   padding: 16px 28px;
 
-  
   font-size: 16px;
   font-weight: 900;
   letter-spacing: -0.01em;
@@ -119,26 +118,25 @@
    VARIANTS
    ========================= */
 .primary {
-  color: rgba(255, 255, 255, 0.96);
+  color: rgb(255, 255, 255);
   background:
     radial-gradient(1000px 240px at 18% 22%,
-      rgba(120, 140, 255, 0.14) 0%,
+      rgba(24, 51, 224, 0.932) 0%,
       rgba(0, 0, 0, 0) 58%),
     linear-gradient(135deg,
-      #050917 0%,
-      #070c1c 22%,
-      #0b1230 48%,
-      #050917 76%,
-      #020413 100%);
+      #2318c2 0%,     /* نیلی تیره */
+      #403ae5 22%,    /* نیلی متوسط */
+      #1720a1 48%,    /* آبی/نیلی روشن و زنده در مرکز */
+      #4988e7 76%,
+      #4a3eee 100%);
 
   background-size: 240% 240%;
   background-position: 16% 24%;
 
   box-shadow:
-    0 22px 62px -40px rgba(2, 6, 23, 0.78),
-    0 10px 24px -18px rgba(2, 6, 23, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    0 15px 35px -15px rgba(67, 56, 202, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .primary::after {
@@ -156,25 +154,24 @@
   inset: -3px;
   border-radius: inherit;
   pointer-events: none;
-
+  
+  /* برق الماسی و درخشان برای دکمه اصلی */
   background: linear-gradient(
     115deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.18) 36%,
-    rgba(255, 255, 255, 0) 62%
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0) 100%
   );
   transform: translateX(-120%);
-  opacity: 0.62;
+  opacity: 0;
 }
 
 .secondary {
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  backdrop-filter: blur(12px) saturate(170%);
-  box-shadow:
-    0 16px 36px -26px rgba(2, 6, 23, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
+  color: rgba(255, 255, 255, 0.85); 
+  background: rgba(255, 255, 255, 0.06); 
+  border: 1px solid rgba(255, 255, 255, 0.12); 
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.3);
 }
 
 .secondary::before {
@@ -220,71 +217,55 @@
 /* =========================
    HOVER / ACTIVE
    ========================= */
+   
 .btn:hover {
-  transform: none;
-  filter: saturate(5) contrast(1.05);
+  transform: none; /* جابجایی حذف شد */
 }
 
 .primary:hover {
   background-position: 78% 55%;
+  filter: brightness(1.08) saturate(1.1); /* کمی درخشان‌تر */
   box-shadow:
-    0 30px 86px -56px rgba(2, 6, 23, 0.88),
+    0 25px 50px -20px rgba(24, 51, 224, 0.5),
     0 14px 34px -24px rgba(2, 6, 23, 0.46);
-    
 }
 
 .primary:hover::before {
-  animation: sheenSlide 1.15s var(--btn-ease) both;
-  opacity: 0.85;
+  opacity: 1;
+  animation: sheenSlide 1.2s cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 
 .secondary:hover {
-  /* override global hover filter for secondary */
-  filter: saturate(1.15) contrast(1.03);
-
-  /* premium neutral gradient (silver) */
-  background:
-    radial-gradient(500px 160px at 50% 0%,
-      rgba(255, 255, 255, 0.85),
-      rgba(255, 255, 255, 0) 70%),
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 1) 0%,
-      rgba(245, 246, 248, 1) 55%,
-      rgba(238, 240, 243, 1) 100%
-    );
-
-  border-color: rgba(15, 23, 42, 0.18);
-
+  filter: brightness(1.1); 
+  background: rgba(255, 255, 255, 0.1); /* شیشه کمی روشن‌تر می‌شود */
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
   box-shadow:
-    0 22px 54px -34px rgba(2, 6, 23, 0.18),
-    0 0 0 1.5px rgb(141, 2, 255),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
+    0 20px 40px -15px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-
-/* Secondary: add a moving silver sheen like Primary */
 .secondary::after {
   content: "";
   position: absolute;
   inset: -3px;
   border-radius: inherit;
   pointer-events: none;
-
+  
+  /* هاله بنفش/یاسی بسیار پریمیوم برای ایجاد هارمونی با دکمه اصلی */
   background: linear-gradient(
     115deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.55) 36%,
-    rgba(255, 255, 255, 0) 62%
+    rgba(167, 139, 250, 0) 0%,
+    rgba(167, 139, 250, 0.4) 50%,
+    rgba(167, 139, 250, 0) 100%
   );
-
   transform: translateX(-120%);
-  opacity: 0.0;
+  opacity: 0;
 }
 
 .secondary:hover::after {
-  opacity: 0.75;
-  animation: sheenSlide 1.15s var(--btn-ease) both;
+  opacity: 1;
+  animation: sheenSlide 1.2s cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 
 .ghost:hover {
@@ -300,7 +281,7 @@
 }
 
 .btn:active {
-  transform: translateY(0px) scale(0.99);
+  transform: scale(0.97); /* افکت فشرده شدن هنگام کلیک حفظ شد اما جابجایی حذف گردید */
 }
 
 /* =========================
@@ -353,7 +334,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .btn,
-  .primary::before {
+  .primary::before,
+  .secondary::after {
     transition: none;
     animation: none;
   }

@@ -16,6 +16,11 @@ const VIEWPORT = { once: true, amount: 0.45 } as const;
 export default function About() {
   const reduceMotion = useReducedMotion();
 
+  // 👇 تنظیمات لینک واتس‌اپ و پیام پیش‌فرض
+  const whatsappNumber = "61497851631";
+  const whatsappMessage = encodeURIComponent("سلام، من از طریق وب‌سایت زرمان پیام می‌دهم و برای انتقال وجه نیاز به راهنمایی دارم.");
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+
   return (
     <section id="about" className={styles.about} aria-label="درباره زرمان">
       <section className={styles.section}>
@@ -63,10 +68,19 @@ export default function About() {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.95, ease: EASE, delay: 0.58 }}
                 >
-                  <Button href="/fa/register" variant="primary" size="lg">
+                  <Button href="/fa/register" variant="primary" size="lg" className={styles.actionBtn}>
                     شروع ثبت‌نام
                   </Button>
-                  <Button href="/fa/contact" variant="secondary" size="lg">
+                  
+                  {/* 👇 دکمه تماس با ما به واتس‌اپ متصل شد */}
+                  <Button 
+                    href={whatsappUrl} 
+                    variant="ghost" 
+                    size="lg" 
+                    className={`${styles.actionBtn} ${styles.mobileDarkGhost}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     تماس با ما
                   </Button>
                 </motion.div>

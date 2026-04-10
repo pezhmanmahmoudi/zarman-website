@@ -1,26 +1,26 @@
 .dashboardWrapper {
-  /* ================= Light Theme Variables (منطبق با Register) ================= */
   --bg-app: #f1f5f9;
   --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
   --bg-soft: #f8fafc;
   --bg-input: #ffffff;
-  
+
   --text-main: #0f172a;
   --text-soft: #475569;
   --text-dim: #64748b;
   --text-placeholder: #94a3b8;
-  
+
   --border-soft: #e2e8f0;
   --border-input: #cbd5e1;
-  
+
   --accent: #4f46e5;
   --accent-hover: #4338ca;
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
 
-  --shadow-card: 0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --shadow-card: 0 20px 40px -10px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.02);
 
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -34,43 +34,275 @@
 }
 
 .dashboardWrapper[data-theme="dark"] {
-  /* ================= Dark Theme Variables (منطبق با Tokens) ================= */
-  --bg-app: #080B12;
+  --bg-app: #080b12;
   --bg-sidebar: #111622;
   --bg-card: #111622;
-  --bg-soft: #1A2133;
+  --bg-soft: #1a2133;
   --bg-input: rgba(255, 255, 255, 0.03);
-  
-  --text-main: #FFFFFF;
-  --text-soft: #94A3B8;
-  --text-dim: #64748B;
-  --text-placeholder: #64748B;
-  
+
+  --text-main: #ffffff;
+  --text-soft: #94a3b8;
+  --text-dim: #64748b;
+  --text-placeholder: #64748b;
+
   --border-soft: rgba(255, 255, 255, 0.08);
   --border-input: rgba(255, 255, 255, 0.15);
-  
-  --accent: #4F46E5;
-  --accent-hover: #4338CA;
-  
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.4),
+    0 2px 4px -2px rgba(0, 0, 0, 0.4);
 }
 
-/* حل قطعی مشکل بیرون‌زدگی المان‌ها */
-.dashboardWrapper *, .dashboardWrapper *::before, .dashboardWrapper *::after {
+.dashboardWrapper *,
+.dashboardWrapper *::before,
+.dashboardWrapper *::after {
   box-sizing: border-box;
 }
 
-.loadingState { min-height: 100dvh; width: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-soft); font-weight: 700; font-size: 1rem; }
-.mobileBackdrop { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.52); z-index: 39; display: none; }
-.mainArea { min-width: 0; padding: 40px; overflow-x: hidden; display: flex; flex-direction: column; gap: 24px;}
-.mobileTopbar { display: none; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
-.mobileMenuBtn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border-soft); background: var(--bg-card); color: var(--text-main); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-.mobileBrand { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
-.mobileBrand strong { font-size: 0.95rem; }
-.mobileBrand span { font-size: 0.75rem; color: var(--text-dim); }
+.loadingState {
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-soft);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.mobileBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.52);
+  z-index: 39;
+  display: none;
+}
+
+.mainArea {
+  min-width: 0;
+  padding: 40px;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* =====================================
+   بخش بالای موبایل (حاوی دکمه همبرگری)
+   ===================================== */
+.mobileTopbar {
+  display: none;
+  align-items: center;
+  /* 👈 در راست‌چین (RTL)، flex-start 요소 را در سمت راست قرار می‌دهد */
+  justify-content: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+  position: relative;
+  /* 👈 باعث می‌شود هنگام باز شدن سایدبار، دکمه زیر آن نرود و دیده شود */
+  z-index: 100000; 
+}
+
+.mobileMenuBtn {
+  /* 👈 حذف position fixed تا دکمه به داخل کارت پایینی نفوذ نکند */
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-card);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+  position: relative; 
+}
+
+/* جلوگیری از حرکت در هاور و لمس */
+.mobileMenuBtn:hover {
+  background: var(--bg-soft);
+}
+.mobileMenuBtn:active {
+  background: var(--border-soft);
+}
+
+.mobileMenuBtn span {
+  width: 22px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--text-main);
+  /* انیمیشن ساخت ضربدر */
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
+  transform-origin: center;
+}
+
+/* تبدیل دقیق خطوط به (X) */
+.mobileMenuBtnActive span:nth-child(1) {
+  transform: translateY(4px) rotate(45deg) !important;
+}
+.mobileMenuBtnActive span:nth-child(2) {
+  transform: translateY(-4px) rotate(-45deg) !important;
+}
+
+.mobileBrand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.mobileBrand strong {
+  font-size: 0.95rem;
+}
+
+.mobileBrand span {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* =====================================
+   استایل‌های مُدال حذف
+   ===================================== */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 100000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.modalContent {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-soft);
+}
+
+.modalTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modalTitleGroup h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.warningIcon {
+  color: var(--danger);
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+}
+.closeBtn:hover {
+  background: var(--border-soft);
+  color: var(--text-main);
+}
+
+.modalBody {
+  padding: 24px;
+}
+
+.modalBody p {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.8;
+  font-size: 0.95rem;
+}
+
+.modalActions {
+  padding: 16px 24px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancelBtn, .dangerBtn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelBtn {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text-main);
+}
+.cancelBtn:hover:not(:disabled) {
+  background: var(--bg-soft);
+}
+
+.dangerBtn {
+  background: var(--danger);
+  border: 1px solid var(--danger);
+  color: #fff;
+}
+.dangerBtn:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+.dangerBtn:disabled, .cancelBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 @media (max-width: 1100px) {
-  .dashboardWrapper { grid-template-columns: 1fr; }
-  .mobileBackdrop, .mobileTopbar { display: flex; }
-  .mainArea { padding: 20px; }
+  .dashboardWrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .mobileBackdrop {
+    display: flex;
+  }
+
+  .mobileTopbar {
+    display: flex;
+  }
+
+  .mainArea {
+    padding: 20px;
+  }
 }

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase"; 
 import { useRates } from "@/context/RateContext"; 
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { processTransactionSecurely } from "@/app/actions/transaction.actions"; // 👈 ایمپورت تابع امنیتی سرور
 
 import shellStyles from "@/styles/dashboard/DashboardShell.module.css";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
@@ -13,6 +14,7 @@ import { DashboardRequestHub } from "@/components/dashboard/DashboardRequestHub"
 import { DashboardTransactionHistory } from "@/components/dashboard/DashboardTransactionHistory";
 import { DashboardProfile } from "@/components/dashboard/DashboardProfile";
 import { DashboardFeedback } from "@/components/dashboard/DashboardFeedback";
+import { AlertTriangle, X } from "lucide-react"; 
 
 export default function ZarmanDashboard() {
   const rateContext = useRates();
@@ -25,6 +27,9 @@ export default function ZarmanDashboard() {
   const [amountStr, setAmountStr] = useState("۱،۰۰۰");
   const [txType, setTxType] = useState<"sell_aud" | "buy_aud">("buy_aud"); 
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("zarman-dashboard-theme");
     if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme);
@@ -32,13 +37,19 @@ export default function ZarmanDashboard() {
 
   useEffect(() => { window.localStorage.setItem("zarman-dashboard-theme", theme); }, [theme]);
 
+  // 🧠 ماشین حساب پیش‌نمایش (تطبیق داده شده با منطق درصدی اسپرد سرور) 🧠
   const baseRate = useMemo(() => {
     const rates = rateContext?.currentRates;
-    if (!rates) return 41250; 
+    if (!rates?.sellAUD || !rates?.buyAUD) return null; 
     return txType === "buy_aud" ? rates.sellAUD : rates.buyAUD;
   }, [rateContext, txType]);
 
-  // 👈 فیلتر کردن تراکنش‌های موفق برای استخراج حجم و تعداد
+  const spread = useMemo(() => {
+    const rates = rateContext?.currentRates;
+    if (!rates?.sellAUD || !rates?.buyAUD) return 0;
+    return Math.abs(rates.sellAUD - rates.buyAUD);
+  }, [rateContext]);
+
   const approvedTransactions = useMemo(() => {
     if (!transactions) return [];
     return transactions.filter((tx: any) => tx.status === "approved");
@@ -49,14 +60,19 @@ export default function ZarmanDashboard() {
   }, [approvedTransactions]);
 
   const loyaltyBonus = useMemo(() => {
-    if (approvedVolume >= 10000) return 600;
-    if (approvedVolume >= 5000) return 250;
-    return 0;
-  }, [approvedVolume]);
+    if (spread === 0 || approvedVolume === 0) return 0;
+    // این اعداد صرفا برای پیش‌نمایش کاربر است، محاسبه قطعی در سرور انجام می‌شود
+    const volumeSteps = Math.floor(approvedVolume / 1000);
+    const rawDiscountPercent = volumeSteps * 0.01;
+    const finalDiscountPercent = Math.min(rawDiscountPercent, 0.50); // سقف 50%
+    return spread * finalDiscountPercent;
+  }, [approvedVolume, spread]);
 
   const tailoredRate = useMemo(() => {
+    if (baseRate === null) return null;
     return txType === "buy_aud" ? baseRate - loyaltyBonus : baseRate + loyaltyBonus; 
   }, [baseRate, txType, loyaltyBonus]);
+  // -------------------------------------------------------------
 
   const isApproved = String(profile?.kyc_status || "").replace(/['"]/g, '').trim().toLowerCase() === "approved";
   
@@ -99,51 +115,47 @@ export default function ZarmanDashboard() {
     ];
   }, [profile]);
 
-  const handleSaveTransaction = async (rawAmount: number, resultNumber: number, currentTxType: string) => {
-    if (!profile || !isApproved || rawAmount <= 0) return false;
-    try {
-      const { data, error } = await supabase
-        .from('transactions') 
-        .insert([{
-          user_id: profile.id,            
-          type: currentTxType,            
-          amount_aud: rawAmount,          
-          equivalent_toman: resultNumber, 
-          status: 'pending'               
-        }])
-        .select();
+  // 🛡️ تغییر بزرگ امنیتی: کلاینت دیگر Insert نمی‌کند. فقط Action را صدا می‌زند 🛡️
+  const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud") => {
+    if (!profile || !profile.id || !isApproved || rawAmount <= 0) return null;
+    
+    // ارسال درخواست به سرور ایزوله (Server Action)
+    const result = await processTransactionSecurely({
+      userId: profile.id,
+      rawAmount: rawAmount,
+      txType: currentTxType
+    });
 
-      if (error) {
-        console.error("خطای سوپابیس:", error);
-        alert(`ثبت تراکنش در دیتابیس مسدود شد!\nارور: ${error.message}`);
-        return false; 
-      }
-      return true; 
-    } catch (err: any) {
-      console.error("خطای شبکه:", err);
-      return false;
+    if (result?.error) {
+      alert(`ثبت تراکنش مسدود شد!\nارور سرور: ${result.error}`);
+      return null;
     }
+
+    // 👈 رفع ارور: با اضافه کردن || null به تایپ‌اسکریپت تضمین می‌دهیم که undefined خروجی نمی‌دهیم
+    // استفاده از as any موقتاً سخت‌گیری تطبیق دقیقِ تایپ‌های سرور و کلاینت را نرم می‌کند
+    return (result?.data as any) || null; 
   };
 
-  // 👈 تابع جدید برای حذف تراکنش از دیتابیس
-  const handleDeleteTransaction = async (txId: string | number) => {
-    if (!confirm("آیا از حذف این درخواست اطمینان دارید؟")) return;
-    
+  
+  const handleDeleteRequest = (txId: string | number) => {
+    setDeleteConfirmId(txId);
+  };
+
+  const executeDeleteTransaction = async () => {
+    if (!deleteConfirmId) return;
+    setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', txId);
-        
+      const { error } = await supabase.from('transactions').delete().eq('id', deleteConfirmId);
       if (error) {
-        console.error("خطا در حذف تراکنش:", error);
         alert(`حذف تراکنش مسدود شد! لطفا RLS مربوط به Delete را چک کنید.`);
       } else {
-        // برای اینکه سریعاً تغییر را ببینیم صفحه را رفرش می‌کنیم
         window.location.reload(); 
       }
     } catch (err) {
       console.error("خطا:", err);
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmId(null);
     }
   };
 
@@ -154,8 +166,8 @@ export default function ZarmanDashboard() {
       <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} theme={theme} setTheme={setTheme} />
       
       <main className={shellStyles.mainArea}>
-        <DashboardHeader firstName={profile?.first_name || "کاربر"} isApproved={isApproved} setMobileMenuOpen={setMobileMenuOpen} />
-        {/* 👈 تعداد تراکنش‌ها حالا فقط تعداد تراکنش‌های موفق را می‌فرستد */}
+        <DashboardHeader firstName={profile?.first_name || "کاربر"} isApproved={isApproved} mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+        
         <DashboardStats totalVolume={approvedVolume} transactionCount={approvedTransactions.length} baseRate={baseRate} loyaltyBonus={loyaltyBonus} txType={txType} />
         
         {activeTab === "hub" && (
@@ -165,10 +177,33 @@ export default function ZarmanDashboard() {
             onSaveTransaction={handleSaveTransaction} 
           />
         )}
-        {/* 👈 تابع حذف به تاریخچه فرستاده شد */}
-        {activeTab === "history" && <DashboardTransactionHistory transactions={transactions} totalVolume={approvedVolume} onDeleteTransaction={handleDeleteTransaction} />}
+        
+        {activeTab === "history" && <DashboardTransactionHistory transactions={transactions} totalVolume={approvedVolume} onDeleteTransaction={handleDeleteRequest} />}
         {activeTab === "profile" && <DashboardProfile profileFields={profileFields} profileId={profile?.id} />}
         {activeTab === "feedback" && <DashboardFeedback profileId={profile?.id || ""} />}
+
+        {deleteConfirmId && (
+          <div className={shellStyles.modalOverlay}>
+            <div className={shellStyles.modalContent}>
+              <div className={shellStyles.modalHeader}>
+                <div className={shellStyles.modalTitleGroup}>
+                  <AlertTriangle className={shellStyles.warningIcon} size={24} />
+                  <h3>لغو درخواست حواله</h3>
+                </div>
+                <button onClick={() => setDeleteConfirmId(null)} className={shellStyles.closeBtn} disabled={isDeleting}><X size={20}/></button>
+              </div>
+              <div className={shellStyles.modalBody}>
+                <p>آیا از لغو و حذف این درخواست تراکنش اطمینان دارید؟ این عمل غیرقابل بازگشت است.</p>
+              </div>
+              <div className={shellStyles.modalActions}>
+                <button onClick={() => setDeleteConfirmId(null)} className={shellStyles.cancelBtn} disabled={isDeleting}>انصراف</button>
+                <button onClick={executeDeleteTransaction} className={shellStyles.dangerBtn} disabled={isDeleting}>
+                  {isDeleting ? "در حال حذف..." : "بله، حذف شود"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

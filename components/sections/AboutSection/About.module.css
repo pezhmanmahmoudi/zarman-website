@@ -46,23 +46,16 @@
   border-radius: 44px;
   overflow: hidden; 
   z-index: 2;
-   background:
-
+  background:
     radial-gradient(900px 520px at 50% -10%,
-
       rgba(99, 102, 241, 0.14),
-
       rgba(255,255,255,0) 58%),
-
     radial-gradient(820px 420px at 15% 35%,
-
       rgba(139, 92, 246, 0.10),
-
       rgba(255,255,255,0) 62%),
-
     linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
   border: 1px solid rgba(124, 58, 237, 0.14);
-   box-shadow:
+  box-shadow:
     0 44px 120px -48px rgba(2, 6, 23, 0.18),
     0 22px 60px -36px rgba(99, 102, 241, 0.14),
     inset 0 1px 0 rgba(255,255,255,0.88);
@@ -111,25 +104,12 @@
 }
 
 .highlightText {
-  /* ✅ TYPOGRAPHY & SPACING */
   display: block;
-  font-size: clamp(20px, 1.5vw, 18px); /* Fluid size: small but legible */
-  font-weight: 800; /* Extra bold for emphasis */
+  font-size: clamp(20px, 1.5vw, 18px); 
+  font-weight: 800; 
   margin-bottom: 18px;
   text-align: center;
-  
-  /* ✅ COLORING (Matching the Framer Motion Example) */
-  color: #000000; /* Modern Purple-500 base color */
-  
-  /* ✅ OPTIONAL: Gradient version to match your Title */
-  /* If you want it to be a gradient like the example: 
-  background: linear-gradient(to left, #a855f7, #6366f1);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  */
-
-  /* ✅ LETTER SPACING & DIRECTION */
+  color: #000000; 
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -140,8 +120,6 @@
   line-height: 1.2; 
   letter-spacing: -0.025em;
   margin-bottom: 24px;
-
-  /* ✅ PREMIUM GRADIENT */
   background: linear-gradient(
     135deg, 
     var(--z-ink-deep) 0%,   
@@ -169,20 +147,6 @@
   gap: clamp(10px, 1.5vw, 18px);
   justify-content: flex-start;
   margin-top: 2rem;
-}
-
-.primaryBtn, .secondaryBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: clamp(44px, 5.5vh, 54px);
-  padding: 0 clamp(20px, 3vw, 40px);
-  border-radius: 999px;
-  font-family: IRANSansX, sans-serif;
-  font-size: clamp(14px, 1.1vw, 17px);
-  font-weight: 700;
-  white-space: nowrap;
-  transition: transform 0.2s ease, background 0.3s ease, color 0.3s ease;
 }
 
 /* =========================
@@ -262,26 +226,32 @@
     gap: 20px;
   }
 
-  .primaryBtn, .secondaryBtn {
-    width: 100%; 
-    max-width: 320px; 
-    height: 50px; 
-    font-size: 15px; 
-    padding: 0 20px;
+  /* تنظیم سایز دکمه‌ها برای موبایل */
+  .actionBtn {
+    width: 100% !important; 
+    max-width: 320px !important; 
+    height: 50px !important; 
+    font-size: 15px !important; 
   }
-}
 
-@media (max-width: 768px) {
-  .actions { gap: 12px; }
-  .primaryBtn, .secondaryBtn { height: 52px; font-size: 16px; }
+  /* 👈 اصلاح رنگ دکمه گوست برای خوانایی روی پس‌زمینه تیره موبایل */
+  .mobileDarkGhost {
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    background: transparent !important;
+  }
+  
+  .mobileDarkGhost:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
 }
 
 @media (max-width: 900px) {
   .highlightText {
-    text-align: center; /* Center-aligned for mobile stack */
+    text-align: center; 
     font-size: 20px;
     margin-bottom: 15px;
-    color: #ffffff; /* Slightly lighter purple for dark mobile background */
+    color: #ffffff; 
   }
 }
 

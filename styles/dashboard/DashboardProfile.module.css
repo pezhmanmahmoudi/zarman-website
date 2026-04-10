@@ -2,13 +2,81 @@
 .uploadBtn { background: rgba(79, 70, 229, 0.1); color: var(--accent); padding: 10px 18px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; border: 1px solid transparent; transition: all 0.2s ease; }
 .uploadBtn:hover { background: rgba(79, 70, 229, 0.15); border-color: rgba(79, 70, 229, 0.2); }
 .profileGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
-.uploadActions { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
-.fileName { color: var(--text-soft); font-size: 0.88rem; word-break: break-word; }
-.uploadStatus { margin: 0; color: var(--text-soft); line-height: 1.8; font-weight: 700; }
+.uploadActions { margin-top: 20px; display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
+.fileName { color: var(--text-soft); font-size: 0.88rem; word-break: break-word; font-family: "Inter", system-ui, sans-serif; direction: ltr; display: inline-block; }
+.uploadStatus { margin: 0; color: var(--text-soft); line-height: 1.8; font-weight: 700; font-size: 0.85rem; }
 
 .inputGroup { display: flex; flex-direction: column; gap: 6px; }
 .inputGroup label { font-size: 0.8rem; font-weight: 600; color: var(--text-soft); }
 .inputControl { background: var(--bg-soft); border: 1px solid var(--border-soft); color: var(--text-dim); padding: 10px 14px; border-radius: 10px; font-size: 16px; font-weight: 500; width: 100%; font-family: "Inter", system-ui, -apple-system, sans-serif; cursor: not-allowed; }
+
+/* =====================================
+   استایل‌های لودینگ و وضعیت (جدید)
+   ===================================== */
+.statusContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.progressWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.progressBar {
+  width: 100%;
+  height: 6px;
+  background-color: var(--border-soft);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progressFill {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, var(--accent) 0%, #d503ff 100%);
+  border-radius: 999px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  animation: loadingIndeterminate 1.5s infinite ease-in-out;
+}
+
+@keyframes loadingIndeterminate {
+  0% { left: -40%; width: 40%; }
+  50% { left: 20%; width: 80%; }
+  100% { left: 100%; width: 40%; }
+}
+
+.successMessage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--success);
+  background: rgba(16, 185, 129, 0.1);
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.successMessage p {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.errorStatus {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
 
 @media (max-width: 1100px) { .profileGrid { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .uploadBtn { width: 100%; justify-content: center; } .profileHeader { align-items: stretch; } }

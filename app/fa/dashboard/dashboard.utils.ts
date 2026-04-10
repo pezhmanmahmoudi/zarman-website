@@ -39,23 +39,22 @@ export function formatDateValue(value?: string | null) {
   return date.toLocaleDateString("fa-IR");
 }
 
-export function extractBaseRateFromContext(rateContext: any): number {
+export function extractBaseRateFromContext(rateContext: any): number | null {
   // ۱. بررسی می‌کنیم آیا اصلاً دیتایی از سوپابیس آمده است یا خیر
   if (!rateContext || !rateContext.rates || rateContext.rates.length === 0) {
-    console.warn("هشدار: نرخ‌ها از سوپابیس دریافت نشدند! استفاده از نرخ موقت.");
-    return 41250; // این فقط در صورتی اجرا می‌شود که اینترنت قطع باشد یا تیبل خالی باشد
+    console.error("خطای بحرانی: نرخ‌ها از سرور دریافت نشدند! ثبت تراکنش باید مسدود شود.");
+    return null; // 👈 تغییر امنیتی: برگشت null به جای عدد هاردکد شده
   }
 
   // ۲. پیدا کردن ردیف نرخ حواله استرالیا از دیتابیس
   const audRate = rateContext.rates.find((r: any) => r.currency_code === 'AUD' || r.pair === 'AUD/IRR');
-  
   
   if (audRate && audRate.sell_aud) {
     return Number(audRate.sell_aud); 
   }
 
   // در صورت پیدا نشدن دیتای دقیق
-  return 41250; 
+  return null; // 👈 تغییر امنیتی
 }
 
 export function normalizeLabel(key: string) {

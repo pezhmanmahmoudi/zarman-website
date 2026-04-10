@@ -45,8 +45,8 @@
   display: flex;
   align-items: center;
   transition: opacity 0.3s ease, transform 0.3s ease;
-  pointer-events: none; /* 👈 غیرفعال کردن کامل کلیک/تاچ روی لوگو */
-  user-select: none; /* جلوگیری از سلکت شدن اشتباهی تصویر */
+  pointer-events: none;
+  user-select: none; 
 }
 
 .headerPillActive .logoContainer {
@@ -62,6 +62,7 @@
 
 /* =========================================
    Hamburger Menu Button & X Animation
+   (دست‌نخورده طبق درخواست شما)
    ========================================= */
 .burger {
   width: 44px;
@@ -76,7 +77,7 @@
   gap: 6px;
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease;
-  z-index: 10001; /* دکمه همیشه رو می‌ماند */
+  z-index: 10001; 
 }
 
 .burger:active {
@@ -102,7 +103,6 @@
   background-color: var(--color-text-primary);
 }
 
-/* 👈 ضربدر بی‌نقص: ۴ پیکسل محاسبه شده بر اساس ضخامت و فاصله خطوط */
 .burgerActive .burgerLine:nth-child(1) {
   transform: translateY(4px) rotate(45deg);
 }
@@ -136,7 +136,7 @@
   max-width: 400px;
   z-index: 9999;
   background-color: var(--color-bg-base);
-  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  border-left: 1px solid var(--color-border-ghost);
   border-radius: 24px 0 0 24px;
   box-shadow: -20px 0 60px rgba(0, 0, 0, 0.4);
   transform: translateX(100%); 
@@ -150,7 +150,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 110px var(--space-6) var(--space-8);
+  padding: 100px var(--space-6) var(--space-8);
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -159,8 +159,8 @@
 }
 
 .menuHeader {
-  margin-bottom: var(--space-6);
-  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding: 0 var(--space-2);
   text-align: right;
   direction: rtl;
 }
@@ -168,103 +168,99 @@
 .menuLabel {
   font-family: var(--font-primary);
   font-size: var(--text-caption);
-  font-weight: var(--font-weight-bold);
-  text-transform: uppercase;
-  letter-spacing: 2px;
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-tertiary);
+  letter-spacing: 1px;
 }
 
 .navLinks {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  gap: 8px;
+  gap: 4px; /* فضای منسجم‌تر بین لینک‌ها */
 }
 
-/* 👈 اصلاح فاصله فلش و متن */
+/* 👈 اصلاح ساختار لینک‌ها برای قرارگیری زیبای فلش در کنار متن */
 .bigLink {
   display: flex;
   align-items: center;
-  justify-content: flex-start; /* المان‌ها را کنار هم می‌چیند */
-  gap: 12px; /* فاصله دقیق بین متن و فلش */
+  justify-content: flex-start; /* 👈 برگرداندن به حالت کنار هم */
+  gap: 25px; /* 👈 فاصله دقیق و شیک بین متن و فلش */
   text-decoration: none;
-  padding: 16px 20px; 
+  padding: 14px var(--space-2); 
   direction: rtl;
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   background-color: transparent;
   transition: background-color 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .bigLink:active {
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: var(--color-border-ghost);
   transform: scale(0.98);
 }
 
 .linkText {
   font-family: var(--font-primary);
-  font-size: 1.25rem; 
-  font-weight: var(--font-weight-bold);
+  font-size: var(--text-body-lg); 
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   transition: color 0.2s ease;
 }
 
 .linkArrow {
-  font-size: 1.1rem;
+  font-size: var(--text-body-md);
   color: var(--color-text-tertiary);
-  opacity: 0.5; /* در حالت عادی کمی محو است */
-  transform: translateX(8px); /* کمی به سمت راست کشیده شده */
+  opacity: 0.4; 
+  /* 👈 کمی به راست هل داده شده تا وقتی کلیک/تاچ می‌کنید، به زیبایی سر جایش بلغزد */
+  transform: translateX(8px); 
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* انیمیشن فلش هنگام تاچ */
 .bigLink:active .linkArrow {
   opacity: 1;
   color: var(--color-accent-primary);
-  transform: translateX(0); /* سر جای خودش برمی‌گردد */
+  transform: translateX(0); 
 }
 
 .bigLink:active .linkText {
   color: var(--color-accent-primary);
 }
 
+/* 👈 سپریتور شیک‌تر متصل به توکن‌ها */
 .divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-  margin: var(--space-6) 0; 
+  background-color: var(--color-border-ghost);
+  margin: var(--space-6) var(--space-2); 
 }
 
 .mobileActions {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: var(--space-4);
 }
 
 .menuFooter {
   margin-top: auto; 
   padding-top: var(--space-8);
   text-align: center;
-  opacity: 0.8;
 }
 
 .menuFooter p {
   margin: 0;
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.5px;
 }
 
 .menuFooterSub {
-  margin-top: 6px !important;
+  margin-top: 4px !important;
   color: var(--color-text-tertiary) !important;
-  font-size: 0.75rem !important;
-  font-weight: var(--font-weight-medium) !important;
-  line-height: 1.4;
+  font-size: var(--text-caption) !important;
+  font-weight: var(--font-weight-regular) !important;
 }
 
-/* 👈 محو شدن دکمه سمت چپ هدر وقتی منو باز است */
 .headerPillActive .headerContent > :last-child {
   opacity: 0;
   pointer-events: none;
