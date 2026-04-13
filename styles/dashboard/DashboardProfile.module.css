@@ -78,5 +78,15 @@
   font-size: 0.85rem;
 }
 
+/* =====================================
+   اضافه شدن استایل برای لیست فایل‌ها
+   ===================================== */
+.fileList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
 @media (max-width: 1100px) { .profileGrid { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .uploadBtn { width: 100%; justify-content: center; } .profileHeader { align-items: stretch; } }

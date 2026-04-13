@@ -82,9 +82,15 @@ export default function ZarmanDashboard() {
 
   const profileFields = useMemo(() => {
     if (!profile) return [];
+    
+    // 🚀 آدرس کامل: کد پستی در اینجا ادغام شد تا یکپارچه نمایش داده شود
     const fullAddress = [
-      profile.address, profile.suburb, profile.city, 
-      profile.state, profile.postcode || profile.post_code, profile.country
+      profile.address, 
+      profile.suburb, 
+      profile.city, 
+      profile.state, 
+      profile.postal_code, // اضافه شدن کد پستی به بافت آدرس
+      profile.country
     ].filter(Boolean).join(" - ");
 
     let docTypeFa = "آپلود نشده";
@@ -104,9 +110,10 @@ export default function ZarmanDashboard() {
     return [
       { id: 'fname', label: "نام", value: profile.first_name || "—", dir: "ltr" },
       { id: 'lname', label: "نام خانوادگی", value: profile.last_name || "—", dir: "ltr" },
-      { id: 'email', label: "ایمیل", value: profile.email || "—", dir: "ltr" },
       { id: 'phone', label: "شماره تماس", value: profile.mobile_number || profile.phone_number || "—", dir: "ltr" },
+      { id: 'email', label: "ایمیل", value: profile.email || "—", dir: "ltr" },
       { id: 'dob', label: "تاریخ تولد", value: dobEn, dir: "ltr" },
+      // 👇 آدرس الان به صورت خطی کامل است (همراه با کد پستی) و فیلد جداگانه کد پستی از پایین حذف شد
       { id: 'address', label: "محل سکونت", value: fullAddress || "—", dir: "ltr" },
       { id: 'doc', label: "مدارک بارگذاری شده", value: docTypeFa, dir: "rtl" }
     ];
@@ -116,7 +123,7 @@ export default function ZarmanDashboard() {
     if (!profile || !profile.id || !isApproved || rawAmount <= 0) return null;
     
     const result = await processTransactionSecurely({
-      userId: profile.id as string, // 🛡️ استفاده از as string برای خفه کردن تایپ‌اسکریپت
+      userId: profile.id as string, 
       rawAmount: rawAmount,
       txType: currentTxType
     });

@@ -43,6 +43,16 @@
   background: var(--text-dim);
 }
 
+/* =====================================
+   اضافه شدن استایل برای لیست فایل‌ها
+   ===================================== */
+.fileList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
 @media (max-width: 1100px) { .panelCard { padding: 24px; } }
 @media (max-width: 720px) { .panelTitle { font-size: 1.15rem; margin-bottom: 20px; } }
 @media (max-width: 520px) { .panelCard { padding: 18px; } }

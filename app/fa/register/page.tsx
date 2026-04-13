@@ -144,7 +144,7 @@ export default function RegisterPage() {
             first_name: formData.firstName,
             middle_name: formData.middleName,
             last_name: formData.lastName,
-            phone_number: fullPhoneNumber,
+            mobile_number: fullPhoneNumber,
             dob: formData.dob,
             address: formData.address,
             state: formData.state,
