@@ -4,7 +4,7 @@ import React from "react";
 import { CheckCircle2, LogIn } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
-import styles from "@/styles/Register.module.css"; // استفاده از استایل یکپارچه مرجع
+import styles from "@/styles/Register.module.css"; 
 
 export default function ConfirmEmailPage() {
   return (
@@ -14,6 +14,11 @@ export default function ConfirmEmailPage() {
       </div>
 
       <div className={styles.card} style={{ maxWidth: "480px" }}>
+        
+        {/* لوگو */}
+        <div className={styles.logoContainer}>
+          <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
+        </div>
         
         <div className={styles.verifyBox}>
           <CheckCircle2 size={64} color="#10b981" style={{ marginBottom: "20px" }} />

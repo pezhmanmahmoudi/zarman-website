@@ -55,15 +55,15 @@ export default function Hero() {
           <div className={styles.content}>
             <p className={`${styles.eyebrow} ${styles.hiddenOnLoad}`}>صرافی زرمان</p>
             <h1 className={`${styles.title} ${styles.hiddenOnLoad}`}>
-              از 
+              از{' '}
               <span className={styles.tooltipWrapper}>
                 اولورو
-                <Info size={16} className={styles.infoIcon} strokeWidth={2.5} />
+                <Info className={styles.infoIcon} strokeWidth={2.5} />
                 <span className={styles.tooltipText}>
                   اولورو (<span className={styles.uluruEnText}>Uluru</span>) صخره‌ایست مقدس و عظیم در قلب استرالیا
                 </span>
               </span>
-              تا دماوند
+              {' '}تا دماوند
               <br />
               <span className={styles.titleAccent}>تنها در چند ساعت...</span>
             </h1>
@@ -110,7 +110,6 @@ export default function Hero() {
                         <span style={{ fontSize: '1rem' }}>در حال دریافت...</span>
                       ) : currentRates.sellAUD ? (
                         <>
-                          {/* 🛡️ اضافه شدن علامت تعجب برای رفع ارور تایپ‌اسکریپت */}
                           {currentRates.sellAUD!.toLocaleString("fa-IR")} 
                           <span className={styles.currency}>تومان</span>
                         </>
@@ -129,7 +128,6 @@ export default function Hero() {
                         <span style={{ fontSize: '1rem' }}>در حال دریافت...</span>
                       ) : currentRates.buyAUD ? (
                         <>
-                          {/* 🛡️ اضافه شدن علامت تعجب برای رفع ارور تایپ‌اسکریپت */}
                           {currentRates.buyAUD!.toLocaleString("fa-IR")} 
                           <span className={styles.currency}>تومان</span>
                         </>

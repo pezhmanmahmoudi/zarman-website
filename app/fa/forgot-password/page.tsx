@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import styles from "@/styles/Register.module.css";
-import { Home, ArrowLeft, MailCheck } from "lucide-react";
+import { ArrowLeft, MailCheck } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
 import { supabase } from "@/lib/supabase";
@@ -20,9 +20,7 @@ export default function ForgotPasswordPage() {
     setError("");
     setMessage("");
 
-    // ارسال درخواست به سوپابیس برای ارسال ایمیل ریست پسورد
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      // این همان صفحه‌ای است که کاربر بعد از کلیک روی لینک ایمیل به آن هدایت می‌شود
       redirectTo: `${window.location.origin}/fa/reset-password`,
     });
 
@@ -41,14 +39,21 @@ export default function ForgotPasswordPage() {
       </div>
 
       <div className={styles.card} style={{ maxWidth: "480px" }}>
+        
+        {/* دکمه دایره‌ای بازگشت به لاگین */}
         <div className={styles.topNav}>
-          <Link href="/fa/login" className={styles.backHome}>
-            <ArrowLeft size={16} /> Back to Login
+          <Link href="/fa/login" className={styles.backHome} aria-label="Back to Login">
+            <ArrowLeft size={18} strokeWidth={2.5} />
           </Link>
         </div>
 
+        {/* لوگو */}
+        <div className={styles.logoContainer}>
+          <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
+        </div>
+
         {message ? (
-          <div className={styles.verifyBox} style={{ marginTop: '40px' }}>
+          <div className={styles.verifyBox} style={{ marginTop: '20px' }}>
             <MailCheck size={64} className={styles.verifyIcon} style={{ marginBottom: "20px" }} />
             <h2 className={styles.title}>Check Your Email</h2>
             <p className={styles.subtitle} style={{ lineHeight: 1.6 }}>{message}</p>
@@ -73,7 +78,7 @@ export default function ForgotPasswordPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       dir="ltr"
-                      placeholder="name@example.com"
+                      placeholder="آدرس ایمیل"
                       required 
                     />
                   </div>

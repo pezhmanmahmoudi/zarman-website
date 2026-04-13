@@ -39,7 +39,6 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
 
-    // آپدیت رمز عبور در دیتابیس سوپابیس
     const { error } = await supabase.auth.updateUser({
       password: password
     });
@@ -49,7 +48,6 @@ export default function ResetPasswordPage() {
       setLoading(false);
     } else {
       setSuccess(true);
-      // انتقال به داشبورد پس از 3 ثانیه
       setTimeout(() => {
         router.push("/fa/dashboard");
       }, 3000);
@@ -64,8 +62,13 @@ export default function ResetPasswordPage() {
 
       <div className={styles.card} style={{ maxWidth: "480px" }}>
         
+        {/* لوگو */}
+        <div className={styles.logoContainer}>
+          <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
+        </div>
+        
         {success ? (
-          <div className={styles.verifyBox} style={{ marginTop: '20px' }}>
+          <div className={styles.verifyBox} style={{ marginTop: '10px' }}>
             <CheckCircle size={64} color="#10b981" style={{ marginBottom: "20px" }} />
             <h2 className={styles.title}>Password Updated</h2>
             <p className={styles.subtitle} style={{ lineHeight: 1.6 }}>

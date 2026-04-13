@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import styles from "@/styles/Register.module.css"; // استفاده از استایل یکپارچه ثبت‌نام
-import { Eye, EyeOff, Home } from "lucide-react";
+import styles from "@/styles/Register.module.css"; 
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
 import { supabase } from "@/lib/supabase"; 
@@ -41,11 +41,18 @@ export default function LoginPage() {
         <AuthGradient />
       </div>
 
-      <div className={styles.card} style={{ maxWidth: "480px" }}> {/* عرض متناسب برای لاگین */}
+      <div className={styles.card} style={{ maxWidth: "480px" }}>
+        
+        {/* دکمه دایره‌ای بازگشت */}
         <div className={styles.topNav}>
-          <Link href="/" className={styles.backHome}>
-            <Home size={16} /> Back to Website
+          <Link href="/" className={styles.backHome} aria-label="Back to Website">
+            <ArrowLeft size={18} strokeWidth={2.5} />
           </Link>
+        </div>
+
+        {/* لوگو */}
+        <div className={styles.logoContainer}>
+          <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
         </div>
 
         <div className={styles.header}>
@@ -66,7 +73,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   dir="ltr"
-                  placeholder="name@example.com"
+                  placeholder="آدرس ایمیل"
                   required 
                 />
               </div>

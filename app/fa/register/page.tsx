@@ -5,7 +5,7 @@ import Link from "next/link";
 import styles from "@/styles/Register.module.css";
 import { 
   ArrowRight, ArrowLeft, UploadCloud, ShieldCheck, 
-  Eye, EyeOff, Home, MailCheck, CheckCircle
+  Eye, EyeOff, MailCheck, CheckCircle
 } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
@@ -37,7 +37,7 @@ export default function RegisterPage() {
     firstName: "", middleName: "", lastName: "",
     email: "", phoneCode: "+61", mobile: "",
     password: "", confirmPassword: "",
-    dob: "", address: "", country: "Australia", state: "", city: "",
+    dob: "", address: "", country: "Australia", state: "", city: "", postalCode: "",
     docType: "", termsAccepted: false, privacyAccepted: false, dvsAccepted: false, 
   });
 
@@ -68,6 +68,7 @@ export default function RegisterPage() {
   const handleStep1Submit = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.firstName) newErrors.firstName = "First name is required";
+    // فیلد نام میانی (Middle Name) از حالت اجباری خارج شد
     if (!formData.lastName) newErrors.lastName = "Last name is required";
     if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = "Valid email is required";
     
@@ -93,6 +94,7 @@ export default function RegisterPage() {
     if (!formData.address) newErrors.address = "Address is required";
     if (!formData.state) newErrors.state = "State is required";
     if (!formData.city) newErrors.city = "City is required";
+    if (!formData.postalCode) newErrors.postalCode = "Postal code is required"; // کد پستی اجباری شد
     if (!formData.docType) newErrors.docType = "Please select a document type";
     if (!formData.privacyAccepted || !formData.termsAccepted || !formData.dvsAccepted) {
       newErrors.policies = "You must accept all terms, policies, and consents to proceed.";
@@ -140,12 +142,14 @@ export default function RegisterPage() {
         options: {
           data: {
             first_name: formData.firstName,
+            middle_name: formData.middleName,
             last_name: formData.lastName,
             phone_number: fullPhoneNumber,
             dob: formData.dob,
             address: formData.address,
             state: formData.state,
             city: formData.city,
+            postal_code: formData.postalCode,
             document_type: formData.docType
           },
           emailRedirectTo: `${window.location.origin}/fa/auth/confirm`, 
@@ -176,10 +180,17 @@ export default function RegisterPage() {
       </div>
 
       <div className={styles.card}>
+        
+        {/* دکمه بازگشت به شکل شارپ و مینیمال در گوشه بالایی کارت */}
         <div className={styles.topNav}>
-          <Link href="/" className={styles.backHome}>
-            <Home size={16} /> Back to Website
+          <Link href="/" className={styles.backHome} aria-label="Back to Website">
+            <ArrowLeft size={18} strokeWidth={2.5} />
           </Link>
+        </div>
+
+        {/* فراخوانی فایل SVG با فرمت صحیح برای جلوگیری از ارور فاصله (%) */}
+        <div className={styles.logoContainer}>
+          <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
         </div>
 
         {step < 3 && (
@@ -209,24 +220,25 @@ export default function RegisterPage() {
               <div className={styles.row}>
                 <div className={styles.inputGroup}>
                   <label>First Name <span className={styles.req}>*</span></label>
-                  <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className={errors.firstName ? styles.errorBorder : ""} />
+                  <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} placeholder="نام" className={errors.firstName ? styles.errorBorder : ""} />
                   {errors.firstName && <span className={styles.errorText}>{errors.firstName}</span>}
                 </div>
                 <div className={styles.inputGroup}>
+                  {/* نام میانی بدون ستاره */}
                   <label>Middle Name</label>
-                  <input type="text" name="middleName" value={formData.middleName} onChange={handleChange} />
+                  <input type="text" name="middleName" value={formData.middleName} onChange={handleChange} placeholder="نام میانی" />
                 </div>
               </div>
 
               <div className={styles.row}>
                 <div className={styles.inputGroup}>
                   <label>Last Name <span className={styles.req}>*</span></label>
-                  <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className={errors.lastName ? styles.errorBorder : ""} />
+                  <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} placeholder="نام خانوادگی" className={errors.lastName ? styles.errorBorder : ""} />
                   {errors.lastName && <span className={styles.errorText}>{errors.lastName}</span>}
                 </div>
                 <div className={styles.inputGroup}>
                   <label>Email Address <span className={styles.req}>*</span></label>
-                  <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="name@example.com" className={errors.email ? styles.errorBorder : ""} />
+                  <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="آدرس ایمیل" className={errors.email ? styles.errorBorder : ""} />
                   {errors.email && <span className={styles.errorText}>{errors.email}</span>}
                 </div>
               </div>
@@ -237,7 +249,7 @@ export default function RegisterPage() {
                   <select name="phoneCode" value={formData.phoneCode} onChange={handleChange} className={styles.countryCode}>
                     {countryCodes.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
                   </select>
-                  <input type="text" inputMode="numeric" name="mobile" value={formData.mobile} onChange={handleChange} placeholder="400 000 000" className={errors.mobile ? styles.errorBorder : ""} />
+                  <input type="text" inputMode="numeric" name="mobile" value={formData.mobile} onChange={handleChange} placeholder="شماره موبایل" className={errors.mobile ? styles.errorBorder : ""} />
                 </div>
                 {errors.mobile && <span className={styles.errorText}>{errors.mobile}</span>}
               </div>
@@ -246,7 +258,7 @@ export default function RegisterPage() {
                 <div className={styles.inputGroup}>
                   <label>Password <span className={styles.req}>*</span></label>
                   <div className={styles.passwordWrapper}>
-                    <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} className={errors.password ? styles.errorBorder : ""} />
+                    <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} placeholder="رمز عبور" className={errors.password ? styles.errorBorder : ""} />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className={styles.eyeBtn}>
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -258,7 +270,7 @@ export default function RegisterPage() {
                 <div className={styles.inputGroup}>
                   <label>Confirm Password <span className={styles.req}>*</span></label>
                   <div className={styles.passwordWrapper}>
-                    <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} className={errors.confirmPassword ? styles.errorBorder : ""} />
+                    <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="تایید رمز عبور" className={errors.confirmPassword ? styles.errorBorder : ""} />
                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className={styles.eyeBtn}>
                       {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -288,7 +300,7 @@ export default function RegisterPage() {
                 </div>
                 <div className={styles.inputGroup}>
                   <label>Residential Address <span className={styles.req}>*</span></label>
-                  <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Unit/Street number, Street name" className={errors.address ? styles.errorBorder : ""} />
+                  <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="آدرس دقیق محل سکونت" className={errors.address ? styles.errorBorder : ""} />
                   {errors.address && <span className={styles.errorText}>{errors.address}</span>}
                 </div>
               </div>
@@ -300,14 +312,20 @@ export default function RegisterPage() {
                 </div>
                 <div className={styles.inputGroup}>
                   <label>State <span className={styles.req}>*</span></label>
-                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="e.g. NSW" className={errors.state ? styles.errorBorder : ""} />
+                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="ایالت" className={errors.state ? styles.errorBorder : ""} />
                   {errors.state && <span className={styles.errorText}>{errors.state}</span>}
                 </div>
                 <div className={styles.inputGroup}>
                   <label>City <span className={styles.req}>*</span></label>
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="e.g. Sydney" className={errors.city ? styles.errorBorder : ""} />
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="شهر" className={errors.city ? styles.errorBorder : ""} />
                   {errors.city && <span className={styles.errorText}>{errors.city}</span>}
                 </div>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label>Postal Code <span className={styles.req}>*</span></label>
+                <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="کد پستی" className={errors.postalCode ? styles.errorBorder : ""} />
+                {errors.postalCode && <span className={styles.errorText}>{errors.postalCode}</span>}
               </div>
 
               <div className={styles.sectionTitle}>Identity Verification</div>
@@ -386,7 +404,8 @@ export default function RegisterPage() {
               </div>
 
               <div className={styles.btnWrapperSpace}>
-                <Button type="button" onClick={() => setStep(1)} variant="secondary" leftIcon={<ArrowLeft />}>
+                {/* تغییر قطعی به ghost برای هماهنگی با کامپوننت Button شما */}
+                <Button type="button" onClick={() => setStep(1)} variant="ghost" leftIcon={<ArrowLeft />}>
                   Back
                 </Button>
                 <Button type="button" onClick={handleFinalSubmit} variant="primary" rightIcon={<ShieldCheck />} loading={loading}>
@@ -396,7 +415,7 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* ================= STEP 3: Email Notice (اصلاح شد) ================= */}
+          {/* ================= STEP 3: Email Notice ================= */}
           {step === 3 && (
             <div className={styles.verifyBox}>
               <MailCheck size={64} className={styles.verifyIcon} style={{ marginBottom: "20px" }} />

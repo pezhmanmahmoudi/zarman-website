@@ -10,13 +10,14 @@ export default function AuthGradient() {
     const gradient = new Gradient();
     
     if (canvasRef.current) {
-      canvasRef.current.style.setProperty("--gradient-color-1", "#00e1ff"); 
-      canvasRef.current.style.setProperty("--gradient-color-2", "#57aeff"); 
-      canvasRef.current.style.setProperty("--gradient-color-3", "#d85dfd"); 
-      canvasRef.current.style.setProperty("--gradient-color-4", "#38f8df"); 
+      // پالت رنگی Premium Aurora (شفق قطبی فین‌تک)
+      canvasRef.current.style.setProperty("--gradient-color-1", "#4f46e5"); // نیلی عمیق (Indigo) - رنگ اعتماد
+      canvasRef.current.style.setProperty("--gradient-color-2", "#06b6d4"); // فیروزه‌ای الکتریک (Cyan) - رنگ تکنولوژی
+      canvasRef.current.style.setProperty("--gradient-color-3", "#c026d3"); // بنفش نئونی (Fuchsia) - رنگ لوکس
+      canvasRef.current.style.setProperty("--gradient-color-4", "#fda4af"); // هلویی/مرجانی (Rose) - برای ایجاد درخشش گرم و زنده
     }
 
-  (gradient as any) .initGradient("#auth-gradient-canvas");
+    (gradient as any).initGradient("#auth-gradient-canvas");
 
     return () => {
       gradient.disconnect();
@@ -28,35 +29,35 @@ export default function AuthGradient() {
       <style>{`
         .responsive-gradient {
           position: absolute;
-          top: -20%;
-          right: -10%;
-          width: 200%;
-          height: 30vh;
-          transform: rotate(-25deg);
-          transform-origin: top right;
-          overflow: hidden;
+          top: 50%;
+          left: 50%;
+          width: 250vw;
+          height: 60vh;
+          transform: translate(-50%, -50%) rotate(-35deg);
           z-index: 0;
-          opacity: 0.9;
-          box-shadow: 0 20px 40px rgba(79, 70, 229, 0.15);
+          
+          opacity: 1; /* تغییر به ۱ برای درخشش کامل و شارپ بودن رنگ‌ها */
+          /* دستور filter: blur(10px); کاملاً حذف شد! */
+          
+          pointer-events: none;
         }
         
-        /* در موبایل و تبلت، گرادیانت جمع‌وجور شده و مثل یک هدر شیک می‌ایستد */
-        @media (max-width: 768px) {
+        /* رسپانسیو برای تبلت: زاویه چرخش بیشتر می‌شود تا با صفحه عمودی‌تر هماهنگ شود */
+        @media (max-width: 992px) {
           .responsive-gradient {
-            top: -10%;
-            right: -25%;
-            width: 150%;
-            height: 220px;
-            transform: rotate(-35deg);
+            width: 300vw;
+            height: 45vh;
+            transform: translate(-50%, -50%) rotate(-45deg);
           }
         }
-        @media (max-width: 480px) {
+
+        /* رسپانسیو برای موبایل: صفحه کاملاً عمودی است، پس زاویه تندتر می‌شود */
+        @media (max-width: 640px) {
           .responsive-gradient {
-            top: -10%;
-            right: -5%;
-            width: 280%;
-            height: 220px;
-            transform: rotate(-55deg);
+            width: 350vw; /* عرض فوق‌العاده برای پوشش کامل قطرهای موبایل */
+            height: 40vh;
+            transform: translate(-50%, -50%) rotate(-60deg);
+            opacity: 0.95; /* در موبایل کمی پررنگ‌تر باشد جذاب‌تر است */
           }
         }
       `}</style>

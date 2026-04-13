@@ -87,7 +87,8 @@
   display: inline-block;
   cursor: help;
   white-space: nowrap;
-  padding-left: 7px; 
+  padding-left: 4px; 
+  margin: 0 3px;
 }
 
 .infoIcon {
@@ -96,6 +97,19 @@
   position: absolute; 
   top: -8px; 
   left: 12px;
+
+  width: 0.4em !important;  
+  height: 0.4em !important;
+  
+  /* ۲. ترمزها! (جلوگیری از غول‌پیکر شدن در دسکتاپ و ناپدید شدن در موبایل) */
+  max-width: 22px !important;  /* هرگز از 22 پیکسل بزرگتر نشود */
+  max-height: 22px !important;
+  min-width: 14px !important;  /* هرگز از 14 پیکسل کوچکتر نشود */
+  min-height: 14px !important;
+
+  top: -8px; 
+  left: 8px;
+
 }
 
 .uluruEnText {
@@ -149,6 +163,9 @@
   visibility: visible;
   opacity: 1;
   margin-top: 10px; 
+
+
+  
 }
 
 /* ==================================================== */
@@ -355,6 +372,27 @@
   .visual {
     justify-content: center;
   }
+
+  .tooltipText {
+    /* با کاهش این درصد، تولتیپ به سمت چپ حرکت می‌کند. 
+       می‌توانید بین 10% تا 30% تغییر دهید تا دقیقاً در جای دلخواهتان قرار بگیرد */
+    transform: translateX(70%); 
+  }
+  
+  .tooltipText::after {
+    /* چون بدنه تولتیپ را جابجا کردیم، باید جای فلش زیر آن را هم تنظیم کنیم 
+       تا دقیقاً روی آیکون/کلمه اشاره کند */
+    right: 80%; 
+    transform: translateX(40%);
+  }
+
+    .infoIcon {
+    /* با کم و زیاد کردن این عدد، آیکون بالا و پایین می‌رود */
+    top: -8px !important; 
+    
+    /* با کم و زیاد کردن این عدد، آیکون چپ و راست می‌رود */
+    left: 4px !important; 
+  }
 }
 
 @media (max-width: 768px) {
@@ -386,4 +424,26 @@
   .value {
     font-size: var(--text-section-title);
   }
+
+  .tooltipText {
+    /* با تغییر این عدد پیکسلی، تولتیپ به راحتی چپ و راست می‌شود */
+    /* عدد منفی تولتیپ را به سمت چپ می‌برد و عدد مثبت به سمت راست */
+    right: -40px !important; 
+    transform: none !important; /* این خط ترانسفورم قبلی را باطل می‌کند تا فقط با right کار کنیم */
+  }
+  
+  .tooltipText::after {
+    /* این عدد جای فلشِ زیر تولتیپ را تنظیم می‌کند */
+    right: 10px !important; 
+    transform: none !important;
+  }
+
+  .infoIcon {
+    /* با کم و زیاد کردن این عدد، آیکون بالا و پایین می‌رود */
+    top: -8px !important; 
+    
+    /* با کم و زیاد کردن این عدد، آیکون چپ و راست می‌رود */
+    left: 4px !important; 
+  }
+
 }
