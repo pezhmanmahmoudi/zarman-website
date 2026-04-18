@@ -15,6 +15,8 @@ import { DashboardTransactionHistory } from "@/components/dashboard/DashboardTra
 import { DashboardProfile } from "@/components/dashboard/DashboardProfile";
 import { DashboardFeedback } from "@/components/dashboard/DashboardFeedback";
 import { AlertTriangle, X } from "lucide-react"; 
+import { FINANCE_CONFIG } from "@/lib/pricing";
+
 
 export default function ZarmanDashboard() {
   const rateContext = useRates();
@@ -60,9 +62,9 @@ export default function ZarmanDashboard() {
 
   const loyaltyBonus = useMemo(() => {
     if (spread === 0 || approvedVolume === 0) return 0;
-    const volumeSteps = Math.floor(approvedVolume / 1000);
-    const rawDiscountPercent = volumeSteps * 0.01;
-    const finalDiscountPercent = Math.min(rawDiscountPercent, 0.50); 
+    const volumeSteps = Math.floor(approvedVolume / FINANCE_CONFIG.DISCOUNT_STEP_VOLUME);
+    const rawDiscountPercent = volumeSteps * FINANCE_CONFIG.DISCOUNT_PERCENT_PER_STEP;
+    const finalDiscountPercent = Math.min(rawDiscountPercent, FINANCE_CONFIG.MAX_DISCOUNT_PERCENT);  
     return spread * finalDiscountPercent;
   }, [approvedVolume, spread]);
 

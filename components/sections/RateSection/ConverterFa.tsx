@@ -5,6 +5,7 @@ import styles from "./ConverterFa.module.css";
 import Button from "@/components/ui/Button/Button";
 import { ArrowLeft, ArrowDownCircle, Info, UserCircle, AlertTriangle, ChevronDown } from "lucide-react";
 import { useRates } from "@/context/RateContext";
+import { FINANCE_CONFIG } from "@/lib/pricing";
 
 type Currency = "AUD" | "IRT";
 
@@ -46,10 +47,10 @@ export default function ConverterFa() {
   let isFeeApplied = false;
   if (amountNum > 0 && safeRate > 0) {
     if (from === "AUD") {
-      isFeeApplied = amountNum < 1000;
+      isFeeApplied = amountNum < FINANCE_CONFIG.FEE_THRESHOLD;
     } else {
       const rawAud = amountNum / safeRate;
-      isFeeApplied = rawAud > 0 && rawAud < 1000;
+      isFeeApplied = rawAud > 0 && rawAud < FINANCE_CONFIG.FEE_THRESHOLD;
     }
   }
 
@@ -59,7 +60,7 @@ export default function ConverterFa() {
     let finalValue = 0;
 
     if (from === "AUD") {
-      const feeInAud = isFeeApplied ? 15 : 0;
+      const feeInAud = isFeeApplied ? FINANCE_CONFIG.APPLIED_FEE : 0;
       const netAud = Math.max(0, amountNum - feeInAud);
       finalValue = netAud * safeRate;
     } else {
@@ -148,7 +149,7 @@ export default function ConverterFa() {
             {isFeeApplied && (
               <span className={styles.feeWarning}>
                 <AlertTriangle size={14} />
-                این تراکنش دارای کارمزد ۱۵ دلار است
+                این تراکنش دارای کارمزد {toFaDigits(String(FINANCE_CONFIG.APPLIED_FEE))} دلار است
               </span>
             )}
           </div>
@@ -175,7 +176,9 @@ export default function ConverterFa() {
       <div className={styles.notesContainer}>
         <div className={styles.noteItem}>
           <Info size={16} strokeWidth={2} />
-          <span>توجه: برای تراکنش‌های کمتر از ۱،۰۰۰ دلار، مبلغ ۱۵ دلار به عنوان کارمزد کسر می‌گردد که در کادر بالا محاسبه شده است.</span>
+           <span>
+            توجه: برای تراکنش‌های کمتر از {formatNumberFa(FINANCE_CONFIG.FEE_THRESHOLD)} دلار، مبلغ {toFaDigits(String(FINANCE_CONFIG.APPLIED_FEE))} دلار به عنوان کارمزد کسر می‌گردد که در کادر بالا محاسبه شده است.
+          </span>
         </div>
         <div className={styles.noteItem}>
           <UserCircle size={16} strokeWidth={2} />

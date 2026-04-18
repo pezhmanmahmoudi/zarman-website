@@ -3,6 +3,7 @@ import { Calculator, AlertTriangle, Lock, MessageSquare, ChevronDown, ServerCras
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/fa/dashboard/dashboard.types"; 
+import { FINANCE_CONFIG } from "@/lib/pricing";
 
 function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]); }
 function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹"; return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d))); }
@@ -58,7 +59,7 @@ export function DashboardRequestHub({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const rawAmount = getRawNumber(amountStr);
-  const appliedFee = (rawAmount > 0 && rawAmount < 1000) ? 15 : 0;
+  const appliedFee = (rawAmount > 0 && rawAmount < FINANCE_CONFIG.FEE_THRESHOLD) ? FINANCE_CONFIG.APPLIED_FEE : 0;
   const isRateOffline = baseRate === null || tailoredRate === null;
 
   const effectiveAud = useMemo(() => {
@@ -174,7 +175,9 @@ export function DashboardRequestHub({
             {appliedFee > 0 && (
               <span className={styles.feeWarning}>
                 <AlertTriangle size={14} /> 
-                {txType === "buy_aud" ? "افزوده شدن ۱۵ دلار کارمزد" : "کسر ۱۵ دلار کارمزد"}
+                {txType === "buy_aud"
+                  ? `افزوده شدن ${toFaDigits(FINANCE_CONFIG.APPLIED_FEE)} دلار کارمزد`
+                  : `کسر ${toFaDigits(FINANCE_CONFIG.APPLIED_FEE)} دلار کارمزد`}
               </span>
             )}
           </div>

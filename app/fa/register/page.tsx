@@ -20,6 +20,52 @@ const countryCodes = [
 ];
 
 export default function RegisterPage() {
+  // --- تنظیمات و توابع مربوط به اعتبارسنجی و آپلود فایل ---
+  const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+  const ALLOWED_MIME_TYPES = new Set([
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+    "application/pdf",
+  ]);
+  const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".pdf"];
+
+  const hasAllowedExtension = (fileName: string) => {
+    const lowerName = fileName.toLowerCase();
+    return ALLOWED_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+  };
+
+  const validateKycFile = (file: File | null, fieldLabel: string): string | null => {
+    if (!file) return `${fieldLabel} is required.`;
+    if (file.size > MAX_FILE_SIZE_BYTES) return `${fieldLabel} must be smaller than 5MB.`;
+    const isAllowedType = ALLOWED_MIME_TYPES.has(file.type) || hasAllowedExtension(file.name);
+    if (!isAllowedType) return `${fieldLabel} must be an image or PDF file.`;
+    return null;
+  };
+
+  const sanitizeFileName = (fileName: string) => fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+  const uploadKycFile = async (userId: string, key: string, file: File) => {
+    const safeName = sanitizeFileName(file.name);
+    const storagePath = `${userId}/${key}-${Date.now()}-${safeName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("kyc-documents")
+      .upload(storagePath, file, { upsert: false, contentType: file.type || undefined });
+
+    if (uploadError) {
+      throw new Error(`Failed to upload ${key}: ${uploadError.message}`);
+    }
+
+    const { data: publicData } = supabase.storage.from("kyc-documents").getPublicUrl(storagePath);
+
+    return { storagePath, publicUrl: publicData.publicUrl };
+  };
+  // -----------------------------------------------------------
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
@@ -68,7 +114,6 @@ export default function RegisterPage() {
   const handleStep1Submit = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.firstName) newErrors.firstName = "First name is required";
-    // فیلد نام میانی (Middle Name) از حالت اجباری خارج شد
     if (!formData.lastName) newErrors.lastName = "Last name is required";
     if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = "Valid email is required";
     
@@ -94,14 +139,34 @@ export default function RegisterPage() {
     if (!formData.address) newErrors.address = "Address is required";
     if (!formData.state) newErrors.state = "State is required";
     if (!formData.city) newErrors.city = "City is required";
-    if (!formData.postalCode) newErrors.postalCode = "Postal code is required"; // کد پستی اجباری شد
+    if (!formData.postalCode) newErrors.postalCode = "Postal code is required"; 
     if (!formData.docType) newErrors.docType = "Please select a document type";
+    
+    // --- اعتبارسنجی فایل‌ها قبل از ارسال ---
+    if (formData.docType === "driver_license") {
+      const frontError = validateKycFile(files.docFront, "License front image");
+      const backError = validateKycFile(files.docBack, "License back image");
+      if (frontError || backError) {
+        newErrors.documents = frontError || backError || "Please upload the required license files.";
+      }
+    }
+    if (formData.docType === "passport") {
+      const passportError = validateKycFile(files.docFront, "Passport image");
+      const addressError = validateKycFile(files.proofOfAddress, "Proof of address");
+      if (passportError || addressError) {
+        newErrors.documents = passportError || addressError || "Please upload all required passport files.";
+      }
+    }
+    
     if (!formData.privacyAccepted || !formData.termsAccepted || !formData.dvsAccepted) {
       newErrors.policies = "You must accept all terms, policies, and consents to proceed.";
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      if (newErrors.documents) {
+        alert(newErrors.documents);
+      }
       return;
     }
 
@@ -136,6 +201,7 @@ export default function RegisterPage() {
         return;
       }
 
+      // --- ثبت نام اولیه کاربر ---
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -150,7 +216,7 @@ export default function RegisterPage() {
             state: formData.state,
             city: formData.city,
             postal_code: formData.postalCode,
-            document_type: formData.docType
+            document_type: formData.docType // 👈 باگ تکراری بودن این خط برطرف شد
           },
           emailRedirectTo: `${window.location.origin}/fa/auth/confirm`, 
         }
@@ -158,6 +224,60 @@ export default function RegisterPage() {
 
       if (error) {
         alert("Error during registration: " + error.message);
+        return;
+      }
+
+      const userId = data.user?.id;
+      if (!userId) {
+        alert("Registration succeeded but user identifier is missing. Please contact support.");
+        return;
+      }
+
+      // --- آپلود امن فایل‌ها در دیتابیس (Supabase Storage) ---
+      const documentPayload: Record<string, string | null> = {
+        doc_front_url: null,
+        doc_back_url: null,
+        proof_of_address_url: null,
+        doc_front_path: null,
+        doc_back_path: null,
+        proof_of_address_path: null,
+      };
+
+      try {
+        if (files.docFront) {
+          const uploadedFront = await uploadKycFile(userId, "doc-front", files.docFront);
+          documentPayload.doc_front_url = uploadedFront.publicUrl;
+          documentPayload.doc_front_path = uploadedFront.storagePath;
+        }
+
+        if (files.docBack) {
+          const uploadedBack = await uploadKycFile(userId, "doc-back", files.docBack);
+          documentPayload.doc_back_url = uploadedBack.publicUrl;
+          documentPayload.doc_back_path = uploadedBack.storagePath;
+        }
+
+        if (files.proofOfAddress) {
+          const uploadedAddress = await uploadKycFile(userId, "proof-of-address", files.proofOfAddress);
+          documentPayload.proof_of_address_url = uploadedAddress.publicUrl;
+          documentPayload.proof_of_address_path = uploadedAddress.storagePath;
+        }
+      } catch (uploadError: unknown) {
+        const uploadMessage = uploadError instanceof Error ? uploadError.message : "Unknown upload error.";
+        alert(`Your account was created, but document upload failed: ${uploadMessage}`);
+        return;
+      }
+
+      // --- بروزرسانی پروفایل با لینک عکس‌های آپلود شده ---
+      const { error: profileUpdateError } = await supabase
+        .from("profiles")
+        .update({
+          ...documentPayload,
+          document_type: formData.docType,
+        })
+        .eq("id", userId);
+
+      if (profileUpdateError) {
+        alert(`Your account was created, but document links could not be saved: ${profileUpdateError.message}`);
         return;
       }
 
