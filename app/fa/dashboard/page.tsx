@@ -4,7 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase"; 
 import { useRates } from "@/context/RateContext"; 
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { processTransactionSecurely } from "@/app/actions/transaction.actions"; 
+// 👈 توابع سروری امن
+import { processTransactionSecurely, deleteTransactionSecurely } from "@/app/actions/transaction.actions"; 
 
 import shellStyles from "@/styles/dashboard/DashboardShell.module.css";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
@@ -27,6 +28,7 @@ export default function ZarmanDashboard() {
   const [amountStr, setAmountStr] = useState("۱،۰۰۰");
   const [txType, setTxType] = useState<"sell_aud" | "buy_aud">("buy_aud"); 
 
+  // 👈 استیت‌های مربوط به Modal قدیمی شما
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -83,13 +85,12 @@ export default function ZarmanDashboard() {
   const profileFields = useMemo(() => {
     if (!profile) return [];
     
-    // 🚀 آدرس کامل: کد پستی در اینجا ادغام شد تا یکپارچه نمایش داده شود
     const fullAddress = [
       profile.address, 
       profile.suburb, 
       profile.city, 
       profile.state, 
-      profile.postal_code, // اضافه شدن کد پستی به بافت آدرس
+      profile.postal_code,
       profile.country
     ].filter(Boolean).join(" - ");
 
@@ -113,17 +114,26 @@ export default function ZarmanDashboard() {
       { id: 'phone', label: "شماره تماس", value: profile.mobile_number || profile.phone_number || "—", dir: "ltr" },
       { id: 'email', label: "ایمیل", value: profile.email || "—", dir: "ltr" },
       { id: 'dob', label: "تاریخ تولد", value: dobEn, dir: "ltr" },
-      // 👇 آدرس الان به صورت خطی کامل است (همراه با کد پستی) و فیلد جداگانه کد پستی از پایین حذف شد
       { id: 'address', label: "محل سکونت", value: fullAddress || "—", dir: "ltr" },
       { id: 'doc', label: "مدارک بارگذاری شده", value: docTypeFa, dir: "rtl" }
     ];
   }, [profile]);
 
+  // 🔒 ثبت امن با توکن
   const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud") => {
     if (!profile || !profile.id || !isApproved || rawAmount <= 0) return null;
     
+    // دریافت توکن زنده از مرورگر
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    
+    if (!token) {
+      alert("خطا: توکن امنیتی یافت نشد. لطفا یکبار از حساب خارج و دوباره وارد شوید.");
+      return null;
+    }
+
     const result = await processTransactionSecurely({
-      userId: profile.id as string, 
+      accessToken: token, // 👈 ارسال توکن به جای userId
       rawAmount: rawAmount,
       txType: currentTxType
     });
@@ -140,18 +150,32 @@ export default function ZarmanDashboard() {
     setDeleteConfirmId(txId);
   };
 
+  // 🔒 حذف امن با توکن
   const executeDeleteTransaction = async () => {
     if (!deleteConfirmId) return;
     setIsDeleting(true);
     try {
-      const { error } = await supabase.from('transactions').delete().eq('id', deleteConfirmId);
-      if (error) {
-        alert(`حذف تراکنش مسدود شد! لطفا RLS مربوط به Delete را چک کنید.`);
+      // دریافت توکن زنده از مرورگر
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        alert("نشست شما منقضی شده است. لطفا دوباره وارد شوید.");
+        setIsDeleting(false);
+        return;
+      }
+
+      // 👈 ارسال آیدی تراکنش به همراه توکن
+      const result = await deleteTransactionSecurely(String(deleteConfirmId), token);
+      
+      if (result?.error) {
+        alert(`لغو تراکنش مسدود شد!\n${result.error}`);
       } else {
         window.location.reload(); 
       }
     } catch (err) {
-      console.error("خطا:", err);
+      console.error("خطا در ارتباط با سرور:", err);
+      alert("ارتباط با سرور برقرار نشد.");
     } finally {
       setIsDeleting(false);
       setDeleteConfirmId(null);
@@ -181,6 +205,7 @@ export default function ZarmanDashboard() {
         {activeTab === "profile" && <DashboardProfile profileFields={profileFields} profileId={profile?.id} />}
         {activeTab === "feedback" && <DashboardFeedback profileId={profile?.id || ""} />}
 
+        {/* 👈 Modal ظاهر قدیمی شما */}
         {deleteConfirmId && (
           <div className={shellStyles.modalOverlay}>
             <div className={shellStyles.modalContent}>
@@ -197,7 +222,7 @@ export default function ZarmanDashboard() {
               <div className={shellStyles.modalActions}>
                 <button onClick={() => setDeleteConfirmId(null)} className={shellStyles.cancelBtn} disabled={isDeleting}>انصراف</button>
                 <button onClick={executeDeleteTransaction} className={shellStyles.dangerBtn} disabled={isDeleting}>
-                  {isDeleting ? "در حال حذف..." : "بله، حذف شود"}
+                  {isDeleting ? "در حال پردازش..." : "بله، حذف شود"}
                 </button>
               </div>
             </div>

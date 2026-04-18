@@ -72,7 +72,7 @@ export function DashboardTransactionHistory({ transactions, totalVolume, onDelet
                 <td>
                   {tx.status === "pending" ? (
                     <button 
-                      onClick={() => onDeleteTransaction(tx.id)} 
+                      onClick={() => onDeleteTransaction(tx.id)} // فقط ایدی رو میفرسته به صفحه اصلی
                       className={styles.deleteBtn} 
                       title="لغو و حذف درخواست"
                     >

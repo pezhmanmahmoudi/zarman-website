@@ -11,6 +11,17 @@ import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
 import { supabase } from "@/lib/supabase";
 
+// 🛡️ ثابت‌های امنیتی برای آپلود مدارک
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // حداکثر 5 مگابایت
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+const EXTENSION_MAP: Record<string, string> = {
+  'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'application/pdf': 'pdf'
+};
+
+const generateSecureRandomString = () => {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
 const countryCodes = [
   { code: "+61", label: "AU (+61)" },
   { code: "+1", label: "US/CA (+1)" },
@@ -54,9 +65,23 @@ export default function RegisterPage() {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
+  // 🛡️ بررسی امنیت فایل‌ها در لحظه انتخاب
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
     if (e.target.files && e.target.files[0]) {
-      setFiles((prev) => ({ ...prev, [key]: e.target.files![0] }));
+      const file = e.target.files[0];
+      
+      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        alert(`فرمت فایل ${file.name} غیرمجاز است. فقط عکس (JPG/PNG) و PDF مجاز است.`);
+        e.target.value = ''; // ریست کردن ورودی
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`حجم فایل ${file.name} بیش از ۵ مگابایت است.`);
+        e.target.value = '';
+        return;
+      }
+
+      setFiles((prev) => ({ ...prev, [key]: file }));
     }
   };
 
@@ -68,7 +93,6 @@ export default function RegisterPage() {
   const handleStep1Submit = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.firstName) newErrors.firstName = "First name is required";
-    // فیلد نام میانی (Middle Name) از حالت اجباری خارج شد
     if (!formData.lastName) newErrors.lastName = "Last name is required";
     if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = "Valid email is required";
     
@@ -94,7 +118,7 @@ export default function RegisterPage() {
     if (!formData.address) newErrors.address = "Address is required";
     if (!formData.state) newErrors.state = "State is required";
     if (!formData.city) newErrors.city = "City is required";
-    if (!formData.postalCode) newErrors.postalCode = "Postal code is required"; // کد پستی اجباری شد
+    if (!formData.postalCode) newErrors.postalCode = "Postal code is required";
     if (!formData.docType) newErrors.docType = "Please select a document type";
     if (!formData.privacyAccepted || !formData.termsAccepted || !formData.dvsAccepted) {
       newErrors.policies = "You must accept all terms, policies, and consents to proceed.";
@@ -122,13 +146,10 @@ export default function RegisterPage() {
         return;
       }
 
-      const isEmailTaken = checkData?.email_exists;
-      const isPhoneTaken = checkData?.phone_exists;
-
-      if (isEmailTaken || isPhoneTaken) {
+      if (checkData?.email_exists || checkData?.phone_exists) {
         const duplicateErrors: Record<string, string> = {};
-        if (isEmailTaken) duplicateErrors.email = "This email is already registered.";
-        if (isPhoneTaken) duplicateErrors.mobile = "This mobile number is already registered.";
+        if (checkData.email_exists) duplicateErrors.email = "This email is already registered.";
+        if (checkData.phone_exists) duplicateErrors.mobile = "This mobile number is already registered.";
         
         setErrors(duplicateErrors);
         setStep(1);
@@ -136,6 +157,7 @@ export default function RegisterPage() {
         return;
       }
 
+      // ۱. ساخت اکانت کاربر
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -161,6 +183,37 @@ export default function RegisterPage() {
         return;
       }
 
+      // 🛡️ ۲. آپلود امن مدارک هویتی در استوریج سوپابیس (اضافه شده)
+      if (data?.user?.id) {
+        const userId = data.user.id;
+        const uploadPromises = [];
+
+        for (const [key, file] of Object.entries(files)) {
+          if (file) {
+            const safeExt = EXTENSION_MAP[file.type] || 'bin';
+            const secureFileName = `${Date.now()}_${generateSecureRandomString()}_${key}.${safeExt}`;
+            const filePath = `${userId}/${secureFileName}`;
+            
+            const uploadTask = supabase.storage
+              .from("kyc-documents")
+              .upload(filePath, file, { cacheControl: "3600", upsert: false })
+              .then(({ error: uploadError }) => {
+                if (uploadError) {
+                  console.error(`Failed to upload ${key}:`, uploadError);
+                  // اگر آپلود با خطا مواجه شد، ثبت نام متوقف نمی‌شود اما لاگ می‌اندازیم
+                  // کاربر می‌تواند بعداً از طریق داشبورد مدارک را تکمیل کند
+                }
+              });
+              
+            uploadPromises.push(uploadTask);
+          }
+        }
+        
+        // منتظر می‌مانیم تا تمام فایل‌ها آپلود شوند
+        await Promise.all(uploadPromises);
+      }
+
+      // ۳. هدایت به صفحه تایید ایمیل
       setStep(3); 
 
     } catch (error) {
@@ -181,14 +234,12 @@ export default function RegisterPage() {
 
       <div className={styles.card}>
         
-        {/* دکمه بازگشت به شکل شارپ و مینیمال در گوشه بالایی کارت */}
         <div className={styles.topNav}>
           <Link href="/" className={styles.backHome} aria-label="Back to Website">
             <ArrowLeft size={18} strokeWidth={2.5} />
           </Link>
         </div>
 
-        {/* فراخوانی فایل SVG با فرمت صحیح برای جلوگیری از ارور فاصله (%) */}
         <div className={styles.logoContainer}>
           <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
         </div>
@@ -224,7 +275,6 @@ export default function RegisterPage() {
                   {errors.firstName && <span className={styles.errorText}>{errors.firstName}</span>}
                 </div>
                 <div className={styles.inputGroup}>
-                  {/* نام میانی بدون ستاره */}
                   <label>Middle Name</label>
                   <input type="text" name="middleName" value={formData.middleName} onChange={handleChange} placeholder="نام میانی" />
                 </div>
@@ -348,7 +398,7 @@ export default function RegisterPage() {
                     ) : (
                       <><UploadCloud size={24} className={styles.uploadIcon} /><span>Upload License (Front)</span></>
                     )}
-                    <input type="file" accept="image/*" className={styles.fileInput} onChange={(e) => handleFileChange(e, "docFront")} />
+                    <input type="file" accept="image/jpeg, image/png, application/pdf" className={styles.fileInput} onChange={(e) => handleFileChange(e, "docFront")} />
                   </div>
                   <div className={styles.uploadBox}>
                     {files.docBack ? (
@@ -356,7 +406,7 @@ export default function RegisterPage() {
                     ) : (
                       <><UploadCloud size={24} className={styles.uploadIcon} /><span>Upload License (Back)</span></>
                     )}
-                    <input type="file" accept="image/*" className={styles.fileInput} onChange={(e) => handleFileChange(e, "docBack")} />
+                    <input type="file" accept="image/jpeg, image/png, application/pdf" className={styles.fileInput} onChange={(e) => handleFileChange(e, "docBack")} />
                   </div>
                 </div>
               )}
@@ -369,7 +419,7 @@ export default function RegisterPage() {
                     ) : (
                       <><UploadCloud size={24} className={styles.uploadIcon} /><span>Upload Passport Page</span></>
                     )}
-                    <input type="file" accept="image/*" className={styles.fileInput} onChange={(e) => handleFileChange(e, "docFront")} />
+                    <input type="file" accept="image/jpeg, image/png, application/pdf" className={styles.fileInput} onChange={(e) => handleFileChange(e, "docFront")} />
                   </div>
                   <div className={styles.uploadBox}>
                     {files.proofOfAddress ? (
@@ -377,7 +427,7 @@ export default function RegisterPage() {
                     ) : (
                       <><UploadCloud size={24} className={styles.uploadIcon} /><span>Proof of Address</span><p className={styles.uploadHelper}>Upload a recent utility bill.</p></>
                     )}
-                    <input type="file" accept="image/*,.pdf" className={styles.fileInput} onChange={(e) => handleFileChange(e, "proofOfAddress")} />
+                    <input type="file" accept="image/jpeg, image/png, application/pdf" className={styles.fileInput} onChange={(e) => handleFileChange(e, "proofOfAddress")} />
                   </div>
                 </div>
               )}
@@ -404,7 +454,6 @@ export default function RegisterPage() {
               </div>
 
               <div className={styles.btnWrapperSpace}>
-                {/* تغییر قطعی به ghost برای هماهنگی با کامپوننت Button شما */}
                 <Button type="button" onClick={() => setStep(1)} variant="ghost" leftIcon={<ArrowLeft />}>
                   Back
                 </Button>
