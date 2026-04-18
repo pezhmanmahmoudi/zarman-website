@@ -57,9 +57,11 @@ body {
 }
 
 body {
-  /* اعمال توکن‌های سیستم پرمیوم زرمان */
-  background-color: var(--color-bg-base);
-  color: var(--color-text-secondary);
+  min-height: 100vh;
+  background-color: #080B12;
+  background-color: var(--color-bg-base, #080B12);
+  color: #fff;
+  color: var(--color-text-primary, #fff);
   
   /* استفاده یکپارچه از متغیر توکن */
   font-family: var(--font-primary);

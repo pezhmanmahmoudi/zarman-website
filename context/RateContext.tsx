@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export type CurrentRates = {
   sellAUD: number | null;
@@ -56,6 +56,13 @@ export function RateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function fetchRates() {
+      if (!isSupabaseConfigured) {
+        setChartDataDaily([]);
+        setCurrentRates(defaultCurrentRates);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         // 🚀 دریافت ۱۵۰۰ روز اخیر (حدود ۴ سال) در یک درخواست بسیار سریع و یکپارچه
         // این کار هم نمودار را کامل می‌کند و هم سایت را سبک نگه می‌دارد

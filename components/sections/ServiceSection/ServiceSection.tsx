@@ -2,10 +2,13 @@
 
 import React from "react";
 import { motion, Variants } from "framer-motion";
+import dynamic from "next/dynamic";
 import styles from "./ServiceSection.module.css";
 
-// کامپوننت شبکه مرکزی
-import ServicesNetworkCore from "./NetworkGlobe";
+const ServicesNetworkCore = dynamic(() => import("./NetworkGlobe"), {
+  ssr: false,
+  loading: () => <div style={{ width: "100%", height: "100%", opacity: 0.12 }} />,
+});
 
 /* ===== Minimal premium SVG icons ===== */
 function GraduationIcon() {

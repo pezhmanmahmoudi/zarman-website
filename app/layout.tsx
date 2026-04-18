@@ -113,7 +113,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body className="min-h-screen antialiased bg-[#080B12] text-white">
+      <body>
         <RateProvider>
           <main id="main-content">{children}</main>
         </RateProvider>
