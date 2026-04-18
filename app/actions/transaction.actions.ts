@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+// 👈 توابع مالی از فایل مرجع اضافه شدند
+import { getAppliedFee, getLoyaltyBonusByVolume, getTailoredRate } from "@/lib/pricing";
 
 // اتصال مستقیم به سوپابیس با کلید ادمین
 const supabaseAdmin = createClient(
@@ -8,15 +10,9 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const CONFIG = {
-  DISCOUNT_STEP_VOLUME: 1000,
-  DISCOUNT_PERCENT_PER_STEP: 0.005,
-  MAX_DISCOUNT_PERCENT: 0.50,
-  FEE_THRESHOLD: 1000,
-  APPLIED_FEE: 15,
-};
+// متغیر CONFIG از اینجا حذف شد چون حالا همه‌چیز از lib/pricing خوانده می‌شود
 
-// 🔒 تابع جدید: بررسی اعتبار توکن ارسالی از سمت مرورگر
+// 🔒 تابع بررسی اعتبار توکن ارسالی از سمت مرورگر (دیوار امنیتی ما)
 async function getSecureUserFromToken(accessToken: string) {
   if (!accessToken) return null;
   // سرور با استفاده از کلید ادمین، اعتبار این توکن را مستقیماً از هسته سوپابیس می‌پرسد
@@ -64,16 +60,16 @@ export async function processTransactionSecurely({ accessToken, rawAmount, txTyp
 
     const approvedVolume = userTxs.reduce((sum, tx) => sum + Number(tx.amount_aud || 0), 0);
 
-    const volumeSteps = Math.floor(approvedVolume / CONFIG.DISCOUNT_STEP_VOLUME);
-    const rawDiscountPercent = volumeSteps * CONFIG.DISCOUNT_PERCENT_PER_STEP;
-    const finalDiscountPercent = Math.min(rawDiscountPercent, CONFIG.MAX_DISCOUNT_PERCENT);
-    
-    const loyaltyBonus = spread * finalDiscountPercent;
+    // 🧠 استفاده از مرجع حقیقت واحد برای محاسبه وفاداری
+    const loyaltyBonus = getLoyaltyBonusByVolume(spread, approvedVolume);
 
+    // 🧠 استفاده از مرجع حقیقت واحد برای محاسبه نرخ نهایی
     const baseRate = txType === "buy_aud" ? rateData.sell_aud : rateData.buy_aud;
-    const tailoredRate = txType === "buy_aud" ? baseRate - loyaltyBonus : baseRate + loyaltyBonus;
+    const tailoredRate = getTailoredRate({ txType, baseRate, loyaltyBonus });
 
-    const appliedFee = (rawAmount > 0 && rawAmount < CONFIG.FEE_THRESHOLD) ? CONFIG.APPLIED_FEE : 0;
+    // 🧠 استفاده از مرجع حقیقت واحد برای محاسبه کارمزد
+    const appliedFee = getAppliedFee(rawAmount);
+
     const effectiveAud = txType === "buy_aud" ? rawAmount + appliedFee : Math.max(rawAmount - appliedFee, 0);
     const equivalentToman = Math.round(effectiveAud * tailoredRate);
 
@@ -103,7 +99,7 @@ export async function processTransactionSecurely({ accessToken, rawAmount, txTyp
 }
 
 // ============================================================================
-// ۲. تابع حذف امن تراکنش
+// ۲. تابع حذف امن تراکنش (دست نخورده و کاملاً امن)
 // ============================================================================
 export async function deleteTransactionSecurely(transactionId: string, accessToken: string) {
   try {

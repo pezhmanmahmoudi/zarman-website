@@ -50,7 +50,6 @@ async function buildLandmaskDots(imageUrl: string, radius: number): Promise<Floa
 
   const positions: number[] = [];
 
-  // Keep the same sampling density (y+=2, x+=2) to preserve appearance
   for (let y = 0; y < H; y += 2) {
     for (let x = 0; x < W; x += 2) {
       const i = (y * W + x) * 4;
@@ -72,7 +71,9 @@ export default function AboutGlobe() {
     const container = wrapRef.current;
     if (!container) return;
 
-    let cancelled = false; // ✅ مهم: جلوگیری از ادامه init بعد از unmount
+    let cancelled = false;
+    // 🚀 این متغیر مشخص می‌کند که آیا پردازش سنگین اولیه انجام شده یا نه
+    let isInitialized = false; 
 
     let renderer: THREE.WebGLRenderer | null = null;
     let scene: THREE.Scene | null = null;
@@ -126,7 +127,6 @@ export default function AboutGlobe() {
       raf = requestAnimationFrame(tick);
     };
 
-    // Resize (throttled via rAF)
     let resizeRaf: number | null = null;
     const onResize = () => {
       if (!renderer || !camera) return;
@@ -193,10 +193,8 @@ export default function AboutGlobe() {
       sphere.renderOrder = 1;
       scene.add(sphere);
 
-      // ✅ Async part — بعد از await ممکن است کامپوننت unmount شده باشد
       const dotPositions = await buildLandmaskDots("/Earth/earth-landmask.png", R + 0.8);
 
-      // ✅ Guard: اگر cleanup شده، ادامه نده
       if (cancelled || !scene || !renderer || !camera) return;
 
       const dotGeom = new THREE.BufferGeometry();
@@ -252,39 +250,40 @@ export default function AboutGlobe() {
       cityGroup.rotation.y = startingRotation;
 
       readyRef.current = true;
-
-      // Start loop only if currently visible
-      const rect = container.getBoundingClientRect();
-      const inView =
-        rect.bottom > 0 &&
-        rect.right > 0 &&
-        rect.top < window.innerHeight &&
-        rect.left < window.innerWidth;
-
-      if (inView) startLoop();
+      
+      // اگر هنوز در دید است، شروع به چرخش کن
+      if (runningRef.current === false && !cancelled) {
+         startLoop();
+      }
     };
 
-    // Pause/Resume based on viewport
+    // 🚀 هوشمندسازی کامل سنسور: ساخت با تاخیر (Lazy Init)
     io = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (!entry) return;
 
-        if (entry.isIntersecting) startLoop();
-        else stopLoop();
+        if (entry.isIntersecting) {
+          if (!isInitialized) {
+            isInitialized = true;
+            init(); // فقط زمانی که کاربر ۸۰۰ پیکسل به کره نزدیک شد، پردازش سنگین را شروع کن
+          } else {
+            startLoop(); // اگر قبلا ساخته شده، فقط چرخش را از سر بگیر
+          }
+        } else {
+          if (isInitialized) stopLoop(); // اگر از کادر خارج شد، استراحت کن
+        }
       },
-      { threshold: 0.15 }
+      { rootMargin: "800px", threshold: 0 } // ۸۰۰ پیکسل حاشیه امنیت برای جلوگیری از لگ زدن حین اسکرول
     );
 
     io.observe(container);
-
     window.addEventListener("resize", onResize, { passive: true });
 
-    init();
+    // دستور init() از اینجا حذف شد تا در زمان لود صفحه اجرا نشود!
 
     return () => {
-      cancelled = true; // ✅ این خط مشکل شما را حل می‌کند
-
+      cancelled = true; 
       stopLoop();
 
       window.removeEventListener("resize", onResize);

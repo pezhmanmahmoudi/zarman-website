@@ -16,6 +16,7 @@ import { DashboardTransactionHistory } from "@/components/dashboard/DashboardTra
 import { DashboardProfile } from "@/components/dashboard/DashboardProfile";
 import { DashboardFeedback } from "@/components/dashboard/DashboardFeedback";
 import { AlertTriangle, X } from "lucide-react"; 
+import { getLoyaltyBonusByVolume } from "@/lib/pricing"; // این را بالای فایل اضافه کن
 
 export default function ZarmanDashboard() {
   const rateContext = useRates();
@@ -60,12 +61,10 @@ export default function ZarmanDashboard() {
     return approvedTransactions.reduce((sum: number, tx: any) => sum + (Number(tx.amount_aud) || 0), 0);
   }, [approvedTransactions]);
 
+  // و متغیر را اینطور تغییر بده:
   const loyaltyBonus = useMemo(() => {
     if (spread === 0 || approvedVolume === 0) return 0;
-    const volumeSteps = Math.floor(approvedVolume / 1000);
-    const rawDiscountPercent = volumeSteps * 0.01;
-    const finalDiscountPercent = Math.min(rawDiscountPercent, 0.50); 
-    return spread * finalDiscountPercent;
+    return getLoyaltyBonusByVolume(spread, approvedVolume);
   }, [approvedVolume, spread]);
 
   const tailoredRate = useMemo(() => {

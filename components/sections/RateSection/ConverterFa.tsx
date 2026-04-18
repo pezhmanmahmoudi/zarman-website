@@ -5,6 +5,7 @@ import styles from "./ConverterFa.module.css";
 import Button from "@/components/ui/Button/Button";
 import { ArrowLeft, ArrowDownCircle, Info, UserCircle, AlertTriangle, ChevronDown } from "lucide-react";
 import { useRates } from "@/context/RateContext";
+import { getAppliedFee, PRICING_CONFIG } from "@/lib/pricing";
 
 type Currency = "AUD" | "IRT";
 
@@ -42,14 +43,14 @@ export default function ConverterFa() {
 
   const amountNum = getRawNumber(amountText);
 
-  // بررسی اعمال کارمزد
+  // بررسی اعمال کارمزد (از منبع مرکزی)
   let isFeeApplied = false;
   if (amountNum > 0 && safeRate > 0) {
     if (from === "AUD") {
-      isFeeApplied = amountNum < 1000;
+      isFeeApplied = getAppliedFee(amountNum) > 0;
     } else {
       const rawAud = amountNum / safeRate;
-      isFeeApplied = rawAud > 0 && rawAud < 1000;
+      isFeeApplied = getAppliedFee(rawAud) > 0;
     }
   }
 
@@ -59,12 +60,12 @@ export default function ConverterFa() {
     let finalValue = 0;
 
     if (from === "AUD") {
-      const feeInAud = isFeeApplied ? 15 : 0;
+      const feeInAud = isFeeApplied ? PRICING_CONFIG.APPLIED_FEE : 0;
       const netAud = Math.max(0, amountNum - feeInAud);
       finalValue = netAud * safeRate;
     } else {
       const rawAud = amountNum / safeRate;
-      const feeInAud = isFeeApplied ? 15 : 0;
+      const feeInAud = isFeeApplied ? PRICING_CONFIG.APPLIED_FEE : 0;
       finalValue = Math.max(0, rawAud - feeInAud);
     }
 
@@ -148,7 +149,7 @@ export default function ConverterFa() {
             {isFeeApplied && (
               <span className={styles.feeWarning}>
                 <AlertTriangle size={14} />
-                این تراکنش دارای کارمزد ۱۵ دلار است
+               این تراکنش دارای کارمزد {toFaDigits(String(PRICING_CONFIG.APPLIED_FEE))} دلار است
               </span>
             )}
           </div>
@@ -175,7 +176,7 @@ export default function ConverterFa() {
       <div className={styles.notesContainer}>
         <div className={styles.noteItem}>
           <Info size={16} strokeWidth={2} />
-          <span>توجه: برای تراکنش‌های کمتر از ۱،۰۰۰ دلار، مبلغ ۱۵ دلار به عنوان کارمزد کسر می‌گردد که در کادر بالا محاسبه شده است.</span>
+          <span>توجه: برای تراکنش‌های کمتر از {toFaDigits(PRICING_CONFIG.FEE_THRESHOLD.toLocaleString("en-US")).replace(/,/g, "،")} دلار، مبلغ {toFaDigits(String(PRICING_CONFIG.APPLIED_FEE))} دلار به عنوان کارمزد کسر می‌گردد که در کادر بالا محاسبه شده است.</span>
         </div>
         <div className={styles.noteItem}>
           <UserCircle size={16} strokeWidth={2} />

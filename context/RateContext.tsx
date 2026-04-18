@@ -57,28 +57,19 @@ export function RateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchRates() {
       try {
-        const pageSize = 1000;
-        let from = 0;
-        let hasMore = true;
-        const allRows: HistoricalRateRow[] = [];
+        // 🚀 دریافت ۱۵۰۰ روز اخیر (حدود ۴ سال) در یک درخواست بسیار سریع و یکپارچه
+        // این کار هم نمودار را کامل می‌کند و هم سایت را سبک نگه می‌دارد
+        const { data, error } = await supabase
+          .from("rates_history")
+          .select("id, created_at, date, buy_aud, sell_aud")
+          .order("date", { ascending: false })
+          .limit(1500);
 
-        while (hasMore) {
-          const { data, error } = await supabase
-            .from("rates_history")
-            .select("id, created_at, date, buy_aud, sell_aud")
-            .order("date", { ascending: true })
-            .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const fetchedRows = (data ?? []) as HistoricalRateRow[];
 
-          if (error) throw error;
-          const batch = (data ?? []) as HistoricalRateRow[];
-          allRows.push(...batch);
-
-          if (batch.length < pageSize) { hasMore = false; } 
-          else { from += pageSize; }
-        }
-
-        // 🛡️ ترمیم کامل زنجیره Map و Filter
-        const normalizedData: ChartDataPoint[] = allRows
+        // 🛡️ ترمیم و فیلتر کردن دیتاها
+        const normalizedData: ChartDataPoint[] = fetchedRows
           .filter((item) => Boolean(item?.date))
           .map((item) => {
             const buyAud = toSafePositiveNumber(item.buy_aud);
@@ -97,6 +88,12 @@ export function RateProvider({ children }: { children: ReactNode }) {
           .filter((item) => {
             const dateMs = new Date(`${item.date}T12:00:00`).getTime();
             return Number.isFinite(dateMs);
+          })
+          // 🚀 مرتب‌سازی صعودی دیتاها تا نمودارها از چپ به راست (قدیم به جدید) درست رسم شوند
+          .sort((a, b) => {
+            const aMs = new Date(`${a.date}T12:00:00Z`).getTime();
+            const bMs = new Date(`${b.date}T12:00:00Z`).getTime();
+            return aMs - bMs;
           });
 
         if (normalizedData.length > 0) {
@@ -111,7 +108,7 @@ export function RateProvider({ children }: { children: ReactNode }) {
           setChartDataDaily([]);
           setCurrentRates(defaultCurrentRates); 
         }
-      } catch (err) {
+      } catch {
         setChartDataDaily([]);
         setCurrentRates(defaultCurrentRates);
       } finally {

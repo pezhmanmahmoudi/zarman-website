@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { RateProvider } from "@/context/RateContext";
 
-// پیکربندی فونت بین‌المللی Inter برای متون و اعداد انگلیسی
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-en",
@@ -11,9 +10,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Zarman Exchange Money | صرافی زرمان",
-  description: "پلتفرم نوین انتقال امن، شفاف و سریع پول بین استرالیا و ایران ( AUD ↔ IRR )",
-  keywords: ["صرافی استرالیا", "حواله دلار استرالیا", "زرمان اکسچنج", "انتقال پول به استرالیا"],
+  metadataBase: new URL("https://zarman.io"),
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -23,8 +23,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fa" dir="rtl" className={`${inter.variable}`}>
+      <head>
+        {/* Preload critical fonts */}
+        <link
+          rel="preconnect"
+          href="https://fonts.googleapis.com"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className="min-h-screen antialiased bg-[#080B12] text-white">
-        {/* تزریق پرووایدر برای مدیریت سراسری نرخ‌های ارز */}
         <RateProvider>
           <main id="main-content">
             {children}
