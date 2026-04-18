@@ -136,7 +136,7 @@ export default function HowItWorks() {
             <Button href="/fa/register" variant="primary" size="lg">
               شروع ثبت‌نام در زرمان
             </Button>
-            <Button href={whatsappLink} target="_blank" variant="secondary" size="lg">
+            <Button href={whatsappLink} target="_blank" rel="noopener noreferrer" variant="secondary" size="lg">
               درخواست مشاوره
             </Button>
           </div>

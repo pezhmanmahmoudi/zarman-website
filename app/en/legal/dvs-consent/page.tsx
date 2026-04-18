@@ -13,7 +13,12 @@ export const metadata: Metadata = {
     type: "website",
   },
   alternates: {
-    canonical: "https://zarman.com.au/en/legal/dvs-consent",
+    canonical: "/en/legal/dvs-consent",
+    languages: {
+      en: "/en/legal/dvs-consent",
+      fa: "/",
+      "x-default": "/",
+    },
   },
 };
 

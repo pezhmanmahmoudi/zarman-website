@@ -13,7 +13,12 @@ export const metadata: Metadata = {
     type: "website",
   },
   alternates: {
-    canonical: "https://zarman.com.au/en/legal/dvs-notice",
+    canonical: "/en/legal/dvs-notice",
+    languages: {
+      en: "/en/legal/dvs-notice",
+      fa: "/",
+      "x-default": "/",
+    },
   },
 };
 

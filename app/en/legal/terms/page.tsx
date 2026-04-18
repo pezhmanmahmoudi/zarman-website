@@ -13,7 +13,12 @@ export const metadata: Metadata = {
     type: "website",
   },
   alternates: {
-    canonical: "https://zarman.com.au/en/legal/terms",
+    canonical: "/en/legal/terms",
+    languages: {
+      en: "/en/legal/terms",
+      fa: "/",
+      "x-default": "/",
+    },
   },
 };
 

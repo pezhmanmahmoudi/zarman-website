@@ -36,7 +36,7 @@ export default function Home() {
   return (
     <PageWrapper>
       <Header />
-      <main id="main-content">
+      <div>
         <Hero />
         <TrustStrip />
         <RateSection />
@@ -46,7 +46,7 @@ export default function Home() {
         <TestimonialSection />
         <FAQSection />
         <FinalCTA />
-      </main>
+      </div>
       <Footer />
     </PageWrapper>
   );

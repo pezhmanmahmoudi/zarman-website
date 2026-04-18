@@ -53,6 +53,13 @@ export const metadata: Metadata = {
         alt: "Zarman Exchange - Money Transfer Platform",
         type: "image/png",
       },
+       {
+        url: "/images/og-image-square.png",
+        width: 800,
+        height: 800,
+        alt: "Zarman Exchange Logo",
+        type: "image/png",
+      },
     ],
   },
   twitter: {
@@ -67,6 +74,23 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
     nocache: false,
+    googleBot: {
+      index: true,
+      follow: true,
+      noimageindex: false,
+    },
+  },
+  verification: {
+    google: "YOUR_GOOGLE_VERIFICATION_CODE",
+    yandex: "YOUR_YANDEX_VERIFICATION_CODE",
+  },
+  alternates: {
+    canonical: "/",
+    languages: {
+      fa: "/",
+      en: "/en/",
+      "x-default": "/",
+    },
   },
 };
 
@@ -87,14 +111,6 @@ export default function RootLayout({
           rel="preconnect"
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
-        />
-        <link rel="canonical" href="https://zarman.com.au" />
-        <link rel="alternate" hrefLang="fa" href="https://zarman.com.au" />
-        <link rel="alternate" hrefLang="en" href="https://zarman.com.au/en/" />
-        <link
-          rel="alternate"
-          hrefLang="x-default"
-          href="https://zarman.com.au"
         />
       </head>
       <body className="min-h-screen antialiased bg-[#080B12] text-white">

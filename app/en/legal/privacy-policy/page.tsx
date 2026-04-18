@@ -13,7 +13,12 @@ export const metadata: Metadata = {
     type: "website",
   },
   alternates: {
-    canonical: "https://zarman.com.au/en/legal/privacy-policy",
+    canonical: "/en/legal/privacy-policy",
+    languages: {
+      en: "/en/legal/privacy-policy",
+      fa: "/",
+      "x-default": "/",
+    },
   },
 };
 

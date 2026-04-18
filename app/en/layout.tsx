@@ -1,5 +1,4 @@
 import type { Metadata, ReactNode } from "next";
-import EnglishPageWrapper from "@/components/layout/PageWrapper/EnglishPageWrapper";
 
 export const metadata: Metadata = {
   title: {
@@ -11,14 +10,15 @@ export const metadata: Metadata = {
     locale: "en_US",
   },
   alternates: {
+    canonical: "/en/",
     languages: {
-      fa: "https://zarman.com.au",
-      en: "https://zarman.com.au/en/",
-      "x-default": "https://zarman.com.au",
+      fa: "/",
+      en: "/en/",
+      "x-default": "/",
     },
   },
 };
 
 export default function EnLayout({ children }: { children: ReactNode }) {
-  return <EnglishPageWrapper>{children}</EnglishPageWrapper>;
+  return <>{children}</>;
 }

@@ -23,17 +23,16 @@ export default function HeaderPublic({
       </a>
 
       <div className="h-inner">
-        <div className="h-logo-wrap" aria-label="Zarman Exchange — صفحه اصلی">
-          {/* 👈 تگ Link حذف شد تا لوگو کاملا ایستا و غیرقابل کلیک باشد */}
+        <Link href="/" className="h-logo-wrap" aria-label="Zarman Exchange — صفحه اصلی">
           <Image
             src="/images/Logo no text light.svg"
             alt="Zarman Exchange"
             className="h-logo-img"
-            width={200}  
+            width={200}
             height={60}  
             priority
           />
-        </div>
+        </Link>
 
         <nav className="h-nav" aria-label="ناوبری اصلی">
           {publicNavItems.map((item) => {

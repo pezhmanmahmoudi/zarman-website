@@ -62,6 +62,18 @@ export default function MobHeader({
     }
     return () => { document.body.style.overflow = ""; };
   }, [open, mounted]);
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   // Header initial load animation
   useGSAP(
@@ -175,7 +187,7 @@ export default function MobHeader({
                   <Button href="/dashboard" variant="primary" fullWidth onClick={close}>
                     رفتن به داشبورد
                   </Button>
-                  <Button href={whatsappUrl} target="_blank" variant="secondary" fullWidth onClick={close}>
+                   <Button href={whatsappUrl} target="_blank" rel="noopener noreferrer" variant="secondary" fullWidth onClick={close}>
                     تماس با پشتیبانی
                   </Button>
                 </>
@@ -184,7 +196,7 @@ export default function MobHeader({
                   <Button href={loginHref} variant="primary" fullWidth onClick={close}>
                     ورود به حساب کاربری
                   </Button>
-                  <Button href={whatsappUrl} target="_blank" variant="secondary" fullWidth onClick={close}>
+                  <Button href={whatsappUrl} target="_blank" rel="noopener noreferrer" variant="secondary" fullWidth onClick={close}>
                     پشتیبانی در واتس‌اپ
                   </Button>
                 </>
