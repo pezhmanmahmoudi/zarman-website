@@ -204,9 +204,9 @@ export default function TestimonialSection() {
         scrollTrigger: { trigger: el, start: "top 75%" },
       });
 
-      tl.fromTo(`.${styles.header} > *`, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, stagger: 0.15 }).fromTo(
+      tl.fromTo(`.${styles.header} > *`, { autoAlpha: 0, y: 20, immediateRender: false }, { autoAlpha: 1, y: 0, stagger: 0.15 }).fromTo(
         `.${styles.carouselMask}`,
-        { autoAlpha: 0, y: 40 },
+        { autoAlpha: 0, y: 40, immediateRender: false },
         { autoAlpha: 1, y: 0, duration: 1.2 },
         "-=0.4"
       );

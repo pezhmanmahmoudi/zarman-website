@@ -30,14 +30,14 @@ export default function RateSection() {
       });
 
       // انیمیشن متون هدر
-      tl.fromTo(`.${styles.eyebrow}`, { autoAlpha: 0, y: 15 }, { autoAlpha: 1, y: 0 })
-        .fromTo(`.${styles.title}`, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0 }, "-=0.6")
-        .fromTo(`.${styles.subtitle}`, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0 }, "-=0.6")
+      tl.fromTo(`.${styles.eyebrow}`, { autoAlpha: 0, y: 15, immediateRender: false }, { autoAlpha: 1, y: 0 })
+        .fromTo(`.${styles.title}`, { autoAlpha: 0, y: 20, immediateRender: false }, { autoAlpha: 1, y: 0 }, "-=0.6")
+        .fromTo(`.${styles.subtitle}`, { autoAlpha: 0, y: 20, immediateRender: false }, { autoAlpha: 1, y: 0 }, "-=0.6")
         
         // انیمیشن کارت‌ها (مبدل و نمودار)
         .fromTo(
           `.${styles.grid} > div`,
-          { autoAlpha: 0, y: 40 },
+          { autoAlpha: 0, y: 40, immediateRender: false },
           { autoAlpha: 1, y: 0, stagger: 0.15, duration: 1 },
           "-=0.4"
         );

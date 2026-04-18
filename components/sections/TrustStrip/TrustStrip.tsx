@@ -57,13 +57,13 @@ export default function TrustStrip() {
       // انیمیشن اول برای هدر سکشن
       tl.fromTo(
         `.${styles.header} > *`, 
-        { autoAlpha: 0, y: 20 }, 
+        { autoAlpha: 0, y: 20, immediateRender: false }, 
         { autoAlpha: 1, y: 0, stagger: 0.2 }
       )
       // انیمیشن دوم برای تک‌تک کارت‌ها با وقفه کوچک و استگر
       .fromTo(
         `.${styles.grid} > .${styles.card}`,
-        { autoAlpha: 0, y: 0 },
+        { autoAlpha: 0, y: 0, immediateRender: false },
         { autoAlpha: 1, y: 0, stagger: 0.15, duration: 1 },
         "-=0.4"
       );

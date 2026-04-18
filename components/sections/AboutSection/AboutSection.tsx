@@ -11,7 +11,7 @@ const AboutGlobe = dynamic(() => import("./AboutGlobe"), {
 });
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-const VIEWPORT = { once: true, amount: 0.45 } as const;
+const VIEWPORT = { once: true, amount: 0 } as const;
 
 export default function About() {
   const reduceMotion = useReducedMotion();
@@ -88,7 +88,7 @@ export default function About() {
 
               <motion.div
                 className={styles.globeArea}
-                viewport={{ once: true, amount: 0.25 }}
+                viewport={{ once: true, amount: 0 }}
                 initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, ease: EASE, delay: 0.34 }}

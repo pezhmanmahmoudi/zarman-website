@@ -169,7 +169,7 @@ export default function Services() {
                   variants={cardVariants}
                   initial="hidden"
                   whileInView="visible"
-                  viewport={{ once: true, amount: 0.35 }}
+                  viewport={{ once: true, amount: 0 }}
                   transition={{ delay: 0.15 + i * 0.1 }}
                 >
                   <div className={styles.iconOrb} aria-hidden="true">
@@ -232,7 +232,7 @@ export default function Services() {
                     variants={cardVariants}
                     initial="hidden"
                     whileInView="visible"
-                    viewport={{ once: true, amount: 0.2 }}
+                    viewport={{ once: true, amount: 0 }}
                     transition={{ delay: 0.15 + idx * 0.1 }}
                   >
                     <div className={styles.mobileIcon} aria-hidden="true">

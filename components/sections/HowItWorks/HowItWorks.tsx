@@ -59,18 +59,18 @@ export default function HowItWorks() {
 
       tl.fromTo(
         `.${styles.header} > *`,
-        { autoAlpha: 0, y: 20 },
+        { autoAlpha: 0, y: 20, immediateRender: false },
         { autoAlpha: 1, y: 0, stagger: 0.15 }
       )
       .fromTo(
         `.${styles.card}`,
-        { autoAlpha: 0, y: 0 },
+        { autoAlpha: 0, y: 0, immediateRender: false },
         { autoAlpha: 1, y: 0, stagger: 0.15, duration: 1 },
         "-=0.4"
       )
       .fromTo(
         `.${styles.ctaBanner}`,
-        { autoAlpha: 0, scale: 0.96, y: 20 },
+        { autoAlpha: 0, scale: 0.96, y: 20, immediateRender: false },
         { autoAlpha: 1, scale: 1, y: 0, duration: 1 },
         "-=0.6"
       );

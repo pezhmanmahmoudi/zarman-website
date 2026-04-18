@@ -45,8 +45,8 @@ export default function Hero() {
         <div className={styles.layout}>
           
           <div className={styles.content}>
-            <p className={`${styles.eyebrow} ${styles.hiddenOnLoad}`}>صرافی زرمان</p>
-            <h1 className={`${styles.title} ${styles.hiddenOnLoad}`}>
+            <p className={styles.eyebrow}>صرافی زرمان</p>
+            <h1 className={styles.title}>
               از{' '}
               <span className={styles.tooltipWrapper}>
                 اولورو
@@ -59,11 +59,11 @@ export default function Hero() {
               <br />
               <span className={styles.titleAccent}>تنها در چند ساعت...</span>
             </h1>
-            <p className={`${styles.subtitle} ${styles.hiddenOnLoad}`}>
+            <p className={styles.subtitle}>
               ما تلاش می‌کنیم با تمرکز بر سرعت، شفافیت و پشتیبانی همیشگی، تجربه ثبت و پیگیری درخواست‌های مالی را برای شما آسان‌تر و روشن‌تر کنیم.
             </p>
             
-            <div className={`${styles.actions} ${styles.hiddenOnLoad}`}>
+            <div className={styles.actions}>
               <Button href="/fa/register" variant="primary" size="lg" className={styles.btn}>
                 شروع ثبت‌نام
               </Button>
@@ -72,7 +72,7 @@ export default function Hero() {
               </Button>
             </div>
 
-            <div className={`${styles.meta} ${styles.hiddenOnLoad}`}>
+            <div className={styles.meta}>
               <span>سریع</span><span className={styles.dot} />
               <span>شفاف</span><span className={styles.dot} />
               <span>شخصی سازی قیمت</span><span className={styles.dot} />
@@ -81,7 +81,7 @@ export default function Hero() {
           </div>
 
           <div className={styles.visual}>
-            <div className={`${styles.rateWidget} ${styles.hiddenOnLoad}`} aria-label="نرخ لحظه‌ای ارز">
+            <div className={styles.rateWidget} aria-label="نرخ لحظه‌ای ارز">
               <div className={styles.widgetHeader}>
                 <span className={styles.pulseDot}></span>
                 <span className={styles.status}>
