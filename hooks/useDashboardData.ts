@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { Profile, Transaction } from "@/app/fa/dashboard/dashboard.types";
+import { Profile, Transaction } from "@/app/(fa)/fa/dashboard/dashboard.types";
 
 export function useDashboardData() {
   const router = useRouter();

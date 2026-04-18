@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Calculator, AlertTriangle, Lock, MessageSquare, ChevronDown, ServerCrash, Loader2 } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
-import { Profile } from "@/app/fa/dashboard/dashboard.types"; 
+import { Profile } from "@/app/(fa)/fa/dashboard/dashboard.types"; 
 import { FINANCE_CONFIG } from "@/lib/pricing";
 
 function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]); }

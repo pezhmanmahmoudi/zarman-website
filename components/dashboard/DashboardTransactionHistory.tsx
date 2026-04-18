@@ -1,6 +1,6 @@
 import React from "react";
 import { History, Target, Trash2 } from "lucide-react";
-import { formatToman } from "@/app/fa/dashboard/dashboard.utils";
+import { formatToman } from "@/app/(fa)/fa/dashboard/dashboard.utils";
 import styles from "@/styles/dashboard/DashboardTransactionHistory.module.css";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 
