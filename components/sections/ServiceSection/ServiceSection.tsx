@@ -5,9 +5,13 @@ import { motion, Variants } from "framer-motion";
 import dynamic from "next/dynamic";
 import styles from "./ServiceSection.module.css";
 
+const GLOBE_LOADING_OPACITY = 0.12;
+
 const ServicesNetworkCore = dynamic(() => import("./NetworkGlobe"), {
   ssr: false,
-  loading: () => <div style={{ width: "100%", height: "100%", opacity: 0.12 }} />,
+  loading: () => (
+    <div style={{ width: "100%", height: "100%", opacity: GLOBE_LOADING_OPACITY }} />
+  ),
 });
 
 /* ===== Minimal premium SVG icons ===== */
