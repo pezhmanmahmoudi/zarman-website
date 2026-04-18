@@ -176,8 +176,8 @@ export function DashboardRequestHub({
               <span className={styles.feeWarning}>
                 <AlertTriangle size={14} /> 
                 {txType === "buy_aud"
-                  ? `افزوده شدن ${toFaDigits(FINANCE_CONFIG.APPLIED_FEE)} دلار کارمزد`
-                  : `کسر ${toFaDigits(FINANCE_CONFIG.APPLIED_FEE)} دلار کارمزد`}
+                  ? `افزوده شدن ${toFaDigits(String(FINANCE_CONFIG.APPLIED_FEE))} دلار کارمزد`
+                  : `کسر ${toFaDigits(String(FINANCE_CONFIG.APPLIED_FEE))} دلار کارمزد`}
               </span>
             )}
           </div>

@@ -11,8 +11,6 @@ import FAQSection from "@/components/sections/FAQSection/FAQSection";
 import FinalCTA from "@/components/sections/FinalCTA/FinalCTA";
 import Footer from "@/components/layout/Footer/Footer";
 
-
-
 // Server-side metadata for SEO
 export const metadata: Metadata = {
   title: "Zarman Exchange Money | صرافی زرمان",
@@ -35,7 +33,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <PageWrapper>
+    <>
       <Header />
       <main id="main-content">
         <Hero />
@@ -49,6 +47,6 @@ export default function Home() {
         <FinalCTA />
       </main>
       <Footer />
-    </PageWrapper>
+    </>
   );
 }
