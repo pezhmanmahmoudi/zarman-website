@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase"; 
 import { useRates } from "@/context/RateContext"; 
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { processTransactionSecurely } from "@/app/actions/transaction.actions"; 
+import { deleteTransactionSecurely, processTransactionSecurely } from "@/app/actions/transaction.actions"; 
 
 import shellStyles from "@/styles/dashboard/DashboardShell.module.css";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
@@ -85,13 +84,12 @@ export default function ZarmanDashboard() {
   const profileFields = useMemo(() => {
     if (!profile) return [];
     
-    // 🚀 آدرس کامل: کد پستی در اینجا ادغام شد تا یکپارچه نمایش داده شود
     const fullAddress = [
       profile.address, 
       profile.suburb, 
       profile.city, 
       profile.state, 
-      profile.postal_code, // اضافه شدن کد پستی به بافت آدرس
+      profile.postal_code, 
       profile.country
     ].filter(Boolean).join(" - ");
 
@@ -115,7 +113,6 @@ export default function ZarmanDashboard() {
       { id: 'phone', label: "شماره تماس", value: profile.mobile_number || profile.phone_number || "—", dir: "ltr" },
       { id: 'email', label: "ایمیل", value: profile.email || "—", dir: "ltr" },
       { id: 'dob', label: "تاریخ تولد", value: dobEn, dir: "ltr" },
-      // 👇 آدرس الان به صورت خطی کامل است (همراه با کد پستی) و فیلد جداگانه کد پستی از پایین حذف شد
       { id: 'address', label: "محل سکونت", value: fullAddress || "—", dir: "ltr" },
       { id: 'doc', label: "مدارک بارگذاری شده", value: docTypeFa, dir: "rtl" }
     ];
@@ -143,17 +140,20 @@ export default function ZarmanDashboard() {
   };
 
   const executeDeleteTransaction = async () => {
-    if (!deleteConfirmId) return;
+    // 🛡️ چک کردن مستقیم برای اطمینان تایپ‌اسکریپت
+    if (deleteConfirmId === null) return;
+    
     setIsDeleting(true);
     try {
-      const { error } = await supabase.from('transactions').delete().eq('id', deleteConfirmId);
-      if (error) {
-        alert(`حذف تراکنش مسدود شد! لطفا RLS مربوط به Delete را چک کنید.`);
+      // استفاده از ! برای اطمینان از عدم وجود null
+      const result = await deleteTransactionSecurely(deleteConfirmId!);
+      if (result?.error) {
+        alert(`حذف تراکنش ناموفق بود: ${result.error}`);
       } else {
         window.location.reload(); 
       }
     } catch (err) {
-      console.error("خطا:", err);
+      console.error("خطا در حذف:", err);
     } finally {
       setIsDeleting(false);
       setDeleteConfirmId(null);
