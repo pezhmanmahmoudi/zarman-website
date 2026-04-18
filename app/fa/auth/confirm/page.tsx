@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ShieldCheck, LogIn } from "lucide-react";
+import Image from "next/image";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
 import styles from "@/styles/Register.module.css"; 
@@ -17,7 +18,13 @@ export default function ConfirmEmailPage() {
         
         {/* لوگو - مسیر اصلاح شده و بدون Space */}
         <div className={styles.logoContainer}>
-          <img src="/images/Logo no text light.svg" alt="Zarman Logo" className={styles.logoImage} />
+          <Image
+            src="/images/Logo%20no%20text%20light.svg"
+            alt="Zarman Logo"
+            width={64}
+            height={64}
+            className={styles.logoImage}
+          />
         </div>
         
         <div className={styles.verifyBox}>

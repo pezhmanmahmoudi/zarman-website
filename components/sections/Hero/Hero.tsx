@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -17,16 +17,8 @@ export default function Hero() {
   const whatsappMessage = encodeURIComponent("سلام، من از طریق وب‌سایت زرمان پیام می‌دهم و برای انتقال وجه نیاز به راهنمایی دارم.");
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   useGSAP(
     () => {
-      if (!mounted) return;
-
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
       tl.fromTo(`.${styles.eyebrow}`, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.65 })
@@ -41,7 +33,7 @@ export default function Hero() {
           "-=0.75"
         );
     },
-    { scope: heroRef, dependencies: [mounted] }
+    { scope: heroRef }
   );
 
   return (

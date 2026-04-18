@@ -27,9 +27,17 @@ export type Profile = {
 
 export type Transaction = {
   id: string;
-  user_id?: string;
+  user_id?: string | null;
   type: "buy_aud" | "sell_aud";
-  amount_aud: number;
-  equivalent_toman: number;
+  amount_aud: number | string;
+  equivalent_toman: number | string;
   created_at: string;
+status?: "approved" | "rejected" | "pending" | string;
+};
+
+export type ProfileField = {
+  id: string;
+  label: string;
+  value: string;
+  dir: "ltr" | "rtl";
 };

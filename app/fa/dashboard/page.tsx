@@ -17,6 +17,7 @@ import { DashboardProfile } from "@/components/dashboard/DashboardProfile";
 import { DashboardFeedback } from "@/components/dashboard/DashboardFeedback";
 import { AlertTriangle, X } from "lucide-react"; 
 import { getLoyaltyBonusByVolume } from "@/lib/pricing"; // این را بالای فایل اضافه کن
+import { ProfileField, Transaction } from "./dashboard.types";
 
 export default function ZarmanDashboard() {
   const rateContext = useRates();
@@ -54,11 +55,11 @@ export default function ZarmanDashboard() {
 
   const approvedTransactions = useMemo(() => {
     if (!transactions) return [];
-    return transactions.filter((tx: any) => tx.status === "approved");
+    return transactions.filter((tx: Transaction) => tx.status === "approved");
   }, [transactions]);
 
   const approvedVolume = useMemo(() => {
-    return approvedTransactions.reduce((sum: number, tx: any) => sum + (Number(tx.amount_aud) || 0), 0);
+    return approvedTransactions.reduce((sum: number, tx: Transaction) => sum + (Number(tx.amount_aud) || 0), 0);
   }, [approvedTransactions]);
 
   // و متغیر را اینطور تغییر بده:
@@ -81,7 +82,7 @@ export default function ZarmanDashboard() {
     return `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "مشتری عزیز";
   }, [profile]);
 
-  const profileFields = useMemo(() => {
+  const profileFields = useMemo<ProfileField[]>(() => {
     if (!profile) return [];
     
     const fullAddress = [
@@ -142,7 +143,7 @@ export default function ZarmanDashboard() {
       return null;
     }
 
-    return (result?.data as any) || null; 
+     return (result?.data as unknown) || null;  
   };
 
   const handleDeleteRequest = (txId: string | number) => {

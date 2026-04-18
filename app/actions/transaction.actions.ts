@@ -73,7 +73,7 @@ export async function processTransactionSecurely({ accessToken, rawAmount, txTyp
     const effectiveAud = txType === "buy_aud" ? rawAmount + appliedFee : Math.max(rawAmount - appliedFee, 0);
     const equivalentToman = Math.round(effectiveAud * tailoredRate);
 
-    const { data: insertData, error: insertError } = await supabaseAdmin
+    const { error: insertError } = await supabaseAdmin
       .from("transactions")
       .insert([{
         user_id: secureUserId, 
@@ -92,7 +92,7 @@ export async function processTransactionSecurely({ accessToken, rawAmount, txTyp
       data: { baseRate, tailoredRate, loyaltyBonus, equivalentToman, appliedFee, rawAmount }
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Server Action Error:", error);
     return { error: "خطای ناشناخته در سرور رخ داد." };
   }

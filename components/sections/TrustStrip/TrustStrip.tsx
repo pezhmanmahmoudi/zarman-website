@@ -3,14 +3,12 @@
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ShieldCheck, Zap, Headset, TrendingUp } from "lucide-react";
 import styles from "./TrustStrip.module.css";
+import { registerGsapPlugins } from "@/lib/gsap";
 
 // ثبت پلاگین اسکرول برای متحرک‌سازی هنگام اسکرول
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
+registerGsapPlugins();
 
 const trustItems = [
   {

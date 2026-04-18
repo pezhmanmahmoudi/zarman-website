@@ -3,7 +3,15 @@ import { Wallet, FileText, ArrowDownLeft, ShieldCheck } from "lucide-react";
 import { formatAUD, formatNumberFa, formatToman } from "@/app/fa/dashboard/dashboard.utils";
 import styles from "@/styles/dashboard/DashboardStats.module.css";
 
-export function DashboardStats({ totalVolume, transactionCount, baseRate, loyaltyBonus, txType }: any) {
+type DashboardStatsProps = {
+  totalVolume: number;
+  transactionCount: number;
+  baseRate: number | null;
+  loyaltyBonus: number;
+  txType: "buy_aud" | "sell_aud";
+};
+
+export function DashboardStats({ totalVolume, transactionCount, baseRate, loyaltyBonus, txType }: DashboardStatsProps) {
   return (
     <section className={styles.topStats}>
       <div className={styles.statCard}>

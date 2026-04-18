@@ -119,7 +119,7 @@ export default function Button(props: ButtonProps) {
             e.preventDefault();
             return;
           }
-          onClick?.(e as any);
+          onClick?.(e);
         }}
         {...anchorProps}
       >

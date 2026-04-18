@@ -3,16 +3,14 @@
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import styles from "./RateSection.module.css";
 import ConverterFa from "./ConverterFa"; 
 import PriceChart from "./PriceChart"; 
+import { registerGsapPlugins } from "@/lib/gsap";
 
 // ثبت پلاگین اسکرول
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
+registerGsapPlugins();
 
 export default function RateSection() {
   const sectionRef = useRef<HTMLElement | null>(null);

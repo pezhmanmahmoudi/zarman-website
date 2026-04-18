@@ -1,10 +1,17 @@
 import React from "react";
 import { History, Target, Trash2 } from "lucide-react";
 import { formatToman } from "@/app/fa/dashboard/dashboard.utils";
+import { Transaction } from "@/app/fa/dashboard/dashboard.types";
 import styles from "@/styles/dashboard/DashboardTransactionHistory.module.css";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 
-export function DashboardTransactionHistory({ transactions, totalVolume, onDeleteTransaction }: any) {
+type DashboardTransactionHistoryProps = {
+  transactions: Transaction[];
+  totalVolume: number;
+  onDeleteTransaction: (txId: string) => void;
+};
+
+export function DashboardTransactionHistory({ transactions, totalVolume, onDeleteTransaction }: DashboardTransactionHistoryProps) {
   return (
     <article className={cardStyles.panelCard}>
       <div className={cardStyles.panelHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -36,7 +43,7 @@ export function DashboardTransactionHistory({ transactions, totalVolume, onDelet
                 <td colSpan={6} className={styles.emptyTable}>هیچ سابقه تراکنشی یافت نشد.</td>
               </tr>
             )}
-            {transactions.length > 0 && transactions.map((tx: any) => (
+            {transactions.length > 0 && transactions.map((tx) => (
               <tr key={tx.id}>
                 
                 {/* 👈 تغییر جادویی تاریخ به فرمت 4 Apr 2026 */}
@@ -72,7 +79,7 @@ export function DashboardTransactionHistory({ transactions, totalVolume, onDelet
                 <td>
                   {tx.status === "pending" ? (
                     <button 
-                      onClick={() => onDeleteTransaction(tx.id)} // فقط ایدی رو میفرسته به صفحه اصلی
+                      onClick={() => onDeleteTransaction(String(tx.id))} // فقط ایدی رو میفرسته به صفحه اصلی
                       className={styles.deleteBtn} 
                       title="لغو و حذف درخواست"
                     >

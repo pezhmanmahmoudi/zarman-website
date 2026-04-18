@@ -39,7 +39,17 @@ export function formatDateValue(value?: string | null) {
   return date.toLocaleDateString("fa-IR");
 }
 
-export function extractBaseRateFromContext(rateContext: any): number | null {
+type RateRow = {
+  currency_code?: string;
+  pair?: string;
+  sell_aud?: number | string | null;
+};
+
+type RateContextShape = {
+  rates?: RateRow[];
+};
+
+export function extractBaseRateFromContext(rateContext: RateContextShape | null | undefined): number | null {
   // ۱. بررسی می‌کنیم آیا اصلاً دیتایی از سوپابیس آمده است یا خیر
   if (!rateContext || !rateContext.rates || rateContext.rates.length === 0) {
     console.error("خطای بحرانی: نرخ‌ها از سرور دریافت نشدند! ثبت تراکنش باید مسدود شود.");
@@ -47,7 +57,7 @@ export function extractBaseRateFromContext(rateContext: any): number | null {
   }
 
   // ۲. پیدا کردن ردیف نرخ حواله استرالیا از دیتابیس
-  const audRate = rateContext.rates.find((r: any) => r.currency_code === 'AUD' || r.pair === 'AUD/IRR');
+    const audRate = rateContext.rates.find((r) => r.currency_code === "AUD" || r.pair === "AUD/IRR");
   
   if (audRate && audRate.sell_aud) {
     return Number(audRate.sell_aud); 

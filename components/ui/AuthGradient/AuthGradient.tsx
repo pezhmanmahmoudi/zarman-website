@@ -3,11 +3,16 @@
 import React, { useEffect, useRef } from "react";
 import { Gradient } from "@/lib/Gradient";
 
+type GradientInstance = {
+  initGradient: (selector: string) => void;
+  disconnect: () => void;
+};
+
 export default function AuthGradient() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const gradient = new Gradient();
+    const gradient = new Gradient() as unknown as GradientInstance;
     
     if (canvasRef.current) {
       // پالت رنگی Premium Aurora (شفق قطبی فین‌تک)
@@ -17,7 +22,7 @@ export default function AuthGradient() {
       canvasRef.current.style.setProperty("--gradient-color-4", "#fda4af"); // هلویی/مرجانی (Rose) - برای ایجاد درخشش گرم و زنده
     }
 
-    (gradient as any).initGradient("#auth-gradient-canvas");
+    gradient.initGradient("#auth-gradient-canvas");
 
     return () => {
       gradient.disconnect();

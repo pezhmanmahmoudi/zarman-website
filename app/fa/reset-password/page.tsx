@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css";
 import { Eye, EyeOff, ShieldCheck, CheckCircle } from "lucide-react";
@@ -64,7 +65,13 @@ export default function ResetPasswordPage() {
         
         {/* لوگو */}
         <div className={styles.logoContainer}>
-          <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
+          <Image
+            src="/images/Logo%20no%20text%20light.svg"
+            alt="Zarman Logo"
+            width={64}
+            height={64}
+            className={styles.logoImage}
+          />
         </div>
         
         {success ? (

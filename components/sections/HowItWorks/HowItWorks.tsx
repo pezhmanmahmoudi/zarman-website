@@ -3,14 +3,12 @@
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./HowItWorks.module.css";
 import Button from "@/components/ui/Button/Button";
 import { UserPlus, ShieldCheck, CreditCard, Send } from "lucide-react";
+import { registerGsapPlugins } from "@/lib/gsap";
 
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
+registerGsapPlugins();
 
 const steps = [
   {

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { UserCircle2, UploadCloud, CheckCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { ProfileField } from "@/app/fa/dashboard/dashboard.types";
 import styles from "@/styles/dashboard/DashboardProfile.module.css";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 
@@ -16,7 +17,12 @@ const EXTENSION_MAP: Record<string, string> = {
   'application/pdf': 'pdf'
 };
 
-export function DashboardProfile({ profileFields, profileId }: any) {
+type DashboardProfileProps = {
+  profileFields: ProfileField[];
+  profileId?: string;
+};
+
+export function DashboardProfile({ profileFields, profileId }: DashboardProfileProps) {
   const [kycFiles, setKycFiles] = useState<File[]>([]);
   const [kycUploading, setKycUploading] = useState(false);
   const [kycUploadStatus, setKycUploadStatus] = useState("");
@@ -123,7 +129,7 @@ export function DashboardProfile({ profileFields, profileId }: any) {
             <div className={styles.inputControl}>یافت نشد</div>
           </div>
         ) : (
-          profileFields.map((field: any) => (
+          profileFields.map((field) => (
             <div key={field.id} className={styles.inputGroup}>
               <label>{field.label}</label>
               <div className={styles.inputControl} dir="ltr" style={{ textAlign: 'left' }}>

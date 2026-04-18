@@ -309,10 +309,10 @@ export default function AboutGlobe() {
 
       if (cityGroup) {
         cityGroup.traverse((obj) => {
-          const mesh = obj as THREE.Mesh;
-          if ((mesh as any).geometry) (mesh as any).geometry.dispose?.();
-          if ((mesh as any).material) {
-            const mat = (mesh as any).material;
+          const mesh = obj as THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>;
+          if ("geometry" in mesh && mesh.geometry) mesh.geometry.dispose?.();
+          if ("material" in mesh && mesh.material) {
+            const mat = mesh.material;
             if (Array.isArray(mat)) mat.forEach((m) => m.dispose?.());
             else mat.dispose?.();
           }

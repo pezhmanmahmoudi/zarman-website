@@ -37,7 +37,6 @@ export default function MobHeader({
 }: MobHeaderProps) {
   const items = useMemo(() => navItems ?? publicNavItems, [navItems]);
 
-  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
 
   const whatsappNumber = "61497851631";
@@ -50,18 +49,13 @@ export default function MobHeader({
   const linksRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
     if (open) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
     return () => { document.body.style.overflow = ""; };
-  }, [open, mounted]);
+  }, [open]);
   useEffect(() => {
     if (!open) return;
 
@@ -85,7 +79,7 @@ export default function MobHeader({
         { y: 0, autoAlpha: 1, duration: 0.8, ease: "expo.out" } // انیمیشن نرم‌تر و لوکس‌تر برای هدر
       );
     },
-    { dependencies: [isReady, mounted] }
+    { dependencies: [isReady] }
   );
 
   // Drawer open/close animations
@@ -129,7 +123,7 @@ export default function MobHeader({
   const toggle = () => setOpen((prev) => !prev);
   const close = () => setOpen(false);
 
-  if (!mounted || !isReady) return null;
+  if (typeof document === "undefined" || !isReady) return null;
 
   return createPortal(
     <>

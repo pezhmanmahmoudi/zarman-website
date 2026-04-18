@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css"; 
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
@@ -22,7 +23,7 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
@@ -52,7 +53,13 @@ export default function LoginPage() {
 
         {/* لوگو */}
         <div className={styles.logoContainer}>
-          <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
+          <Image
+            src="/images/Logo%20no%20text%20light.svg"
+            alt="Zarman Logo"
+            width={64}
+            height={64}
+            className={styles.logoImage}
+          />
         </div>
 
         <div className={styles.header}>
@@ -110,7 +117,7 @@ export default function LoginPage() {
         </div>
 
         <div className={styles.footerText}>
-          Don't have an account? 
+          Don&apos;t have an account? 
           <Link href="/fa/register" className={styles.footerLink}>
             Sign up
           </Link>
