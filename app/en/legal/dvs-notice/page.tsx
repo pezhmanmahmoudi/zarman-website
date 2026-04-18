@@ -16,8 +16,7 @@ export const metadata: Metadata = {
     canonical: "/en/legal/dvs-notice",
     languages: {
       en: "/en/legal/dvs-notice",
-      fa: "/",
-      "x-default": "/",
+      "x-default": "/en/legal/dvs-notice", // 👈 اصلاح شد
     },
   },
 };

@@ -12,9 +12,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/en/",
     languages: {
-      fa: "/",
       en: "/en/",
-      "x-default": "/",
+      "x-default": "/en/", // 👈 تغییر یافت
     },
   },
 };

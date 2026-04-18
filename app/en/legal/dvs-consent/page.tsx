@@ -16,8 +16,7 @@ export const metadata: Metadata = {
     canonical: "/en/legal/dvs-consent",
     languages: {
       en: "/en/legal/dvs-consent",
-      fa: "/",
-      "x-default": "/",
+      "x-default": "/en/legal/dvs-consent", // 👈 اصلاح شد
     },
   },
 };

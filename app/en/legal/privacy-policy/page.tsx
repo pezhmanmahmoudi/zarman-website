@@ -16,8 +16,7 @@ export const metadata: Metadata = {
     canonical: "/en/legal/privacy-policy",
     languages: {
       en: "/en/legal/privacy-policy",
-      fa: "/",
-      "x-default": "/",
+      "x-default": "/en/legal/privacy-policy", // 👈 اصلاح شد
     },
   },
 };

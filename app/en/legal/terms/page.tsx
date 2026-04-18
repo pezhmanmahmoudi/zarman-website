@@ -16,8 +16,7 @@ export const metadata: Metadata = {
     canonical: "/en/legal/terms",
     languages: {
       en: "/en/legal/terms",
-      fa: "/",
-      "x-default": "/",
+      "x-default": "/en/legal/terms", // 👈 تغییر یافت
     },
   },
 };

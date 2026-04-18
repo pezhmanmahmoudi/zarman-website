@@ -1,43 +1,26 @@
 import type { NextConfig } from "next";
 
-// 🛡️ تنظیمات سخت‌گیرانه امنیتی (Content Security Policy)
-const ContentSecurityPolicy = `
-  default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline';
-  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-  font-src 'self' data: https://fonts.gstatic.com;
-  img-src 'self' blob: data: https:;
-  connect-src 'self' https://*.supabase.co;
-  frame-ancestors 'none';
-  base-uri 'self';
-  form-action 'self';
-`.replace(/\n/g, '').replace(/\s+/g, ' ').trim();
-
+// 🛡️ سایر هدرهای امنیتی (CSP به فایل middleware منتقل شد)
 const securityHeaders = [
   {
     key: 'X-Frame-Options',
-    value: 'DENY', // جلوگیری از باز شدن سایت در iframe (ضد کلیک‌دزدی)
+    value: 'DENY', // جلوگیری از باز شدن سایت در iframe
   },
   {
     key: 'X-Content-Type-Options',
-    value: 'nosniff', // جلوگیری از تغییر نوع فایل‌ها توسط هکرها
+    value: 'nosniff', 
   },
   {
     key: 'Referrer-Policy',
-    value: 'strict-origin-when-cross-origin', // حفظ حریم خصوصی در لینک‌های خروجی
-  },
-  {
-    key: 'Content-Security-Policy',
-    value: ContentSecurityPolicy, // دیوار آتش اصلی
+    value: 'strict-origin-when-cross-origin', 
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=()', // مسدود کردن سخت‌افزارها
+    value: 'camera=(), microphone=(), geolocation=()', 
   },
 ];
 
 const nextConfig: NextConfig = {
-  // این تابع هدرهای امنیتی را به تمام صفحات سایت تزریق می‌کند
   async headers() {
     return [
       {

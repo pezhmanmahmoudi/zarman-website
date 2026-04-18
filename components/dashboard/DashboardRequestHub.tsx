@@ -3,6 +3,7 @@ import { Calculator, AlertTriangle, Lock, MessageSquare, ChevronDown, ServerCras
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/fa/dashboard/dashboard.types"; 
+import { getAppliedFee } from "@/lib/pricing"; // 👈 ایمپورت مرجع حقیقت واحد
 
 function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]); }
 function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹"; return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d))); }
@@ -58,7 +59,8 @@ export function DashboardRequestHub({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const rawAmount = getRawNumber(amountStr);
-  const appliedFee = (rawAmount > 0 && rawAmount < 1000) ? 15 : 0;
+  // 👈 استفاده از تابع مرجع حقیقت واحد به جای کد دستی (Hardcode)
+  const appliedFee = getAppliedFee(rawAmount);
   const isRateOffline = baseRate === null || tailoredRate === null;
 
   const effectiveAud = useMemo(() => {
@@ -89,14 +91,13 @@ export function DashboardRequestHub({
 
       const actionLabel = txType === "sell_aud" ? "فروش AUD (مشتری دلار می‌دهد)" : "خرید AUD (مشتری تومان می‌دهد)";
       
-      // 👈 محاسبه مجموع تخفیف برای ارسال به واتس‌اپ
       const totalLoyalty = serverData.loyaltyBonus * serverData.rawAmount;
 
       const fmtAmount = formatNumberWA(serverData.rawAmount, false);
       const fmtResult = formatNumberWA(serverData.equivalentToman, true);
       const fmtTailored = formatNumberWA(serverData.tailoredRate, true);
       const fmtBase = formatNumberWA(serverData.baseRate, true);
-      const fmtLoyaltyTotal = formatNumberWA(totalLoyalty, true); // 👈 ارسال جمع کل تخفیف
+      const fmtLoyaltyTotal = formatNumberWA(totalLoyalty, true); 
       
       let feeText = "بدون کارمزد";
       if (serverData.appliedFee > 0) {
@@ -174,7 +175,8 @@ export function DashboardRequestHub({
             {appliedFee > 0 && (
               <span className={styles.feeWarning}>
                 <AlertTriangle size={14} /> 
-                {txType === "buy_aud" ? "افزوده شدن ۱۵ دلار کارمزد" : "کسر ۱۵ دلار کارمزد"}
+                {/* 👈 استفاده پویا از مقدار کارمزد برای جلوگیری از هاردکد شدن متن */}
+                {txType === "buy_aud" ? `افزوده شدن ${toFaDigits(String(appliedFee))} دلار کارمزد` : `کسر ${toFaDigits(String(appliedFee))} دلار کارمزد`}
               </span>
             )}
           </div>
@@ -202,7 +204,6 @@ export function DashboardRequestHub({
           <strong className={styles.summaryRate}>
             نرخ اختصاصی شما: {isRateOffline ? "—" : formatNumberUI(tailoredRate, true)} تومان
           </strong>
-          {/* 👈 این بخش کاملاً هوشمند شد تا مجموع تخفیف را محاسبه و نمایش دهد */}
           {(loyaltyBonus > 0 && !isRateOffline) && (
             <span className={styles.summaryHint}>
               {rawAmount > 0 
