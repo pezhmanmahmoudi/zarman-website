@@ -1,15 +1,26 @@
-"use client";
-
-import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import styles from "@/styles/Legal.module.css";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy | Zarman Exchange",
+  description: "Privacy Policy for Zarman Exchange - How we protect your personal information",
+  openGraph: {
+    title: "Privacy Policy | Zarman Exchange",
+    description: "Privacy Policy for Zarman Exchange",
+    url: "https://zarman.com.au/en/legal/privacy-policy",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://zarman.com.au/en/legal/privacy-policy",
+  },
+};
 
 export default function PrivacyPolicyPage() {
   return (
     <div className={styles.pageWrapper}>
       <div className={styles.container}>
-        
         <Link href="/fa/register" className={styles.backBtn}>
           <ArrowLeft size={18} /> Back to Registration
         </Link>
@@ -22,10 +33,10 @@ export default function PrivacyPolicyPage() {
         <div className={styles.content}>
           <h2>1. Our Commitment to Your Privacy</h2>
           <p>
-            <strong>ZARMAN EXCHANGE PTY LTD</strong> (ABN: 70 692 742 957) (referred to as “we”, “us”, or “our”) is committed to protecting your privacy. We are bound by the <em>Privacy Act 1988 (Cth)</em> (Privacy Act) and the Australian Privacy Principles (APPs).
+            <strong>ZARMAN EXCHANGE PTY LTD</strong> (ABN: 70 692 742 957) (referred to as "we", "us", or "our") is committed to protecting your privacy. We are bound by the <em>Privacy Act 1988 (Cth)</em>, including the Australian Privacy Principles (APPs).
           </p>
           <p>
-            This Privacy Policy outlines how we collect, use, hold, and disclose your personal information. It also covers your rights to access and correct your information and how to make a complaint. This policy is available free of charge on our website: zarman.com.au
+            This Privacy Policy outlines how we collect, use, hold, and disclose your personal information. It also covers your rights to access and correct your information and how to make a complaint.
           </p>
 
           <h2>2. What Personal Information We Collect</h2>
@@ -48,26 +59,26 @@ export default function PrivacyPolicyPage() {
             <li><strong>From Third Parties:</strong> We may collect information from third parties such as electronic verification services (to verify your identity), referrers, or publicly available sources.</li>
           </ul>
           <p>
-            <strong>Why we collect it:</strong> Our primary purpose for collecting your information is to provide you with our financial exchange services. This includes verifying your identity in line with our legal obligations, processing transactions, and managing risks.
+            <strong>Why we collect it:</strong> Our primary purpose for collecting your information is to provide you with our financial exchange services. This includes verifying your identity in compliance with the Anti-Money Laundering and Counter-Terrorism Financing Act 2006 (AML/CTF Act).
           </p>
 
           <h2>4. Anonymity and Pseudonymity</h2>
           <p>
-            We do not give you the option of dealing with us anonymously or under a pseudonym. This is because it is impracticable and illegal for us to provide our services to unidentified individuals (due to our obligations under the <em>Anti-Money Laundering and Counter-Terrorism Financing Act 2006</em>).
+            We do not give you the option of dealing with us anonymously or under a pseudonym. This is because it is impracticable and illegal for us to provide our services to unidentified individuals.
           </p>
 
           <h2>5. How We Use and Disclose Your Information</h2>
           <p>
-            We do not sell, share, or rent your personal information to third parties for their promotional purposes. We may disclose information to Service Providers (IT support, fraud prevention) or Law Enforcement and Regulators where necessary to comply with the law.
+            We do not sell, share, or rent your personal information to third parties for their promotional purposes. We may disclose information to Service Providers (IT support, fraud prevention), beneficiary financial institutions, and regulatory authorities as required by law.
           </p>
           <h3>Cross-Border (Overseas) Disclosure</h3>
           <p>
-            To process your transactions, we may need to disclose your personal information to recipients located outside Australia (e.g., Beneficiary financial institutions or global settlement network partners).
+            To process your transactions, we may need to disclose your personal information to recipients located outside Australia (e.g., Beneficiary financial institutions or global settlement networks). We take reasonable steps to ensure these overseas recipients handle your information in compliance with the APPs.
           </p>
 
           <h2>6. How We Hold and Secure Your Information</h2>
           <p>
-            We take reasonable steps to protect your information from misuse, interference, loss, and from unauthorised access. These steps include Technical Measures (encryption, firewalls, two-factor authentication), Access Controls, and Physical Security.
+            We take reasonable steps to protect your information from misuse, interference, loss, and from unauthorised access. These steps include Technical Measures (encryption, firewalls, two-factor authentication), Physical Measures (secure facilities), and Organizational Measures (staff training, access controls).
           </p>
 
           <h2>7. Cookies and Website Analytics</h2>
@@ -77,12 +88,12 @@ export default function PrivacyPolicyPage() {
 
           <h2>8. Your Rights: Access and Correction</h2>
           <p>
-            You have the right to request access to and correction of the personal information we hold about you. You can request access by contacting our Privacy Officer. We will respond within a reasonable period (generally within 30 days).
+            You have the right to request access to and correction of the personal information we hold about you. You can request access by contacting our Privacy Officer. We will respond within a reasonable timeframe as required by law.
           </p>
 
           <h2>9. How to Make a Complaint</h2>
           <p>
-            If you have a concern about how we handled your personal information, please contact our Privacy Officer first. If you are not satisfied, you have the right to lodge a complaint with the Office of the Australian Information Commissioner (OAIC) at www.oaic.gov.au.
+            If you have a concern about how we handled your personal information, please contact our Privacy Officer first. If you are not satisfied, you have the right to lodge a complaint with the Office of the Australian Information Commissioner (OAIC).
           </p>
 
           <h2>10. Contact Us</h2>
@@ -90,9 +101,8 @@ export default function PrivacyPolicyPage() {
           <ul>
             <li><strong>Email:</strong> infor@zarman.com.au</li>
             <li><strong>Phone:</strong> 0497851631</li>
-            <li><strong>Mail:</strong> U W2608 108 Donnison st, Gosford, NSW, 2250</li>
+            <li><strong>Mail:</strong> U 2608 108 Donnison st, Gosford, NSW, 2250</li>
           </ul>
-
         </div>
       </div>
     </div>

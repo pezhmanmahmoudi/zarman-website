@@ -1,15 +1,26 @@
-"use client";
-
-import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import styles from "@/styles/Legal.module.css";
+
+export const metadata: Metadata = {
+  title: "Terms and Conditions | Zarman Exchange",
+  description: "Terms and Conditions for using Zarman Exchange services",
+  openGraph: {
+    title: "Terms and Conditions | Zarman Exchange",
+    description: "Terms and Conditions for Zarman Exchange",
+    url: "https://zarman.com.au/en/legal/terms",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://zarman.com.au/en/legal/terms",
+  },
+};
 
 export default function TermsPage() {
   return (
     <div className={styles.pageWrapper}>
       <div className={styles.container}>
-        
         <Link href="/fa/register" className={styles.backBtn}>
           <ArrowLeft size={18} /> Back to Registration
         </Link>
@@ -22,13 +33,10 @@ export default function TermsPage() {
         <div className={styles.content}>
           <h2>1. Acceptance of Terms</h2>
           <p>
-            By accessing, browsing, and/or using the <strong>Zarman Exchange Pty Ltd</strong> website, you agree to comply with and be bound by the following terms and conditions of use, which together with our privacy policy govern Zarman Exchange Pty Ltd&apos;s relationship with you in relation to this website.
+            By accessing, browsing, and/or using the <strong>Zarman Exchange Pty Ltd</strong> website, you agree to comply with and be bound by the following terms and conditions of use.
           </p>
           <p>
             The terms &apos;Zarman Exchange&apos;, &apos;us&apos;, or &apos;we&apos; refers to the owner of the website. The term &apos;you&apos; refers to the user or viewer of our website.
-          </p>
-          <p>
-            Use of this website is subject to the following terms and conditions: This website contains material owned by or licensed to us. Reproduction is prohibited other than in accordance with the copyright notice, which forms part of these terms and conditions.
           </p>
 
           <h2>2. Services Provided</h2>
@@ -48,7 +56,7 @@ export default function TermsPage() {
 
           <h2>5. AML/CTF Compliance</h2>
           <p>
-            We comply with the <em>Anti-Money Laundering and Counter-Terrorism Financing Act 2006</em>. You agree to provide accurate information and cooperate with our identity verification procedures.
+            We comply with the <em>Anti-Money Laundering and Counter-Terrorism Financing Act 2006</em>. You agree to provide accurate information and cooperate with our identity verification processes.
           </p>
 
           <h2>6. Limitation of Liability</h2>
@@ -68,7 +76,7 @@ export default function TermsPage() {
 
           <h2>9. Indemnify</h2>
           <p>
-            You indemnify and hold us and our agents, affiliates, directors, officers, employees, consultants, and contractors harmless from and against any and all liability, costs, claims, losses, damages, and expenses (including all reasonable legal fees) which may be suffered, incurred, made, or brought against any of the Indemnified Persons directly or indirectly in connection with your use of the website.
+            You indemnify and hold us and our agents, affiliates, directors, officers, employees, consultants, and contractors harmless from and against any and all liability, costs, claims, losses, damages, and expenses.
           </p>
         </div>
       </div>
