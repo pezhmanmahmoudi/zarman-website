@@ -160,7 +160,7 @@ export default function TestimonialSection() {
 
         if (testError) throw testError;
 
-        const testimonials = (testData ?? []) as TestimonialRow[];
+         const testimonials = (testData ?? []) as unknown as TestimonialRow[];
         if (testimonials.length === 0) return;
 
         const liveReviews: Review[] = testimonials.map((item, index) => {

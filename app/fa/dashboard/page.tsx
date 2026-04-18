@@ -11,7 +11,7 @@ import shellStyles from "@/styles/dashboard/DashboardShell.module.css";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
-import { DashboardRequestHub } from "@/components/dashboard/DashboardRequestHub";
+import { DashboardRequestHub, ServerTransactionResult } from "@/components/dashboard/DashboardRequestHub";
 import { DashboardTransactionHistory } from "@/components/dashboard/DashboardTransactionHistory";
 import { DashboardProfile } from "@/components/dashboard/DashboardProfile";
 import { DashboardFeedback } from "@/components/dashboard/DashboardFeedback";
@@ -143,7 +143,7 @@ export default function ZarmanDashboard() {
       return null;
     }
 
-     return (result?.data as unknown) || null;  
+     return (result?.data as ServerTransactionResult) ?? null;    
   };
 
   const handleDeleteRequest = (txId: string | number) => {

@@ -24,7 +24,7 @@ export function DashboardStats({ totalVolume, transactionCount, baseRate, loyalt
       </div>
       <div className={styles.statCard}>
         <div className={styles.statIcon}><ArrowDownLeft size={24} /></div>
-        <div><span className={styles.statLabel}>{txType === "sell_aud" ? "نرخ فروش دلار به زرمان" : "نرخ خرید دلار از زرمان"}</span><strong className={styles.statValue}>{formatToman(baseRate)}</strong></div>
+         <div><span className={styles.statLabel}>{txType === "sell_aud" ? "نرخ فروش دلار به زرمان" : "نرخ خرید دلار از زرمان"}</span><strong className={styles.statValue}>{formatToman(baseRate ?? 0)}</strong></div>
       </div>
       <div className={styles.statCard}>
         <div className={`${styles.statIcon} ${styles.statIconAccent}`}><ShieldCheck size={24} /></div>

@@ -27,7 +27,7 @@ function formatNumberWA(num: number | null, isToman: boolean = false) {
   return Number(num).toLocaleString("en-US", options);
 }
 
-type ServerTransactionResult = {
+export type ServerTransactionResult = {
   baseRate: number;
   tailoredRate: number;
   loyaltyBonus: number;

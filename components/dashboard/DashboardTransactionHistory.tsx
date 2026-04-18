@@ -63,7 +63,7 @@ export function DashboardTransactionHistory({ transactions, totalVolume, onDelet
                 
                 <td dir="ltr" className={styles.tableMoney}>${Number(tx.amount_aud).toLocaleString("en-US")}</td>
                 
-                <td className={styles.tableToman}>{formatToman(tx.equivalent_toman)}</td>
+                <td className={styles.tableToman}>{formatToman(Number(tx.equivalent_toman))}</td>
                 
                 <td>
                   <span className={
