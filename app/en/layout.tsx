@@ -1,4 +1,5 @@
-import type { Metadata, ReactNode } from "next";
+import type { Metadata } from "next";
+import type { ReactNode } from "react"; // 👈 این خط اضافه و اصلاح شد
 
 export const metadata: Metadata = {
   title: {
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
     canonical: "/en/",
     languages: {
       en: "/en/",
-      "x-default": "/en/", // 👈 تغییر یافت
+      "x-default": "/en/",
     },
   },
 };
