@@ -49,10 +49,6 @@ export default function ConfirmEmailPage() {
               Proceed to Secure Login
             </Button>
           </div>
-
-          <p style={{ marginTop: "24px", fontSize: "0.8rem", color: "var(--text-soft)", fontWeight: "500" }}>
-            Zarman Exchange
-          </p>
         </div>
 
       </div>

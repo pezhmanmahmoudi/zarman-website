@@ -279,3 +279,10 @@
   .title { font-size: 1.5rem; }
   .inputGroup .countryCode { width: 110px !important; }
 }
+
+
+/* 🚀 استایل هوشمند برای فیلدهای فارسی (گواهینامه و...) */
+.inputControl[dir="rtl"] {
+  font-family: var(--font-primary, Tahoma, sans-serif) !important;
+  letter-spacing: normal !important;
+}

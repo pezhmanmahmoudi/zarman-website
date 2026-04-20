@@ -110,7 +110,7 @@ export function DashboardProfile({ profileFields, profileId }: any) {
             type="file" 
             multiple 
             hidden 
-            accept="image/jpeg, image/png, application/pdf" // 🛡️ محدودیت ظاهری برای پنجره انتخاب فایل
+            accept="image/jpeg, image/png, application/pdf" 
             onChange={handleFileChange} 
           />
         </label>
@@ -126,7 +126,15 @@ export function DashboardProfile({ profileFields, profileId }: any) {
           profileFields.map((field: any) => (
             <div key={field.id} className={styles.inputGroup}>
               <label>{field.label}</label>
-              <div className={styles.inputControl} dir="ltr" style={{ textAlign: 'left' }}>
+              <div 
+                className={styles.inputControl} 
+                dir={field.dir || "ltr"} 
+                style={{ 
+                  textAlign: field.dir === "rtl" ? 'right' : 'left',
+                  // 🚀 این خط اضافه شد: دستورِ ارث‌بری فونت برای متون فارسی
+                  fontFamily: field.dir === "rtl" ? 'inherit' : undefined
+                }}
+              >
                 {field.value || "تنظیم نشده"}
               </div>
             </div>

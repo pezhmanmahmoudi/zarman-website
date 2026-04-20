@@ -48,6 +48,7 @@ export default function RegisterPage() {
   };
 
   const sanitizeFileName = (fileName: string) => fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const uploadKycFile = async (userId: string, key: string, file: File) => {
     const safeName = sanitizeFileName(file.name);
@@ -269,17 +270,37 @@ export default function RegisterPage() {
         return;
       }
 
-      // --- بروزرسانی پروفایل با لینک عکس‌های آپلود شده ---
-      const { error: profileUpdateError } = await supabase
-        .from("profiles")
-        .update({
-          ...documentPayload,
-          document_type: formData.docType,
-        })
-        .eq("id", userId);
+      // 🚀 --- بروزرسانی پروفایل با استفاده از تونل امن (RPC) دور زدن RLS ---
+      let profileUpdateErrorMessage = "پروفایل در دیتابیس یافت نشد.";
 
-      if (profileUpdateError) {
-        alert(`Your account was created, but document links could not be saved: ${profileUpdateError.message}`);
+      for (let attempt = 1; attempt <= 5; attempt += 1) {
+        const { data: isUpdated, error: rpcError } = await supabase.rpc('attach_documents_to_profile', {
+          p_user_id: userId,
+          p_doc_type: formData.docType,
+          p_front_url: documentPayload.doc_front_url,
+          p_back_url: documentPayload.doc_back_url,
+          p_address_url: documentPayload.proof_of_address_url,
+          p_front_path: documentPayload.doc_front_path,
+          p_back_path: documentPayload.doc_back_path,
+          p_address_path: documentPayload.proof_of_address_path
+        });
+
+        if (rpcError) {
+          profileUpdateErrorMessage = rpcError.message;
+          break; 
+        }
+
+        if (isUpdated) {
+          profileUpdateErrorMessage = "";
+          break; 
+        }
+
+        profileUpdateErrorMessage = "زمان آپدیت پروفایل به پایان رسید.";
+        await wait(500); 
+      }
+
+      if (profileUpdateErrorMessage) {
+        alert(`Your account was created, but document links could not be saved: ${profileUpdateErrorMessage}`);
         return;
       }
 
@@ -513,7 +534,6 @@ export default function RegisterPage() {
               <div className={styles.policies}>
                 <label className={styles.checkboxLabel}>
                   <input type="checkbox" name="privacyAccepted" checked={formData.privacyAccepted} onChange={handleChange} />
-                  {/* 🚀 بازگشت به مسیر صحیح /en/legal */}
                   <span>I have read and agree to the <Link href="/en/legal/privacy-policy" target="_blank">Privacy Policy</Link> & <Link href="/en/legal/dvs-notice" target="_blank">Verification Notice</Link>. <span className={styles.req}>*</span></span>
                 </label>
                 
@@ -564,7 +584,6 @@ export default function RegisterPage() {
         {step < 3 && (
           <div className={styles.footerText}>
             Already have an account? 
-            {/* 🚀 بازگشت به مسیر صحیح /fa/login */}
             <Link href="/fa/login" className={styles.footerLink}>
               Log in
             </Link>
