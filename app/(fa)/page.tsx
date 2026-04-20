@@ -11,31 +11,20 @@ import FAQSection from "@/components/sections/FAQSection/FAQSection";
 import FinalCTA from "@/components/sections/FinalCTA/FinalCTA";
 import Footer from "@/components/layout/Footer/Footer";
 
-// Server-side metadata for SEO
+// 🚀 سئوی هوشمند: فقط موارد اختصاصی این صفحه نوشته می‌شود تا با layout ادغام شود
 export const metadata: Metadata = {
-  title: "Zarman Exchange Money | صرافی زرمان",
+  title: "صفحه اصلی", 
   description: "پلتفرم نوین انتقال امن، شفاف و سریع پول بین استرالیا و ایران ( AUD ↔ IRR )",
-  keywords: ["صرافی استرالیا", "حواله دلار استرالیا", "زرمان اکسچنج", "انتقال پول به استرالیا"],
-  openGraph: {
-    title: "Zarman Exchange Money | صرافی زرمان",
-    description: "پلتفرم نوین انتقال امن، شفاف و سریع پول بین استرالیا و ایران ( AUD ↔ IRR )",
-    url: "https://zarman.com.au",
-    siteName: "Zarman Exchange",
-    images: [
-      {
-        url: "/images/og-image.png",
-        width: 1200,
-        height: 630,
-      },
-    ],
-  },
+  keywords: ["صرافی استرالیا", "حواله دلار استرالیا", "زرمان اکسچنج", "انتقال پول به استرالیا", "دلار استرالیا به تومان"],
 };
 
 export default function Home() {
   return (
     <>
       <Header />
-      <main id="main-content">
+      
+      {/* 🛡️ تگ main حذف شد تا با layout تداخل نکند و استانداردهای نابینایان (W3C) رعایت شود */}
+      <div className="flex flex-col w-full relative">
         <Hero />
         <TrustStrip />
         <RateSection />
@@ -45,7 +34,8 @@ export default function Home() {
         <TestimonialSection />
         <FAQSection />
         <FinalCTA />
-      </main>
+      </div>
+      
       <Footer />
     </>
   );

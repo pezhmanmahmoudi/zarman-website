@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image"; // 🚀 ایمپورت کامپوننت قدرتمند Image
 import styles from "@/styles/Register.module.css";
 import { ArrowLeft, MailCheck } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
@@ -49,7 +50,15 @@ export default function ForgotPasswordPage() {
 
         {/* لوگو */}
         <div className={styles.logoContainer}>
-          <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
+          {/* 🚀 جایگزینی با Next.js Image و اصلاح نام فایل (بدون Space) */}
+          <Image 
+            src="/images/logo-no-text-light.svg" 
+            alt="Zarman Logo" 
+            width={80}
+            height={80}
+            priority
+            className={styles.logoImage} 
+          />
         </div>
 
         {message ? (

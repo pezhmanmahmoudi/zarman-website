@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import styles from "@/styles/Register.module.css";
 import { 
@@ -216,8 +217,9 @@ export default function RegisterPage() {
             state: formData.state,
             city: formData.city,
             postal_code: formData.postalCode,
-            document_type: formData.docType // 👈 باگ تکراری بودن این خط برطرف شد
+            document_type: formData.docType 
           },
+          // 🚀 مسیر صحیح با توجه به ساختار پوشه‌ها
           emailRedirectTo: `${window.location.origin}/fa/auth/confirm`, 
         }
       });
@@ -308,9 +310,16 @@ export default function RegisterPage() {
           </Link>
         </div>
 
-        {/* فراخوانی فایل SVG با فرمت صحیح برای جلوگیری از ارور فاصله (%) */}
         <div className={styles.logoContainer}>
-          <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
+          {/* استفاده از کامپوننت Image */}
+          <Image 
+            src="/images/logo-no-text-light.svg" 
+            alt="Zarman Logo" 
+            width={80}
+            height={80}
+            priority
+            className={styles.logoImage} 
+          />
         </div>
 
         {step < 3 && (
@@ -344,7 +353,6 @@ export default function RegisterPage() {
                   {errors.firstName && <span className={styles.errorText}>{errors.firstName}</span>}
                 </div>
                 <div className={styles.inputGroup}>
-                  {/* نام میانی بدون ستاره */}
                   <label>Middle Name</label>
                   <input type="text" name="middleName" value={formData.middleName} onChange={handleChange} placeholder="نام میانی" />
                 </div>
@@ -505,6 +513,7 @@ export default function RegisterPage() {
               <div className={styles.policies}>
                 <label className={styles.checkboxLabel}>
                   <input type="checkbox" name="privacyAccepted" checked={formData.privacyAccepted} onChange={handleChange} />
+                  {/* 🚀 بازگشت به مسیر صحیح /en/legal */}
                   <span>I have read and agree to the <Link href="/en/legal/privacy-policy" target="_blank">Privacy Policy</Link> & <Link href="/en/legal/dvs-notice" target="_blank">Verification Notice</Link>. <span className={styles.req}>*</span></span>
                 </label>
                 
@@ -524,7 +533,6 @@ export default function RegisterPage() {
               </div>
 
               <div className={styles.btnWrapperSpace}>
-                {/* تغییر قطعی به ghost برای هماهنگی با کامپوننت Button شما */}
                 <Button type="button" onClick={() => setStep(1)} variant="ghost" leftIcon={<ArrowLeft />}>
                   Back
                 </Button>
@@ -556,6 +564,7 @@ export default function RegisterPage() {
         {step < 3 && (
           <div className={styles.footerText}>
             Already have an account? 
+            {/* 🚀 بازگشت به مسیر صحیح /fa/login */}
             <Link href="/fa/login" className={styles.footerLink}>
               Log in
             </Link>

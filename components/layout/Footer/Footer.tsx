@@ -12,7 +12,7 @@ export default function Footer() {
         <div className={styles.brandSection}>
           <Link href="#hero" aria-label="بازگشت به بالای صفحه" className={styles.logoLink}>
             <Image
-              src="/images/logo_white text and ring.svg" /* 👈 آدرس تصویر قبلی شما برگردانده شد */
+              src="/images/logo-white-text-and-ring.svg" /* 👈 آدرس تصویر قبلی شما برگردانده شد */
               alt="لوگوی زرمان اکسچنج"
               width={220}
               height={100}

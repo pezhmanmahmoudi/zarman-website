@@ -99,7 +99,7 @@ export default function Hero() {
 
               <div className={styles.splitCard}>
                 <div className={styles.logoSection}>
-                  <Image src="/images/Logo no text light.svg" alt="Zarman Exchange" width={100} height={100} className={styles.boardLogo} />
+                  <Image src="/images/logo-no-text-light.svg" alt="Zarman Exchange" width={100} height={100} className={styles.boardLogo} />
                 </div>
 
                 <div className={styles.ratesData}>

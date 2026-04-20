@@ -29,7 +29,7 @@ type MobHeaderProps = {
 export default function MobHeader({
   isReady = true,
   isAuthenticated = false,
-  logoSrc = "/images/Logo no text light.svg",
+  logoSrc = "/images/logo-no-text-light.svg",
   brandAriaLabel = "Zarman Exchange",
   signupHref = "/fa/register",
   loginHref = "/fa/login",
@@ -138,7 +138,7 @@ export default function MobHeader({
           </Link>
 
           {isAuthenticated ? (
-            <Button href="/dashboard" variant="secondary" size="sm" onClick={close}>
+            <Button href="/fa/dashboard" variant="secondary" size="sm" onClick={close}>
               پنل کاربری
             </Button>
           ) : (
@@ -172,7 +172,7 @@ export default function MobHeader({
             <div className={styles.mobileActions}>
               {isAuthenticated ? (
                 <>
-                  <Button href="/dashboard" variant="primary" fullWidth onClick={close}>
+                  <Button href="/fa/dashboard" variant="primary" fullWidth onClick={close}>
                     رفتن به داشبورد
                   </Button>
                   <Button href={whatsappUrl} target="_blank" variant="secondary" fullWidth onClick={close}>

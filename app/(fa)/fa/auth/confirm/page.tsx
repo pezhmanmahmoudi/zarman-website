@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { ShieldCheck, LogIn } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
@@ -15,9 +16,16 @@ export default function ConfirmEmailPage() {
 
       <div className={styles.card} style={{ maxWidth: "480px", textAlign: "center" }}>
         
-        {/* لوگو - مسیر اصلاح شده و بدون Space */}
         <div className={styles.logoContainer}>
-          <img src="/images/Logo no text light.svg" alt="Zarman Logo" className={styles.logoImage} />
+          {/* لوگو با استانداردهای Next.js Image */}
+          <Image 
+            src="/images/logo-no-text-light.svg" 
+            alt="Zarman Logo" 
+            width={80}
+            height={80}
+            priority
+            className={styles.logoImage} 
+          />
         </div>
         
         <div className={styles.verifyBox}>
@@ -36,6 +44,7 @@ export default function ConfirmEmailPage() {
           </p>
 
           <div style={{ width: "100%" }}>
+            {/* 🚀 مسیر ورود دقیقاً مطابق معماری پوشه‌ها درست است */}
             <Button href="/fa/login" variant="primary" size="lg" fullWidth rightIcon={<LogIn />}>
               Proceed to Secure Login
             </Button>

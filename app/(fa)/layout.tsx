@@ -12,10 +12,13 @@ const inter = Inter({
 
 const productionUrl = "https://zarman.com.au";
 const siteName = "Zarman Exchange";
+
+// 🚀 متن‌های جدید و همگام‌سازی شده با مفاهیم نسخه فارسی
 const defaultTitle = "Zarman Exchange | Premium AUD/IRT Remittance Platform";
 const defaultDescription =
-  "Zarman Exchange is a premium AUD/IRT remittance service that helps Australians send funds to Iran with transparent rates, fast settlement, and enterprise-grade compliance confidence.";
-const socialPreviewImage = "/images/Logo-v3.png";
+  "Zarman Exchange is a secure and rapid platform for AUD to IRT currency transfers. We offer dynamic exchange rates tailored to your transaction activity, ensuring you consistently receive the most competitive value. Backed by instant settlement and uncompromising regulatory compliance, we guarantee a flawless remittance experience.";
+
+const socialPreviewImage = "/images/layout_logo.png";
 
 export const metadata: Metadata = {
   metadataBase: new URL(productionUrl),
@@ -26,21 +29,21 @@ export const metadata: Metadata = {
   description: defaultDescription,
   applicationName: siteName,
   alternates: {
-    canonical: "/",
+    canonical: "/en",
   },
   openGraph: {
     type: "website",
-    url: productionUrl,
+    url: `${productionUrl}/en`,
     siteName,
     title: defaultTitle,
     description: defaultDescription,
-    locale: "fa_IR",
+    locale: "en_AU",
     images: [
       {
         url: socialPreviewImage,
         width: 1200,
         height: 630,
-        alt: "Zarman Exchange premium AUD/IRT remittance platform",
+        alt: "Zarman Exchange | Premium AUD/IRT Remittance Platform",
       },
     ],
   },
@@ -53,9 +56,8 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "any" }],
     shortcut: ["/favicon.ico"],
-    apple: [{ url: "/favicon.ico" }],
+    apple: [{ url: "/images/icon-192.png" }],
   },
-  manifest: "/site.webmanifest",
 };
 
 export const viewport: Viewport = {
@@ -64,15 +66,14 @@ export const viewport: Viewport = {
   themeColor: "#080B12",
 };
 
-export default function RootLayout({
+export default function EnglishRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fa" dir="rtl" className={`${inter.variable}`}>
+    <html lang="en" dir="ltr" className={`${inter.variable}`}>
       <head>
-        {/* Preload critical fonts */}
         <link
           rel="preconnect"
           href="https://fonts.googleapis.com"

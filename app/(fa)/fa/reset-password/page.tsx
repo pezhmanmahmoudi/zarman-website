@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image"; // 🚀 ایمپورت کامپوننت Image
 import { useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css";
 import { Eye, EyeOff, ShieldCheck, CheckCircle } from "lucide-react";
@@ -49,6 +50,7 @@ export default function ResetPasswordPage() {
     } else {
       setSuccess(true);
       setTimeout(() => {
+        // 🚀 مسیر کاملاً درست است
         router.push("/fa/dashboard");
       }, 3000);
     }
@@ -64,7 +66,15 @@ export default function ResetPasswordPage() {
         
         {/* لوگو */}
         <div className={styles.logoContainer}>
-          <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
+          {/* 🚀 جایگزینی با Next.js Image و اصلاح نام فایل */}
+          <Image 
+            src="/images/logo-no-text-light.svg" 
+            alt="Zarman Logo" 
+            width={80}
+            height={80}
+            priority
+            className={styles.logoImage} 
+          />
         </div>
         
         {success ? (

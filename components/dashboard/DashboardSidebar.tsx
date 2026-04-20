@@ -83,7 +83,7 @@ export function DashboardSidebar({
               onClick={handleCloseMenu}
             >
               <Image
-                src="/images/Logo no text light.svg"
+                src="/images/logo-no-text-light.svg"
                 alt="Zarman Logo"
                 width={115}
                 height={115}

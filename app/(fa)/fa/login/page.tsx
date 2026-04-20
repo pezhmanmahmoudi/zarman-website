@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image"; // 🚀 اضافه شدن کامپوننت Image
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css"; 
@@ -31,6 +32,7 @@ export default function LoginPage() {
       setError("Email or password is incorrect.");
       setLoading(false);
     } else {
+      // 🚀 مسیر کاملاً درست است
       router.push("/fa/dashboard");
     }
   };
@@ -52,7 +54,15 @@ export default function LoginPage() {
 
         {/* لوگو */}
         <div className={styles.logoContainer}>
-          <img src="/images/Logo%20no%20text%20light.svg" alt="Zarman Logo" className={styles.logoImage} />
+          {/* 🚀 جایگزینی با Next.js Image و اصلاح نام فایل (بدون Space) */}
+          <Image 
+            src="/images/logo-no-text-light.svg" 
+            alt="Zarman Logo" 
+            width={80}
+            height={80}
+            priority
+            className={styles.logoImage} 
+          />
         </div>
 
         <div className={styles.header}>
@@ -81,6 +91,7 @@ export default function LoginPage() {
               <div className={styles.inputGroup}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <label htmlFor="password" style={{ marginBottom: 0 }}>Password</label>
+                  {/* 🚀 مسیر کاملاً درست است */}
                   <Link href="/fa/forgot-password" className={styles.footerLink} style={{ fontSize: "0.75rem", marginRight: 0, fontWeight: 600 }}>
                     Forgot Password?
                   </Link>
@@ -111,6 +122,7 @@ export default function LoginPage() {
 
         <div className={styles.footerText}>
           Don't have an account? 
+          {/* 🚀 مسیر کاملاً درست است */}
           <Link href="/fa/register" className={styles.footerLink}>
             Sign up
           </Link>
