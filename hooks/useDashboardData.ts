@@ -1,5 +1,18 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import type { Profile, Transaction } from "@/app/(fa)/fa/dashboard/dashboard.types";
+
+function getLocaleFromPath(pathname: string): "fa" | "en" {
+  if (pathname.startsWith("/en")) return "en";
+  return "fa";
+}
+
 export function useDashboardData() {
   const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(true);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -7,14 +20,21 @@ export function useDashboardData() {
   const [totalVolume, setTotalVolume] = useState(0);
 
   useEffect(() => {
+    let isMounted = true;
+
     const initializeDashboard = async () => {
+      const locale = getLocaleFromPath(pathname);
+
       try {
         setLoading(true);
-        const { data: { session }, error: authError } = await supabase.auth.getSession();
-        setSessionChecked(true);
+        
+        const {
+          data: { session },
+          error: authError,
+        } = await supabase.auth.getSession();
 
         if (authError || !session) {
-          router.replace("/fa/login"); // 🚀 مسیر کاملاً درست است
+          router.replace(`/${locale}/login`);
           return;
         }
 
@@ -22,8 +42,17 @@ export function useDashboardData() {
         // 🚀 اجرای همزمان درخواست‌ها برای سرعت بیشتر
         const [profileRes, txRes] = await Promise.all([
           supabase.from("profiles").select("*").eq("id", userId).single(),
-          supabase.from("transactions").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+           supabase
+            .from("transactions")
+            .select("*")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false }),
         ]);
+
+        if (profileRes.error) throw profileRes.error;
+        if (txRes.error) throw txRes.error;
+
+        if (!isMounted) return;
 
         if (profileRes.data) setProfile(profileRes.data as Profile);
         
@@ -35,13 +64,18 @@ export function useDashboardData() {
       } catch (err) {
         console.error("Dashboard Load Error:", err);
       } finally {
-        // 🚀 این خط تضمین می‌کند که در هر صورت (موفقیت یا شکست) حالت لودینگ تمام شود
+       if (!isMounted) return;
+        setSessionChecked(true);
         setLoading(false);
       }
     };
 
     initializeDashboard();
-  }, [router]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [pathname, router]);
 
   return { profile, transactions, totalVolume, loading, sessionChecked };
 }

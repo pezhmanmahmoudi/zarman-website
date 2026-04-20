@@ -51,7 +51,7 @@ export default function ConfirmEmailPage() {
           </div>
 
           <p style={{ marginTop: "24px", fontSize: "0.8rem", color: "var(--text-soft)", fontWeight: "500" }}>
-            AUSTRAC Registered Independent Remittance Dealer
+            Zarman Exchange
           </p>
         </div>
 
