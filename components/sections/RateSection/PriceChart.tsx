@@ -133,7 +133,7 @@ export default function PriceChart() {
   const chartData = useMemo<PreparedChartPoint[]>(() => {
     if (!chartDataDaily || chartDataDaily.length === 0) return [];
 
-    let data = chartDataDaily
+    const data = chartDataDaily
       .map((item) => ({
         ...item,
         timestamp: parseDateToTimestamp(item.date),
