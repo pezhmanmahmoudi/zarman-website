@@ -1,6 +1,6 @@
 
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { createSupabaseProxyClient } from '@/lib/supabase-server'
 
 function getLocaleFromPath(pathname: string): 'fa' | 'en' {
   if (pathname.startsWith('/en')) return 'en'
@@ -13,34 +13,7 @@ function isDashboardRoute(pathname: string) {
 
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
+  const { supabase, getResponse, applyPendingCookies } = createSupabaseProxyClient(request)
 
   const {
     data: { user },
@@ -49,10 +22,11 @@ export async function proxy(request: NextRequest) {
 
   if (!user && isDashboardRoute(request.nextUrl.pathname)) {
     const locale = getLocaleFromPath(request.nextUrl.pathname)
-    return NextResponse.redirect(new URL(`/${locale}/login`, request.url))
+    const redirectResponse = NextResponse.redirect(new URL(`/${locale}/login`, request.url))
+    return applyPendingCookies(redirectResponse)
   }
 
-  return response
+  return getResponse()
 }
 
 export const config = {
