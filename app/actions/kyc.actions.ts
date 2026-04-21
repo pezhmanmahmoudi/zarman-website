@@ -39,7 +39,14 @@ function isPrivilegedRole(role: string | undefined) {
   return role === "admin" || role === "supabase_admin" || role === "service_role";
 }
 
-async function getAuthenticatedUser() {
+async function getAuthenticatedUser(accessToken?: string) {
+  if (accessToken) {
+    const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!error && data.user) {
+      return data.user;
+    }
+  }
+
   const cookieStore = await cookies();
   const supabaseServer = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,10 +77,12 @@ export async function uploadKycDocumentSecurely({
   userId,
   key,
   file,
+  accessToken,
 }: {
   userId: string;
   key: string;
   file: File;
+  accessToken?: string;
 }) {
   if (!userId || !key || !file) {
     throw new Error("Missing upload inputs.");
@@ -95,7 +104,7 @@ export async function uploadKycDocumentSecurely({
     throw new Error("Unsupported file type.");
   }
 
-  const user = await getAuthenticatedUser();
+  const user = await getAuthenticatedUser(accessToken);
   const isOwner = user.id === userId;
   const role = user.app_metadata?.role as string | undefined;
   const isPrivileged = isPrivilegedRole(role);
@@ -125,10 +134,12 @@ export async function createKycDocumentSignedUrl({
   userId,
   storagePath,
   expiresIn = DEFAULT_SIGNED_URL_EXPIRY_SECONDS,
+  accessToken,
 }: {
   userId: string;
   storagePath: string;
   expiresIn?: number;
+  accessToken?: string;
 }) {
   if (!userId || !storagePath) {
     throw new Error("Missing signed URL inputs.");
@@ -138,7 +149,7 @@ export async function createKycDocumentSignedUrl({
     throw new Error("Invalid user identifier.");
   }
 
-  const user = await getAuthenticatedUser();
+  const user = await getAuthenticatedUser(accessToken);
   const role = user.app_metadata?.role as string | undefined;
   const isPrivileged = isPrivilegedRole(role);
   const isOwner = user.id === userId;

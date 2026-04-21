@@ -49,6 +49,18 @@ export default function RegisterPage() {
   };
 
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const getFreshAccessToken = async (initialToken?: string | null) => {
+    if (initialToken) return initialToken;
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionToken = sessionData.session?.access_token;
+      if (sessionToken) return sessionToken;
+      await wait(200);
+    }
+
+    return null;
+  };
   // -----------------------------------------------------------
 
   const [step, setStep] = useState(1);
@@ -219,6 +231,8 @@ export default function RegisterPage() {
         return;
       }
 
+      const accessToken = await getFreshAccessToken(data.session?.access_token);
+
       // --- آپلود امن فایل‌ها در دیتابیس (Supabase Storage) ---
       const documentPayload: Record<string, string | null> = {
         doc_front_path: null,
@@ -228,17 +242,17 @@ export default function RegisterPage() {
 
       try {
         if (files.docFront) {
-          const uploadedFront = await uploadKycDocumentSecurely({ userId, key: "doc-front", file: files.docFront });
+          const uploadedFront = await uploadKycDocumentSecurely({ userId, key: "doc-front", file: files.docFront, accessToken: accessToken || undefined });
           documentPayload.doc_front_path = uploadedFront.storagePath;
         }
 
         if (files.docBack) {
-          const uploadedBack = await uploadKycDocumentSecurely({ userId, key: "doc-back", file: files.docBack });
+          const uploadedBack = await uploadKycDocumentSecurely({ userId, key: "doc-back", file: files.docBack, accessToken: accessToken || undefined });
           documentPayload.doc_back_path = uploadedBack.storagePath;
         }
 
         if (files.proofOfAddress) {
-          const uploadedAddress = await uploadKycDocumentSecurely({ userId, key: "proof-of-address", file: files.proofOfAddress });
+          const uploadedAddress = await uploadKycDocumentSecurely({ userId, key: "proof-of-address", file: files.proofOfAddress, accessToken: accessToken || undefined });
           documentPayload.proof_of_address_path = uploadedAddress.storagePath;
         }
       } catch (uploadError: unknown) {
