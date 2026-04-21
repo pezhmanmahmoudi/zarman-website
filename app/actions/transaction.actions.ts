@@ -58,11 +58,14 @@ export async function processTransactionSecurely({ rawAmount, txType }: { rawAmo
     const spread = Math.abs(rateData.sell_aud - rateData.buy_aud);
 
     // ۲. بررسی سوابق
-    const { data: userTxs } = await supabaseAdmin
+    const { data: userTxs, error: txError } = await supabaseAdmin
       .from("transactions")
       .select("amount_aud")
       .eq("user_id", authenticatedUserId)
       .eq("status", "approved");
+    if (txError) {
+      return { error: "دریافت سوابق تراکنش با مشکل مواجه شد." };
+    }
 
     const approvedVolume = userTxs?.reduce((sum, tx) => sum + Number(tx.amount_aud || 0), 0) || 0;
 
