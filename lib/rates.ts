@@ -69,29 +69,28 @@ async function fetchRatesSnapshot(): Promise<RateSnapshot> {
       .select("id, created_at, date, buy_aud, sell_aud")
       .gte("date", fromDateISO)
       .order("date", { ascending: false })
-      .order("id", { ascending: false })
       .limit(MAX_HISTORY_ROWS);
 
     if (error) {
       return emptySnapshot;
     }
 
-    const normalizedData = normalizeRows((data ?? []) as HistoricalRateRow[]).sort((a, b) => {
-      const dateA = new Date(`${a.date}T12:00:00`).getTime();
-      const dateB = new Date(`${b.date}T12:00:00`).getTime();
-      if (dateA !== dateB) return dateA - dateB;
-      return a.id - b.id;
-    });
+    const rawRows = (data ?? []) as HistoricalRateRow[];
+    if (rawRows.length === 0) {
+      return emptySnapshot;
+    }
+
+    const latestRawRow = rawRows[0];
+    const normalizedData = normalizeRows([...rawRows].reverse());
     if (normalizedData.length === 0) {
       return emptySnapshot;
     }
 
-    const latest = normalizedData[normalizedData.length - 1];
     return {
       currentRates: {
-        sellAUD: latest.sell_aud,
-        buyAUD: latest.buy_aud,
-        lastUpdated: latest.date,
+        sellAUD: toSafePositiveNumber(latestRawRow.sell_aud),
+        buyAUD: toSafePositiveNumber(latestRawRow.buy_aud),
+        lastUpdated: latestRawRow.date,
       },
       chartDataDaily: normalizedData,
     };
