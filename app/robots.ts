@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 // آدرس تولیدی صرافی زرمان
-const productionUrl = "https://zarman.io";
+const productionUrl = "https://zarman.com.au";
 
 export default function robots(): MetadataRoute.Robots {
   return {

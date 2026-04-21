@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const productionUrl = "https://zarman.io";
+const productionUrl = "https://zarman.com.au";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
