@@ -11,6 +11,7 @@ import {
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
 import { supabase } from "@/lib/supabase";
+import { uploadKycDocumentSecurely } from "@/app/actions/kyc.actions";
 
 const countryCodes = [
   { code: "+61", label: "AU (+61)" },
@@ -47,24 +48,18 @@ export default function RegisterPage() {
     return null;
   };
 
-  const sanitizeFileName = (fileName: string) => fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const getFreshAccessToken = async (initialToken?: string | null) => {
+    if (initialToken) return initialToken;
 
-  const uploadKycFile = async (userId: string, key: string, file: File) => {
-    const safeName = sanitizeFileName(file.name);
-    const storagePath = `${userId}/${key}-${Date.now()}-${safeName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("kyc-documents")
-      .upload(storagePath, file, { upsert: false, contentType: file.type || undefined });
-
-    if (uploadError) {
-      throw new Error(`Failed to upload ${key}: ${uploadError.message}`);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionToken = sessionData.session?.access_token;
+      if (sessionToken) return sessionToken;
+      await wait(200);
     }
 
-    const { data: publicData } = supabase.storage.from("kyc-documents").getPublicUrl(storagePath);
-
-    return { storagePath, publicUrl: publicData.publicUrl };
+    return null;
   };
   // -----------------------------------------------------------
 
@@ -236,11 +231,10 @@ export default function RegisterPage() {
         return;
       }
 
+      const accessToken = await getFreshAccessToken(data.session?.access_token);
+
       // --- آپلود امن فایل‌ها در دیتابیس (Supabase Storage) ---
       const documentPayload: Record<string, string | null> = {
-        doc_front_url: null,
-        doc_back_url: null,
-        proof_of_address_url: null,
         doc_front_path: null,
         doc_back_path: null,
         proof_of_address_path: null,
@@ -248,20 +242,17 @@ export default function RegisterPage() {
 
       try {
         if (files.docFront) {
-          const uploadedFront = await uploadKycFile(userId, "doc-front", files.docFront);
-          documentPayload.doc_front_url = uploadedFront.publicUrl;
+          const uploadedFront = await uploadKycDocumentSecurely({ userId, key: "doc-front", file: files.docFront, accessToken: accessToken ?? undefined });
           documentPayload.doc_front_path = uploadedFront.storagePath;
         }
 
         if (files.docBack) {
-          const uploadedBack = await uploadKycFile(userId, "doc-back", files.docBack);
-          documentPayload.doc_back_url = uploadedBack.publicUrl;
+          const uploadedBack = await uploadKycDocumentSecurely({ userId, key: "doc-back", file: files.docBack, accessToken: accessToken ?? undefined });
           documentPayload.doc_back_path = uploadedBack.storagePath;
         }
 
         if (files.proofOfAddress) {
-          const uploadedAddress = await uploadKycFile(userId, "proof-of-address", files.proofOfAddress);
-          documentPayload.proof_of_address_url = uploadedAddress.publicUrl;
+          const uploadedAddress = await uploadKycDocumentSecurely({ userId, key: "proof-of-address", file: files.proofOfAddress, accessToken: accessToken ?? undefined });
           documentPayload.proof_of_address_path = uploadedAddress.storagePath;
         }
       } catch (uploadError: unknown) {
@@ -277,9 +268,9 @@ export default function RegisterPage() {
         const { data: isUpdated, error: rpcError } = await supabase.rpc('attach_documents_to_profile', {
           p_user_id: userId,
           p_doc_type: formData.docType,
-          p_front_url: documentPayload.doc_front_url,
-          p_back_url: documentPayload.doc_back_url,
-          p_address_url: documentPayload.proof_of_address_url,
+          p_front_url: null,
+          p_back_url: null,
+          p_address_url: null,
           p_front_path: documentPayload.doc_front_path,
           p_back_path: documentPayload.doc_back_path,
           p_address_path: documentPayload.proof_of_address_path
