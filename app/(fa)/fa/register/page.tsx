@@ -242,17 +242,17 @@ export default function RegisterPage() {
 
       try {
         if (files.docFront) {
-          const uploadedFront = await uploadKycDocumentSecurely({ userId, key: "doc-front", file: files.docFront, accessToken: accessToken || undefined });
+          const uploadedFront = await uploadKycDocumentSecurely({ userId, key: "doc-front", file: files.docFront, accessToken: accessToken ?? undefined });
           documentPayload.doc_front_path = uploadedFront.storagePath;
         }
 
         if (files.docBack) {
-          const uploadedBack = await uploadKycDocumentSecurely({ userId, key: "doc-back", file: files.docBack, accessToken: accessToken || undefined });
+          const uploadedBack = await uploadKycDocumentSecurely({ userId, key: "doc-back", file: files.docBack, accessToken: accessToken ?? undefined });
           documentPayload.doc_back_path = uploadedBack.storagePath;
         }
 
         if (files.proofOfAddress) {
-          const uploadedAddress = await uploadKycDocumentSecurely({ userId, key: "proof-of-address", file: files.proofOfAddress, accessToken: accessToken || undefined });
+          const uploadedAddress = await uploadKycDocumentSecurely({ userId, key: "proof-of-address", file: files.proofOfAddress, accessToken: accessToken ?? undefined });
           documentPayload.proof_of_address_path = uploadedAddress.storagePath;
         }
       } catch (uploadError: unknown) {
