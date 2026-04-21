@@ -9,12 +9,12 @@ const inter = Inter({
 });
 
 const productionUrl = "https://zarman.com.au";
-const siteName = "Zarman Exchange";
+const siteName = "صرافی زرمان";
 
 // 🚀 متن‌های جدید و همگام‌سازی شده با مفاهیم نسخه فارسی
-const defaultTitle = "Zarman Exchange | Premium AUD/IRT Remittance Platform";
+const defaultTitle = "صرافی زرمان | پلتفرم نوین حواله AUD/IRR";
 const defaultDescription =
-  "Zarman Exchange is a secure and rapid platform for AUD to IRT currency transfers. We offer dynamic exchange rates tailored to your transaction activity, ensuring you consistently receive the most competitive value. Backed by instant settlement and uncompromising regulatory compliance, we guarantee a flawless remittance experience.";
+  "پلتفرم نوین انتقال امن، شفاف و سریع پول بین استرالیا و ایران (AUD ↔ IRR).";
 
 const socialPreviewImage = "/images/layout_logo.png";
 
@@ -22,26 +22,22 @@ export const metadata: Metadata = {
   metadataBase: new URL(productionUrl),
   title: {
     default: defaultTitle,
-    template: "%s | Zarman Exchange",
+    template: "%s | صرافی زرمان",
   },
   description: defaultDescription,
   applicationName: siteName,
-  alternates: {
-    canonical: "/en",
-  },
   openGraph: {
     type: "website",
-    url: `${productionUrl}/en`,
     siteName,
     title: defaultTitle,
     description: defaultDescription,
-    locale: "en_AU",
+    locale: "fa_IR",
     images: [
       {
         url: socialPreviewImage,
         width: 1200,
         height: 630,
-        alt: "Zarman Exchange | Premium AUD/IRT Remittance Platform",
+        alt: "صرافی زرمان | پلتفرم نوین حواله AUD/IRR",
       },
     ],
   },
@@ -70,7 +66,7 @@ export default function EnglishRootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" dir="ltr" className={`${inter.variable}`}>
+    <html lang="fa" dir="rtl" className={`${inter.variable}`}>
       <head>
         <link
           rel="preconnect"

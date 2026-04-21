@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import styles from "@/styles/Legal.module.css";
+
+export const metadata: Metadata = {
+  title: "Terms and Conditions",
+  description: "Terms and conditions for using Zarman Exchange services.",
+  alternates: {
+    canonical: "/en/legal/terms",
+  },
+};
 
 export default function TermsPage() {
   return (
