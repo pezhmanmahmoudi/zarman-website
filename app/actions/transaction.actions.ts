@@ -10,38 +10,38 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function processTransactionSecurely({ userId, rawAmount, txType }: { userId: string, rawAmount: number, txType: "buy_aud" | "sell_aud" }) {
+async function getAuthenticatedUserId() {
+  const cookieStore = await cookies();
+  const supabaseServer = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
+
+  const { data, error } = await supabaseServer.auth.getUser();
+  if (error || !data.user) {
+    throw new Error("Unauthorized request");
+  }
+
+  return data.user.id;
+}
+
+export async function processTransactionSecurely({ rawAmount, txType }: { rawAmount: number, txType: "buy_aud" | "sell_aud" }) {
   if (rawAmount <= 0) return { error: "اطلاعات نامعتبر است." };
 
   try {
-    const cookieStore = await cookies();
-    const supabaseServer = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          },
-        },
-      }
-    );
-
-    // 🛡️ تلاش برای خواندن هویت از سشن امن
-    const { data: authData } = await supabaseServer.auth.getUser();
-    let authenticatedUserId = authData?.user?.id;
-
-    // 💡 Fallback برای محیط تستی و جلوگیری از ارور Unauthorized
-    if (!authenticatedUserId) {
-      authenticatedUserId = userId;
-    }
-
-    if (!authenticatedUserId) {
-      return { error: "هویت کاربر شناسایی نشد. مجدداً وارد شوید." };
-    }
+    const authenticatedUserId = await getAuthenticatedUserId();
 
     // ۱. دریافت آخرین نرخ
     const { data: rateData, error: rateError } = await supabaseAdmin
@@ -63,6 +63,9 @@ export async function processTransactionSecurely({ userId, rawAmount, txType }: 
       .select("amount_aud")
       .eq("user_id", authenticatedUserId)
       .eq("status", "approved");
+    if (txError) {
+      return { error: "دریافت سوابق تراکنش با مشکل مواجه شد." };
+    }
 
     const approvedVolume = userTxs?.reduce((sum, tx) => sum + Number(tx.amount_aud || 0), 0) || 0;
 
@@ -98,6 +101,9 @@ export async function processTransactionSecurely({ userId, rawAmount, txType }: 
     };
 
   } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized request") {
+      return { error: "Unauthorized request" };
+    }
     console.error("Server Error:", error);
     return { error: "خطای سیستمی رخ داد." };
   }
@@ -107,36 +113,19 @@ export async function deleteTransactionSecurely(transactionId: number | string) 
   if (!transactionId) return { error: "شناسه نامعتبر." };
 
   try {
-    const cookieStore = await cookies();
-    const supabaseServer = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-        },
-      }
-    );
-
-    const { data: authData } = await supabaseServer.auth.getUser();
-    const authenticatedUserId = authData?.user?.id;
-
-    // حذف با استفاده از ادمین برای دور زدن محدودیت‌های کلاینت
-    const query = supabaseAdmin
+    const authenticatedUserId = await getAuthenticatedUserId();
+    const { error } = await supabaseAdmin
       .from("transactions")
       .delete()
-      .eq("id", transactionId);
-
-    // اگر کاربر لاگین بود، برای امنیت بیشتر فقط تراکنش خودش را پاک کند
-    if (authenticatedUserId) {
-      query.eq("user_id", authenticatedUserId);
-    }
-
-    const { error } = await query;
+      .eq("id", transactionId)
+      .eq("user_id", authenticatedUserId);
     if (error) return { error: "عملیات حذف ناموفق بود." };
 
     return { success: true };
   } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized request") {
+      return { error: "Unauthorized request" };
+    }
     return { error: "خطای سرور در هنگام حذف." };
   }
 }
