@@ -8,11 +8,19 @@ function getLocaleFromPath(pathname: string): 'fa' | 'en' {
 }
 
 function isDashboardRoute(pathname: string) {
-  return pathname.startsWith('/fa/dashboard') || pathname.startsWith('/en/dashboard')
+  return (
+    pathname.startsWith('/fa/dashboard') ||
+    pathname.startsWith('/en/dashboard') ||
+    pathname.startsWith('/dashboard')
+  )
 }
 
 
 export async function proxy(request: NextRequest) {
+  if (!isDashboardRoute(request.nextUrl.pathname)) {
+    return NextResponse.next()
+  }
+
   const { supabase, getResponse, applyPendingCookies } = createSupabaseProxyClient(request)
 
   const {
@@ -31,6 +39,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-        '/((?!api|_next/static|_next/image|assets|favicon.ico|sw.js).*)',
+    '/fa/dashboard/:path*',
+    '/en/dashboard/:path*',
+    '/dashboard/:path*',
   ],
 }
