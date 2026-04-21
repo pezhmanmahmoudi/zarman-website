@@ -45,7 +45,7 @@ function normalizeRows(rows: HistoricalRateRow[]): ChartDataPoint[] {
     })
     .filter((item): item is ChartDataPoint => item !== null)
     .filter((item) => {
-      const dateMs = new Date(`${item.date}T12:00:00Z`).getTime();
+      const dateMs = new Date(`${item.date}T12:00:00`).getTime();
       return Number.isFinite(dateMs);
     });
 }
