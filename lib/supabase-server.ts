@@ -42,23 +42,16 @@ export function createSupabaseProxyClient(request: NextRequest) {
     },
   });
 
-  const pendingCookies: SupabaseCookie[] = [];
+  const pendingCookies = new Map<string, SupabaseCookie>();
 
   const supabase = createSupabaseSsrClient({
     getAll() {
       return request.cookies.getAll();
     },
     setAll(cookiesToSet) {
-      pendingCookies.push(...cookiesToSet);
-      cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-
-      response = NextResponse.next({
-        request: {
-          headers: request.headers,
-        },
-      });
-
       cookiesToSet.forEach(({ name, value, options }) => {
+        pendingCookies.set(name, { name, value, options });
+        request.cookies.set(name, value);
         response.cookies.set(name, value, options);
       });
     },
