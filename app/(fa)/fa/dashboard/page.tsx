@@ -122,7 +122,6 @@ export default function ZarmanDashboard() {
     if (!profile || !profile.id || !isApproved || rawAmount <= 0) return null;
     
     const result = await processTransactionSecurely({
-      userId: profile.id as string, 
       rawAmount: rawAmount,
       txType: currentTxType
     });
