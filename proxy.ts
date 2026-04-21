@@ -7,11 +7,6 @@ function getLocaleFromPath(pathname: string): 'fa' | 'en' {
   return 'fa'
 }
 
-function isDashboardRoute(pathname: string) {
-  return pathname.startsWith('/fa/dashboard') || pathname.startsWith('/en/dashboard')
-}
-
-
 export async function proxy(request: NextRequest) {
   const { supabase, getResponse, applyPendingCookies } = createSupabaseProxyClient(request)
 
@@ -20,7 +15,7 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
 
-  if (!user && isDashboardRoute(request.nextUrl.pathname)) {
+  if (!user) {
     const locale = getLocaleFromPath(request.nextUrl.pathname)
     const redirectResponse = NextResponse.redirect(new URL(`/${locale}/login`, request.url))
     return applyPendingCookies(redirectResponse)
@@ -31,6 +26,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-        '/((?!api|_next/static|_next/image|assets|favicon.ico|sw.js).*)',
+    '/fa/dashboard/:path*',
+    '/en/dashboard/:path*',
+    '/dashboard/:path*',
   ],
 }
