@@ -12,9 +12,9 @@ const productionUrl = "https://zarman.com.au";
 const siteName = "صرافی زرمان";
 
 // 🚀 متن‌های جدید و همگام‌سازی شده با مفاهیم نسخه فارسی
-const defaultTitle = "صرافی زرمان | پلتفرم نوین حواله AUD/IRR";
+const defaultTitle = "صرافی زرمان | استارتاپ مالی خرید و فروش دلار استرالیا";
 const defaultDescription =
-  "پلتفرم نوین انتقال امن، شفاف و سریع پول بین استرالیا و ایران (AUD ↔ IRR).";
+  "صرافی زرمان، پلتفرمی امن و سریع برای تبادل دلار استرالیا (AUD) و تومان (IRT) است. در زرمان، نرخهای تبادل بهصورت پویا و بر اساس میزان فعالیت شما محاسبه میشوند تا همواره بهصرفهترین پیشنهاد را دریافت کنید. تسویه فوری و پایبندیِ بیقیدوشرط به استانداردهای قانونی، تضمینِ ما برای خلق تجربهای مطمئن و بینقص در جابجایی ارز است.";
 
 const socialPreviewImage = "/images/layout_logo.png";
 
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
         url: socialPreviewImage,
         width: 1200,
         height: 630,
-        alt: "صرافی زرمان | پلتفرم نوین حواله AUD/IRR",
+        alt: "صرافی زرمان | استارتاپ مالی خرید و فروش دلار استرالیا",
       },
     ],
   },
@@ -52,6 +52,7 @@ export const metadata: Metadata = {
     shortcut: ["/favicon.ico"],
     apple: [{ url: "/images/icon-192.png" }],
   },
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
