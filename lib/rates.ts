@@ -11,7 +11,7 @@ type HistoricalRateRow = {
 };
 
 const HISTORY_WINDOW_DAYS = 365 * 5;
-const MAX_HISTORY_ROWS = 2500;
+const MAX_HISTORY_ROWS = 4000;
 
 const emptySnapshot: RateSnapshot = {
   currentRates: {
@@ -68,14 +68,20 @@ async function fetchRatesSnapshot(): Promise<RateSnapshot> {
       .from("rates_history")
       .select("id, created_at, date, buy_aud, sell_aud")
       .gte("date", fromDateISO)
-      .order("date", { ascending: true })
+      .order("date", { ascending: false })
+      .order("id", { ascending: false })
       .limit(MAX_HISTORY_ROWS);
 
     if (error) {
       return emptySnapshot;
     }
 
-    const normalizedData = normalizeRows((data ?? []) as HistoricalRateRow[]);
+    const normalizedData = normalizeRows((data ?? []) as HistoricalRateRow[]).sort((a, b) => {
+      const dateA = new Date(`${a.date}T12:00:00`).getTime();
+      const dateB = new Date(`${b.date}T12:00:00`).getTime();
+      if (dateA !== dateB) return dateA - dateB;
+      return a.id - b.id;
+    });
     if (normalizedData.length === 0) {
       return emptySnapshot;
     }
