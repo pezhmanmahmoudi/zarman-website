@@ -23,12 +23,8 @@ export const metadata: Metadata = {
   },
   description: defaultDescription,
   applicationName: siteName,
-  alternates: {
-    canonical: "/en",
-  },
   openGraph: {
     type: "website",
-    url: `${productionUrl}/en`,
     siteName,
     title: defaultTitle,
     description: defaultDescription,
@@ -53,7 +49,7 @@ export const metadata: Metadata = {
     shortcut: ["/favicon.ico"],
     apple: [{ url: "/favicon.ico" }],
   },
-  manifest: "/site.webmanifest",
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {

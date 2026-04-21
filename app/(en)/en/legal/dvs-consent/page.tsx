@@ -1,6 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import styles from "@/styles/Legal.module.css";
+
+export const metadata: Metadata = {
+  title: "Identity Verification Consent",
+  description:
+    "Consent for identity verification checks for Zarman Exchange services.",
+  alternates: {
+    canonical: "/en/legal/dvs-consent",
+  },
+};
 
 export default function DVSConsentPage() {
   return (

@@ -1,7 +1,16 @@
-
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import styles from "@/styles/Legal.module.css";
+
+export const metadata: Metadata = {
+  title: "Identity Verification Collection Notice",
+  description:
+    "Collection notice for identity verification via the Document Verification Service.",
+  alternates: {
+    canonical: "/en/legal/dvs-notice",
+  },
+};
 
 export default function DVSNoticePage() {
   return (
