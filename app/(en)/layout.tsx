@@ -1,8 +1,6 @@
 import "../globals.css";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { RateProvider } from "@/context/RateContext";
-import SmoothScrollProvider from "@/components/providers/SmoothScrollProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -79,11 +77,7 @@ export default function EnglishRootLayout({
         />
       </head>
       <body className="min-h-screen antialiased bg-[#080B12] text-white">
-        <SmoothScrollProvider>
-          <RateProvider>
-            <main id="main-content">{children}</main>
-          </RateProvider>
-        </SmoothScrollProvider>
+        <main id="main-content">{children}</main>
       </body>
     </html>
   );

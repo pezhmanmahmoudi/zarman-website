@@ -11,7 +11,8 @@ import {
   YAxis,
 } from "recharts";
 import styles from "./PriceChart.module.css";
-import { useRates, type ChartDataPoint } from "@/context/RateContext";
+import { useRates } from "@/context/RateContext";
+import type { ChartDataPoint } from "@/lib/rates-types";
 
 type Timeframe = "1W" | "1M" | "3M" | "1Y" | "3Y" | "ALL";
 
@@ -132,7 +133,7 @@ export default function PriceChart() {
   const chartData = useMemo<PreparedChartPoint[]>(() => {
     if (!chartDataDaily || chartDataDaily.length === 0) return [];
 
-    let data = chartDataDaily
+    const timeSeriesData = chartDataDaily
       .map((item) => ({
         ...item,
         timestamp: parseDateToTimestamp(item.date),
@@ -140,9 +141,9 @@ export default function PriceChart() {
       }))
       .sort((a, b) => a.timestamp - b.timestamp);
 
-    if (timeframe === "ALL") return data;
+    if (timeframe === "ALL") return timeSeriesData;
 
-    const lastDataDate = data[data.length - 1].timestamp;
+    const lastDataDate = timeSeriesData[timeSeriesData.length - 1].timestamp;
 
     let filterMs = 0;
     switch (timeframe) {
@@ -154,7 +155,7 @@ export default function PriceChart() {
     }
 
     const cutoff = lastDataDate - filterMs;
-    return data.filter((d) => d.timestamp >= cutoff);
+    return timeSeriesData.filter((d) => d.timestamp >= cutoff);
   }, [chartDataDaily, timeframe]);
 
   const yAxisConfig = useMemo(() => {
