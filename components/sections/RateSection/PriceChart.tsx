@@ -11,7 +11,8 @@ import {
   YAxis,
 } from "recharts";
 import styles from "./PriceChart.module.css";
-import { useRates, type ChartDataPoint } from "@/context/RateContext";
+import { useRates } from "@/context/RateContext";
+import type { ChartDataPoint } from "@/lib/rates-types";
 
 type Timeframe = "1W" | "1M" | "3M" | "1Y" | "3Y" | "ALL";
 

@@ -10,6 +10,8 @@ import TestimonialSection from "@/components/sections/Testimonial/TestimonialSec
 import FAQSection from "@/components/sections/FAQSection/FAQSection";
 import FinalCTA from "@/components/sections/FinalCTA/FinalCTA";
 import Footer from "@/components/layout/Footer/Footer";
+import MarketProviders from "@/components/providers/MarketProviders";
+import { getRatesSnapshot } from "@/lib/rates";
 
 // 🚀 سئوی هوشمند: فقط موارد اختصاصی این صفحه نوشته می‌شود تا با layout ادغام شود
 export const metadata: Metadata = {
@@ -18,11 +20,13 @@ export const metadata: Metadata = {
   keywords: ["صرافی استرالیا", "حواله دلار استرالیا", "زرمان اکسچنج", "انتقال پول به استرالیا", "دلار استرالیا به تومان"],
 };
 
-export default function Home() {
+export default async function Home() {
+  const rateSnapshot = await getRatesSnapshot();
+
   return (
-    <>
+    <MarketProviders initialData={rateSnapshot}>
       <Header />
-      
+
       {/* 🛡️ تگ main حذف شد تا با layout تداخل نکند و استانداردهای نابینایان (W3C) رعایت شود */}
       <div className="flex flex-col w-full relative">
         <Hero />
@@ -35,8 +39,8 @@ export default function Home() {
         <FAQSection />
         <FinalCTA />
       </div>
-      
+
       <Footer />
-    </>
+    </MarketProviders>
   );
 }
