@@ -13,6 +13,7 @@ const supabaseAdmin = createClient(
 );
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MIN_SIGNED_URL_EXPIRY_SECONDS = 60;
 const DEFAULT_SIGNED_URL_EXPIRY_SECONDS = 300;
 const MAX_SIGNED_URL_EXPIRY_SECONDS = 900;
 const ALLOWED_DOCUMENT_KEYS = new Set(["doc-front", "doc-back", "proof-of-address"]);
@@ -104,7 +105,7 @@ export async function uploadKycDocumentSecurely({
   }
 
   const safeName = sanitizeFileName(file.name || "document");
-  const storagePath = `${userId}/${key}-${Date.now()}-${safeName}`;
+  const storagePath = `${userId}/${key}-${crypto.randomUUID()}-${safeName}`;
 
   const { error: uploadError } = await supabaseAdmin.storage
     .from("kyc-documents")
@@ -144,7 +145,10 @@ export async function createKycDocumentSignedUrl({
   const firstSlashIndex = storagePath.indexOf("/");
   const pathUserId = firstSlashIndex > 0 ? storagePath.slice(0, firstSlashIndex) : "";
   const isOwnedPath = pathUserId === userId;
-  const safeExpirySeconds = Math.min(Math.max(Math.floor(expiresIn), 60), MAX_SIGNED_URL_EXPIRY_SECONDS);
+  const safeExpirySeconds = Math.min(
+    Math.max(Math.floor(expiresIn), MIN_SIGNED_URL_EXPIRY_SECONDS),
+    MAX_SIGNED_URL_EXPIRY_SECONDS
+  );
 
   if ((!isOwner || !isOwnedPath) && !isPrivileged) {
     throw new Error("Forbidden signed URL request.");
