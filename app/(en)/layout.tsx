@@ -1,4 +1,4 @@
-import "../globals.css";
+import "@/app/globals.css";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 
@@ -65,13 +65,6 @@ export default function EnglishRootLayout({
 }) {
   return (
     <html lang="en" dir="ltr" className={`${inter.variable}`}>
-      <head>
-        <link
-          rel="preconnect"
-          href="https://fonts.googleapis.com"
-          crossOrigin="anonymous"
-        />
-      </head>
       <body className="min-h-screen antialiased bg-[#080B12] text-white">
         <main id="main-content">{children}</main>
       </body>
