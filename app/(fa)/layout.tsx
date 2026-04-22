@@ -1,12 +1,5 @@
 import "@/app/globals.css";
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-en",
-  display: "swap",
-});
 
 const productionUrl = "https://zarman.com.au";
 const siteName = "صرافی زرمان";
@@ -14,7 +7,7 @@ const siteName = "صرافی زرمان";
 // 🚀 متن‌های جدید و همگام‌سازی شده با مفاهیم نسخه فارسی
 const defaultTitle = "صرافی زرمان | استارتاپ مالی خرید و فروش دلار استرالیا";
 const defaultDescription =
-  "صرافی زرمان، پلتفرمی امن و سریع برای تبادل دلار استرالیا (AUD) و تومان (IRT) است. در زرمان، نرخهای تبادل بهصورت پویا و بر اساس میزان فعالیت شما محاسبه میشوند تا همواره بهصرفهترین پیشنهاد را دریافت کنید. تسویه فوری و پایبندیِ بیقیدوشرط به استانداردهای قانونی، تضمینِ ما برای خلق تجربهای مطمئن و بینقص در جابجایی ارز است.";
+  "صرافی زرمان، پلتفرمی امن و سریع برای تبادل دلار استرالیا (AUD) و تومان (IRT) است. در زرمان، نرخ‌های تبادل به‌صورت پویا و بر اساس میزان فعالیت شما محاسبه می‌شوند تا همواره به‌صرفه‌ترین پیشنهاد را دریافت کنید. تسویه فوری و پایبندیِ بی‌قیدوشرط به استانداردهای قانونی، تضمینِ ما برای خلق تجربه‌ای مطمئن و بی‌نقص در جابه‌جایی ارز است.";
 
 const socialPreviewImage = "/images/layout_logo.png";
 
@@ -65,20 +58,13 @@ export const viewport: Viewport = {
   themeColor: "#080B12",
 };
 
-export default function EnglishRootLayout({
+export default function PersianRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fa" dir="rtl" className={`${inter.variable}`}>
-      <head>
-        <link
-          rel="preconnect"
-          href="https://fonts.googleapis.com"
-          crossOrigin="anonymous"
-        />
-      </head>
+    <html lang="fa" dir="rtl">
       <body className="min-h-screen antialiased bg-[#080B12] text-white">
         <main id="main-content">{children}</main>
       </body>
