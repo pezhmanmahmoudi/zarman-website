@@ -20,6 +20,9 @@ const socialPreviewImage = "/images/layout_logo.png";
 
 export const metadata: Metadata = {
   metadataBase: new URL(productionUrl),
+  alternates: {
+    canonical: "/fa",
+  },
   title: {
     default: defaultTitle,
     template: "%s | صرافی زرمان",
@@ -28,6 +31,7 @@ export const metadata: Metadata = {
   applicationName: siteName,
   openGraph: {
     type: "website",
+    url: `${productionUrl}/fa`,
     siteName,
     title: defaultTitle,
     description: defaultDescription,
