@@ -2,7 +2,7 @@
 .statCard { background: var(--bg-card); backdrop-filter: blur(12px);
    padding: 18px; border-radius: 16px; justify-content: center; position: relative; /* 👈 لنگرگاه برای آیکون */
    border: 1px solid var(--border-soft); 
-   box-shadow: var(--shadow-soft); 
+   box-shadow: var(--shadow-card); 
    display: flex; align-items: center; gap: 12px; min-width: 0;  
    transition: transform 0.2s ease; }
 .statIcon { 
@@ -18,7 +18,7 @@
   position: absolute; /* 👈 آیکون را از مرکز خارج می‌کند */
   right: 18px; /* 👈 آیکون را به فاصله ۱۸ پیکسلی از راست میخکوب می‌کند */
 }
-.statIconAccent { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.statIconAccent { background: rgba(var(--success-rgb), 0.12); color: var(--success); }
 .statLabel { display: block; text-align: center; font-size: 0.78rem; color: var(--text-dim); margin-bottom: 4px; font-weight: 600; }
 .statValue { 
   font-size: 1.1rem; 
@@ -29,7 +29,7 @@
   display: flex;
   justify-content: center; /* 👈 اطمینان از وسط‌چین شدن در صورت وجود فلش یا نماد */
 }
-.successText { color: #10b981 !important; }
+.successText { color: var(--success) !important; }
 
 @media (max-width: 1280px) { .topStats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 

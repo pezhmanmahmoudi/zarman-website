@@ -40,8 +40,8 @@
 
 /* استایل نوع تراکنش */
 .txTypeBuy, .txTypeSell { padding: 6px 12px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; }
-.txTypeBuy { color: var(--accent); background: rgba(79, 70, 229, 0.1); }
-.txTypeSell { color: var(--success); background: rgba(16, 185, 129, 0.1); }
+.txTypeBuy { color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
+.txTypeSell { color: var(--success); background: rgba(var(--success-rgb), 0.1); }
 
 /* تگ‌های وضعیت (Status) */
 .statusPending, .statusApproved, .statusRejected {
@@ -54,17 +54,17 @@
   justify-content: center;
 }
 
-.statusPending { color: #d97706; background: rgba(245, 158, 11, 0.1); }
-.statusApproved { color: var(--success); background: rgba(16, 185, 129, 0.1); }
-.statusRejected { color: var(--warning); background: rgba(239, 68, 68, 0.1); }
+.statusPending { color: var(--warning); background: rgba(var(--warning-rgb), 0.1); }
+.statusApproved { color: var(--success); background: rgba(var(--success-rgb), 0.1); }
+.statusRejected { color: var(--danger); background: rgba(var(--danger-rgb), 0.1); }
 
 /* باکس حجم تبادلات در هدر */
 .volumeBadge {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(79, 70, 229, 0.08);
-  border: 1px solid rgba(79, 70, 229, 0.2);
+  background: rgba(var(--accent-rgb), 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   color: var(--accent);
   padding: 10px 16px;
   border-radius: 12px;
@@ -81,7 +81,7 @@
 .deleteBtn {
   background: transparent;
   border: none;
-  color: #ef4444; /* قرمز */
+  color: var(--danger);
   cursor: pointer;
   padding: 6px;
   border-radius: 8px;
@@ -93,7 +93,7 @@
 }
 
 .deleteBtn:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(var(--danger-rgb), 0.1);
   opacity: 1;
   transform: scale(1.05);
 }

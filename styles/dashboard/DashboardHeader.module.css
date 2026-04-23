@@ -52,15 +52,15 @@
 }
 
 .kyc_success { 
-  background: rgba(16, 185, 129, 0.12); 
-  color: #10b981; 
-  border: 1px solid rgba(16, 185, 129, 0.22); 
+  background: rgba(var(--success-rgb), 0.12); 
+  color: var(--success); 
+  border: 1px solid rgba(var(--success-rgb), 0.22); 
 }
 
 .kyc_warning { 
-  background: rgba(245, 158, 11, 0.12); 
-  color: #f59e0b; 
-  border: 1px solid rgba(245, 158, 11, 0.22); 
+  background: rgba(var(--warning-rgb), 0.12); 
+  color: var(--warning); 
+  border: 1px solid rgba(var(--warning-rgb), 0.22); 
 }
 
 /* ==================================

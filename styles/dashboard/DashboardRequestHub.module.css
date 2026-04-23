@@ -16,7 +16,7 @@
   padding: 36px; 
   border-radius: inherit;
 }
-.lockIcon { margin-bottom: 16px; color: #f59e0b; }
+.lockIcon { margin-bottom: 16px; color: var(--warning); }
 .lockTitle { font-size: 1.45rem; margin: 0 0 10px 0; font-weight: 900; }
 .lockText { max-width: 560px; line-height: 1.95; color: rgba(255, 255, 255, 0.92); margin: 0; }
 
@@ -86,11 +86,11 @@
 }
 .fieldGroup:focus-within { 
   border-color: var(--accent); 
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); 
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15); 
 }
 .locked { 
   background-color: var(--bg-soft); 
-  border-color: rgba(79, 70, 229, 0.2); 
+  border-color: rgba(var(--accent-rgb), 0.2); 
 }
 
 /* =======================================
