@@ -1,11 +1,21 @@
 "use client";
 
 import React from "react";
+import dynamic from "next/dynamic";
 import { motion, Variants } from "framer-motion";
 import styles from "./ServiceSection.module.css";
 
 // کامپوننت شبکه مرکزی
-import ServicesNetworkCore from "./NetworkGlobe";
+const ServicesNetworkCore = dynamic(() => import("./NetworkGlobe"), {
+  ssr: false,
+  loading: () => (
+    <div
+      aria-hidden="true"
+      className="w-full h-full"
+      style={{ backgroundColor: "#080B12" }}
+    />
+  ),
+});
 
 /* ===== Minimal premium SVG icons ===== */
 function GraduationIcon() {

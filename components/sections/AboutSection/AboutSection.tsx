@@ -11,7 +11,13 @@ import {
 
 const AboutGlobe = dynamic(() => import("./AboutGlobe"), {
   ssr: false,
-  loading: () => <div style={{ height: "400px", opacity: 0.1 }} />,
+  loading: () => (
+    <div
+      aria-hidden="true"
+      className="w-full h-full"
+      style={{ minHeight: "400px", backgroundColor: "#080B12" }}
+    />
+  ),
 });
 
 const EASE = [0.16, 1, 0.3, 1] as const;
