@@ -4,6 +4,7 @@ import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/(fa)/fa/dashboard/dashboard.types"; 
 import { FINANCE_CONFIG } from "@/lib/pricing";
+import { buildWhatsAppUrl } from "@/lib/constants/contact";
 
 function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]); }
 function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹"; return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d))); }
@@ -119,7 +120,7 @@ export function DashboardRequestHub({
         "* معادل نهایی: " + fmtResult + " تومان *\n\n" +
         "لطفاً درخواست من را بررسی نمایید.";
 
-      window.open(`https://wa.me/61497851631?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+      window.open(buildWhatsAppUrl(text), "_blank", "noopener,noreferrer");
       
       setAmountStr("");
 

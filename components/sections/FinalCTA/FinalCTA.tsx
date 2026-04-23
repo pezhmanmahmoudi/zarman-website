@@ -1,13 +1,13 @@
 import React from "react";
 import styles from "./FinalCTA.module.css";
 import Button from "@/components/ui/Button/Button";
+import {
+  buildWhatsAppUrl,
+  WHATSAPP_MESSAGE_SIGNUP_HELP,
+} from "@/lib/constants/contact";
 
 export default function FinalCTA() {
-  // متن پیش‌فرض برای پیام واتس‌اپ
-  const whatsappText = "سلام. وقت بخیر. من برای ثبت‌نام و انجام تراکنش در صرافی زرمان نیاز به راهنمایی دارم.";
-  
-  // ساخت لینک نهایی به همراه متن اِنکُد شده
-  const whatsappUrl = `https://wa.me/61497851631?text=${encodeURIComponent(whatsappText)}`;
+  const whatsappUrl = buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP);
 
   return (
     <section id="contact" className={styles.section} aria-label="ثبت نام نهایی">

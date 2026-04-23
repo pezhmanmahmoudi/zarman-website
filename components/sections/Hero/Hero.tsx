@@ -8,14 +8,16 @@ import Button from "@/components/ui/Button/Button";
 import { Info } from "lucide-react"; 
 import styles from "./Hero.module.css";
 import { useRates } from "@/context/RateContext";
+import {
+  buildWhatsAppUrl,
+  WHATSAPP_MESSAGE_TRANSFER_HELP,
+} from "@/lib/constants/contact";
 
 export default function Hero() {
   const heroRef = useRef<HTMLElement | null>(null);
   const { currentRates, isLoading } = useRates();
 
-  const whatsappNumber = "61497851631"; 
-  const whatsappMessage = encodeURIComponent("سلام، من از طریق وب‌سایت زرمان پیام می‌دهم و برای انتقال وجه نیاز به راهنمایی دارم.");
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+  const whatsappUrl = buildWhatsAppUrl(WHATSAPP_MESSAGE_TRANSFER_HELP);
 
   const [mounted, setMounted] = useState(false);
 
