@@ -9,6 +9,10 @@ import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
 
 import { publicNavItems } from "@/data/navigation";
+import {
+  buildWhatsAppUrl,
+  WHATSAPP_MESSAGE_SIGNUP_HELP,
+} from "@/lib/constants/contact";
 import styles from "./MobHeader.module.css";
 
 type NavItem = {
@@ -40,9 +44,7 @@ export default function MobHeader({
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const whatsappNumber = "61497851631";
-  const whatsappMessage = encodeURIComponent("سلام. وقت بخیر. من برای ثبت‌نام و انجام تراکنش در صرافی زرمان نیاز به راهنمایی دارم.");
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+  const whatsappUrl = buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);

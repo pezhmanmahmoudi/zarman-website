@@ -4,6 +4,10 @@ import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
 import styles from "./About.module.css";
 import Button from "@/components/ui/Button/Button";
+import {
+  buildWhatsAppUrl,
+  WHATSAPP_MESSAGE_TRANSFER_HELP,
+} from "@/lib/constants/contact";
 
 const AboutGlobe = dynamic(() => import("./AboutGlobe"), {
   ssr: false,
@@ -16,10 +20,7 @@ const VIEWPORT = { once: true, amount: 0.45 } as const;
 export default function About() {
   const reduceMotion = useReducedMotion();
 
-  // 👇 تنظیمات لینک واتس‌اپ و پیام پیش‌فرض
-  const whatsappNumber = "61497851631";
-  const whatsappMessage = encodeURIComponent("سلام، من از طریق وب‌سایت زرمان پیام می‌دهم و برای انتقال وجه نیاز به راهنمایی دارم.");
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+  const whatsappUrl = buildWhatsAppUrl(WHATSAPP_MESSAGE_TRANSFER_HELP);
 
   return (
     <section id="about" className={styles.about} aria-label="درباره زرمان">

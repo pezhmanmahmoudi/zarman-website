@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button/Button";
 import { ArrowLeft, ArrowDownCircle, Info, UserCircle, AlertTriangle, ChevronDown } from "lucide-react";
 import { useRates } from "@/context/RateContext";
 import { FINANCE_CONFIG } from "@/lib/pricing";
+import { buildWhatsAppUrl } from "@/lib/constants/contact";
 
 type Currency = "AUD" | "IRT";
 
@@ -93,7 +94,7 @@ export default function ConverterFa() {
         text = `سلام، من می‌خواهم ${amountText} تومان را با نرخ ${rateFa} تبدیل کنم که در وب‌سایت، مبلغ ${resultText} دلار استرالیا محاسبه شده است. لطفا مرا راهنمایی کنید.`;
     }
 
-    window.open(`https://wa.me/61497851631?text=${encodeURIComponent(text)}`, "_blank");
+    window.open(buildWhatsAppUrl(text), "_blank");
   };
 
   return (
