@@ -358,48 +358,53 @@ export default function RegisterPage() {
           {/* ================= STEP 1: Account Creation ================= */}
           {step === 1 && (
             <div className={styles.stepContent}>
-              <div className={styles.row}>
-                <div className={styles.inputGroup}>
-                  <label>First Name <span className={styles.req}>*</span></label>
-                  <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} placeholder="نام" className={errors.firstName ? styles.errorBorder : ""} />
-                  {errors.firstName && <span className={styles.errorText}>{errors.firstName}</span>}
+                <div className={styles.row}>
+                  <div className={styles.inputGroup}>
+                    <label htmlFor="register-first-name">First Name <span className={styles.req}>*</span></label>
+                    <input id="register-first-name" type="text" name="firstName" value={formData.firstName} onChange={handleChange} placeholder="نام" className={errors.firstName ? styles.errorBorder : ""} />
+                    {errors.firstName && <span className={styles.errorText}>{errors.firstName}</span>}
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label htmlFor="register-middle-name">Middle Name</label>
+                    <input id="register-middle-name" type="text" name="middleName" value={formData.middleName} onChange={handleChange} placeholder="نام میانی" />
+                  </div>
                 </div>
-                <div className={styles.inputGroup}>
-                  <label>Middle Name</label>
-                  <input type="text" name="middleName" value={formData.middleName} onChange={handleChange} placeholder="نام میانی" />
-                </div>
-              </div>
 
-              <div className={styles.row}>
-                <div className={styles.inputGroup}>
-                  <label>Last Name <span className={styles.req}>*</span></label>
-                  <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} placeholder="نام خانوادگی" className={errors.lastName ? styles.errorBorder : ""} />
-                  {errors.lastName && <span className={styles.errorText}>{errors.lastName}</span>}
+                <div className={styles.row}>
+                  <div className={styles.inputGroup}>
+                    <label htmlFor="register-last-name">Last Name <span className={styles.req}>*</span></label>
+                    <input id="register-last-name" type="text" name="lastName" value={formData.lastName} onChange={handleChange} placeholder="نام خانوادگی" className={errors.lastName ? styles.errorBorder : ""} />
+                    {errors.lastName && <span className={styles.errorText}>{errors.lastName}</span>}
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label htmlFor="register-email">Email Address <span className={styles.req}>*</span></label>
+                    <input id="register-email" type="email" name="email" value={formData.email} onChange={handleChange} placeholder="آدرس ایمیل" className={errors.email ? styles.errorBorder : ""} />
+                    {errors.email && <span className={styles.errorText}>{errors.email}</span>}
+                  </div>
                 </div>
-                <div className={styles.inputGroup}>
-                  <label>Email Address <span className={styles.req}>*</span></label>
-                  <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="آدرس ایمیل" className={errors.email ? styles.errorBorder : ""} />
-                  {errors.email && <span className={styles.errorText}>{errors.email}</span>}
-                </div>
-              </div>
 
               <div className={styles.inputGroup}>
-                <label>Mobile Number <span className={styles.req}>*</span></label>
+                <label htmlFor="register-mobile">Mobile Number <span className={styles.req}>*</span></label>
                 <div className={styles.mobileInputWrapper}>
-                  <select name="phoneCode" value={formData.phoneCode} onChange={handleChange} className={styles.countryCode}>
+                  <select id="register-phone-code" name="phoneCode" value={formData.phoneCode} onChange={handleChange} className={styles.countryCode}>
                     {countryCodes.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
                   </select>
-                  <input type="text" inputMode="numeric" name="mobile" value={formData.mobile} onChange={handleChange} placeholder="شماره موبایل" className={errors.mobile ? styles.errorBorder : ""} />
+                  <input id="register-mobile" type="text" inputMode="numeric" name="mobile" value={formData.mobile} onChange={handleChange} placeholder="شماره موبایل" className={errors.mobile ? styles.errorBorder : ""} />
                 </div>
                 {errors.mobile && <span className={styles.errorText}>{errors.mobile}</span>}
               </div>
 
               <div className={styles.row}>
                 <div className={styles.inputGroup}>
-                  <label>Password <span className={styles.req}>*</span></label>
+                  <label htmlFor="register-password">Password <span className={styles.req}>*</span></label>
                   <div className={styles.passwordWrapper}>
-                    <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} placeholder="رمز عبور" className={errors.password ? styles.errorBorder : ""} />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className={styles.eyeBtn}>
+                    <input id="register-password" type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} placeholder="رمز عبور" className={errors.password ? styles.errorBorder : ""} />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className={styles.eyeBtn}
+                      aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
+                    >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
@@ -408,10 +413,15 @@ export default function RegisterPage() {
                 </div>
 
                 <div className={styles.inputGroup}>
-                  <label>Confirm Password <span className={styles.req}>*</span></label>
+                  <label htmlFor="register-confirm-password">Confirm Password <span className={styles.req}>*</span></label>
                   <div className={styles.passwordWrapper}>
-                    <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="تایید رمز عبور" className={errors.confirmPassword ? styles.errorBorder : ""} />
-                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className={styles.eyeBtn}>
+                    <input id="register-confirm-password" type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="تایید رمز عبور" className={errors.confirmPassword ? styles.errorBorder : ""} />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className={styles.eyeBtn}
+                      aria-label={showConfirmPassword ? "مخفی کردن تایید رمز عبور" : "نمایش تایید رمز عبور"}
+                    >
                       {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
@@ -434,44 +444,44 @@ export default function RegisterPage() {
               
               <div className={styles.row}>
                 <div className={styles.inputGroup}>
-                  <label>Date of Birth <span className={styles.req}>*</span></label>
-                  <input type="date" name="dob" max={maxDate} value={formData.dob} onChange={handleChange} className={errors.dob ? styles.errorBorder : ""} />
+                  <label htmlFor="register-dob">Date of Birth <span className={styles.req}>*</span></label>
+                  <input id="register-dob" type="date" name="dob" max={maxDate} value={formData.dob} onChange={handleChange} className={errors.dob ? styles.errorBorder : ""} />
                   {errors.dob && <span className={styles.errorText}>{errors.dob}</span>}
                 </div>
                 <div className={styles.inputGroup}>
-                  <label>Residential Address <span className={styles.req}>*</span></label>
-                  <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="آدرس دقیق محل سکونت" className={errors.address ? styles.errorBorder : ""} />
+                  <label htmlFor="register-address">Residential Address <span className={styles.req}>*</span></label>
+                  <input id="register-address" type="text" name="address" value={formData.address} onChange={handleChange} placeholder="آدرس دقیق محل سکونت" className={errors.address ? styles.errorBorder : ""} />
                   {errors.address && <span className={styles.errorText}>{errors.address}</span>}
                 </div>
               </div>
 
               <div className={styles.row3}>
                 <div className={styles.inputGroup}>
-                  <label>Country <span className={styles.req}>*</span></label>
-                  <input type="text" name="country" value={formData.country} readOnly className={styles.readOnlyInput} />
+                  <label htmlFor="register-country">Country <span className={styles.req}>*</span></label>
+                  <input id="register-country" type="text" name="country" value={formData.country} readOnly className={styles.readOnlyInput} />
                 </div>
                 <div className={styles.inputGroup}>
-                  <label>State <span className={styles.req}>*</span></label>
-                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="ایالت" className={errors.state ? styles.errorBorder : ""} />
+                  <label htmlFor="register-state">State <span className={styles.req}>*</span></label>
+                  <input id="register-state" type="text" name="state" value={formData.state} onChange={handleChange} placeholder="ایالت" className={errors.state ? styles.errorBorder : ""} />
                   {errors.state && <span className={styles.errorText}>{errors.state}</span>}
                 </div>
                 <div className={styles.inputGroup}>
-                  <label>City <span className={styles.req}>*</span></label>
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="شهر" className={errors.city ? styles.errorBorder : ""} />
+                  <label htmlFor="register-city">City <span className={styles.req}>*</span></label>
+                  <input id="register-city" type="text" name="city" value={formData.city} onChange={handleChange} placeholder="شهر" className={errors.city ? styles.errorBorder : ""} />
                   {errors.city && <span className={styles.errorText}>{errors.city}</span>}
                 </div>
               </div>
 
               <div className={styles.inputGroup}>
-                <label>Postal Code <span className={styles.req}>*</span></label>
-                <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="کد پستی" className={errors.postalCode ? styles.errorBorder : ""} />
+                <label htmlFor="register-postal-code">Postal Code <span className={styles.req}>*</span></label>
+                <input id="register-postal-code" type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="کد پستی" className={errors.postalCode ? styles.errorBorder : ""} />
                 {errors.postalCode && <span className={styles.errorText}>{errors.postalCode}</span>}
               </div>
 
               <div className={styles.sectionTitle}>Identity Verification</div>
               <div className={styles.inputGroup}>
-                <label>Document Type <span className={styles.req}>*</span></label>
-                <select name="docType" value={formData.docType} onChange={handleChange} className={errors.docType ? styles.errorBorder : ""}>
+                <label htmlFor="register-doc-type">Document Type <span className={styles.req}>*</span></label>
+                <select id="register-doc-type" name="docType" value={formData.docType} onChange={handleChange} className={errors.docType ? styles.errorBorder : ""}>
                   <option value="" disabled>Select Document...</option>
                   <option value="driver_license">Australian Driver's License</option>
                   <option value="passport">Passport</option>
@@ -523,18 +533,18 @@ export default function RegisterPage() {
               )}
 
               <div className={styles.policies}>
-                <label className={styles.checkboxLabel}>
-                  <input type="checkbox" name="privacyAccepted" checked={formData.privacyAccepted} onChange={handleChange} />
+                <label className={styles.checkboxLabel} htmlFor="register-privacy-accepted">
+                  <input id="register-privacy-accepted" type="checkbox" name="privacyAccepted" checked={formData.privacyAccepted} onChange={handleChange} />
                   <span>I have read and agree to the <Link href="/en/legal/privacy-policy" target="_blank">Privacy Policy</Link> & <Link href="/en/legal/dvs-notice" target="_blank">Verification Notice</Link>. <span className={styles.req}>*</span></span>
                 </label>
                 
-                <label className={styles.checkboxLabel}>
-                  <input type="checkbox" name="termsAccepted" checked={formData.termsAccepted} onChange={handleChange} />
+                <label className={styles.checkboxLabel} htmlFor="register-terms-accepted">
+                  <input id="register-terms-accepted" type="checkbox" name="termsAccepted" checked={formData.termsAccepted} onChange={handleChange} />
                   <span>I agree to the <Link href="/en/legal/terms" target="_blank">Terms & Conditions</Link>. <span className={styles.req}>*</span></span>
                 </label>
 
-                <label className={styles.checkboxLabel} style={{ alignItems: 'flex-start' }}>
-                  <input type="checkbox" name="dvsAccepted" checked={formData.dvsAccepted} onChange={handleChange} style={{ marginTop: '4px' }} />
+                <label className={styles.checkboxLabel} style={{ alignItems: 'flex-start' }} htmlFor="register-dvs-accepted">
+                  <input id="register-dvs-accepted" type="checkbox" name="dvsAccepted" checked={formData.dvsAccepted} onChange={handleChange} style={{ marginTop: '4px' }} />
                   <span style={{ fontSize: '0.75rem', lineHeight: '1.5' }}>
                     I consent to Zarman Exchange verifying my personal details and ID documents via official records (DVS) as per the <Link href="/en/legal/dvs-consent" target="_blank">Identity Verification Consent</Link>. <span className={styles.req}>*</span>
                   </span>

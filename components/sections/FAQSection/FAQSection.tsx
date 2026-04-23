@@ -41,6 +41,7 @@ export default function FAQSection() {
         <div className={styles.faqList}>
           {faqs.map((faq, index) => {
             const isOpen = openIndex === index;
+            const panelId = `faq-panel-${index}`;
             return (
               <div
                 key={index}
@@ -50,6 +51,7 @@ export default function FAQSection() {
                   className={styles.questionBtn}
                   onClick={() => toggleFAQ(index)}
                   aria-expanded={isOpen}
+                  aria-controls={panelId}
                 >
                   <span className={styles.questionText}>{faq.q}</span>
                   <span className={styles.icon} aria-hidden="true">
@@ -57,7 +59,7 @@ export default function FAQSection() {
                   </span>
                 </button>
                 
-                <div className={styles.answerWrapper}>
+                <div id={panelId} className={styles.answerWrapper}>
                   <div className={styles.answerInner}>
                     <p className={styles.answerText}>{faq.a}</p>
                   </div>

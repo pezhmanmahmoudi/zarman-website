@@ -105,7 +105,12 @@ export default function LoginPage() {
                     dir="ltr"
                     required 
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className={styles.eyeBtn}>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className={styles.eyeBtn}
+                    aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
+                  >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
