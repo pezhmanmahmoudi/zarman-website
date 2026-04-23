@@ -34,9 +34,9 @@ export function DashboardFeedback({ profileId }: { profileId: string }) {
             type="button"
             onClick={() => setRating(s)}
             aria-label={`ثبت امتیاز ${persianRatingDigits[s - 1]} از ۵`}
-            className={`${styles.starBtn} ${s <= rating ? styles.starActive : styles.starOff} inline-flex bg-transparent p-0 border-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 rounded-sm`}
+            className="inline-flex bg-transparent p-0 border-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 rounded-sm"
           >
-            <Star size={44} aria-hidden="true" />
+            <Star size={44} aria-hidden="true" className={`${styles.starBtn} ${s <= rating ? styles.starActive : styles.starOff}`} />
           </button>
         ))}
       </div>
