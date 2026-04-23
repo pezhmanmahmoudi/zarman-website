@@ -18,7 +18,7 @@ const AboutGlobe = dynamic(() => import("./AboutGlobe"), {
       className="w-full h-full"
       style={{ minHeight: "400px", backgroundColor: "#080B12" }}
     >
-      <span className="sr-only">در حال بارگذاری بخش</span>
+      <span className="sr-only">در حال بارگذاری گلوب</span>
     </div>
   ),
 });

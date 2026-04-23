@@ -11,7 +11,7 @@ import Footer from "@/components/layout/Footer/Footer";
 import MarketProviders from "@/components/providers/MarketProviders";
 import { getRatesSnapshot } from "@/lib/rates";
 
-function SectionLoadingFallback() {
+function SectionLoadingFallback({ label }: { label: string }) {
   return (
     <div
       role="status"
@@ -19,7 +19,7 @@ function SectionLoadingFallback() {
       className="w-full"
       style={{ minHeight: "320px", backgroundColor: "#080B12" }}
     >
-      <span className="sr-only">در حال بارگذاری بخش</span>
+      <span className="sr-only">در حال بارگذاری {label}</span>
     </div>
   );
 }
@@ -27,21 +27,21 @@ function SectionLoadingFallback() {
 const AboutSection = dynamic(
   () => import("@/components/sections/AboutSection/AboutSection"),
   {
-    loading: () => <SectionLoadingFallback />,
+    loading: () => <SectionLoadingFallback label="بخش درباره ما" />,
   },
 );
 
 const ServiceSection = dynamic(
   () => import("@/components/sections/ServiceSection/ServiceSection"),
   {
-    loading: () => <SectionLoadingFallback />,
+    loading: () => <SectionLoadingFallback label="بخش خدمات" />,
   },
 );
 
 const TestimonialSection = dynamic(
   () => import("@/components/sections/Testimonial/TestimonialSection"),
   {
-    loading: () => <SectionLoadingFallback />,
+    loading: () => <SectionLoadingFallback label="بخش نظرات کاربران" />,
   },
 );
 

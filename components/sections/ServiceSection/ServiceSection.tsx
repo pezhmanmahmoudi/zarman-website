@@ -15,7 +15,7 @@ const ServicesNetworkCore = dynamic(() => import("./NetworkGlobe"), {
       className="w-full h-full"
       style={{ backgroundColor: "#080B12" }}
     >
-      <span className="sr-only">در حال بارگذاری بخش</span>
+      <span className="sr-only">در حال بارگذاری گلوب شبکه</span>
     </div>
   ),
 });
