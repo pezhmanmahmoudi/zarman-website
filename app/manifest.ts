@@ -3,22 +3,24 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "صرافی زرمان",
-    short_name: "Zarman", // 👈 نام مینیمال و امن برای آیکون موبایل
-    description:
-      "پلتفرمی امن و سریع برای تبادل دلار استرالیا (AUD) و تومان (IRT) با تسویه فوری.", // 👈 توضیحات فارسی و یکپارچه با سایت
-    start_url: "/",
+    short_name: "Zarman", 
+    // 🚀 همگام‌سازی کامل دیسکریپشن با شعار اصلی برند
+    description: "پلتفرمی نوین برای تبادل دلار استرالیا (AUD) و تومان (IRT) با نرخ‌های پویا، تسویه فوری و پایبندی کامل به استانداردهای قانونی در استرالیا.",
+    
+    // ⚡ تغییر استراتژیک: اجرای مستقیم مسیر اصلی برای افزایش سرعت PWA
+    start_url: "/fa", 
+    
     display: "standalone",
-    background_color: "#080B12", // 👈 رنگ Cosmic Navy
+    background_color: "#080B12", 
     theme_color: "#080B12",
-    lang: "fa", // 👈 تعریف زبان پایه
-    dir: "rtl", // 👈 تعریف جهت چیدمان برای اپلیکیشن موبایل
+    lang: "fa", 
+    dir: "rtl", 
     icons: [
       {
         src: "/favicon.ico",
         sizes: "any",
         type: "image/x-icon",
       },
-      // 🚀 این دو آیکون برای نصب اپلیکیشن روی موبایل ضروری هستند
       {
         src: "/images/icon-192.png",
         sizes: "192x192",

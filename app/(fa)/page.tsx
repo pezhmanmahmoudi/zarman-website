@@ -13,42 +13,31 @@ import { getRatesSnapshot } from "@/lib/rates";
 
 function SectionLoadingFallback({ label }: { label: string }) {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="w-full"
-      style={{ minHeight: "320px", backgroundColor: "#080B12" }}
-    >
+    <div role="status" className="w-full" style={{ minHeight: "320px", backgroundColor: "#080B12" }}>
       <span className="sr-only">در حال بارگذاری {label}</span>
     </div>
   );
 }
 
-const AboutSection = dynamic(
-  () => import("@/components/sections/AboutSection/AboutSection"),
-  {
-    loading: () => <SectionLoadingFallback label="بخش درباره ما" />,
-  },
-);
+const AboutSection = dynamic(() => import("@/components/sections/AboutSection/AboutSection"), {
+  loading: () => <SectionLoadingFallback label="درباره زرمان" />,
+});
 
-const ServiceSection = dynamic(
-  () => import("@/components/sections/ServiceSection/ServiceSection"),
-  {
-    loading: () => <SectionLoadingFallback label="بخش خدمات" />,
-  },
-);
+const ServiceSection = dynamic(() => import("@/components/sections/ServiceSection/ServiceSection"), {
+  loading: () => <SectionLoadingFallback label="خدمات صرافی" />,
+});
 
-const TestimonialSection = dynamic(
-  () => import("@/components/sections/Testimonial/TestimonialSection"),
-  {
-    loading: () => <SectionLoadingFallback label="بخش نظرات کاربران" />,
-  },
-);
+const TestimonialSection = dynamic(() => import("@/components/sections/Testimonial/TestimonialSection"), {
+  loading: () => <SectionLoadingFallback label="نظرات مشتریان" />,
+});
 
-// 🚀 سئوی هوشمند: فقط موارد اختصاصی این صفحه نوشته می‌شود تا با layout ادغام شود
 export const metadata: Metadata = {
-  title: "صفحه اصلی",
-  keywords: ["صرافی استرالیا", "حواله دلار استرالیا", "زرمان اکسچنج", "انتقال پول به استرالیا", "دلار استرالیا به تومان"],
+  title: "صرافی زرمان | قیمت گذاری هوشمند و شخصی سازی شده",
+  description: "استارتاپ نوین برای تبادل دلار استرالیا (AUD) و تومان (IRT) با نرخ‌های پویا، تسویه فوری و پایبندی کامل به استانداردهای قانونی در استرالیا.", 
+  alternates: {
+    canonical: "/fa",
+  },
+  keywords: ["صرافی استرالیا", "حواله دلار استرالیا", "نرخ دلار سیدنی", "انتقال پول به ایران", "زرمان اکسچنج", "زرمان " , "صرافی زرمان", "زرمان تبادل", "زرمان نرخ", "زرمان دلار", "زرمان تومان", "زرمان استرالیا", "زرمان ایران"],
 };
 
 export default async function Home() {
@@ -57,8 +46,6 @@ export default async function Home() {
   return (
     <MarketProviders initialData={rateSnapshot}>
       <Header />
-
-      {/* 🛡️ تگ main حذف شد تا با layout تداخل نکند و استانداردهای نابینایان (W3C) رعایت شود */}
       <div className="flex flex-col w-full relative">
         <Hero />
         <TrustStrip />
@@ -70,7 +57,6 @@ export default async function Home() {
         <FAQSection />
         <FinalCTA />
       </div>
-
       <Footer />
     </MarketProviders>
   );

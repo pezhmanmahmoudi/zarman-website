@@ -108,7 +108,7 @@ html {
   scroll-behavior: smooth; /* اسکرول نرم */
   
   /* این خط جادویی، مشکل هدر ثابت را برای کل سایت و تمام لینک‌ها حل می‌کند */
-  scroll-padding-top: -101px !important; 
+  scroll-padding-top: 101px !important; 
 }
 
 /* آیدی rates را به این لیست اضافه کنید */

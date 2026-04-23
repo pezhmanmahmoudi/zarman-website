@@ -10,9 +10,12 @@ const inter = Inter({
 
 const productionUrl = "https://zarman.com.au";
 const siteName = "Zarman Exchange";
-const defaultTitle = "Zarman Exchange | Premium AUD/IRT Remittance Platform";
+
+// 🚀 تایتل و دیسکریپشن جدید با تمرکز بر "نرخ‌های شخصی‌سازی شده بر اساس حجم تراکنش"
+const defaultTitle = "Zarman Exchange | Premium & Tailored AUD/IRT Remittance";
 const defaultDescription =
-  "Zarman Exchange is a premium AUD/IRT remittance service that helps Australians send funds to Iran with transparent rates, fast settlement, and enterprise-grade compliance confidence.";
+  "Experience premium AUD/IRT remittance with Zarman Exchange. We offer dynamic, tailored exchange rates based on your transaction volume, ensuring you always receive the most competitive pricing alongside fast settlement and enterprise-grade compliance.";
+
 const socialPreviewImage = "/images/Logo-v3.png";
 
 export const metadata: Metadata = {
@@ -34,7 +37,7 @@ export const metadata: Metadata = {
         url: socialPreviewImage,
         width: 1200,
         height: 630,
-        alt: "Zarman Exchange premium AUD/IRT remittance platform",
+        alt: "Zarman Exchange - Tailored AUD to IRT Remittance",
       },
     ],
   },
@@ -47,7 +50,8 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "any" }],
     shortcut: ["/favicon.ico"],
-    apple: [{ url: "/favicon.ico" }],
+    // 🛠️ اصلاح: استفاده از فرمت استاندارد png برای دستگاه‌های اپل
+    apple: [{ url: "/images/icon-192.png" }], 
   },
   manifest: "/manifest.webmanifest",
 };
