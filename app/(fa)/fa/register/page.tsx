@@ -386,7 +386,7 @@ export default function RegisterPage() {
               <div className={styles.inputGroup}>
                 <label htmlFor="register-mobile">Mobile Number <span className={styles.req}>*</span></label>
                 <div className={styles.mobileInputWrapper}>
-                  <select id="register-phone-code" name="phoneCode" value={formData.phoneCode} onChange={handleChange} className={styles.countryCode}>
+                  <select id="register-phone-code" name="phoneCode" value={formData.phoneCode} onChange={handleChange} className={styles.countryCode} aria-label="کد کشور">
                     {countryCodes.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
                   </select>
                   <input id="register-mobile" type="text" inputMode="numeric" name="mobile" value={formData.mobile} onChange={handleChange} placeholder="شماره موبایل" className={errors.mobile ? styles.errorBorder : ""} />
@@ -533,22 +533,22 @@ export default function RegisterPage() {
               )}
 
               <div className={styles.policies}>
-                <label className={styles.checkboxLabel} htmlFor="register-privacy-accepted">
+                <div className={styles.checkboxLabel}>
                   <input id="register-privacy-accepted" type="checkbox" name="privacyAccepted" checked={formData.privacyAccepted} onChange={handleChange} />
-                  <span>I have read and agree to the <Link href="/en/legal/privacy-policy" target="_blank">Privacy Policy</Link> & <Link href="/en/legal/dvs-notice" target="_blank">Verification Notice</Link>. <span className={styles.req}>*</span></span>
-                </label>
+                  <label htmlFor="register-privacy-accepted">I have read and agree to the <Link href="/en/legal/privacy-policy" target="_blank">Privacy Policy</Link> & <Link href="/en/legal/dvs-notice" target="_blank">Verification Notice</Link>. <span className={styles.req}>*</span></label>
+                </div>
                 
-                <label className={styles.checkboxLabel} htmlFor="register-terms-accepted">
+                <div className={styles.checkboxLabel}>
                   <input id="register-terms-accepted" type="checkbox" name="termsAccepted" checked={formData.termsAccepted} onChange={handleChange} />
-                  <span>I agree to the <Link href="/en/legal/terms" target="_blank">Terms & Conditions</Link>. <span className={styles.req}>*</span></span>
-                </label>
+                  <label htmlFor="register-terms-accepted">I agree to the <Link href="/en/legal/terms" target="_blank">Terms & Conditions</Link>. <span className={styles.req}>*</span></label>
+                </div>
 
-                <label className={styles.checkboxLabel} style={{ alignItems: 'flex-start' }} htmlFor="register-dvs-accepted">
+                <div className={styles.checkboxLabel} style={{ alignItems: 'flex-start' }}>
                   <input id="register-dvs-accepted" type="checkbox" name="dvsAccepted" checked={formData.dvsAccepted} onChange={handleChange} style={{ marginTop: '4px' }} />
-                  <span style={{ fontSize: '0.75rem', lineHeight: '1.5' }}>
+                  <label htmlFor="register-dvs-accepted" style={{ fontSize: '0.75rem', lineHeight: '1.5' }}>
                     I consent to Zarman Exchange verifying my personal details and ID documents via official records (DVS) as per the <Link href="/en/legal/dvs-consent" target="_blank">Identity Verification Consent</Link>. <span className={styles.req}>*</span>
-                  </span>
-                </label>
+                  </label>
+                </div>
                 
                 {errors.policies && <span className={styles.errorText} style={{ marginTop: '8px' }}>{errors.policies}</span>}
               </div>
