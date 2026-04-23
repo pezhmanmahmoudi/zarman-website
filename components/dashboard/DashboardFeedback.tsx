@@ -9,6 +9,7 @@ export function DashboardFeedback({ profileId }: { profileId: string }) {
   const [feedback, setFeedback] = useState("");
   const [feedbackStatus, setFeedbackStatus] = useState("");
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const persianRatingDigits = ["۱", "۲", "۳", "۴", "۵"];
 
   const handleSubmitFeedback = async () => {
     if (!profileId || !feedback.trim() || feedbackSubmitting) return;
@@ -32,7 +33,7 @@ export function DashboardFeedback({ profileId }: { profileId: string }) {
             key={s}
             type="button"
             onClick={() => setRating(s)}
-            aria-label={`ثبت امتیاز ${s} از ۵`}
+            aria-label={`ثبت امتیاز ${persianRatingDigits[s - 1]} از ۵`}
             className={`${styles.starBtn} ${s <= rating ? styles.starActive : styles.starOff} inline-flex bg-transparent p-0 border-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 rounded-sm`}
           >
             <Star size={44} aria-hidden="true" />
