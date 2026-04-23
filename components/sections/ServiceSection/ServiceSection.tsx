@@ -10,10 +10,13 @@ const ServicesNetworkCore = dynamic(() => import("./NetworkGlobe"), {
   ssr: false,
   loading: () => (
     <div
-      aria-hidden="true"
+      role="status"
+      aria-live="polite"
       className="w-full h-full"
       style={{ backgroundColor: "#080B12" }}
-    />
+    >
+      <span className="sr-only">در حال بارگذاری بخش</span>
+    </div>
   ),
 });
 

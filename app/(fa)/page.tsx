@@ -14,10 +14,13 @@ import { getRatesSnapshot } from "@/lib/rates";
 function SectionLoadingFallback() {
   return (
     <div
-      aria-hidden="true"
+      role="status"
+      aria-live="polite"
       className="w-full"
       style={{ minHeight: "320px", backgroundColor: "#080B12" }}
-    />
+    >
+      <span className="sr-only">در حال بارگذاری بخش</span>
+    </div>
   );
 }
 
