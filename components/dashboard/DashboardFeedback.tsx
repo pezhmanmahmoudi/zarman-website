@@ -28,7 +28,15 @@ export function DashboardFeedback({ profileId }: { profileId: string }) {
       </div>
       <div className={styles.starsRow}>
         {[1, 2, 3, 4, 5].map((s) => (
-          <Star key={s} size={44} onClick={() => setRating(s)} className={`${styles.starBtn} ${s <= rating ? styles.starActive : styles.starOff}`} />
+          <button
+            key={s}
+            type="button"
+            onClick={() => setRating(s)}
+            aria-label={`ثبت امتیاز ${s} از ۵`}
+            className={`${styles.starBtn} ${s <= rating ? styles.starActive : styles.starOff} inline-flex bg-transparent p-0 border-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 rounded-sm`}
+          >
+            <Star size={44} aria-hidden="true" />
+          </button>
         ))}
       </div>
       <textarea className={styles.feedbackTextarea} placeholder="پیشنهادات، انتقادات یا رضایت خود را در این کادر بنویسید..." value={feedback} onChange={(e) => setFeedback(e.target.value)} />
