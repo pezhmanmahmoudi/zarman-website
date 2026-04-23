@@ -7,6 +7,10 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import styles from "./HowItWorks.module.css";
 import Button from "@/components/ui/Button/Button";
 import { UserPlus, ShieldCheck, CreditCard, Send } from "lucide-react";
+import {
+  buildWhatsAppUrl,
+  WHATSAPP_MESSAGE_SIGNUP_HELP,
+} from "@/lib/constants/contact";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -80,8 +84,7 @@ export default function HowItWorks() {
     { scope: sectionRef }
   );
 
-  const whatsappMessage = "سلام. وقت بخیر. من برای ثبت‌نام و انجام تراکنش در صرافی زرمان نیاز به راهنمایی دارم.";
-  const whatsappLink = `https://wa.me/61497851631?text=${encodeURIComponent(whatsappMessage)}`;
+  const whatsappLink = buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP);
 
   return (
     <section
