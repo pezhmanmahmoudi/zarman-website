@@ -33,7 +33,7 @@ const TestimonialSection = dynamic(() => import("@/components/sections/Testimoni
 
 export const metadata: Metadata = {
   title: "صرافی زرمان | قیمت گذاری هوشمند و شخصی سازی شده",
-  description: "استارتاپ نوین برای تبادل دلار استرالیا (AUD) و تومان (IRT) با نرخ‌های پویا، تسویه فوری و پایبندی کامل به استانداردهای قانونی در استرالیا.", 
+  description: "استارتاپ نوین برای تبادل دلار استرالیا (AUD) و تومان (IRT) با نرخ‌های شخصی سازی شده، تسویه فوری و پایبندی کامل به استانداردهای قانونی در استرالیا.", 
   alternates: {
     canonical: "/fa",
   },
@@ -48,11 +48,11 @@ export default async function Home() {
       <Header />
       <div className="flex flex-col w-full relative">
         <Hero />
-        <TrustStrip />
         <RateSection />
         <AboutSection />
-        <HowItWorks />
+        <TrustStrip />
         <ServiceSection />
+        <HowItWorks />
         <TestimonialSection />
         <FAQSection />
         <FinalCTA />

@@ -2,10 +2,10 @@ import "@/app/globals.css";
 import type { Metadata, Viewport } from "next";
 
 const productionUrl = "https://zarman.com.au";
-const siteName = "صرافی زرمان";
+const siteName = "صرافی زرمان | راه حل هوشمند برای تبادل ارز";
 
 // 🚀 دیسکریپشن واحد و استاندارد زرمان
-const defaultDescription = "استارتاپ نوین برای تبادل دلار استرالیا (AUD) و تومان (IRT) با نرخ‌های پویا، تسویه فوری و پایبندی کامل به استانداردهای قانونی در استرالیا.";
+const defaultDescription = "استارتاپ نوین برای تبادل دلار استرالیا (AUD) و تومان (IRT) با نرخ‌های هوشمند و شخصی سازی‌ شده، تسویه فوری و پایبندی کامل به استانداردهای قانونی در استرالیا.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(productionUrl),
@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName,
-    title: "صرافی زرمان",
+    title: "صرافی زرمان | راه حل هوشمند برای تبادل ارز",
     description: defaultDescription,
     locale: "fa_IR",
     images: [{
-      url: "/images/layout_logo.png",
+      url: "/images/layout-logo.png",
       width: 1200,
       height: 630,
       alt: "صرافی زرمان | پلتفرم تبادل ارز استرالیا و ایران",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "صرافی زرمان",
     description: defaultDescription,
-    images: ["/images/layout_logo.png"],
+    images: ["/images/layout-logo.png"],
   },
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "any" }],
