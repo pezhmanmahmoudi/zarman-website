@@ -1,5 +1,4 @@
-import "@/app/globals.css";
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 
 const productionUrl = "https://zarman.com.au";
 const siteName = "صرافی زرمان | راه حل هوشمند برای تبادل ارز";
@@ -10,7 +9,7 @@ const defaultDescription = "استارتاپ نوین برای تبادل دلا
 export const metadata: Metadata = {
   metadataBase: new URL(productionUrl),
   title: {
-    default: "صرافی زرمان | ورود برای قیمت گذاری هوشمند و شخصی سازی شده",
+    default: "ورود برای قیمت گذاری هوشمند و شخصی سازی شده | صرافی زرمان",
     template: "%s | صرافی زرمان",
   },
   description: defaultDescription,
@@ -34,18 +33,12 @@ export const metadata: Metadata = {
     description: defaultDescription,
     images: ["/images/layout-logo.png"],
   },
-  icons: {
-    icon: [{ url: "/favicon.ico", sizes: "any" }],
-    shortcut: ["/favicon.ico"],
-    apple: [{ url: "/images/icon-192.png" }],
+  alternates: {
+    languages: {
+      fa: "/fa",
+      en: "/en",
+    },
   },
-  manifest: "/manifest.webmanifest",
-};
-
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  themeColor: "#080B12",
 };
 
 export default function PersianRootLayout({ children }: { children: React.ReactNode }) {

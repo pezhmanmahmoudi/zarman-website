@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import styles from "@/styles/Legal.module.css";
@@ -15,10 +16,23 @@ export default function PrivacyPolicyPage() {
   return (
     <div className={styles.pageWrapper}>
       <div className={styles.container}>
-        
-        <Link href="/fa/register" className={styles.backBtn}>
-          <ArrowLeft size={18} /> Back to Registration
-        </Link>
+
+        <div className={styles.topNav}>
+          <Link href="/" className={styles.backHome} aria-label="Back to Website">
+            <ArrowLeft size={18} strokeWidth={2.5} />
+          </Link>
+        </div>
+
+        <div className={styles.logoContainer}>
+          <Image
+            src="/images/logo-no-text-light.svg"
+            alt="Zarman Logo"
+            width={80}
+            height={80}
+            priority
+            className={styles.logoImage}
+          />
+        </div>
 
         <header className={styles.header}>
           <h1 className={styles.title}>Privacy Policy</h1>

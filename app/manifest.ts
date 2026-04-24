@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "صرافی زرمان",
-    short_name: "Zarman", 
+    name: "صرافی زرمان | راه حل هوشمند برای تبادل ارز",
+    short_name: "Zarmanex", 
     // 🚀 همگام‌سازی کامل دیسکریپشن با شعار اصلی برند
     description: "پلتفرمی نوین برای تبادل دلار استرالیا (AUD) و تومان (IRT) با نرخ‌های پویا، تسویه فوری و پایبندی کامل به استانداردهای قانونی در استرالیا.",
     
@@ -25,7 +25,19 @@ export default function manifest(): MetadataRoute.Manifest {
         src: "/images/icon-192.png",
         sizes: "192x192",
         type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/images/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
         purpose: "maskable",
+      },
+      {
+        src: "/images/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
       },
       {
         src: "/images/icon-512.png",

@@ -8,7 +8,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // صفحات اصلی با اولویت بالا
   const mainRoutes = [
     { url: "/fa", priority: 1, changeFrequency: "daily" as const }, // آدرس اصلی فارسی
-    { url: "/en", priority: 0.9, changeFrequency: "monthly" as const }, // اگر صفحه اصلی انگلیسی دارید
     { url: "/fa/register", priority: 0.9, changeFrequency: "weekly" as const },
     { url: "/fa/login", priority: 0.8, changeFrequency: "weekly" as const },
   ];

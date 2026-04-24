@@ -1,5 +1,4 @@
-import "@/app/globals.css";
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
 const inter = Inter({
@@ -16,7 +15,7 @@ const defaultTitle = "Zarman Exchange | Premium & Tailored AUD/IRT Remittance";
 const defaultDescription =
   "Experience premium AUD/IRT remittance with Zarman Exchange. We offer dynamic, tailored exchange rates based on your transaction volume, ensuring you always receive the most competitive pricing alongside fast settlement and enterprise-grade compliance.";
 
-const socialPreviewImage = "/images/Logo-v3.png";
+const socialPreviewImage = "/images/layout-logo.png";
 
 export const metadata: Metadata = {
   metadataBase: new URL(productionUrl),
@@ -47,19 +46,12 @@ export const metadata: Metadata = {
     description: defaultDescription,
     images: [socialPreviewImage],
   },
-  icons: {
-    icon: [{ url: "/favicon.ico", sizes: "any" }],
-    shortcut: ["/favicon.ico"],
-    // 🛠️ اصلاح: استفاده از فرمت استاندارد png برای دستگاه‌های اپل
-    apple: [{ url: "/images/icon-192.png" }], 
+  alternates: {
+    languages: {
+      fa: "/fa",
+      en: "/en",
+    },
   },
-  manifest: "/manifest.webmanifest",
-};
-
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  themeColor: "#080B12",
 };
 
 export default function EnglishRootLayout({
@@ -68,10 +60,10 @@ export default function EnglishRootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" dir="ltr" className={`${inter.variable}`}>
-      <body className="min-h-screen antialiased bg-[#080B12] text-white">
+    <div lang="en" dir="ltr" className={`${inter.variable}`}>
+      <div className="min-h-screen antialiased bg-[#080B12] text-white">
         <main id="main-content">{children}</main>
-      </body>
-    </html>
+      </div>
+    </div>
   );
 }

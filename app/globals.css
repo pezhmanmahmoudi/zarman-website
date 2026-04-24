@@ -48,6 +48,8 @@
 /* ========== Reset & Base ========== */
 html {
   scroll-behavior: smooth; /* اسکرول نرم بین سکشن‌ها */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 html,
@@ -89,6 +91,15 @@ h1, h2, h3, h4, h5, h6 {
 
 .zarman-lang-code {
   font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Global mobile baseline: prevent iOS Safari auto-zoom on text-entry controls. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* این جادوی تایپوگرافی فین‌تک است!

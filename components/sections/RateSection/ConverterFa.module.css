@@ -182,7 +182,7 @@
   /* پدینگ بیشتر در سمت چپ برای جا دادن آیکون فلش */
   padding: 0 0 0 24px; 
   font-family: var(--font-primary);
-  font-size: var(--text-body-sm);
+  font-size: 1rem;
   font-weight: var(--font-weight-bold);
   color: rgba(255, 255, 255, 0.8);
   outline: none;
@@ -263,7 +263,7 @@
 @media (max-width: 768px) {
   .card { padding: var(--space-6); }
   .faInput { font-size: 1.1rem; }
-  .currencySelect { font-size: 11px; }
+  .currencySelect { font-size: 1rem; }
 }
 
 
@@ -276,5 +276,5 @@
 
 @media (max-width: 768px) {
   .faInput { font-size: 1.1rem; }
-  .currencySelect { font-size: 11px; }
+  .currencySelect { font-size: 1rem; }
 }
