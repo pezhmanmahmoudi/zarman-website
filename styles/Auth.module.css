@@ -52,7 +52,7 @@
   padding: 12px 14px;
   color: #0f172a !important;
   font-family: var(--font-primary);
-  font-size: 0.95rem;
+  font-size: 16px !important;
   font-weight: 500;
   transition: all 0.2s ease;
   outline: none;
@@ -87,8 +87,4 @@
 @media (max-width: 640px) { 
   .pageWrapper { padding: 20px 16px; }
   .card { padding: 32px 24px; } 
-}
-
-.input {
-  font-size: 16px !important; /* این مقدار قبلا 0.95rem بود */
 }

@@ -93,13 +93,12 @@ h1, h2, h3, h4, h5, h6 {
   font-family: system-ui, -apple-system, sans-serif;
 }
 
-/* Global mobile baseline: prevent iOS Safari auto-zoom on text-entry controls. */
-@supports (-webkit-touch-callout: none) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
-  select,
-  textarea {
-    font-size: 16px;
-  }
+/* Global form control baseline: prevent iOS Safari auto-zoom by enforcing 16px minimum.
+   Applied to all text-entry controls regardless of device. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+select,
+textarea {
+  font-size: 16px !important;
 }
 
 /* این جادوی تایپوگرافی فین‌تک است!
