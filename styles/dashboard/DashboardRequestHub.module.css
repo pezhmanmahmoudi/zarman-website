@@ -104,6 +104,7 @@
   color: var(--text-main); 
   font-family: "IRANSansX", "IRANSans", "Peyda", sans-serif !important; 
   font-size: 1.35rem; 
+  line-height: normal !important; /* 🚀 جلوگیری از خطای باونڈنگ باکس */
   font-weight: 800;
   outline: none;
   width: 100%;
@@ -112,7 +113,10 @@
   text-align: right !important; 
   direction: ltr !important; 
 }
-.faInput::placeholder { color: var(--text-placeholder); }
+.faInput::placeholder { 
+  color: var(--text-placeholder); 
+  font-size: 16px !important; /* 🚀 فیکس قطعی پلیس‌هولدر برای جلوگیری از زوم */
+}
 .resultInput { 
   color: var(--accent); 
   font-size: 1.55rem; 
@@ -145,7 +149,8 @@
   direction: rtl;
   padding: 0 0 0 28px; 
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 16px !important; /* 🚀 فیکس برای جلوگیری از زوم سافاری */
+  line-height: normal !important; /* 🚀 اضافه شد */
   font-weight: 800;
   color: var(--text-main);
   outline: none;
@@ -223,6 +228,6 @@
   .summaryBox { padding: 16px; } 
   .lockOverlay { padding: 22px; } 
   .lockTitle { font-size: 1.2rem; } 
-  .faInput { font-size: 1.15rem; }
+  .faInput { font-size: 16px !important; } /* 🚀 فیکس نهایی برای نسخه موبایل */
   .resultInput { font-size: 1.35rem; }
 }

@@ -142,7 +142,7 @@
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
-/* اعداد راست‌چین و در سمت راست فیلد */
+/* اعداد راست‌چین و در سمت راست فیلد (اصلاح شده) */
 .faInput {
   flex: 1;
   background: transparent;
@@ -150,6 +150,7 @@
   color: #ffffff; 
   font-family: "IRANSansX", "Peyda", sans-serif !important; 
   font-size: 1.35rem; 
+  line-height: normal !important; /* 🚀 اضافه شد */
   font-weight: var(--font-weight-bold);
   outline: none;
   width: 100%;
@@ -159,6 +160,7 @@
 
 .faInput::placeholder {
   color: rgba(255, 255, 255, 0.2);
+  font-size: 16px !important; /* 🚀 فیکس قطعی برای جلوگیری از زوم */
 }
 
 .divider {
@@ -168,7 +170,7 @@
   margin: 0 var(--space-3);
 }
 
-/* استایل‌های مربوط به زبانه و منوی انتخاب ارز */
+/* استایل‌های مربوط به زبانه و منوی انتخاب ارز (اصلاح شده) */
 .selectWrapper {
   position: relative;
   display: flex;
@@ -182,7 +184,8 @@
   /* پدینگ بیشتر در سمت چپ برای جا دادن آیکون فلش */
   padding: 0 0 0 24px; 
   font-family: var(--font-primary);
-  font-size: 1rem;
+  font-size: 16px !important; /* 🚀 جایگزین 1rem شد */
+  line-height: normal !important; /* 🚀 اضافه شد */
   font-weight: var(--font-weight-bold);
   color: rgba(255, 255, 255, 0.8);
   outline: none;
@@ -260,13 +263,6 @@
   width: 100%;
 }
 
-@media (max-width: 768px) {
-  .card { padding: var(--space-6); }
-  .faInput { font-size: 1.1rem; }
-  .currencySelect { font-size: 1rem; }
-}
-
-
 @media (max-width: 1024px) {
   .card { 
     padding: var(--space-6); 
@@ -275,6 +271,7 @@
 }
 
 @media (max-width: 768px) {
-  .faInput { font-size: 1.1rem; }
-  .currencySelect { font-size: 1rem; }
+  .card { padding: var(--space-6); }
+  .faInput { font-size: 16px !important; } /* 🚀 فیکس نهایی موبایل */
+  .currencySelect { font-size: 16px !important; } /* 🚀 فیکس نهایی موبایل */
 }

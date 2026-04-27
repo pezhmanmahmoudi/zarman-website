@@ -179,18 +179,9 @@
 /* 🚀 پلیس‌هولدرهای فارسی (راست‌چین) 🚀 */
 .inputGroup input::placeholder { 
   color: #94a3b8 !important; 
-  font-family: var(--font-primary, Tahoma, sans-serif);
-  font-size: 0.85rem;
-  text-align: right !important; /* برعکس کردن چینش به سمت راست */
-  direction: rtl !important;
-}
-
-/* استثنا برای فیلدهای انگلیسی مثل ایمیل */
-/* 🚀 پلیس‌هولدرهای فارسی (راست‌چین) 🚀 */
-.inputGroup input::placeholder { 
-  color: #94a3b8 !important; 
-  font-family: var(--font-primary, Tahoma, sans-serif) !important; /* اضافه شدن important */
-  font-size: 0.85rem;
+  font-family: var(--font-primary, Tahoma, sans-serif) !important;
+  font-size: 16px !important; /* فیکس برای جلوگیری از زوم سافاری */
+  font-weight: 400 !important; /* ظریف نگه داشتن بصری */
   text-align: right !important; 
   direction: rtl !important;
 }
