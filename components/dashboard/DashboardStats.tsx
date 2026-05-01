@@ -1,6 +1,6 @@
 import React from "react";
 import { Wallet, FileText, ArrowDownLeft, ShieldCheck } from "lucide-react";
-import { formatAUD, formatNumberFa, formatToman } from "@/app/(fa)/fa/dashboard/dashboard.utils";
+import { formatAUD, formatNumberFa, formatToman } from "@/app/[locale]/dashboard/dashboard.utils";
 import styles from "@/styles/dashboard/DashboardStats.module.css";
 
 export function DashboardStats({ totalVolume, transactionCount, baseRate, loyaltyBonus, txType }: any) {

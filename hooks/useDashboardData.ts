@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import type { Profile, Transaction } from "@/app/(fa)/fa/dashboard/dashboard.types";
+import type { Profile, Transaction } from "@/app/[locale]/dashboard/dashboard.types";
 
 function getLocaleFromPath(pathname: string): "fa" | "en" {
   if (pathname.startsWith("/en")) return "en";
