@@ -79,38 +79,24 @@ export function DashboardRequestHub({
     setAmountStr(formatNumberUI(raw, false));
   };
 
-  const submit = async () => {
+const submit = async () => {
     if (!profile || !isApproved || rawAmount <= 0 || isRateOffline || isSubmitting) return;
 
     setIsSubmitting(true);
-    let whatsappWindow: Window | null = null;
-    
-    // 1. Immediately open a blank tab synchronously to bypass mobile popup blockers
-    try {
-      whatsappWindow = window.open('about:blank', '_blank');
-    } catch (e) {
-      console.warn("Could not pre-open window", e);
-    }
 
     try {
       const serverData = await onSaveTransaction(rawAmount, txType);
       
-      if (!serverData) {
-        // 4. Close the blank tab if transaction fails or is cancelled
-        if (whatsappWindow) whatsappWindow.close();
-        return; 
-      }
+      if (!serverData) return; 
 
       const actionLabel = txType === "sell_aud" ? "فروش AUD (مشتری دلار می‌دهد)" : "خرید AUD (مشتری تومان می‌دهد)";
-      
-      // 👈 محاسبه مجموع تخفیف برای ارسال به واتس‌اپ
       const totalLoyalty = serverData.loyaltyBonus * serverData.rawAmount;
 
       const fmtAmount = formatNumberWA(serverData.rawAmount, false);
       const fmtResult = formatNumberWA(serverData.equivalentToman, true);
       const fmtTailored = formatNumberWA(serverData.tailoredRate, true);
       const fmtBase = formatNumberWA(serverData.baseRate, true);
-      const fmtLoyaltyTotal = formatNumberWA(totalLoyalty, true); // 👈 ارسال جمع کل تخفیف
+      const fmtLoyaltyTotal = formatNumberWA(totalLoyalty, true);
       
       let feeText = "بدون کارمزد";
       if (serverData.appliedFee > 0) {
@@ -134,19 +120,14 @@ export function DashboardRequestHub({
 
       const finalUrl = buildWhatsAppUrl(text);
 
-      // 3. Mutate the location of the pre-opened tab or fallback
-      if (whatsappWindow) {
-        whatsappWindow.location.href = finalUrl;
-      } else {
-        window.location.assign(finalUrl);
-      }
+      // 👈 راه حل قطعی: هدایت مستقیم در همان تب. 
+      // برای لینک‌های اپلیکیشنی، گوشی به طور خودکار اپ را باز می‌کند و سایت شما بسته نمی‌شود.
+      window.location.assign(finalUrl);
       
       setAmountStr("");
 
     } catch (error) {
-      // 4. Close the blank tab if transaction threw an error
-      if (whatsappWindow) whatsappWindow.close();
-      throw error;
+      console.error(error);
     } finally {
       setIsSubmitting(false);
     }
