@@ -83,11 +83,23 @@ export function DashboardRequestHub({
     if (!profile || !isApproved || rawAmount <= 0 || isRateOffline || isSubmitting) return;
 
     setIsSubmitting(true);
+    let whatsappWindow: Window | null = null;
+    
+    // 1. Immediately open a blank tab synchronously to bypass mobile popup blockers
+    try {
+      whatsappWindow = window.open('about:blank', '_blank');
+    } catch (e) {
+      console.warn("Could not pre-open window", e);
+    }
 
     try {
       const serverData = await onSaveTransaction(rawAmount, txType);
       
-      if (!serverData) return; 
+      if (!serverData) {
+        // 4. Close the blank tab if transaction fails or is cancelled
+        if (whatsappWindow) whatsappWindow.close();
+        return; 
+      }
 
       const actionLabel = txType === "sell_aud" ? "فروش AUD (مشتری دلار می‌دهد)" : "خرید AUD (مشتری تومان می‌دهد)";
       
@@ -120,10 +132,21 @@ export function DashboardRequestHub({
         "* معادل نهایی: " + fmtResult + " تومان *\n\n" +
         "لطفاً درخواست من را بررسی نمایید.";
 
-      window.open(buildWhatsAppUrl(text), "_blank", "noopener,noreferrer");
+      const finalUrl = buildWhatsAppUrl(text);
+
+      // 3. Mutate the location of the pre-opened tab or fallback
+      if (whatsappWindow) {
+        whatsappWindow.location.href = finalUrl;
+      } else {
+        window.location.assign(finalUrl);
+      }
       
       setAmountStr("");
 
+    } catch (error) {
+      // 4. Close the blank tab if transaction threw an error
+      if (whatsappWindow) whatsappWindow.close();
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
