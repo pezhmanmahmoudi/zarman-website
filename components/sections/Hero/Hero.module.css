@@ -428,13 +428,13 @@
   .tooltipText {
     /* با تغییر این عدد پیکسلی، تولتیپ به راحتی چپ و راست می‌شود */
     /* عدد منفی تولتیپ را به سمت چپ می‌برد و عدد مثبت به سمت راست */
-    right: -40px !important; 
+    right: 0 !important; 
     transform: none !important; /* این خط ترانسفورم قبلی را باطل می‌کند تا فقط با right کار کنیم */
   }
   
   .tooltipText::after {
     /* این عدد جای فلشِ زیر تولتیپ را تنظیم می‌کند */
-    right: 10px !important; 
+    right: 20px !important; 
     transform: none !important;
   }
 

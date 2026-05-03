@@ -188,7 +188,7 @@
   .section { padding-inline: 0; background: #02040a; }
   .card { padding: 0; }
   .cardSurface { 
-    border-radius: 0; border: none; background: transparent; backdrop-filter: none; box-shadow: none; overflow: visible; 
+    border-radius: 0; border: none; background: transparent; backdrop-filter: none; box-shadow: none; overflow: hidden; 
   }
   .borderBeam { display: none; }
   .layoutGrid { grid-template-columns: 1fr; grid-template-areas: "stack"; padding: 20px 24px; min-height: 550px; }
