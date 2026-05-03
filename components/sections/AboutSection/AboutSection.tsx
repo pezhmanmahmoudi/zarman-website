@@ -1,13 +1,11 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
 import styles from "./About.module.css";
 import Button from "@/components/ui/Button/Button";
-import {
-  buildWhatsAppUrl,
-  WHATSAPP_MESSAGE_TRANSFER_HELP,
-} from "@/lib/constants/contact";
+import { WHATSAPP_NUMBER, WHATSAPP_MESSAGE_TRANSFER_HELP, buildWhatsAppUrl } from "@/lib/constants/contact";
 
 const AboutGlobe = dynamic(() => import("./AboutGlobe"), {
   ssr: false,
@@ -29,7 +27,14 @@ const VIEWPORT = { once: true, amount: 0.45 } as const;
 export default function About() {
   const reduceMotion = useReducedMotion();
 
-  const whatsappUrl = buildWhatsAppUrl(WHATSAPP_MESSAGE_TRANSFER_HELP);
+  // ۱. مقدار اولیه: نسخه امن برای رندر سرور (SSR Safe) برای جلوگیری از ارور قرمز
+  const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_TRANSFER_HELP)}`;
+  const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
+
+  // ۲. پس از لود شدن در مرورگر، تابع هوشمند اجرا شده و لینک را در صورت نیاز (برای موبایل) تغییر می‌دهد
+  useEffect(() => {
+    setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_TRANSFER_HELP));
+  }, []);
 
   return (
     <section id="about" className={styles.about} aria-label="درباره زرمان">
@@ -82,7 +87,7 @@ export default function About() {
                     شروع ثبت‌نام
                   </Button>
                   
-                  {/* 👇 دکمه تماس با ما به واتس‌اپ متصل شد */}
+                  {/* دکمه تماس با ما متصل به استیت (State) */}
                   <Button 
                     href={whatsappUrl} 
                     variant="ghost" 

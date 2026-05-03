@@ -94,7 +94,14 @@ export default function ConverterFa() {
         text = `سلام، من می‌خواهم ${amountText} تومان را با نرخ ${rateFa} تبدیل کنم که در وب‌سایت، مبلغ ${resultText} دلار استرالیا محاسبه شده است. لطفا مرا راهنمایی کنید.`;
     }
 
-    window.open(buildWhatsAppUrl(text), "_blank");
+    const finalUrl = buildWhatsAppUrl(text);
+
+    // 👇 بررسی هوشمند برای جلوگیری از باز شدن تب خالی در موبایل
+    if (finalUrl.startsWith('http')) {
+      window.open(finalUrl, '_blank');
+    } else {
+      window.location.assign(finalUrl);
+    }
   };
 
   return (
@@ -177,8 +184,8 @@ export default function ConverterFa() {
       <div className={styles.notesContainer}>
         <div className={styles.noteItem}>
           <Info size={16} strokeWidth={2} />
-           <span>
-            توجه: برای تراکنش‌های کمتر از {formatNumberFa(FINANCE_CONFIG.FEE_THRESHOLD)} دلار، مبلغ {toFaDigits(String(FINANCE_CONFIG.APPLIED_FEE))} دلار به عنوان کارمزد کسر می‌گردد که در کادر بالا محاسبه شده است.
+            <span>
+             توجه: برای تراکنش‌های کمتر از {formatNumberFa(FINANCE_CONFIG.FEE_THRESHOLD)} دلار، مبلغ {toFaDigits(String(FINANCE_CONFIG.APPLIED_FEE))} دلار به عنوان کارمزد کسر می‌گردد که در کادر بالا محاسبه شده است.
           </span>
         </div>
         <div className={styles.noteItem}>

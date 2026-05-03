@@ -120,9 +120,14 @@ const submit = async () => {
 
       const finalUrl = buildWhatsAppUrl(text);
 
-      // 👈 راه حل قطعی: هدایت مستقیم در همان تب. 
-      // برای لینک‌های اپلیکیشنی، گوشی به طور خودکار اپ را باز می‌کند و سایت شما بسته نمی‌شود.
-      window.location.assign(finalUrl);
+      // بررسی نوع لینک برای اجرای بهترین رفتار در موبایل و دسکتاپ
+      if (finalUrl.startsWith('http')) {
+        // در دسکتاپ: باز کردن واتس‌اپ وب در تب جدید تا داشبورد بسته نشود
+        window.open(finalUrl, '_blank');
+      } else {
+        // در موبایل: اجرای مستقیم پروتکل نیتیو بدون ساختن تب خالی
+        window.location.assign(finalUrl);
+      }
       
       setAmountStr("");
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -8,6 +8,7 @@ import styles from "./HowItWorks.module.css";
 import Button from "@/components/ui/Button/Button";
 import { UserPlus, ShieldCheck, CreditCard, Send } from "lucide-react";
 import {
+  WHATSAPP_NUMBER, // 👈 اضافه شد
   buildWhatsAppUrl,
   WHATSAPP_MESSAGE_SIGNUP_HELP,
 } from "@/lib/constants/contact";
@@ -50,6 +51,15 @@ const steps = [
 export default function HowItWorks() {
   const sectionRef = useRef<HTMLElement | null>(null);
 
+  // ۱. مقدار اولیه امن برای رندر سرور (SSR)
+  const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_SIGNUP_HELP)}`;
+  const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
+
+  // ۲. آپدیت شدن لینک پس از لود شدن در مرورگر کلاینت
+  useEffect(() => {
+    setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP));
+  }, []);
+
   useGSAP(
     () => {
       const el = sectionRef.current;
@@ -83,8 +93,6 @@ export default function HowItWorks() {
     },
     { scope: sectionRef }
   );
-
-  const whatsappLink = buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP);
 
   return (
     <section
@@ -139,7 +147,8 @@ export default function HowItWorks() {
             <Button href="/fa/register" variant="primary" size="lg">
               شروع ثبت‌نام در زرمان
             </Button>
-            <Button href={whatsappLink} target="_blank" variant="secondary" size="lg">
+            {/* 👇 متغیر جدید جایگزین شد */}
+            <Button href={whatsappUrl} target="_blank" rel="noopener noreferrer" variant="secondary" size="lg">
               درخواست مشاوره
             </Button>
           </div>

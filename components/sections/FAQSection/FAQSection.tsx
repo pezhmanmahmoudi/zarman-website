@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import styles from "./FAQSection.module.css";
 
 const faqs = [
@@ -23,8 +23,27 @@ const faqs = [
   },
 ];
 
+/* ===== تنظیمات انیمیشن پدیدار شدن (کپی شده از Service) ===== */
+const EASE = [0.16, 1, 0.3, 1] as const;
+
+const highlightAnim = {
+  initial: { opacity: 0, y: 15, filter: "blur(8px)" },
+  whileInView: { opacity: 1, y: 0, filter: "blur(0px)" },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 20, scale: 0.98, filter: "blur(8px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: "blur(0px)",
+    transition: { duration: 0.85, ease: EASE },
+  },
+};
+
 export default function FAQSection() {
-  const [openIndex, setOpenIndex] = useState<number | null>(0); // اولین مورد پیش‌فرض باز باشد
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const toggleFAQ = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -34,17 +53,38 @@ export default function FAQSection() {
     <section id="faq" className={styles.section} aria-labelledby="faq-title">
       <div className={styles.container}>
         <div className={styles.header}>
-          <p className={styles.eyebrow}>پاسخ به ابهامات شما</p>
-          <h2 id="faq-title" className={styles.title}>سوالات متداول</h2>
+          <motion.p 
+            className={styles.eyebrow}
+            {...highlightAnim}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: EASE }}
+          >
+            پاسخ به ابهامات شما
+          </motion.p>
+          <motion.h2 
+            id="faq-title" 
+            className={styles.title}
+            {...highlightAnim}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: EASE, delay: 0.1 }}
+          >
+            سوالات متداول
+          </motion.h2>
         </div>
 
         <div className={styles.faqList}>
           {faqs.map((faq, index) => {
             const isOpen = openIndex === index;
             return (
-              <div
+              <motion.div
                 key={index}
                 className={`${styles.faqItem} ${isOpen ? styles.isOpen : ""}`}
+                /* اعمال انیمیشن پدیدار شدن سکشن سرویس */
+                variants={itemVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ delay: 0.15 + index * 0.1 }}
               >
                 <button
                   className={styles.questionBtn}
@@ -57,12 +97,23 @@ export default function FAQSection() {
                   </span>
                 </button>
                 
-                <div className={styles.answerWrapper}>
-                  <div className={styles.answerInner}>
-                    <p className={styles.answerText}>{faq.a}</p>
-                  </div>
-                </div>
-              </div>
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className={styles.answerWrapper}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div className={styles.answerInner}>
+                        <p className={styles.answerText}>{faq.a}</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             );
           })}
         </div>

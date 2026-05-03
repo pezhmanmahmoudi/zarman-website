@@ -1,13 +1,23 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import styles from "./FinalCTA.module.css";
 import Button from "@/components/ui/Button/Button";
 import {
+  WHATSAPP_NUMBER,
   buildWhatsAppUrl,
   WHATSAPP_MESSAGE_SIGNUP_HELP,
 } from "@/lib/constants/contact";
 
 export default function FinalCTA() {
-  const whatsappUrl = buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP);
+  // ۱. مقدار اولیه امن برای رندر سرور (SSR) تا ارور Hydration نگیریم
+  const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_SIGNUP_HELP)}`;
+  const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
+
+  // ۲. آپدیت شدن لینک بر اساس دستگاه کاربر، بلافاصله پس از لود شدن در مرورگر
+  useEffect(() => {
+    setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP));
+  }, []);
 
   return (
     <section id="contact" className={styles.section} aria-label="ثبت نام نهایی">

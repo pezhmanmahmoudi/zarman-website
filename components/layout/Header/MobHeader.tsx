@@ -10,6 +10,7 @@ import Button from "@/components/ui/Button/Button";
 
 import { publicNavItems } from "@/data/navigation";
 import {
+  WHATSAPP_NUMBER, // 👈 اضافه شد
   buildWhatsAppUrl,
   WHATSAPP_MESSAGE_SIGNUP_HELP,
 } from "@/lib/constants/contact";
@@ -44,7 +45,9 @@ export default function MobHeader({
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const whatsappUrl = buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP);
+  // ۱. مقدار اولیه امن برای رندر سرور (جلوگیری از Hydration Error)
+  const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_SIGNUP_HELP)}`;
+  const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -53,6 +56,8 @@ export default function MobHeader({
 
   useEffect(() => {
     setMounted(true);
+    // ۲. آپدیت شدن لینک پس از لود صفحه در مرورگر
+    setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP));
   }, []);
 
   useEffect(() => {
@@ -72,7 +77,7 @@ export default function MobHeader({
       gsap.fromTo(
         rootRef.current,
         { y: -100, autoAlpha: 0 },
-        { y: 0, autoAlpha: 1, duration: 0.8, ease: "expo.out" } // انیمیشن نرم‌تر و لوکس‌تر برای هدر
+        { y: 0, autoAlpha: 1, duration: 0.8, ease: "expo.out" }
       );
     },
     { dependencies: [isReady, mounted] }
@@ -91,9 +96,7 @@ export default function MobHeader({
       if (open) {
         gsap.set(overlay, { display: "block" });
         tl.to(overlay, { opacity: 1, duration: 0.4, ease: "power2.out" })
-          // تغییر ease به expo.out برای حس سرعت و دقت فین‌تکی
           .to(drawer, { x: "0%", duration: 0.6, ease: "expo.out" }, "-=0.4")
-          // تغییر انیمیشن آیتم‌ها: به جای حرکت از کنار، از پایین به بالا می‌آیند
           .fromTo(
             animatedItems,
             { y: 24, opacity: 0 },
@@ -101,7 +104,6 @@ export default function MobHeader({
             "-=0.4"
           );
       } else {
-        // انیمیشن بسته شدن سریع‌تر و تیزتر
         tl.to(drawer, { x: "100%", duration: 0.4, ease: "power3.in" })
           .to(overlay, { 
             opacity: 0, 

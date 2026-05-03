@@ -9,6 +9,7 @@ import { Info } from "lucide-react";
 import styles from "./Hero.module.css";
 import { useRates } from "@/context/RateContext";
 import {
+  WHATSAPP_NUMBER, // 👈 اضافه شد
   buildWhatsAppUrl,
   WHATSAPP_MESSAGE_TRANSFER_HELP,
 } from "@/lib/constants/contact";
@@ -17,12 +18,16 @@ export default function Hero() {
   const heroRef = useRef<HTMLElement | null>(null);
   const { currentRates, isLoading } = useRates();
 
-  const whatsappUrl = buildWhatsAppUrl(WHATSAPP_MESSAGE_TRANSFER_HELP);
+  // ۱. مقدار اولیه امن برای رندر سرور (SSR Safe)
+  const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_TRANSFER_HELP)}`;
+  const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    // ۲. آپدیت کردن لینک به نسخه نیتیو (whatsapp://) در صورت نیاز، بلافاصله بعد از لود صفحه
+    setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_TRANSFER_HELP));
   }, []);
 
   useGSAP(
@@ -77,6 +82,7 @@ export default function Hero() {
               <Button href="/fa/register" variant="primary" size="lg" className={styles.btn}>
                 شروع ثبت‌نام
               </Button>
+              {/* 👇 اینجا دکمه از State می‌خواند */}
               <Button href={whatsappUrl} variant="secondary" size="lg" className={styles.btn} target="_blank" rel="noopener noreferrer">
                 تماس با ما
               </Button>
