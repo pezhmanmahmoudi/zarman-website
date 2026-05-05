@@ -40,16 +40,9 @@ export function DashboardHeader({
         <div className={styles.headerContent}>
           <span className={styles.headerEyebrow}>پنل مدیریت تراکنش کاربر</span>
 
-          <h1
-            className={styles.headerTitle}
-            dir="ltr"
-            style={{
-              textAlign: "right",
-              fontFamily: "inherit",
-              color: "#bf00ff",
-            }}
-          >
-            Hi {firstName}!
+          {/* 🚀 رنگ‌بندی حرفه‌ای: "Hi" رنگ اصلی و نام کاربر رنگ Accent می‌گیرد */}
+          <h1 className={styles.headerTitle} dir="ltr">
+            Hi <span className={styles.textAccent}>{firstName}</span>!
           </h1>
 
           <p className={styles.headerDescription}>

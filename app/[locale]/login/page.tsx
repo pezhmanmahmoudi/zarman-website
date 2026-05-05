@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image"; // 🚀 اضافه شدن کامپوننت Image
+import Image from "next/image"; 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css"; 
@@ -32,7 +32,6 @@ export default function LoginPage() {
       setError("Email or password is incorrect.");
       setLoading(false);
     } else {
-      // 🚀 مسیر کاملاً درست است
       router.push("/fa/dashboard");
     }
   };
@@ -54,7 +53,6 @@ export default function LoginPage() {
 
         {/* لوگو */}
         <div className={styles.logoContainer}>
-          {/* 🚀 جایگزینی با Next.js Image و اصلاح نام فایل (بدون Space) */}
           <Image 
             src="/images/logo-no-text-light.svg" 
             alt="Zarman Logo" 
@@ -77,13 +75,14 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div className={styles.inputGroup}>
                 <label htmlFor="email">Email Address</label>
+                {/* 🚀 کلاس enInput اعمال شد */}
                 <input 
                   id="email" 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  dir="ltr"
                   placeholder="آدرس ایمیل"
+                  className={styles.enInput}
                   required 
                 />
               </div>
@@ -91,18 +90,20 @@ export default function LoginPage() {
               <div className={styles.inputGroup}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <label htmlFor="password" style={{ marginBottom: 0 }}>Password</label>
-                  {/* 🚀 مسیر کاملاً درست است */}
-                  <Link href="/fa/forgot-password" className={styles.footerLink} style={{ fontSize: "0.75rem", marginRight: 0, fontWeight: 600 }}>
+                  {/* 🚀 استایل‌دهی حرفه‌ای به Forgot Password */}
+                  <Link href="/fa/forgot-password" className={styles.forgotLink}>
                     Forgot Password?
                   </Link>
                 </div>
                 <div className={styles.passwordWrapper}>
+                  {/* 🚀 کلاس enInput اعمال شد */}
                   <input 
                     id="password" 
                     type={showPassword ? "text" : "password"} 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    dir="ltr"
+                    className={styles.enInput}
+                    placeholder="رمز عبور"
                     required 
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className={styles.eyeBtn}>
@@ -122,7 +123,6 @@ export default function LoginPage() {
 
         <div className={styles.footerText}>
           Don't have an account? 
-          {/* 🚀 مسیر کاملاً درست است */}
           <Link href="/fa/register" className={styles.footerLink}>
             Sign up
           </Link>

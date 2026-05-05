@@ -1,4 +1,5 @@
 .dashboardWrapper {
+  /* متغیرهای حالت روز (Light Mode) */
   --bg-app: #f1f5f9;
   --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
@@ -19,7 +20,6 @@
   --warning: #f59e0b;
   --danger: #ef4444;
 
-  /* RGB channels – use with rgba(var(--*-rgb), alpha) */
   --accent-rgb: 79, 70, 229;
   --success-rgb: 16, 185, 129;
   --warning-rgb: 245, 158, 11;
@@ -32,33 +32,35 @@
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: 100dvh;
   direction: rtl;
-  font-family: "Peyda", "IRANSansX", system-ui, -apple-system, sans-serif;
+  
+  /* 🚀 تغییر به توکن فونت سراسری */
+  font-family: var(--font-primary);
   background-color: var(--bg-app);
   color: var(--text-main);
   transition: background-color 0.3s ease, color 0.3s ease;
   position: relative;
 }
 
+/* 🚀 اتصال هوشمندانه متغیرهای Dark Mode به فایل tokens.css */
 .dashboardWrapper[data-theme="dark"] {
-  --bg-app: #080b12;
-  --bg-sidebar: #111622;
-  --bg-card: #111622;
-  --bg-soft: #1a2133;
+  --bg-app: var(--color-bg-base);
+  --bg-sidebar: var(--color-bg-surface);
+  --bg-card: var(--color-bg-surface);
+  --bg-soft: var(--color-bg-surface-hover);
   --bg-input: rgba(255, 255, 255, 0.03);
 
-  --text-main: #ffffff;
-  --text-soft: #94a3b8;
-  --text-dim: #64748b;
-  --text-placeholder: #64748b;
+  --text-main: var(--color-text-primary);
+  --text-soft: var(--color-text-secondary);
+  --text-dim: var(--color-text-tertiary);
+  --text-placeholder: var(--color-text-tertiary);
 
-  --border-soft: rgba(255, 255, 255, 0.08);
-  --border-input: rgba(255, 255, 255, 0.15);
+  --border-soft: var(--color-border-ghost);
+  --border-input: var(--color-border-ghost-light);
 
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
+  --accent: var(--color-accent-primary);
+  --accent-hover: var(--color-accent-primary-hover);
 
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.4),
-    0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-card: var(--shadow-md);
 }
 
 .dashboardWrapper *,
@@ -74,8 +76,8 @@
   align-items: center;
   justify-content: center;
   color: var(--text-soft);
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-body-md); /* جایگزین 1rem */
 }
 
 .mobileBackdrop {
@@ -92,7 +94,7 @@
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-6); /* جایگزین 24px */
 }
 
 /* =====================================
@@ -101,17 +103,14 @@
 .mobileTopbar {
   display: none;
   align-items: center;
-  /* 👈 در راست‌چین (RTL)، flex-start 요소 را در سمت راست قرار می‌دهد */
   justify-content: flex-start;
-  gap: 16px;
+  gap: var(--space-4); /* جایگزین 16px */
   margin-bottom: 18px;
   position: relative;
-  /* 👈 باعث می‌شود هنگام باز شدن سایدبار، دکمه زیر آن نرود و دیده شود */
   z-index: 100000; 
 }
 
 .mobileMenuBtn {
-  /* 👈 حذف position fixed تا دکمه به داخل کارت پایینی نفوذ نکند */
   width: 48px;
   height: 48px;
   border-radius: 14px;
@@ -130,47 +129,30 @@
   position: relative; 
 }
 
-/* جلوگیری از حرکت در هاور و لمس */
-.mobileMenuBtn:hover {
-  background: var(--bg-soft);
-}
-.mobileMenuBtn:active {
-  background: var(--border-soft);
-}
+.mobileMenuBtn:hover { background: var(--bg-soft); }
+.mobileMenuBtn:active { background: var(--border-soft); }
 
 .mobileMenuBtn span {
   width: 22px;
   height: 2px;
   border-radius: 999px;
   background: var(--text-main);
-  /* انیمیشن ساخت ضربدر */
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
   transform-origin: center;
 }
 
-/* تبدیل دقیق خطوط به (X) */
-.mobileMenuBtnActive span:nth-child(1) {
-  transform: translateY(4px) rotate(45deg) !important;
-}
-.mobileMenuBtnActive span:nth-child(2) {
-  transform: translateY(-4px) rotate(-45deg) !important;
-}
+.mobileMenuBtnActive span:nth-child(1) { transform: translateY(4px) rotate(45deg) !important; }
+.mobileMenuBtnActive span:nth-child(2) { transform: translateY(-4px) rotate(-45deg) !important; }
 
 .mobileBrand {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  line-height: 1.2;
+  line-height: var(--leading-tight);
 }
 
-.mobileBrand strong {
-  font-size: 0.95rem;
-}
-
-.mobileBrand span {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-}
+.mobileBrand strong { font-size: var(--text-body-sm); /* جایگزین 0.95rem */ }
+.mobileBrand span { font-size: var(--text-caption); /* جایگزین 0.75rem */ color: var(--text-dim); }
 
 /* =====================================
    استایل‌های مُدال حذف
@@ -189,7 +171,7 @@
 .modalContent {
   background: var(--bg-card);
   border: 1px solid var(--border-soft);
-  border-radius: 20px;
+  border-radius: var(--radius-xl); /* جایگزین 20px */
   width: 100%;
   max-width: 420px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -214,19 +196,17 @@
 .modalTitleGroup {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3); /* جایگزین 12px */
 }
 
 .modalTitleGroup h3 {
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 800;
+  font-size: var(--text-body-md); /* جایگزین 1.15rem */
+  font-weight: var(--font-weight-bold);
   color: var(--text-main);
 }
 
-.warningIcon {
-  color: var(--danger);
-}
+.warningIcon { color: var(--danger); }
 
 .closeBtn {
   background: transparent;
@@ -234,81 +214,50 @@
   color: var(--text-dim);
   cursor: pointer;
   padding: 4px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: grid;
   place-items: center;
   transition: all 0.2s ease;
 }
-.closeBtn:hover {
-  background: var(--border-soft);
-  color: var(--text-main);
-}
 
-.modalBody {
-  padding: 24px;
-}
+.closeBtn:hover { background: var(--border-soft); color: var(--text-main); }
+
+.modalBody { padding: var(--space-6); /* جایگزین 24px */ }
 
 .modalBody p {
   margin: 0;
   color: var(--text-soft);
-  line-height: 1.8;
-  font-size: 0.95rem;
+  line-height: var(--leading-relaxed); /* جایگزین 1.8 */
+  font-size: var(--text-body-sm); /* جایگزین 0.95rem */
 }
 
 .modalActions {
   padding: 16px 24px 24px;
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .cancelBtn, .dangerBtn {
   padding: 10px 20px;
   border-radius: 10px;
-  font-weight: 700;
-  font-family: inherit;
-  font-size: 0.95rem;
+  font-weight: var(--font-weight-bold);
+  font-family: var(--font-primary); /* یکپارچه‌سازی فونت دکمه‌ها */
+  font-size: var(--text-body-sm); /* جایگزین 0.95rem */
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.cancelBtn {
-  background: transparent;
-  border: 1px solid var(--border-soft);
-  color: var(--text-main);
-}
-.cancelBtn:hover:not(:disabled) {
-  background: var(--bg-soft);
-}
+.cancelBtn { background: transparent; border: 1px solid var(--border-soft); color: var(--text-main); }
+.cancelBtn:hover:not(:disabled) { background: var(--bg-soft); }
 
-.dangerBtn {
-  background: var(--danger);
-  border: 1px solid var(--danger);
-  color: #fff;
-}
-.dangerBtn:hover:not(:disabled) {
-  background: #dc2626;
-  transform: translateY(-1px);
-}
-.dangerBtn:disabled, .cancelBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.dangerBtn { background: var(--danger); border: 1px solid var(--danger); color: #fff; }
+.dangerBtn:hover:not(:disabled) { background: #dc2626; transform: translateY(-1px); }
+.dangerBtn:disabled, .cancelBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @media (max-width: 1100px) {
-  .dashboardWrapper {
-    grid-template-columns: 1fr;
-  }
-
-  .mobileBackdrop {
-    display: flex;
-  }
-
-  .mobileTopbar {
-    display: flex;
-  }
-
-  .mainArea {
-    padding: 20px;
-  }
+  .dashboardWrapper { grid-template-columns: 1fr; }
+  .mobileBackdrop { display: flex; }
+  .mobileTopbar { display: flex; }
+  .mainArea { padding: 20px; }
 }

@@ -11,14 +11,17 @@
   flex-direction: column; 
   align-items: center; 
   justify-content: center; 
-  color: #ffffff; 
+  color: var(--color-text-primary); 
   text-align: center; 
-  padding: 36px; 
+  padding: 2.25rem; 
   border-radius: inherit;
 }
-.lockIcon { margin-bottom: 16px; color: var(--warning); }
-.lockTitle { font-size: 1.45rem; margin: 0 0 10px 0; font-weight: 900; }
-.lockText { max-width: 560px; line-height: 1.95; color: rgba(255, 255, 255, 0.92); margin: 0; }
+.offlineOverlay { background: rgba(var(--danger-rgb), 0.9); }
+.offlineIcon { color: var(--color-text-primary) !important; }
+
+.lockIcon { margin-bottom: var(--space-4); color: var(--warning); }
+.lockTitle { font-size: var(--text-body-lg); margin: 0 0 var(--space-2) 0; font-weight: 900; }
+.lockText { max-width: 560px; line-height: var(--leading-relaxed); color: rgba(255, 255, 255, 0.92); margin: 0; }
 
 /* =======================================
    عنوان محاسبه‌گر (مرکز چین)
@@ -27,17 +30,17 @@
   width: 100%; 
   display: flex; 
   justify-content: center; 
-  align-items: center; /* 👈 اضافه شد برای تراز قطعی */
+  align-items: center; 
 }
 .panelTitle { 
   display: flex; 
   align-items: center; 
   justify-content: center; 
   width: 100%; 
-  gap: 12px; 
-  font-size: 1.55rem; 
+  gap: var(--space-3); 
+  font-size: var(--text-card-title); 
   font-weight: 900; 
-  margin-bottom: 36px; 
+  margin-bottom: var(--space-8); 
   color: var(--text-main); 
   text-align: center; 
 }
@@ -49,15 +52,17 @@
 .formRow { 
   display: grid; 
   grid-template-columns: repeat(2, minmax(0, 1fr)); 
-  gap: 24px; 
-  margin-bottom: 24px; 
+  gap: var(--space-6); 
+  margin-bottom: var(--space-6); 
 }
 .inputBox { 
   display: flex; 
   flex-direction: column; 
-  gap: 10px; 
+  gap: var(--space-2); 
   min-width: 0; 
 }
+.lastInputBox { margin-bottom: var(--space-6); }
+
 .labelRow { 
   display: flex; 
   justify-content: space-between; 
@@ -65,7 +70,7 @@
 }
 .label { 
   font-weight: 800; 
-  font-size: 0.85rem; 
+  font-size: var(--text-body-sm); 
   color: var(--text-soft); 
 }
 
@@ -77,10 +82,10 @@
   align-items: center;
   background-color: var(--bg-input); 
   border: 1px solid var(--border-input);
-  border-radius: 12px;
-  padding: 0 16px; /* پدینگ عمودی باید صفر باشد تا فقط height کار کند */
-  height: 64px; /* 👈 ارتفاع دقیق و یکسان برای هر 3 فیلد */
-  box-sizing: border-box; /* 👈 جلوگیری از به هم ریختن سایز بخاطر بوردر */
+  border-radius: var(--radius-lg);
+  padding: 0 var(--space-4); 
+  height: 4rem; 
+  box-sizing: border-box; 
   transition: all 0.2s ease;
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
 }
@@ -102,33 +107,30 @@
   background: transparent;
   border: none;
   color: var(--text-main); 
-  font-family: "IRANSansX", "IRANSans", "Peyda", sans-serif !important; 
-  font-size: 1.35rem; 
-  line-height: normal !important; /* 🚀 جلوگیری از خطای باونڈنگ باکس */
+  font-family: var(--font-primary) !important; 
+  font-size: var(--text-body-lg); 
+  line-height: normal !important; 
   font-weight: 800;
   outline: none;
   width: 100%;
-  
-  /* 👈 این دو دستور باعث می‌شود عدد سمتِ راست (کنار واحد پول) قرار بگیرد */
   text-align: right !important; 
   direction: ltr !important; 
 }
 .faInput::placeholder { 
   color: var(--text-placeholder); 
-  font-size: 16px !important; /* 🚀 فیکس قطعی پلیس‌هولدر برای جلوگیری از زوم */
 }
 .resultInput { 
   color: var(--accent); 
-  font-size: 1.55rem; 
+  font-size: var(--text-card-title); 
   font-weight: 900; 
 }
 
 /* خط جداکننده بین عدد و واحد پولی */
 .divider { 
   width: 1px; 
-  height: 24px; 
+  height: var(--space-6); 
   background-color: var(--border-input); 
-  margin: 0 16px; 
+  margin: 0 var(--space-4); 
 }
 
 /* =======================================
@@ -139,18 +141,17 @@
   display: flex; 
   align-items: center; 
   width: 100%; 
-  height: 100%; /* 👈 پر کردن کل ارتفاع باکس */
+  height: 100%; 
 }
 .currencySelect {
   width: 100%;
-  height: 100%; /* 👈 پر کردن کل ارتفاع باکس */
+  height: 100%; 
   border: none;
   background: transparent;
   direction: rtl;
-  padding: 0 0 0 28px; 
-  font-family: inherit;
-  font-size: 16px !important; /* 🚀 فیکس برای جلوگیری از زوم سافاری */
-  line-height: normal !important; /* 🚀 اضافه شد */
+  padding: 0 0 0 1.75rem; 
+  font-family: var(--font-primary);
+  line-height: normal !important; 
   font-weight: 800;
   color: var(--text-main);
   outline: none;
@@ -170,7 +171,7 @@
 }
 
 .currencyLabelFixed { 
-  font-size: 0.95rem; 
+  font-size: var(--text-body-sm); 
   font-weight: 800; 
   color: var(--text-soft); 
   white-space: nowrap; 
@@ -182,33 +183,33 @@
 .feeWarning { 
   display: flex; 
   align-items: center; 
-  gap: 4px; 
+  gap: var(--space-1); 
   color: var(--warning); 
-  font-size: 0.8rem; 
+  font-size: var(--text-caption); 
   font-weight: 800; 
 }
 .summaryBox { 
   background: var(--bg-soft); 
-  padding: 24px; 
-  border-radius: 16px; 
+  padding: var(--space-6); 
+  border-radius: var(--radius-xl); 
   display: flex; 
   justify-content: space-between; 
   align-items: center; 
-  gap: 18px; 
-  margin-top: 10px; 
+  gap: var(--space-4); 
+  margin-top: var(--space-2); 
   border: 1px dashed var(--accent); 
 }
 .summaryText { min-width: 0; }
 .summaryRate { 
   color: var(--accent); 
   display: block; 
-  font-size: 1.15rem; 
+  font-size: var(--text-body-lg); 
   font-weight: 900; 
 }
 .summaryHint { 
-  font-size: 0.85rem; 
+  font-size: var(--text-body-sm); 
   color: var(--success); 
-  margin-top: 6px; 
+  margin-top: var(--space-2); 
   display: block; 
   font-weight: 700; 
 }
@@ -225,9 +226,8 @@
   } 
 }
 @media (max-width: 520px) { 
-  .summaryBox { padding: 16px; } 
-  .lockOverlay { padding: 22px; } 
-  .lockTitle { font-size: 1.2rem; } 
-  .faInput { font-size: 16px !important; } /* 🚀 فیکس نهایی برای نسخه موبایل */
-  .resultInput { font-size: 1.35rem; }
+  .summaryBox { padding: var(--space-4); } 
+  .lockOverlay { padding: var(--space-6); } 
+  .lockTitle { font-size: var(--text-body-md); } 
+  .resultInput { font-size: var(--text-body-lg); }
 }

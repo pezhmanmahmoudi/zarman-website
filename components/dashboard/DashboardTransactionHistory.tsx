@@ -7,8 +7,9 @@ import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 export function DashboardTransactionHistory({ transactions, totalVolume, onDeleteTransaction }: any) {
   return (
     <article className={cardStyles.panelCard}>
-      <div className={cardStyles.panelHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <h2 className={cardStyles.panelTitle} style={{ margin: 0 }}>
+      {/* 🚀 جایگزینی Inline Styles با کلاس‌های CSS */}
+      <div className={`${cardStyles.panelHeader} ${styles.headerWrap}`}>
+        <h2 className={`${cardStyles.panelTitle} ${styles.tableTitle}`}>
           <History size={24} /> سوابق مالی و تراکنش‌ها
         </h2>
         
@@ -38,8 +39,6 @@ export function DashboardTransactionHistory({ transactions, totalVolume, onDelet
             )}
             {transactions.length > 0 && transactions.map((tx: any) => (
               <tr key={tx.id}>
-                
-                {/* 👈 تغییر جادویی تاریخ به فرمت 4 Apr 2026 */}
                 <td dir="ltr" className={styles.tableDate}>
                   {new Date(tx.created_at).toLocaleDateString("en-GB", {
                     day: "numeric",

@@ -1,54 +1,47 @@
-.tableWrap { overflow-x: auto; border: 1px solid var(--border-soft); border-radius: 16px; background: transparent; }
-.historyTable { width: 100%; min-width: 680px; border-collapse: collapse; text-align: center; /* 👈 وسط‌چین کل جدول */ }
+.headerWrap { flex-wrap: wrap; }
+.tableTitle { margin: 0 !important; }
+
+.tableWrap { overflow-x: auto; border: 1px solid var(--border-soft); border-radius: var(--radius-xl); background: transparent; }
+.historyTable { width: 100%; min-width: 680px; border-collapse: collapse; text-align: center; }
 
 .historyTable th { 
   color: var(--text-dim); 
-  font-size: 0.85rem; 
-  padding: 16px; 
+  font-size: var(--text-body-sm); 
+  padding: var(--space-4); 
   border-bottom: 1px solid var(--border-soft); 
   white-space: nowrap; 
   background: var(--bg-soft); 
-  font-weight: 600; 
-  text-align: center; /* 👈 وسط‌چین هدر */
+  font-weight: var(--font-weight-semibold); 
+  text-align: center; 
 }
 
 .historyTable td { 
-  padding: 18px 16px; 
+  padding: var(--space-4); 
   border-bottom: 1px solid var(--border-soft); 
-  font-weight: 600; 
+  font-weight: var(--font-weight-semibold); 
   color: var(--text-main); 
   white-space: nowrap; 
-  text-align: center; /* 👈 وسط‌چین محتوا */
+  text-align: center; 
 }
 
 .historyTable tr:hover td { background-color: var(--bg-soft); }
-.emptyTable { text-align: center; padding: 50px !important; color: var(--text-dim); }
+.emptyTable { text-align: center; padding: var(--space-12) !important; color: var(--text-dim); }
 
-/* فونت انگلیسی و تمیز برای تاریخ و دلار */
-.tableDate { 
-  font-family: "Inter", system-ui, sans-serif !important; 
-  letter-spacing: 0.5px; 
-}
-.tableMoney { 
-  font-weight: 600 !important; 
-  font-family: "Inter", system-ui, sans-serif !important; 
-  color: var(--text-main);
-}
-.tableToman {
-  font-weight: 800 !important;
-}
+.tableDate { font-family: var(--font-en-stack) !important; letter-spacing: 0.5px; }
+.tableMoney { font-weight: var(--font-weight-semibold) !important; font-family: var(--font-en-stack) !important; color: var(--text-main); }
+.tableToman { font-weight: var(--font-weight-bold) !important; }
 
 /* استایل نوع تراکنش */
-.txTypeBuy, .txTypeSell { padding: 6px 12px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+.txTypeBuy, .txTypeSell { padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-weight: var(--font-weight-bold); display: inline-flex; align-items: center; justify-content: center; font-size: var(--text-caption); }
 .txTypeBuy { color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
 .txTypeSell { color: var(--success); background: rgba(var(--success-rgb), 0.1); }
 
 /* تگ‌های وضعیت (Status) */
 .statusPending, .statusApproved, .statusRejected {
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.75rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-caption);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -62,18 +55,18 @@
 .volumeBadge {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   background: rgba(var(--accent-rgb), 0.08);
   border: 1px solid rgba(var(--accent-rgb), 0.2);
   color: var(--accent);
-  padding: 10px 16px;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  font-weight: 700;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-bold);
 }
 .volumeBadge strong {
-  font-size: 1.1rem;
-  font-family: "Inter", system-ui, sans-serif;
+  font-size: var(--text-body-md);
+  font-family: var(--font-en-stack) !important;
   letter-spacing: 0.5px;
 }
 
@@ -83,8 +76,8 @@
   border: none;
   color: var(--danger);
   cursor: pointer;
-  padding: 6px;
-  border-radius: 8px;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -92,13 +85,21 @@
   opacity: 0.8;
 }
 
-.deleteBtn:hover {
-  background: rgba(var(--danger-rgb), 0.1);
-  opacity: 1;
-  transform: scale(1.05);
-}
+.deleteBtn:hover { background: rgba(var(--danger-rgb), 0.1); opacity: 1; transform: scale(1.05); }
+.noAction { color: var(--text-dim); font-weight: var(--font-weight-regular); }
 
-.noAction {
-  color: var(--text-dim);
-  font-weight: 400;
+/* 🚀 حل مشکل بهم‌ریختگی هدر تراکنش‌ها در موبایل (رفتن به خط بعد) */
+@media (max-width: 768px) {
+  .headerWrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-4);
+  }
+  .tableTitle {
+    justify-content: center;
+  }
+  .volumeBadge {
+    justify-content: center;
+    width: 100%;
+  }
 }

@@ -6,14 +6,10 @@ import { supabase } from "@/lib/supabase";
 import styles from "@/styles/dashboard/DashboardProfile.module.css";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 
-// 🛡️ ثابت‌های امنیتی
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // حداکثر حجم مجاز: 5 مگابایت
+const MAX_FILE_SIZE = 5 * 1024 * 1024; 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
 const EXTENSION_MAP: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/jpg': 'jpg',
-  'image/png': 'png',
-  'application/pdf': 'pdf'
+  'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'application/pdf': 'pdf'
 };
 
 export function DashboardProfile({ profileFields, profileId }: any) {
@@ -22,12 +18,9 @@ export function DashboardProfile({ profileFields, profileId }: any) {
   const [kycUploadStatus, setKycUploadStatus] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  // 🛡️ تابع بررسی امنیت فایل‌ها در زمان انتخاب
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files).slice(0, 3);
-      
-      // بررسی امنیتی تک‌تک فایل‌ها
       for (const file of selectedFiles) {
         if (!ALLOWED_MIME_TYPES.includes(file.type)) {
           alert(`فرمت فایل ${file.name} غیرمجاز است. فقط عکس (JPG/PNG) و PDF مجاز است.`);
@@ -38,14 +31,12 @@ export function DashboardProfile({ profileFields, profileId }: any) {
           return;
         }
       }
-
       setKycFiles(selectedFiles);
       setUploadSuccess(false);
       setKycUploadStatus("");
     }
   };
 
-  // تولید یک رشته تصادفی امن برای نام فایل
   const generateSecureRandomString = () => {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   };
@@ -56,30 +47,16 @@ export function DashboardProfile({ profileFields, profileId }: any) {
       setKycUploading(true); 
       setKycUploadStatus(`در حال تأیید امنیت و آپلود ${kycFiles.length} مدرک...`);
       setUploadSuccess(false);
-
       let hasError = false;
 
       for (let i = 0; i < kycFiles.length; i++) {
         const file = kycFiles[i];
-        
-        // 🛡️ استخراج پسوند امن بر اساس MIME Type واقعی فایل (نه نام فایل)
         const safeExt = EXTENSION_MAP[file.type] || 'bin';
-        
-        // 🛡️ ساخت نام یکتا و غیرقابل حدس برای فایل
         const secureFileName = `${Date.now()}_${generateSecureRandomString()}_${i + 1}.${safeExt}`;
         const filePath = `${profileId}/${secureFileName}`;
         
-        const { error } = await supabase.storage
-          .from("kyc-documents")
-          .upload(filePath, file, { 
-            cacheControl: "3600", 
-            upsert: false 
-          });
-        
-        if (error) { 
-          hasError = true;
-          console.error("Secure Upload Error:", error);
-        }
+        const { error } = await supabase.storage.from("kyc-documents").upload(filePath, file, { cacheControl: "3600", upsert: false });
+        if (error) { hasError = true; console.error("Secure Upload Error:", error); }
       }
 
       if (hasError) {
@@ -101,18 +78,13 @@ export function DashboardProfile({ profileFields, profileId }: any) {
   return (
     <article className={cardStyles.panelCard}>
       <div className={styles.profileHeader}>
-        <h2 className={cardStyles.panelTitle} style={{marginBottom: 0}}>
+        {/* 🚀 استایل خطی حذف و با کلاس profileTitle جایگزین شد */}
+        <h2 className={`${cardStyles.panelTitle} ${styles.profileTitle}`}>
           <UserCircle2 size={24} /> اطلاعات هویتی و امنیتی
         </h2>
         <label className={styles.uploadBtn}>
           <UploadCloud size={20} /> آپلود مدارک
-          <input 
-            type="file" 
-            multiple 
-            hidden 
-            accept="image/jpeg, image/png, application/pdf" 
-            onChange={handleFileChange} 
-          />
+          <input type="file" multiple hidden accept="image/jpeg, image/png, application/pdf" onChange={handleFileChange} />
         </label>
       </div>
       
@@ -126,14 +98,10 @@ export function DashboardProfile({ profileFields, profileId }: any) {
           profileFields.map((field: any) => (
             <div key={field.id} className={styles.inputGroup}>
               <label>{field.label}</label>
+              {/* 🚀 استایل خطی کاملاً حذف شد و به CSS سپرده شد */}
               <div 
-                className={styles.inputControl} 
+                className={`${styles.inputControl} ${field.dir === "rtl" ? styles.dirRtl : styles.dirLtr}`} 
                 dir={field.dir || "ltr"} 
-                style={{ 
-                  textAlign: field.dir === "rtl" ? 'right' : 'left',
-                  // 🚀 این خط اضافه شد: دستورِ ارث‌بری فونت برای متون فارسی
-                  fontFamily: field.dir === "rtl" ? 'inherit' : undefined
-                }}
               >
                 {field.value || "تنظیم نشده"}
               </div>
@@ -143,20 +111,15 @@ export function DashboardProfile({ profileFields, profileId }: any) {
       </div>
       
       <div className={styles.uploadActions}>
-        <button 
-          className={cardStyles.primaryButton} 
-          onClick={handleKycUpload} 
-          disabled={kycFiles.length === 0 || kycUploading} 
-          type="button"
-        >
+        <button className={cardStyles.primaryButton} onClick={handleKycUpload} disabled={kycFiles.length === 0 || kycUploading} type="button">
           <UploadCloud size={18} /> {kycUploading ? "در حال ارسال امن..." : "ارسال مدارک برای بررسی"}
         </button>
         
         <div className={styles.statusContainer}>
           {kycFiles.length > 0 && (
-            <div className={styles.fileList} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
+            <div className={styles.fileList}>
               {kycFiles.map((f, idx) => (
-                <span key={idx} className={styles.fileName} style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                <span key={idx} className={styles.fileName}>
                   📄 {f.name} ({(f.size / (1024 * 1024)).toFixed(2)} MB)
                 </span>
               ))}
@@ -165,18 +128,13 @@ export function DashboardProfile({ profileFields, profileId }: any) {
           
           {kycUploading && (
             <div className={styles.progressWrapper}>
-              <div className={styles.progressBar}>
-                <div className={styles.progressFill}></div>
-              </div>
+              <div className={styles.progressBar}><div className={styles.progressFill}></div></div>
               <p className={styles.uploadStatus}>{kycUploadStatus}</p>
             </div>
           )}
 
           {uploadSuccess && (
-            <div className={styles.successMessage}>
-              <CheckCircle size={18} />
-              <p>{kycUploadStatus}</p>
-            </div>
+            <div className={styles.successMessage}><CheckCircle size={18} /><p>{kycUploadStatus}</p></div>
           )}
           
           {(!kycUploading && !uploadSuccess && kycUploadStatus) && (

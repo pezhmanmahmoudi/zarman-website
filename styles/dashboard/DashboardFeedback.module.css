@@ -1,15 +1,34 @@
 .feedbackCard { max-width: 760px; margin-right: auto; margin-left: auto; }
-.feedbackHeader { text-align: center; margin-bottom: 30px; }
-.feedbackTitle { font-size: 1.5rem; margin-bottom: 10px; margin-top: 0; font-weight: 800; color: var(--text-main); }
-.feedbackText { color: var(--text-soft); line-height: 1.9; margin: 0; font-size: 0.9rem;}
-.starsRow { display: flex; justify-content: center; gap: 14px; margin-bottom: 30px; flex-wrap: wrap; }
+.feedbackHeader { text-align: center; margin-bottom: var(--space-8); }
+.feedbackTitle { font-size: var(--text-card-title); margin-bottom: var(--space-3); margin-top: 0; font-weight: 800; color: var(--text-main); }
+.feedbackText { color: var(--text-soft); line-height: var(--leading-relaxed); margin: 0; font-size: var(--text-body-sm); }
+.starsRow { display: flex; justify-content: center; gap: var(--space-4); margin-bottom: var(--space-8); flex-wrap: wrap; }
 .starBtn { cursor: pointer; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), fill 0.2s, color 0.2s; }
 .starBtn:hover { transform: scale(1.14) rotate(4deg); }
 .starActive { color: var(--warning); fill: var(--warning); filter: drop-shadow(0 0 8px rgba(var(--warning-rgb), 0.35)); }
 .starOff { color: var(--border-soft); fill: transparent; }
-.feedbackTextarea { background: var(--bg-input); border: 1px solid var(--border-input); color: var(--text-main); padding: 12px 16px; border-radius: 10px; font-size: 16px !important; width: 100%; outline: none; min-height: 170px; resize: vertical; margin-bottom: 20px; line-height: 1.9; font-family: inherit; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02); }
+
+.feedbackTextarea { 
+  background: var(--bg-input); 
+  border: 1px solid var(--border-input); 
+  color: var(--text-main); 
+  padding: var(--space-3) var(--space-4); 
+  border-radius: var(--radius-md); 
+  font-size: var(--text-control); 
+  width: 100%; outline: none; min-height: 170px; resize: vertical; margin-bottom: var(--space-6); 
+  line-height: var(--leading-relaxed); 
+  font-family: var(--font-primary); 
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02); 
+}
 .feedbackTextarea::placeholder { color: var(--text-placeholder); }
 .feedbackTextarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15), inset 0 1px 2px rgba(0,0,0,0.02); }
-.feedbackActions { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-.feedbackStatus { color: var(--success); font-weight: 800; text-align: center; margin: 0; line-height: 1.8; }
-@media (max-width: 720px) { .starsRow { gap: 10px; } .starBtn { width: 36px; height: 36px; } .feedbackTitle { font-size: 1.3rem; } }
+
+.feedbackActions { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
+.feedbackStatus { color: var(--success); font-weight: 800; text-align: center; margin: 0; line-height: var(--leading-relaxed); }
+
+@media (max-width: 720px) { 
+  .starsRow { gap: var(--space-3); } 
+  .starBtn { width: 36px; height: 36px; } 
+  .feedbackTitle { font-size: var(--text-body-lg); } 
+  .feedbackTextarea { font-size: 19px !important; } /* 🚀 فیکس زوم سافاری */
+}

@@ -1,6 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
-/* دقت کنید: ایمپورت توکن‌ها باید دقیقاً همینجا و در بالای فایل باشد */
 @import '../styles/tokens.css';
+
 
 /* ========== Fonts ========== */
 
@@ -55,7 +56,7 @@
 
 /* ========== Reset & Base ========== */
 html {
-  scroll-behavior: smooth; /* اسکرول نرم بین سکشن‌ها */
+  scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -70,22 +71,13 @@ body {
 }
 
 body {
-  /* اعمال توکن‌های سیستم پرمیوم زرمان */
   background-color: var(--color-bg-base);
   color: var(--color-text-secondary);
-  
-  /* 👈 استفاده یکپارچه از متغیر توکن و اعمال سایز پایه */
   font-family: var(--font-primary);
   font-size: var(--text-body-md);
   line-height: var(--leading-relaxed);
-  
-  /* مهم: فعال‌سازی راست‌چین برای کل سایت */
   direction: rtl; 
-  
-  /* جلوگیری از ایجاد فضای خالی به خاطر هدر Fixed */
   padding-top: 0;
-
-  /* Premium Dark Mode Font Rendering */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -102,44 +94,44 @@ h1, h2, h3, h4, h5, h6 {
 .dir-rtl { direction: rtl; }
 
 .zarman-lang-code {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-en-stack);
 }
 
-/* Global form control baseline: prevent iOS Safari auto-zoom by enforcing 16px minimum.
-   Applied to all text-entry controls regardless of device. */
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
-select,
-textarea {
-  font-size: 19px !important;
+/* ====================================================
+   📱 مدیریت هوشمند زوم در سافاری iOS (تفکیک فارسی و انگلیسی) 
+   ==================================================== */
+@media (max-width: 768px) {
+  /* ۱. سایز ۱۹ پیکسل برای جلوگیری از پرش فونت فارسی (Peyda) */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 19px !important;
+  }
+
+  /* ۲. سایز ۱۶ پیکسل برای اینپوت‌های انگلیسی (Inter) جهت حفظ ظرافت ظاهر فرم‌ها */
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[dir="ltr"],
+  .en-text,
+  .en-text input {
+    font-size: 16px !important;
+  }
 }
 
-/* این جادوی تایپوگرافی فین‌تک است!
-  هر المنتی (مثل اینپوت‌ها، شماره تماس‌ها یا پسوردها) که چپ‌چین شود，
-  یا کلاس en-text بگیرد، فوراً فونت زیبای Inter را می‌گیرد.
-*/
+/* تخصیص فونت انگلیسی به متون مربوطه */
 [dir="ltr"],
 .en-text {
   font-family: var(--font-en-stack) !important;
-  letter-spacing: 0.5px;
+  letter-spacing: 0; /* فونت Inter خودش فاصله‌گذاری ایده‌آلی دارد */
 }
-
-
 
 /* ========== Scroll Margins (For Anchor Links) ========== */
 html {
-  scroll-behavior: smooth; /* اسکرول نرم */
-  
-  /* این خط جادویی، مشکل هدر ثابت را برای کل سایت و تمام لینک‌ها حل می‌کند */
+  scroll-behavior: smooth;
   scroll-padding-top: 101px !important; 
 }
 
-/* آیدی rates را به این لیست اضافه کنید */
-#rates,
-#about,
-#services,
-#how-it-works,
-#security,
-#faq,
-#contact {
-  scroll-margin-top: 110px; /* این عدد باعث می‌شود سکشن دقیقاً زیر هدر متوقف شود */
+#rates, #about, #services, #how-it-works, #security, #faq, #contact {
+  scroll-margin-top: 110px; 
 }

@@ -8,10 +8,8 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-// 👇 تغییر اساسی در اینجا انجام شد. کلمات دقیقاً با page.tsx یکسان شدند
 type DashboardSidebarProps = {
   activeTab: "hub" | "history" | "profile" | "feedback";
-  // 👈 این خط باید دقیقاً اینطور باشد، نه (tab: string)
   setActiveTab: (tab: "hub" | "history" | "profile" | "feedback") => void; 
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
@@ -76,25 +74,26 @@ export function DashboardSidebar({
       >
         <div className={styles.sidebarScroll}>
           <div className={styles.sidebarHeader}>
-            <Link
-              href="/"
-              className={styles.logoArea}
-              style={{ textDecoration: "none", cursor: "pointer" }}
-              onClick={handleCloseMenu}
-            >
-              <Image
-                src="/images/logo-no-text-light.svg"
-                alt="Zarman Logo"
-                width={115}
-                height={115}
-                className={styles.logoImage}
-                priority
-              />
-              <div>
+            <div className={styles.logoContainer}>
+              <Link
+                href="/"
+                className={styles.logoLink}
+                onClick={handleCloseMenu}
+              >
+                <Image
+                  src="/images/logo-no-text-light.svg"
+                  alt="Zarman Logo"
+                  width={115}
+                  height={115}
+                  className={styles.logoImage}
+                  priority
+                />
+              </Link>
+              <div className={styles.logoTextWrapper}>
                 <h2 className={styles.logoTitle}>ZARMAN</h2>
                 <p className={styles.logoSubtitle}>EXCHANGE PTY LTD</p>
               </div>
-            </Link>
+            </div>
           </div>
 
           <div className={styles.divider} />

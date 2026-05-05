@@ -79,7 +79,7 @@ export function DashboardRequestHub({
     setAmountStr(formatNumberUI(raw, false));
   };
 
-const submit = async () => {
+  const submit = async () => {
     if (!profile || !isApproved || rawAmount <= 0 || isRateOffline || isSubmitting) return;
 
     setIsSubmitting(true);
@@ -120,17 +120,12 @@ const submit = async () => {
 
       const finalUrl = buildWhatsAppUrl(text);
 
-      // بررسی نوع لینک برای اجرای بهترین رفتار در موبایل و دسکتاپ
       if (finalUrl.startsWith('http')) {
-        // در دسکتاپ: باز کردن واتس‌اپ وب در تب جدید تا داشبورد بسته نشود
         window.open(finalUrl, '_blank');
       } else {
-        // در موبایل: اجرای مستقیم پروتکل نیتیو بدون ساختن تب خالی
         window.location.assign(finalUrl);
       }
-      
       setAmountStr("");
-
     } catch (error) {
       console.error(error);
     } finally {
@@ -141,8 +136,8 @@ const submit = async () => {
   return (
     <article className={cardStyles.panelCard}>
       {isRateOffline && (
-        <div className={styles.lockOverlay} style={{ background: 'rgba(239, 68, 68, 0.9)' }}>
-          <ServerCrash size={48} className={styles.lockIcon} style={{ color: '#fff' }} />
+        <div className={`${styles.lockOverlay} ${styles.offlineOverlay}`}>
+          <ServerCrash size={48} className={`${styles.lockIcon} ${styles.offlineIcon}`} />
           <h3 className={styles.lockTitle}>ارتباط با سرور جهانی نرخ قطع است</h3>
           <p className={styles.lockText}>متاسفانه در حال حاضر دریافت نرخ لحظه‌ای امکان‌پذیر نیست. برای جلوگیری از ضرر مالی، ثبت تراکنش موقتاً غیرفعال شده است. لطفاً دقایقی دیگر تلاش کنید.</p>
         </div>
@@ -199,7 +194,7 @@ const submit = async () => {
         </div>
       </div>
       
-      <div className={styles.inputBox} style={{ marginBottom: "28px" }}>
+      <div className={`${styles.inputBox} ${styles.lastInputBox}`}>
         <label className={styles.label}>
           {txType === "buy_aud" ? "مبلغ قابل پرداخت به تومان (IRT)" : "مبلغ دریافتی شما به تومان (IRT)"}
         </label>
@@ -215,7 +210,6 @@ const submit = async () => {
           <strong className={styles.summaryRate}>
             نرخ اختصاصی شما: {isRateOffline ? "—" : formatNumberUI(tailoredRate, true)} تومان
           </strong>
-          {/* 👈 این بخش کاملاً هوشمند شد تا مجموع تخفیف را محاسبه و نمایش دهد */}
           {(loyaltyBonus > 0 && !isRateOffline) && (
             <span className={styles.summaryHint}>
               {rawAmount > 0 

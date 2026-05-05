@@ -14,10 +14,9 @@ export default function ConfirmEmailPage() {
         <AuthGradient />
       </div>
 
-      <div className={styles.card} style={{ maxWidth: "480px", textAlign: "center" }}>
+      <div className={`${styles.card} ${styles.confirmCard}`}>
         
         <div className={styles.logoContainer}>
-          {/* لوگو با استانداردهای Next.js Image */}
           <Image 
             src="/images/logo-no-text-light.svg" 
             alt="Zarman Logo" 
@@ -29,22 +28,21 @@ export default function ConfirmEmailPage() {
         </div>
         
         <div className={styles.verifyBox}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
-             <div style={{ background: "rgba(16, 185, 129, 0.1)", padding: "16px", borderRadius: "50%" }}>
-               <ShieldCheck size={56} color="#10b981" />
+          <div className={styles.successIconBox}>
+             <div className={styles.successIconCircle}>
+               <ShieldCheck size={56} color="var(--success, #10b981)" />
              </div>
           </div>
           
-          <h2 className={styles.title} style={{ fontSize: "1.75rem", marginBottom: "16px", fontWeight: "700" }}>
+          <h2 className={`${styles.title} ${styles.confirmTitle}`}>
             Identity Verified Securely
           </h2>
           
-          <p className={styles.subtitle} style={{ lineHeight: 1.6, marginBottom: "32px", fontSize: "0.95rem" }}>
+          <p className={`${styles.subtitle} ${styles.confirmSubtitle}`}>
             Your email address has been successfully verified. Your Zarman Exchange account is now protected and ready for secure access.
           </p>
 
-          <div style={{ width: "100%" }}>
-            {/* 🚀 مسیر ورود دقیقاً مطابق معماری پوشه‌ها درست است */}
+          <div className={styles.btnContainer}>
             <Button href="/fa/login" variant="primary" size="lg" fullWidth rightIcon={<LogIn />}>
               Proceed to Secure Login
             </Button>

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Image from "next/image"; // 🚀 ایمپورت کامپوننت Image
+import React, { useState } from "react";
+import Image from "next/image"; 
 import { useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css";
 import { Eye, EyeOff, ShieldCheck, CheckCircle } from "lucide-react";
@@ -50,7 +50,6 @@ export default function ResetPasswordPage() {
     } else {
       setSuccess(true);
       setTimeout(() => {
-        // 🚀 مسیر کاملاً درست است
         router.push("/fa/dashboard");
       }, 3000);
     }
@@ -62,26 +61,28 @@ export default function ResetPasswordPage() {
         <AuthGradient />
       </div>
 
-      <div className={styles.card} style={{ maxWidth: "480px" }}>
+      <div className={`${styles.card} ${styles.confirmCard}`}>
         
-        {/* لوگو */}
         <div className={styles.logoContainer}>
-          {/* 🚀 جایگزینی با Next.js Image و اصلاح نام فایل */}
           <Image 
             src="/images/logo-no-text-light.svg" 
             alt="Zarman Logo" 
-            width={80}
-            height={80}
-            priority
+            width={80} 
+            height={80} 
+            priority 
             className={styles.logoImage} 
           />
         </div>
         
         {success ? (
-          <div className={styles.verifyBox} style={{ marginTop: '10px' }}>
-            <CheckCircle size={64} color="#10b981" style={{ marginBottom: "20px" }} />
-            <h2 className={styles.title}>Password Updated</h2>
-            <p className={styles.subtitle} style={{ lineHeight: 1.6 }}>
+          <div className={styles.verifyBox}>
+            <div className={styles.successIconBox}>
+              <div className={styles.successIconCircle}>
+                <CheckCircle size={56} color="var(--success, #10b981)" />
+              </div>
+            </div>
+            <h2 className={styles.confirmTitle}>Password Updated</h2>
+            <p className={styles.confirmSubtitle}>
               Your password has been changed successfully. Redirecting you to the dashboard...
             </p>
           </div>
@@ -96,7 +97,7 @@ export default function ResetPasswordPage() {
               <div className={styles.stepContent}>
                 {error && <div className={styles.errorText} style={{ textAlign: 'center', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '8px', border: '1px solid #fca5a5' }}>{error}</div>}
 
-                <form onSubmit={handleUpdatePassword} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <form onSubmit={handleUpdatePassword} className={styles.btnContainer} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   
                   <div className={styles.inputGroup}>
                     <label>New Password <span className={styles.req}>*</span></label>
@@ -105,14 +106,15 @@ export default function ResetPasswordPage() {
                         type={showPassword ? "text" : "password"} 
                         value={password} 
                         onChange={(e) => setPassword(e.target.value)} 
-                        dir="ltr"
+                        className={styles.enInput}
+                        placeholder="رمز عبور جدید"
                         required
                       />
                       <button type="button" onClick={() => setShowPassword(!showPassword)} className={styles.eyeBtn}>
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
-                    <p className={styles.hintText}>Min. 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character.</p>
+                    <p className={styles.hintText}>Min. 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special character.</p>
                   </div>
 
                   <div className={styles.inputGroup}>
@@ -122,7 +124,8 @@ export default function ResetPasswordPage() {
                         type={showConfirmPassword ? "text" : "password"} 
                         value={confirmPassword} 
                         onChange={(e) => setConfirmPassword(e.target.value)} 
-                        dir="ltr"
+                        className={styles.enInput}
+                        placeholder="تایید رمز عبور جدید"
                         required
                       />
                       <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className={styles.eyeBtn}>

@@ -1,44 +1,86 @@
-.topStats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
-.statCard { background: var(--bg-card); backdrop-filter: blur(12px);
-   padding: 18px; border-radius: 16px; justify-content: center; position: relative; /* 👈 لنگرگاه برای آیکون */
-   border: 1px solid var(--border-soft); 
-   box-shadow: var(--shadow-card); 
-   display: flex; align-items: center; gap: 12px; min-width: 0;  
-   transition: transform 0.2s ease; }
+.topStats { 
+  display: grid; 
+  grid-template-columns: repeat(4, minmax(0, 1fr)); 
+  gap: var(--space-4); 
+  margin-bottom: var(--space-6); 
+}
+
+.statCard { 
+  background: var(--bg-card); 
+  backdrop-filter: blur(12px);
+  padding: var(--space-4); 
+  border-radius: var(--radius-xl); 
+  justify-content: center; 
+  position: relative; 
+  border: 1px solid var(--border-soft); 
+  box-shadow: var(--shadow-card); 
+  display: flex; 
+  align-items: center; 
+  gap: var(--space-3); 
+  min-width: 0;  
+  transition: transform 0.2s ease; 
+}
+
 .statIcon { 
   width: 42px; 
   height: 42px; 
-  border-radius: 10px; 
+  border-radius: var(--radius-md); 
   display: grid; 
   place-items: center; 
   background: var(--bg-soft); 
   color: var(--text-main); 
   flex-shrink: 0;
-  
-  position: absolute; /* 👈 آیکون را از مرکز خارج می‌کند */
-  right: 18px; /* 👈 آیکون را به فاصله ۱۸ پیکسلی از راست میخکوب می‌کند */
+  position: absolute; 
+  right: var(--space-4); 
 }
-.statIconAccent { background: rgba(var(--success-rgb), 0.12); color: var(--success); }
-.statLabel { display: block; text-align: center; font-size: 0.78rem; color: var(--text-dim); margin-bottom: 4px; font-weight: 600; }
+
+.statIconAccent { 
+  background: rgba(var(--success-rgb), 0.12); 
+  color: var(--success); 
+}
+
+.statLabel { 
+  display: block; 
+  text-align: center; 
+  font-size: var(--text-caption); 
+  color: var(--text-dim); 
+  margin-bottom: var(--space-1); 
+  font-weight: var(--font-weight-semibold); 
+}
+
 .statValue { 
-  font-size: 1.1rem; 
+  font-size: var(--text-body-md); 
   font-weight: 900; 
-  line-height: 1.4; 
+  line-height: var(--leading-snug); 
   overflow-wrap: anywhere; 
-  text-align: center; /* 👈 وسط‌چین کردن عدد */
+  text-align: center; 
   display: flex;
-  justify-content: center; /* 👈 اطمینان از وسط‌چین شدن در صورت وجود فلش یا نماد */
+  justify-content: center; 
 }
-.successText { color: var(--success) !important; }
 
-@media (max-width: 1280px) { .topStats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.successText { 
+  color: var(--success) !important; 
+}
 
-/* جادوی موبایل: نمایش ۲ در ۲ به جای خطی */
+@media (max-width: 1280px) { 
+  .topStats { grid-template-columns: repeat(2, minmax(0, 1fr)); } 
+}
+
 @media (max-width: 720px) { 
-  .topStats { grid-template-columns: repeat(2, 1fr); gap: 12px; } 
-  .statCard { flex-direction: column; text-align: center; padding: 16px 12px; gap: 8px; }
-  .statLabel { margin-bottom: 2px; }
+  .topStats { 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: var(--space-3); 
+  } 
+  .statCard { 
+    flex-direction: column; 
+    text-align: center; 
+    padding: var(--space-4) var(--space-3); 
+    gap: var(--space-2); 
+  }
+  .statLabel { 
+    margin-bottom: 2px; 
+  }
   .statIcon {
-    position: static; /* 👈 در موبایل آیکون را برمی‌گرداند بالای متن */
+    position: static; 
   }
 }

@@ -22,17 +22,8 @@ const countryCodes = [
 ];
 
 export default function RegisterPage() {
-  // --- تنظیمات و توابع مربوط به اعتبارسنجی و آپلود فایل ---
   const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-  const ALLOWED_MIME_TYPES = new Set([
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/webp",
-    "image/heic",
-    "image/heif",
-    "application/pdf",
-  ]);
+  const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"]);
   const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".pdf"];
 
   const hasAllowedExtension = (fileName: string) => {
@@ -51,17 +42,14 @@ export default function RegisterPage() {
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   const getFreshAccessToken = async (initialToken?: string | null) => {
     if (initialToken) return initialToken;
-
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const { data: sessionData } = await supabase.auth.getSession();
       const sessionToken = sessionData.session?.access_token;
       if (sessionToken) return sessionToken;
       await wait(200);
     }
-
     return null;
   };
-  // -----------------------------------------------------------
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -71,9 +59,7 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [files, setFiles] = useState<Record<string, File | null>>({
-    docFront: null,
-    docBack: null,
-    proofOfAddress: null
+    docFront: null, docBack: null, proofOfAddress: null
   });
 
   const [formData, setFormData] = useState({
@@ -87,12 +73,8 @@ export default function RegisterPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = type === "checkbox" ? (e.target as HTMLInputElement).checked : undefined;
-    
     let finalValue = value;
-    if (name === "mobile") {
-      finalValue = value.replace(/\D/g, ""); 
-    }
-
+    if (name === "mobile") finalValue = value.replace(/\D/g, ""); 
     setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : finalValue }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
@@ -113,20 +95,12 @@ export default function RegisterPage() {
     if (!formData.firstName) newErrors.firstName = "First name is required";
     if (!formData.lastName) newErrors.lastName = "Last name is required";
     if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = "Valid email is required";
-    
-    if (!formData.mobile) {
-      newErrors.mobile = "Mobile number is required";
-    } else if (formData.mobile.length < 8 || formData.mobile.length > 15) {
-      newErrors.mobile = "Enter a valid mobile number (8-15 digits)";
-    }
-    
+    if (!formData.mobile) { newErrors.mobile = "Mobile number is required"; } 
+    else if (formData.mobile.length < 8 || formData.mobile.length > 15) { newErrors.mobile = "Enter a valid mobile number (8-15 digits)"; }
     if (!validatePassword(formData.password)) newErrors.password = "Password does not meet the requirements";
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords do not match";
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
     setStep(2); 
   };
 
@@ -139,20 +113,15 @@ export default function RegisterPage() {
     if (!formData.postalCode) newErrors.postalCode = "Postal code is required"; 
     if (!formData.docType) newErrors.docType = "Please select a document type";
     
-    // --- اعتبارسنجی فایل‌ها قبل از ارسال ---
     if (formData.docType === "driver_license") {
       const frontError = validateKycFile(files.docFront, "License front image");
       const backError = validateKycFile(files.docBack, "License back image");
-      if (frontError || backError) {
-        newErrors.documents = frontError || backError || "Please upload the required license files.";
-      }
+      if (frontError || backError) newErrors.documents = frontError || backError || "Please upload the required license files.";
     }
     if (formData.docType === "passport") {
       const passportError = validateKycFile(files.docFront, "Passport image");
       const addressError = validateKycFile(files.proofOfAddress, "Proof of address");
-      if (passportError || addressError) {
-        newErrors.documents = passportError || addressError || "Please upload all required passport files.";
-      }
+      if (passportError || addressError) newErrors.documents = passportError || addressError || "Please upload all required passport files.";
     }
     
     if (!formData.privacyAccepted || !formData.termsAccepted || !formData.dvsAccepted) {
@@ -161,28 +130,16 @@ export default function RegisterPage() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      if (newErrors.documents) {
-        alert(newErrors.documents);
-      }
+      if (newErrors.documents) alert(newErrors.documents);
       return;
     }
 
-    setLoading(true);
-    setErrors({});
+    setLoading(true); setErrors({});
     
     try {
       const fullPhoneNumber = `${formData.phoneCode}${formData.mobile}`;
-
-      const { data: checkData, error: checkError } = await supabase.rpc('check_user_exists', {
-        p_email: formData.email,
-        p_phone: fullPhoneNumber
-      });
-
-      if (checkError) {
-        alert("Security Check Failed: " + checkError.message);
-        setLoading(false);
-        return;
-      }
+      const { data: checkData, error: checkError } = await supabase.rpc('check_user_exists', { p_email: formData.email, p_phone: fullPhoneNumber });
+      if (checkError) { alert("Security Check Failed: " + checkError.message); setLoading(false); return; }
 
       const isEmailTaken = checkData?.email_exists;
       const isPhoneTaken = checkData?.phone_exists;
@@ -191,117 +148,54 @@ export default function RegisterPage() {
         const duplicateErrors: Record<string, string> = {};
         if (isEmailTaken) duplicateErrors.email = "This email is already registered.";
         if (isPhoneTaken) duplicateErrors.mobile = "This mobile number is already registered.";
-        
-        setErrors(duplicateErrors);
-        setStep(1);
-        setLoading(false);
-        return;
+        setErrors(duplicateErrors); setStep(1); setLoading(false); return;
       }
 
-      // --- ثبت نام اولیه کاربر ---
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
-            first_name: formData.firstName,
-            middle_name: formData.middleName,
-            last_name: formData.lastName,
-            mobile_number: fullPhoneNumber,
-            dob: formData.dob,
-            address: formData.address,
-            state: formData.state,
-            city: formData.city,
-            postal_code: formData.postalCode,
-            document_type: formData.docType 
+            first_name: formData.firstName, middle_name: formData.middleName, last_name: formData.lastName,
+            mobile_number: fullPhoneNumber, dob: formData.dob, address: formData.address,
+            state: formData.state, city: formData.city, postal_code: formData.postalCode, document_type: formData.docType 
           },
-          // 🚀 مسیر صحیح با توجه به ساختار پوشه‌ها
           emailRedirectTo: `${window.location.origin}/fa/auth/confirm`, 
         }
       });
 
-      if (error) {
-        alert("Error during registration: " + error.message);
-        return;
-      }
-
+      if (error) { alert("Error during registration: " + error.message); return; }
       const userId = data.user?.id;
-      if (!userId) {
-        alert("Registration succeeded but user identifier is missing. Please contact support.");
-        return;
-      }
+      if (!userId) { alert("Registration succeeded but user identifier is missing."); return; }
 
       const accessToken = await getFreshAccessToken(data.session?.access_token);
-
-      // --- آپلود امن فایل‌ها در دیتابیس (Supabase Storage) ---
-      const documentPayload: Record<string, string | null> = {
-        doc_front_path: null,
-        doc_back_path: null,
-        proof_of_address_path: null,
-      };
+      const documentPayload: Record<string, string | null> = { doc_front_path: null, doc_back_path: null, proof_of_address_path: null };
 
       try {
-        if (files.docFront) {
-          const uploadedFront = await uploadKycDocumentSecurely({ userId, key: "doc-front", file: files.docFront, accessToken: accessToken ?? undefined });
-          documentPayload.doc_front_path = uploadedFront.storagePath;
-        }
-
-        if (files.docBack) {
-          const uploadedBack = await uploadKycDocumentSecurely({ userId, key: "doc-back", file: files.docBack, accessToken: accessToken ?? undefined });
-          documentPayload.doc_back_path = uploadedBack.storagePath;
-        }
-
-        if (files.proofOfAddress) {
-          const uploadedAddress = await uploadKycDocumentSecurely({ userId, key: "proof-of-address", file: files.proofOfAddress, accessToken: accessToken ?? undefined });
-          documentPayload.proof_of_address_path = uploadedAddress.storagePath;
-        }
+        if (files.docFront) documentPayload.doc_front_path = (await uploadKycDocumentSecurely({ userId, key: "doc-front", file: files.docFront, accessToken: accessToken ?? undefined })).storagePath;
+        if (files.docBack) documentPayload.doc_back_path = (await uploadKycDocumentSecurely({ userId, key: "doc-back", file: files.docBack, accessToken: accessToken ?? undefined })).storagePath;
+        if (files.proofOfAddress) documentPayload.proof_of_address_path = (await uploadKycDocumentSecurely({ userId, key: "proof-of-address", file: files.proofOfAddress, accessToken: accessToken ?? undefined })).storagePath;
       } catch (uploadError: unknown) {
-        const uploadMessage = uploadError instanceof Error ? uploadError.message : "Unknown upload error.";
-        alert(`Your account was created, but document upload failed: ${uploadMessage}`);
+        alert(`Account created, but document upload failed: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`);
         return;
       }
 
-      // 🚀 --- بروزرسانی پروفایل با استفاده از تونل امن (RPC) دور زدن RLS ---
       let profileUpdateErrorMessage = "پروفایل در دیتابیس یافت نشد.";
-
       for (let attempt = 1; attempt <= 5; attempt += 1) {
         const { data: isUpdated, error: rpcError } = await supabase.rpc('attach_documents_to_profile', {
-          p_user_id: userId,
-          p_doc_type: formData.docType,
-          p_front_url: null,
-          p_back_url: null,
-          p_address_url: null,
-          p_front_path: documentPayload.doc_front_path,
-          p_back_path: documentPayload.doc_back_path,
-          p_address_path: documentPayload.proof_of_address_path
+          p_user_id: userId, p_doc_type: formData.docType, p_front_url: null, p_back_url: null, p_address_url: null,
+          p_front_path: documentPayload.doc_front_path, p_back_path: documentPayload.doc_back_path, p_address_path: documentPayload.proof_of_address_path
         });
-
-        if (rpcError) {
-          profileUpdateErrorMessage = rpcError.message;
-          break; 
-        }
-
-        if (isUpdated) {
-          profileUpdateErrorMessage = "";
-          break; 
-        }
-
+        if (rpcError) { profileUpdateErrorMessage = rpcError.message; break; }
+        if (isUpdated) { profileUpdateErrorMessage = ""; break; }
         profileUpdateErrorMessage = "زمان آپدیت پروفایل به پایان رسید.";
         await wait(500); 
       }
 
-      if (profileUpdateErrorMessage) {
-        alert(`Your account was created, but document links could not be saved: ${profileUpdateErrorMessage}`);
-        return;
-      }
-
+      if (profileUpdateErrorMessage) { alert(`Account created, but document links could not be saved: ${profileUpdateErrorMessage}`); return; }
       setStep(3); 
 
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error(error); } finally { setLoading(false); }
   };
 
   const today = new Date();
@@ -314,50 +208,31 @@ export default function RegisterPage() {
       </div>
 
       <div className={styles.card}>
-        
-        {/* دکمه بازگشت به شکل شارپ و مینیمال در گوشه بالایی کارت */}
         <div className={styles.topNav}>
-          <Link href="/" className={styles.backHome} aria-label="Back to Website">
-            <ArrowLeft size={18} strokeWidth={2.5} />
-          </Link>
+          <Link href="/" className={styles.backHome} aria-label="Back to Website"><ArrowLeft size={18} strokeWidth={2.5} /></Link>
         </div>
 
         <div className={styles.logoContainer}>
-          {/* استفاده از کامپوننت Image */}
-          <Image 
-            src="/images/logo-no-text-light.svg" 
-            alt="Zarman Logo" 
-            width={80}
-            height={80}
-            priority
-            className={styles.logoImage} 
-          />
+          <Image src="/images/logo-no-text-light.svg" alt="Zarman Logo" width={80} height={80} priority className={styles.logoImage} />
         </div>
 
         {step < 3 && (
           <div className={styles.header}>
             <h1 className={styles.title}>Create your Account</h1>
             <p className={styles.subtitle}>Join Zarman to start transferring money securely.</p>
-            
             <div className={styles.progressContainer}>
-              <div className={`${styles.progressStep} ${step >= 1 ? styles.active : ""}`}>
-                <div className={styles.stepCircle}>1</div>
-                <span className={styles.stepLabel}>Account</span>
-              </div>
+              <div className={`${styles.progressStep} ${step >= 1 ? styles.active : ""}`}><div className={styles.stepCircle}>1</div><span className={styles.stepLabel}>Account</span></div>
               <div className={`${styles.progressLine} ${step >= 2 ? styles.activeLine : ""}`}></div>
-              <div className={`${styles.progressStep} ${step >= 2 ? styles.active : ""}`}>
-                <div className={styles.stepCircle}>2</div>
-                <span className={styles.stepLabel}>KYC & Docs</span>
-              </div>
+              <div className={`${styles.progressStep} ${step >= 2 ? styles.active : ""}`}><div className={styles.stepCircle}>2</div><span className={styles.stepLabel}>KYC & Docs</span></div>
             </div>
           </div>
         )}
 
         <div className={styles.formBody}>
-          
-          {/* ================= STEP 1: Account Creation ================= */}
           {step === 1 && (
             <div className={styles.stepContent}>
+              <div className={styles.formHint}>جهت یکپارچگی و تایید سریع‌تر حساب، لطفاً تمامی اطلاعات فرم را به زبان انگلیسی وارد کنید.</div>
+
               <div className={styles.row}>
                 <div className={styles.inputGroup}>
                   <label>First Name <span className={styles.req}>*</span></label>
@@ -420,16 +295,14 @@ export default function RegisterPage() {
               </div>
 
               <div className={styles.btnWrapperRight}>
-                <Button type="button" onClick={handleStep1Submit} variant="primary" rightIcon={<ArrowRight />}>
-                  Continue
-                </Button>
+                <Button type="button" onClick={handleStep1Submit} variant="primary" rightIcon={<ArrowRight />}>Continue</Button>
               </div>
             </div>
           )}
 
-          {/* ================= STEP 2: KYC & Docs ================= */}
           {step === 2 && (
             <div className={styles.stepContent}>
+              <div className={styles.formHint}>جهت یکپارچگی و تایید سریع‌تر حساب، لطفاً تمامی اطلاعات فرم را به زبان انگلیسی وارد کنید.</div>
               <div className={styles.sectionTitle}>Personal Details</div>
               
               <div className={styles.row}>
@@ -527,34 +400,26 @@ export default function RegisterPage() {
                   <input type="checkbox" name="privacyAccepted" checked={formData.privacyAccepted} onChange={handleChange} />
                   <span>I have read and agree to the <Link href="/en/legal/privacy-policy" target="_blank">Privacy Policy</Link> & <Link href="/en/legal/dvs-notice" target="_blank">Verification Notice</Link>. <span className={styles.req}>*</span></span>
                 </label>
-                
                 <label className={styles.checkboxLabel}>
                   <input type="checkbox" name="termsAccepted" checked={formData.termsAccepted} onChange={handleChange} />
                   <span>I agree to the <Link href="/en/legal/terms" target="_blank">Terms & Conditions</Link>. <span className={styles.req}>*</span></span>
                 </label>
-
                 <label className={styles.checkboxLabel} style={{ alignItems: 'flex-start' }}>
                   <input type="checkbox" name="dvsAccepted" checked={formData.dvsAccepted} onChange={handleChange} style={{ marginTop: '4px' }} />
                   <span style={{ fontSize: '0.75rem', lineHeight: '1.5' }}>
                     I consent to Zarman Exchange verifying my personal details and ID documents via official records (DVS) as per the <Link href="/en/legal/dvs-consent" target="_blank">Identity Verification Consent</Link>. <span className={styles.req}>*</span>
                   </span>
                 </label>
-                
                 {errors.policies && <span className={styles.errorText} style={{ marginTop: '8px' }}>{errors.policies}</span>}
               </div>
 
               <div className={styles.btnWrapperSpace}>
-                <Button type="button" onClick={() => setStep(1)} variant="ghost" leftIcon={<ArrowLeft />}>
-                  Back
-                </Button>
-                <Button type="button" onClick={handleFinalSubmit} variant="primary" rightIcon={<ShieldCheck />} loading={loading}>
-                  Submit & Verify
-                </Button>
+                <Button type="button" onClick={() => setStep(1)} variant="ghost" leftIcon={<ArrowLeft />}>Back</Button>
+                <Button type="button" onClick={handleFinalSubmit} variant="primary" rightIcon={<ShieldCheck />} loading={loading}>Submit & Verify</Button>
               </div>
             </div>
           )}
 
-          {/* ================= STEP 3: Email Notice ================= */}
           {step === 3 && (
             <div className={styles.verifyBox}>
               <MailCheck size={64} className={styles.verifyIcon} style={{ marginBottom: "20px" }} />
@@ -569,15 +434,11 @@ export default function RegisterPage() {
               </div>
             </div>
           )}
-
         </div>
 
         {step < 3 && (
           <div className={styles.footerText}>
-            Already have an account? 
-            <Link href="/fa/login" className={styles.footerLink}>
-              Log in
-            </Link>
+            Already have an account? <Link href="/fa/login" className={styles.footerLink}>Log in</Link>
           </div>
         )}
       </div>
