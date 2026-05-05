@@ -12,7 +12,7 @@ export default function Footer() {
         <div className={styles.brandSection}>
           <Link href="#hero" aria-label="بازگشت به بالای صفحه" className={styles.logoLink}>
             <Image
-              src="/images/logo-white-text-and-ring.svg" /* 👈 آدرس تصویر قبلی شما برگردانده شد */
+              src="/images/logo-white-text-and-ring.svg"
               alt="لوگوی زرمان اکسچنج"
               width={220}
               height={100}
@@ -32,7 +32,6 @@ export default function Footer() {
           <div className={styles.linkCol}>
             <h4 className={styles.colTitle}>دسترسی سریع</h4>
             <ul className={styles.linkList}>
-              {/* 👈 لینک ماشین حساب تصحیح شد */}
               <li><Link href="#rates">ماشین‌حساب نرخ</Link></li>
               <li><Link href="#services">خدمات ما</Link></li>
               <li><Link href="#how-it-works">نحوه انتقال</Link></li>
@@ -54,7 +53,6 @@ export default function Footer() {
           <div className={styles.linkCol}>
             <h4 className={styles.colTitle}>ارتباط با ما</h4>
             <ul className={styles.linkList}>
-              {/* هر سه خط اکنون از کلاس contactItem استفاده می‌کنند تا کاملاً یک شکل باشند */}
               <li className={styles.contactItem} dir="ltr">
                 +61 497 851 631
               </li>

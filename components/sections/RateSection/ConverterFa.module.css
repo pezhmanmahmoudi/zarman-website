@@ -32,7 +32,7 @@
   margin: 0;
   color: #ffffff; 
   font-family: var(--font-primary);
-  font-size: var(--text-section-title);
+  font-size: var(--text-card-title); /* 👈 تغییر به توکن مخصوص کارت‌ها (ظریف‌تر شد) */
   font-weight: var(--font-weight-bold);
   letter-spacing: -0.5px;
 }
@@ -116,7 +116,7 @@
   gap: 4px;
   color: #fbbf24; 
   font-family: var(--font-primary);
-  font-size: 11px;
+  font-size: var(--text-caption); /* 👈 ۱۱ پیکسل خط خورد تا خوانا شود */
   font-weight: var(--font-weight-bold);
   padding-left: var(--space-2);
   animation: fadeIn 0.3s ease-in-out;
@@ -142,7 +142,6 @@
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
-/* اعداد راست‌چین و در سمت راست فیلد (اصلاح شده) */
 .faInput {
   flex: 1;
   background: transparent;
@@ -150,7 +149,7 @@
   color: #ffffff; 
   font-family: "IRANSansX", "Peyda", sans-serif !important; 
   font-size: 1.35rem; 
-  line-height: normal !important; /* 🚀 اضافه شد */
+  line-height: normal !important; 
   font-weight: var(--font-weight-bold);
   outline: none;
   width: 100%;
@@ -160,7 +159,7 @@
 
 .faInput::placeholder {
   color: rgba(255, 255, 255, 0.2);
-  font-size: 16px !important; /* 🚀 فیکس قطعی برای جلوگیری از زوم */
+  font-size: 16px !important; 
 }
 
 .divider {
@@ -170,7 +169,6 @@
   margin: 0 var(--space-3);
 }
 
-/* استایل‌های مربوط به زبانه و منوی انتخاب ارز (اصلاح شده) */
 .selectWrapper {
   position: relative;
   display: flex;
@@ -181,11 +179,10 @@
   border: none;
   background: transparent;
   direction: rtl;
-  /* پدینگ بیشتر در سمت چپ برای جا دادن آیکون فلش */
   padding: 0 0 0 24px; 
   font-family: var(--font-primary);
-  font-size: 16px !important; /* 🚀 جایگزین 1rem شد */
-  line-height: normal !important; /* 🚀 اضافه شد */
+  font-size: 16px !important; 
+  line-height: normal !important; 
   font-weight: var(--font-weight-bold);
   color: rgba(255, 255, 255, 0.8);
   outline: none;
@@ -200,12 +197,11 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* آیکون فلش (زبانه) واضح برای تغییر ارز */
 .selectChevron {
   position: absolute;
   left: 0;
   color: #94a3b8;
-  pointer-events: none; /* کلیک‌ها از روی آیکون رد شده و منو باز می‌شود */
+  pointer-events: none; 
 }
 
 .locked .currencySelect { 
@@ -249,7 +245,7 @@
   gap: 10px;
   color: rgba(255, 255, 255, 0.6);
   font-family: var(--font-primary);
-  font-size: 11px;
+  font-size: var(--text-caption); /* 👈 ۱۱ پیکسل خط خورد تا یکپارچه شود */
   line-height: 1.5;
 }
 
@@ -272,6 +268,6 @@
 
 @media (max-width: 768px) {
   .card { padding: var(--space-6); }
-  .faInput { font-size: 16px !important; } /* 🚀 فیکس نهایی موبایل */
-  .currencySelect { font-size: 16px !important; } /* 🚀 فیکس نهایی موبایل */
+  .faInput { font-size: 19px !important; } /* 🛡️ گارد محافظتی زوم iOS حفظ شد */
+  .currencySelect { font-size: 19px !important; } /* 🛡️ گارد محافظتی زوم iOS حفظ شد */
 }

@@ -40,38 +40,42 @@
   padding: 0 var(--container-padding);
 }
 
-.top {
+.header {
   text-align: center;
   margin-bottom: var(--space-16);
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.highlightText {
-  display: inline-block;
-  font-family: var(--font-primary);
-  font-size: var(--text-body-sm);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.5px;
-  margin-bottom: var(--space-3);
+.eyebrow {
+  margin: 0 0 var(--space-3);
   color: var(--color-accent-secondary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-md); 
+  /* 👈 اصلاح شد: اتصال به توکن وزن فونت */
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.5px;
 }
 
 .title {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-primary);
   font-family: var(--font-primary);
   font-size: var(--text-section-title);
-  font-weight: var(--font-weight-bold);
   line-height: var(--leading-tight);
   letter-spacing: -0.02em;
-  margin-bottom: var(--space-4);
-  color: var(--color-text-primary);
+  /* 👈 اصلاح شد: اتصال به توکن وزن فونت */
+  font-weight: var(--font-weight-bold);
 }
 
 .subtitle {
-  font-family: var(--font-primary);
-  font-size: var(--text-body-lg);
-  line-height: var(--leading-relaxed);
-  color: var(--color-text-secondary);
-  max-width: 60ch;
   margin: 0 auto;
+  color: var(--color-text-secondary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-md); 
+  line-height: var(--leading-relaxed);
+  max-width: 60ch;
 }
 
 /* Stage & Guides */
@@ -185,15 +189,16 @@
 
 .itemTitle {
   font-family: var(--font-primary);
-  font-size: var(--text-body-lg);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--text-body-lg); 
+  /* 👈 اصلاح شد: اتصال به توکن وزن فونت */
+  font-weight: var(--font-weight-bold); 
   color: var(--color-text-primary);
   margin-bottom: var(--space-2);
 }
 
 .itemText {
   font-family: var(--font-primary);
-  font-size: var(--text-body-md);
+  font-size: var(--text-caption); 
   line-height: var(--leading-relaxed);
   color: var(--color-text-secondary);
   max-width: 46ch;
@@ -249,7 +254,7 @@
 
 .mobileCore {
   position: absolute; left: 50%; top: 50%;
-  width: 170px; height: 170px; /* گوی بزرگتر برای آیپد/موبایل بزرگ */
+  width: 170px; height: 170px; 
   transform: translate(-50%, -50%);
   border-radius: var(--radius-pill);
   background-color: var(--color-bg-surface);
@@ -261,6 +266,7 @@
 .mobileTitle {
   font-family: var(--font-primary);
   font-size: var(--text-section-title);
+  /* 👈 اصلاح شد: اتصال به توکن وزن فونت */
   font-weight: var(--font-weight-bold);
   line-height: var(--leading-tight);
   margin: var(--space-2) 0 var(--space-4) 0;
@@ -291,6 +297,7 @@
 .mobileRowTitle {
   font-family: var(--font-primary);
   font-size: var(--text-body-md);
+  /* 👈 اصلاح شد: اتصال به توکن وزن فونت */
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
 }
@@ -316,20 +323,18 @@
 
 /* Responsive Overrides */
 @media (max-width: 980px) {
-  .top, .rings, .center, .quadDesktop, .verticalGuides { display: none; }
-  .bgGrid { display: none; } /* پنهان کردن پترن خطی پشتی در موبایل */
+  .header, .rings, .center, .quadDesktop, .verticalGuides { display: none; } 
+  .bgGrid { display: none; } 
   .stage { min-height: auto; }
   .mobileStack { display: block; }
 }
 
 @media (max-width: 600px) {
   .section { padding: var(--section-pad-compact) 0; }
-  .mobileTitle { font-size: clamp(24px, 7vw, 32px); }
   
   .mobileCenter { width: 260px; height: 260px; margin-top: 0; }
-  .mobileCore { width: 130px; height: 130px; } /* گوی بزرگتر برای گوشی */
+  .mobileCore { width: 130px; height: 130px; } 
   
-  /* تنظیم سایز رینگ‌های ثابت در گوشی */
   .mobileRings::before { width: 180px; height: 180px; }
   .mobileRings::after { width: 240px; height: 240px; }
 }

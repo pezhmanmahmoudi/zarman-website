@@ -105,20 +105,22 @@
 
 .highlightText {
   display: block;
-  font-size: clamp(20px, 1.5vw, 18px); 
-  font-weight: 800; 
+  font-family: var(--font-primary);
+  /* 👈 جایگزین کردن clamp با توکن سیستم */
+  font-size: var(--text-body-md); 
+  font-weight: var(--font-weight-bold); 
   margin-bottom: 18px;
-  text-align: center;
   color: #000000; 
   letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 .mainTitle {
-  font-size: clamp(32px, 5vw, 54px); 
-  font-weight: 950;
-  line-height: 1.2; 
-  letter-spacing: -0.025em;
+  font-family: var(--font-primary);
+  /* 👈 جایگزین کردن clamp با توکن سیستم */
+  font-size: var(--text-display-l); 
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-tight); 
+  letter-spacing: -0.02em;
   margin-bottom: 24px;
   background: linear-gradient(
     135deg, 
@@ -134,10 +136,11 @@
 }
 
 .bodyText {
-  font-size: clamp(16px, 1.1rem, 18px); 
-  line-height: 2; 
+  font-family: var(--font-primary);
+  /* 👈 جایگزین کردن clamp با توکن سیستم */
+  font-size: var(--text-body-md); 
+  line-height: var(--leading-relaxed); 
   color: var(--z-text-main);
-  font-weight: 450; 
   max-width: 100%;
   margin-bottom: clamp(32px, 5vh, 48px);
 }
@@ -203,19 +206,24 @@
     margin-inline-end: 0; 
   }
 
+  .highlightText {
+    text-align: center; 
+    /* 👈 در موبایل متن درباره زرمان روی رنگ مشکی باید سفید شود */
+    color: #ffffff; 
+  }
+
   .mainTitle {
     background: none;
     -webkit-background-clip: initial;
     background-clip: initial;
     color: #ffffff; 
     text-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
-    font-size: clamp(30px, 8vw, 42px);
+    /* 👈 خط font-size clamp پاک شد، توکن در موبایل اتوماتیک سایز را کم میکند */
   }
 
   .bodyText { 
     color: #ffffff; 
     margin: 0 auto 35px; 
-    font-weight: 500;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   }
 
@@ -243,15 +251,6 @@
   
   .mobileDarkGhost:hover {
     background: rgba(255, 255, 255, 0.1) !important;
-  }
-}
-
-@media (max-width: 900px) {
-  .highlightText {
-    text-align: center; 
-    font-size: 20px;
-    margin-bottom: 15px;
-    color: #ffffff; 
   }
 }
 

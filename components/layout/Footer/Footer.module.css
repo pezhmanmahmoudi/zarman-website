@@ -1,7 +1,7 @@
 /* Footer.module.css - Zarman Premium Dark & Centered */
 
 .footer {
-  background-color: var(--color-bg-base); /* استفاده از رنگ تیره سایت */
+  background-color: var(--color-bg-base); 
   border-top: 1px solid var(--color-border-ghost); 
   padding: var(--space-16) 0 var(--space-6) 0;
   direction: rtl;
@@ -9,7 +9,7 @@
   overflow: hidden;
 }
 
-/* یک هاله نوری بسیار محو در بک‌گراند فوتر برای زیبایی */
+/* 👈 هاردکد رنگ پاک شد و به متغیر رنگ سازمانی متصل گردید */
 .footer::before {
   content: "";
   position: absolute;
@@ -18,7 +18,7 @@
   transform: translateX(-50%);
   width: 60%;
   height: 1px;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.4) 0%, transparent 100%);
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.4) 0%, transparent 100%);
 }
 
 .container {
@@ -99,7 +99,7 @@
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 30px;
+  width: 32px;
   height: 2px;
   background-color: var(--color-accent-primary);
   border-radius: var(--radius-pill);
@@ -120,12 +120,13 @@
   font-family: var(--font-primary);
   font-size: var(--text-body-md);
   text-decoration: none;
-  transition: all var(--transition-fast);
+  /* 👈 ترانزیشن به متغیر سیستم متصل شد */
+  transition: color var(--transition-fast), transform var(--transition-fast);
 }
 
 .linkList a:hover {
   color: var(--color-accent-secondary); 
-  transform: translateY(-1px);
+  transform: translateY(-2px); /* 👈 ارتقای UX برای حس کلیک‌پذیری بهتر */
 }
 
 /* استایل تماس */
@@ -134,14 +135,8 @@
   font-family: var(--font-en-stack);
   font-size: var(--text-body-md);
   letter-spacing: 0.5px;
-}
-
-.contactItemEn {
-  color: var(--color-text-tertiary);
-  font-family: var(--font-en-stack);
-  font-size: var(--text-body-sm);
   line-height: var(--leading-relaxed);
-  margin-top: var(--space-2);
+  text-align: center;
 }
 
 /* ==================
@@ -156,7 +151,8 @@
 .copyright {
   color: var(--color-text-tertiary); 
   font-family: var(--font-primary);
-  font-size: var(--text-body-sm);
+  /* 👈 تغییر به کپشن برای تناسب معنایی با کپی‌رایت */
+  font-size: var(--text-caption);
   line-height: var(--leading-relaxed);
   margin: 0;
 }
@@ -170,7 +166,7 @@
    ================== */
 @media (max-width: 1024px) {
   .linksGrid { 
-    grid-template-columns: repeat(3, 1fr); 
+    /* 👈 حذف خطوط تکراری */
     gap: var(--space-6); 
   }
 }
@@ -180,20 +176,15 @@
     padding: var(--space-12) 0 var(--space-8) 0; 
   }
   .brandDesc {
-    font-size: var(--text-body-sm);
+    /* 👈 فونت سایز دستی حذف شد */
     padding: 0 var(--space-4);
   }
   .linksGrid { 
     grid-template-columns: 1fr; 
     gap: var(--space-12);
   }
-  .colTitle {
-    font-size: var(--text-body-md);
-  }
-  .linkList a, .contactItem {
-    font-size: var(--text-body-sm);
-  }
+  /* 👈 تغییرات فونت‌سایزهای لینک‌ها و عنوان‌ها پاک شد. سیستم توکن خودش آن‌ها را مدیریت می‌کند */
   .mobileBreak {
-    display: block; /* در موبایل متن کپی‌رایت را می‌شکند تا زیباتر شود */
+    display: block; 
   }
 }

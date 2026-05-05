@@ -7,6 +7,7 @@
   width: 1px;
   height: 1px;
 }
+
 .h-skip:focus {
   left: var(--space-4);
   top: var(--space-3);
@@ -28,7 +29,7 @@
   transform: translateX(-50%);
   width: 100%;
   max-width: var(--container-max-width);
-  height: 72px;
+  height: 72px; /* ابعاد ساختاری ثابت هدر */
   padding: 0 var(--container-padding);
   z-index: 9999;
 }
@@ -66,7 +67,6 @@
   align-items: center;
   flex-shrink: 0;
   z-index: 10;
-  /* 👈 کنترل مرکزی برای غیرفعال کردن کلیک و هایلایت شدن لوگو */
   pointer-events: none; 
   user-select: none;
 }
@@ -92,7 +92,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-6);
-  flex-grow: 1; /* به صورت هوشمند فضای خالی وسط را پر می‌کند */
+  flex-grow: 1;
 }
 
 /* Links */

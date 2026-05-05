@@ -70,6 +70,7 @@ function formatPrice(num: number) {
     .replace(/,/g, "،");
 }
 
+// 🚀 جادوی ریاضی برای حل مشکل نمودار هفتگی
 function calculateNiceTicks(rawMin: number, rawMax: number, maxTicks = 6) {
   if (rawMin === rawMax) {
     return { 
@@ -80,7 +81,16 @@ function calculateNiceTicks(rawMin: number, rawMax: number, maxTicks = 6) {
   }
   
   const range = rawMax - rawMin;
-  const roughStep = range / (maxTicks - 1);
+  
+  // ایجاد حاشیه امن (Buffer): 
+  // ۱۵ درصد حاشیه می‌دهیم اما حداقل ۲۰۰ تومان بالا و پایین آزاد می‌گذاریم تا به هیچ وجه نچسبد
+  const buffer = Math.max(range * 0.15, 200); 
+  
+  const paddedMin = rawMin - buffer;
+  const paddedMax = rawMax + buffer;
+  const paddedRange = paddedMax - paddedMin;
+
+  const roughStep = paddedRange / (maxTicks - 1);
   
   const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
   const normalizedStep = roughStep / magnitude;
@@ -93,11 +103,11 @@ function calculateNiceTicks(rawMin: number, rawMax: number, maxTicks = 6) {
   
   step *= magnitude;
   
-  const niceMin = Math.floor(rawMin / step) * step;
-  const niceMax = Math.ceil(rawMax / step) * step;
+  const niceMin = Math.floor(paddedMin / step) * step;
+  const niceMax = Math.ceil(paddedMax / step) * step;
   
   const ticks = [];
-  for (let i = niceMin; i <= niceMax; i += step) {
+  for (let i = niceMin; i <= niceMax + (step / 2); i += step) {
     ticks.push(i);
   }
   
@@ -126,7 +136,6 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
 };
 
 export default function PriceChart() {
-  // 👈 تنها تغییر: پیش‌فرض برای ظاهر زیبای چارت روی 1W تنظیم شد
   const [timeframe, setTimeframe] = useState<Timeframe>("1W");
   const { chartDataDaily, isLoading } = useRates();
 

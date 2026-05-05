@@ -58,7 +58,7 @@
   margin: 0 0 var(--space-3);
   color: var(--color-accent-secondary); 
   font-family: var(--font-primary);
-  font-size: var(--text-body-md);
+  font-size: var(--text-body-md); /* 👈 ۱۶ پیکسل برای خوانایی عالی در فارسی */
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.9px;
 }
@@ -80,7 +80,7 @@
 }
 
 /* ====================================================
-   Tooltip Styles (Original User Styles Preserved)
+   Tooltip Styles
    ==================================================== */
 .tooltipWrapper {
   position: relative;
@@ -101,15 +101,13 @@
   width: 0.4em !important;  
   height: 0.4em !important;
   
-  /* ۲. ترمزها! (جلوگیری از غول‌پیکر شدن در دسکتاپ و ناپدید شدن در موبایل) */
-  max-width: 22px !important;  /* هرگز از 22 پیکسل بزرگتر نشود */
+  max-width: 22px !important; 
   max-height: 22px !important;
-  min-width: 14px !important;  /* هرگز از 14 پیکسل کوچکتر نشود */
+  min-width: 14px !important; 
   min-height: 14px !important;
 
   top: -8px; 
   left: 8px;
-
 }
 
 .uluruEnText {
@@ -163,9 +161,6 @@
   visibility: visible;
   opacity: 1;
   margin-top: 10px; 
-
-
-  
 }
 
 /* ==================================================== */
@@ -174,7 +169,7 @@
   margin: 0 0 var(--space-8);
   font-family: var(--font-primary);
   color: var(--color-text-secondary);
-  font-size: var(--text-body-lg);
+  font-size: var(--text-body-md); /* 👈 رفع مشکل غول‌پیکر شدن متن */
   line-height: var(--leading-relaxed);
   max-width: 90%;
   position: relative;
@@ -231,37 +226,33 @@
   max-width: 480px;
 }
 
-/* 👈 وسط‌چین کردن و پس‌زمینه سبز ملایم */
 .widgetHeader {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   align-self: center; 
-  background-color: rgba(16, 185, 129, 0.15); /* پس‌زمینه هاله سبز */
-  border: 1px solid rgba(16, 185, 129, 0.3); /* حاشیه سبز ظریف */
+  background-color: rgba(16, 185, 129, 0.15); 
+  border: 1px solid rgba(16, 185, 129, 0.3); 
   padding: 6px 16px;
   border-radius: var(--radius-pill);
 }
 
-/* 👈 نقطه چشمک‌زن سبز */
 .pulseDot {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-pill);
-  background-color: #10b981; /* رنگ سبز زنده */
-  box-shadow: 0 0 12px #10b981; /* سایه درخشان سبز */
+  background-color: #10b981; 
+  box-shadow: 0 0 12px #10b981; 
   animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 👈 متن سبز رنگ */
 .status {
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
   font-weight: var(--font-weight-bold);
-  color: #10b981; /* رنگ سبز زنده */
+  color: #10b981; 
 }
 
-/* 👈 استایل بهبود یافته پنل قیمت (بافت‌دار و لوکس‌تر) */
 .splitCard {
   display: flex;
   flex-direction: row; 
@@ -283,7 +274,6 @@
   gap: var(--space-6);
 }
 
-/* 👈 لوگو به سمت راست منتقل شد (چون در HTML اول آمده) */
 .logoSection {
   width: 150px;
   background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(0,0,0,0.2) 100%);
@@ -334,7 +324,7 @@
 }
 
 .currency {
-  font-size: var(--text-body-md);
+  font-size: var(--text-body-sm); /* 👈 کلمه‌ی تومان برای تناسب بهتر روی sm تنظیم شد */
   font-weight: var(--font-weight-regular);
   color: var(--color-text-tertiary);
   margin-right: var(--space-2);
@@ -349,10 +339,10 @@
 /* Responsive Overrides */
 @media (max-width: 1024px) {
   .hero {
-    min-height: auto; /* لغو وسط‌چین عمودی برای کنترل دقیق‌تر */
+    min-height: auto; 
   }
   .container {
-    padding-top: 130px; /* 👈 این عدد را کم و زیاد کنید تا فاصله بالا در تبلت تنظیم شود */
+    padding-top: 130px; 
   }
   
   .layout {
@@ -374,23 +364,16 @@
   }
 
   .tooltipText {
-    /* با کاهش این درصد، تولتیپ به سمت چپ حرکت می‌کند. 
-       می‌توانید بین 10% تا 30% تغییر دهید تا دقیقاً در جای دلخواهتان قرار بگیرد */
     transform: translateX(70%); 
   }
   
   .tooltipText::after {
-    /* چون بدنه تولتیپ را جابجا کردیم، باید جای فلش زیر آن را هم تنظیم کنیم 
-       تا دقیقاً روی آیکون/کلمه اشاره کند */
     right: 80%; 
     transform: translateX(40%);
   }
 
-    .infoIcon {
-    /* با کم و زیاد کردن این عدد، آیکون بالا و پایین می‌رود */
+  .infoIcon {
     top: -8px !important; 
-    
-    /* با کم و زیاد کردن این عدد، آیکون چپ و راست می‌رود */
     left: 4px !important; 
   }
 }
@@ -400,7 +383,7 @@
     min-height: auto;
   }
   .container {
-    padding-top: 130px; /* 👈 این عدد را کم و زیاد کنید تا فاصله بالا در موبایل تنظیم شود */
+    padding-top: 130px; 
   }
   .eyebrow {
     margin-bottom: 24px; 
@@ -426,24 +409,17 @@
   }
 
   .tooltipText {
-    /* با تغییر این عدد پیکسلی، تولتیپ به راحتی چپ و راست می‌شود */
-    /* عدد منفی تولتیپ را به سمت چپ می‌برد و عدد مثبت به سمت راست */
     right: 0 !important; 
-    transform: none !important; /* این خط ترانسفورم قبلی را باطل می‌کند تا فقط با right کار کنیم */
+    transform: none !important; 
   }
   
   .tooltipText::after {
-    /* این عدد جای فلشِ زیر تولتیپ را تنظیم می‌کند */
     right: 20px !important; 
     transform: none !important;
   }
 
   .infoIcon {
-    /* با کم و زیاد کردن این عدد، آیکون بالا و پایین می‌رود */
     top: -8px !important; 
-    
-    /* با کم و زیاد کردن این عدد، آیکون چپ و راست می‌رود */
     left: 4px !important; 
   }
-
 }

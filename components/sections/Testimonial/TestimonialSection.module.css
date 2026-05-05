@@ -25,7 +25,8 @@
 .eyebrow {
   color: var(--color-accent-support); 
   font-family: var(--font-primary);
-  font-size: var(--text-body-sm);
+  /* 👈 هماهنگ‌سازی با استاندارد هدرها در کل سایت */
+  font-size: var(--text-body-md);
   font-weight: var(--font-weight-bold);
   margin-bottom: var(--space-3);
   display: inline-block;
@@ -45,13 +46,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  margin-top: 20px;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
 }
 
 .starsContainer {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   color: #fbbf24;
 }
 
@@ -65,15 +66,19 @@
   color: var(--color-text-secondary);
   font-family: "IRANSansX", "IRANSans", sans-serif;
   font-size: var(--text-body-sm);
-  font-weight: 500;
+  /* 👈 حذف هاردکد 500 */
+  font-weight: var(--font-weight-medium);
   background: rgba(255, 255, 255, 0.03);
-  padding: 6px 16px;
+  /* 👈 حذف هاردکد 6px 16px */
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-border-ghost);
 }
+
 .statsText strong {
   color: var(--color-text-primary);
-  font-weight: 800;
+  /* 👈 حذف هاردکد 800 */
+  font-weight: var(--font-weight-bold);
 }
 
 /* =========================================
@@ -93,8 +98,6 @@
   gap: var(--space-6);
   height: 100%;
 }
-
-/* 👈 بخش مربوط به هاور (animation-play-state: paused) از اینجا حذف شد تا حرکت متوقف نشود */
 
 .column {
   display: flex;
@@ -142,7 +145,6 @@
   border-color: rgba(124, 58, 237, 0.3);
 }
 
-/* هدر کارت (ستاره‌ها و آیکون نقل قول) */
 .cardHeaderFlex {
   display: flex;
   justify-content: space-between;
@@ -159,17 +161,17 @@
 
 .cardRating {
   display: flex;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .starFilled { color: #fbbf24; }
 .starEmpty { color: var(--color-border-ghost); }
 
-/* محتوای متن */
 .textWrap {
   margin: 0; 
-  flex-grow: 1; /* باعث می‌شود متن تمام فضای خالی بالا را پر کند */
-  margin-bottom: 24px; /* فاصله تضمینی بین متن و خط افقی */
+  flex-grow: 1; 
+  /* 👈 حذف هاردکد 24px */
+  margin-bottom: var(--space-6); 
 }
 
 .text {
@@ -181,14 +183,15 @@
   text-align: right; 
 }
 
-/* 👈 باکس نویسنده (حل مشکل خط افقی و تداخل) */
 .authorBox {
   display: flex;
   align-items: center;
-  gap: 16px;
-  border-top: 1px solid var(--color-border-ghost); /* خط جداکننده اینجا قرار می‌گیرد */
-  padding-top: 20px; /* فاصله داخلی از خط افقی به پایین */
-  margin-top: auto; /* باکس را به انتهای کارت می‌چسباند */
+  /* 👈 حذف هاردکد 16px */
+  gap: var(--space-4);
+  border-top: 1px solid var(--color-border-ghost);
+  /* 👈 حذف هاردکد 20px */
+  padding-top: var(--space-5);
+  margin-top: auto; 
 }
 
 .avatar {
@@ -200,8 +203,9 @@
   place-items: center;
   color: #fff;
   font-family: "Inter", var(--font-primary); 
+  /* 👈 حذف هاردکدهای وزن و سایز فونت */
   font-weight: var(--font-weight-bold);
-  font-size: 1.1rem;
+  font-size: var(--text-body-lg);
   flex-shrink: 0;
   text-transform: uppercase;
 }
@@ -210,7 +214,8 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px; /* فاصله بین نام و حجم */
+  /* 👈 حذف هاردکد 4px */
+  gap: var(--space-1); 
 }
 
 .name {
@@ -220,22 +225,6 @@
   font-weight: var(--font-weight-bold);
   margin: 0;
   text-align: right;
-}
-
-.volumeText {
-  color: var(--color-text-tertiary);
-  font-family: var(--font-primary);
-  font-size: 0.8rem;
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.volumeText strong {
-  color: var(--color-accent-secondary); 
-  font-family: "Inter", system-ui, sans-serif; 
-  font-weight: 800;
-  letter-spacing: 0.5px;
 }
 
 /* ==================

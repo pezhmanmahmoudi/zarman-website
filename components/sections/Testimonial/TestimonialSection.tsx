@@ -18,17 +18,17 @@ const QuoteIcon = () => (
   </svg>
 );
 
-// دیتای مجازی (Fallback) برای زمانی که اینترنت قطع است
+// 🛡️ دیتای مجازی - فیلد volume کاملاً حذف شد
 const fallbackReviews = [
-  { name: "علیرضا م.", volume: "12,000", rating: 5, text: "پرداخت شهریه دانشگاه همیشه پر از استرس بود، اما با زرمان، هم نرخ شفاف بود و هم دقیقاً در زمان مقرر وجه به حساب نشست." },
-  { name: "سارا ت.", volume: "8,500", rating: 5, text: "برای انتقال پس‌اندازم به استرالیا وسواس زیادی داشتم. سیستم پیگیری مرحله‌به‌مرحله باعث شد در تمام مسیر خیالم راحت باشد." },
-  { name: "شرکت بازرگانی آ.", volume: "45,000", rating: 4, text: "سرعت در تسویه اینوویس‌ها برای ما حیاتی است. زرمان نه‌تنها نقدینگی را تامین کرد، بلکه فاکتورهای رسمی برای مالیات ارائه داد." },
-  { name: "محمد ح.", volume: "150,000", rating: 5, text: "بهترین صرافی برای انتقال مبالغ بالا. کارمزدها بسیار شفاف است و تیم پشتیبانی در تمام مراحل همراه شما هستند." },
-  { name: "ندا ش.", volume: "5,000", rating: 5, text: "فرایند احراز هویت خیلی سریع و حرفه‌ای بود. پولی که فرستادم در کمتر از چند ساعت در حساب مقصدم در استرالیا بود." },
-  { name: "امید ر.", volume: "3,200", rating: 5, text: "پشتیبانی واتس‌اپ فوق‌العاده است. حتی در روزهای تعطیل هم پاسخ دادند و مشکل من را در لحظه حل کردند. بی‌نظیر بود." },
-  { name: "رضا ک.", volume: "22,000", rating: 5, text: "سیستم اعلان‌ها و پیگیری زرمان به من آرامش خاطر میده. همیشه می‌دونم پولم کجاست و کی به مقصد می‌رسه." },
-  { name: "مریم ا.", volume: "1,500", rating: 4, text: "بهترین ریت دلار رو همیشه از زرمان می‌گیرم. رابط کاربری سایت هم انقدر جذابه که کار کردن باهاش لذت بخشه." },
-  { name: "پیمان م.", volume: "9,800", rating: 5, text: "بدون هیچ هزینه پنهانی. دقیقاً همون مبلغی که در ماشین‌حساب سایت دیدم، بدون یک سنت کم و کاست به حسابم واریز شد." }
+  { name: "علیرضا م.", rating: 5, text: "پرداخت شهریه دانشگاه همیشه پر از استرس بود، اما با زرمان، هم نرخ شفاف بود و هم دقیقاً در زمان مقرر وجه به حساب نشست." },
+  { name: "سارا ت.", rating: 5, text: "برای انتقال پس‌اندازم به استرالیا وسواس زیادی داشتم. سیستم پیگیری مرحله‌به‌مرحله باعث شد در تمام مسیر خیالم راحت باشد." },
+  { name: "شرکت بازرگانی آ.", rating: 4, text: "سرعت در تسویه اینوویس‌ها برای ما حیاتی است. زرمان نه‌تنها نقدینگی را تامین کرد، بلکه فاکتورهای رسمی برای مالیات ارائه داد." },
+  { name: "محمد ح.", rating: 5, text: "بهترین صرافی برای انتقال مبالغ بالا. کارمزدها بسیار شفاف است و تیم پشتیبانی در تمام مراحل همراه شما هستند." },
+  { name: "ندا ش.", rating: 5, text: "فرایند احراز هویت خیلی سریع و حرفه‌ای بود. پولی که فرستادم در کمتر از چند ساعت در حساب مقصدم در استرالیا بود." },
+  { name: "امید ر.", rating: 5, text: "پشتیبانی واتس‌اپ فوق‌العاده است. حتی در روزهای تعطیل هم پاسخ دادند و مشکل من را در لحظه حل کردند. بی‌نظیر بود." },
+  { name: "رضا ک.", rating: 5, text: "سیستم اعلان‌ها و پیگیری زرمان به من آرامش خاطر میده. همیشه می‌دونم پولم کجاست و کی به مقصد می‌رسه." },
+  { name: "مریم ا.", rating: 4, text: "بهترین ریت دلار رو همیشه از زرمان می‌گیرم. رابط کاربری سایت هم انقدر جذابه که کار کردن باهاش لذت بخشه." },
+  { name: "پیمان م.", rating: 5, text: "بدون هیچ هزینه پنهانی. دقیقاً همون مبلغی که در ماشین‌حساب سایت دیدم، بدون یک سنت کم و کاست به حسابم واریز شد." }
 ];
 
 const ReviewCard = ({ review }: { review: any }) => (
@@ -53,7 +53,6 @@ const ReviewCard = ({ review }: { review: any }) => (
       
       <div className={styles.authorInfo}>
         <h4 className={styles.name} dir="auto">{review.name}</h4>
-        <span className={styles.volumeText} dir="rtl">حجم مبادلات: <strong dir="ltr">{review.volume} AUD</strong></span>
       </div>
     </figcaption>
   </figure>
@@ -65,57 +64,29 @@ export default function TestimonialSection() {
   const [stats, setStats] = useState({ avg: 4.8, total: fallbackReviews.length });
 
   useEffect(() => {
-    async function fetchTestimonialsAndVolumes() {
+    async function fetchTestimonials() {
       try {
-        // ۱. خواندن نظرات و نام کاربران
+        // 🛡️ فقط دریافت نظرات - بدون ارتباط با تیبل تراکنش‌ها
         const { data: testData, error: testError } = await supabase
           .from('testimonials')
-          .select('user_id, rating, message, profiles(first_name, last_name)')
+          .select('rating, message, profiles(first_name, last_name)')
           .order('created_at', { ascending: false });
 
         if (testError) throw testError;
 
         if (testData && testData.length > 0) {
           
-          // ۲. استخراج آیدی کاربرانی که نظر داده‌اند
-          const userIds = [...new Set(testData.map(t => t.user_id).filter(Boolean))];
-          
-          // ۳. خواندن تراکنش‌های موفقِ این کاربران از تیبل تراکنش‌ها
-          let volumeMap: Record<string, number> = {};
-          if (userIds.length > 0) {
-            const { data: txData, error: txError } = await supabase
-              .from('transactions')
-              .select('user_id, amount_aud')
-              .eq('status', 'approved') // فقط تراکنش‌های تایید شده محاسبه می‌شوند
-              .in('user_id', userIds);
-              
-            if (!txError && txData) {
-              // محاسبه مجموع حجم برای هر کاربر
-              txData.forEach(tx => {
-                if (tx.user_id) {
-                  volumeMap[tx.user_id] = (volumeMap[tx.user_id] || 0) + Number(tx.amount_aud || 0);
-                }
-              });
-            }
-          }
-
-          // ۴. ترکیب نام، نظر و حجم واقعی کاربر
           const liveReviews = testData.map((item: any) => {
             const fName = item.profiles?.first_name || "کاربر";
             const lName = item.profiles?.last_name ? ` ${item.profiles.last_name.charAt(0)}.` : "";
             
-            // تخصیص حجم محاسبه شده (اگر صفر باشد، همان صفر را نمایش می‌دهد)
-            const realVolume = item.user_id ? (volumeMap[item.user_id] || 0) : 0;
-
             return {
               name: fName + lName,
-              volume: realVolume > 0 ? realVolume.toLocaleString("en-US") : "0",
               text: item.message,
               rating: item.rating || 5
             };
           });
 
-          // ۵. آپدیت آمارهای بالای بخش
           const average = liveReviews.reduce((sum, rev) => sum + rev.rating, 0) / liveReviews.length;
           
           setReviews(liveReviews);
@@ -125,7 +96,7 @@ export default function TestimonialSection() {
         console.warn("استفاده از دیتای مجازی به دلیل خطا یا خالی بودن دیتابیس.", err);
       }
     }
-    fetchTestimonialsAndVolumes();
+    fetchTestimonials();
   }, []);
 
   const col1 = reviews.filter((_, i) => i % 3 === 0);

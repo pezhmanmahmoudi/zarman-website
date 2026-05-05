@@ -5,8 +5,6 @@
 /* ========== Fonts ========== */
 
 /* ۱. تنظیمات اعداد (ترکیب با فونت پیدا) */
-/* این کد به مرورگر می‌گوید که هر جا فونت Peyda فراخوانی شد، 
-   برای اعداد (انگلیسی و فارسی) از فایل ایران‌سنس استفاده کند! */
 @font-face {
   font-family: "Peyda";
   src: url("/fonts/IRANSansX-Bold.woff2") format("woff2");
@@ -16,7 +14,27 @@
   unicode-range: U+0030-0039, U+06F0-06F9, U+0660-0669, U+066C, U+002C;
 }
 
-/* ۲. فونت اصلی متن (پیدا) - وزن بولد */
+/* ۲. وزن ۴۰۰ (معمولی) - برای متن‌های بدنه، پاراگراف‌ها و زیرنویس‌ها */
+@font-face {
+  font-family: "Peyda";
+  src: url("/fonts/PeydaWeb-Regular.woff2") format("woff2"),
+       url("/fonts/PeydaWeb-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ۳. وزن ۶۰۰ (نیمه‌ضخیم) - برای تیترهای کوچک کارت‌ها و دکمه‌ها */
+@font-face {
+  font-family: "Peyda";
+  src: url("/fonts/PeydaWeb-SemBd.woff2") format("woff2"),
+       url("/fonts/PeydaWeb-SemBd.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ۴. وزن ۷۰۰ (ضخیم) - برای تیترهای اصلی (H1, H2) */
 @font-face {
   font-family: "Peyda";
   src: url("/fonts/PeydaWeb-Bold.woff2") format("woff2"),
@@ -26,17 +44,7 @@
   font-display: swap;
 }
 
-/* در صورت امکان، حتما وزن‌های 400 و 500 را هم برای متون بدنه اضافه کنید */
-/*
-@font-face {
-  font-family: "Peyda";
-  src: url("/fonts/PeydaWeb-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-*/
-
+/* ۵. فونت مستقل ایران‌سنس */
 @font-face {
   font-family: "IRANSansX";
   src: url("/fonts/IRANSansX-Bold.woff2") format("woff2");
@@ -66,8 +74,9 @@ body {
   background-color: var(--color-bg-base);
   color: var(--color-text-secondary);
   
-  /* استفاده یکپارچه از متغیر توکن */
+  /* 👈 استفاده یکپارچه از متغیر توکن و اعمال سایز پایه */
   font-family: var(--font-primary);
+  font-size: var(--text-body-md);
   line-height: var(--leading-relaxed);
   
   /* مهم: فعال‌سازی راست‌چین برای کل سایت */
@@ -101,11 +110,11 @@ h1, h2, h3, h4, h5, h6 {
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
 select,
 textarea {
-  font-size: 16px !important;
+  font-size: 19px !important;
 }
 
 /* این جادوی تایپوگرافی فین‌تک است!
-  هر المنتی (مثل اینپوت‌ها، شماره تماس‌ها یا پسوردها) که چپ‌چین شود،
+  هر المنتی (مثل اینپوت‌ها، شماره تماس‌ها یا پسوردها) که چپ‌چین شود，
   یا کلاس en-text بگیرد، فوراً فونت زیبای Inter را می‌گیرد.
 */
 [dir="ltr"],

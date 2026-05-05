@@ -10,11 +10,9 @@ import {
 } from "@/lib/constants/contact";
 
 export default function FinalCTA() {
-  // ۱. مقدار اولیه امن برای رندر سرور (SSR) تا ارور Hydration نگیریم
   const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_SIGNUP_HELP)}`;
   const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
 
-  // ۲. آپدیت شدن لینک بر اساس دستگاه کاربر، بلافاصله پس از لود شدن در مرورگر
   useEffect(() => {
     setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP));
   }, []);
@@ -25,7 +23,8 @@ export default function FinalCTA() {
         <div className={styles.card}>
           <div className={styles.glowBg} aria-hidden="true" />
           
-          <div className={styles.content}>
+          {/* 👈 نام کلاس به استانداردهای ما تغییر کرد */}
+          <div className={styles.header}>
             <h2 className={styles.title}>آماده‌اید تا تجربه مالی متفاوتی داشته باشید؟</h2>
             <p className={styles.subtitle}>
               همین حالا حساب کاربری خود را بسازید و اولین انتقال خود را با امنیت، سرعت و شفافیت کامل انجام دهید.

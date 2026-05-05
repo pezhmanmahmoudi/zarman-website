@@ -114,15 +114,16 @@ export default function Services() {
 
       <div className={styles.inner}>
         {/* ===== Header ===== */}
-        <header className={styles.top}>
-          <motion.span
-            className={styles.highlightText}
+        {/* 👈 className changed to styles.header */}
+        <header className={styles.header}>
+          <motion.p
+            className={styles.eyebrow} /* 👈 className changed to styles.eyebrow */
             {...highlightAnim}
             viewport={{ once: true }}
             transition={{ duration: 0.8, ease: EASE }}
           >
             خدمات ویژه ما
-          </motion.span>
+          </motion.p>
 
           <motion.h2
             id="services-title"
@@ -145,7 +146,6 @@ export default function Services() {
         </header>
 
         <div className={styles.stage}>
-          {/* خطوط راهنمای کناری حفظ شدند، فقط خطوط متقاطع وسط حذف شدند */}
           <div className={styles.verticalGuides} aria-hidden="true" />
           <div className={styles.rings} aria-hidden="true" />
 
@@ -200,14 +200,15 @@ export default function Services() {
                 </div>
               </div>
 
-              <motion.span
-                className={styles.highlightText}
+              {/* 👈 className changed to styles.eyebrow and changed tag to <p> */}
+              <motion.p
+                className={styles.eyebrow}
                 {...highlightAnim}
                 viewport={{ once: true }}
                 transition={{ duration: 0.78, ease: EASE }}
               >
                 خدمات ویژه ما              
-              </motion.span>
+              </motion.p>
               
               <motion.h3
                 className={styles.mobileTitle}

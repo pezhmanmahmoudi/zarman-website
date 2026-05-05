@@ -1,3 +1,5 @@
+/* FAQSection.module.css - Zarman Premium Standard */
+
 .section {
   padding: var(--section-pad-major) 0;
   background-color: var(--color-bg-base);
@@ -6,7 +8,7 @@
 
 .container {
   width: 100%;
-  max-width: 800px; /* عرض کمتر برای خوانایی بهتر متون طولانی */
+  max-width: 800px; /* این مقدار برای کنترل عرض خطوط (Line-length) خوانایی متون طولانی استاندارد است */
   margin: 0 auto;
   padding: 0 var(--container-padding);
 }
@@ -19,8 +21,9 @@
 .eyebrow {
   color: var(--color-accent-secondary);
   font-family: var(--font-primary);
-  font-size: var(--text-body-sm);
-  font-weight: var(--font-weight-semibold);
+  /* 👈 هماهنگ‌سازی شده با سایر سکشن‌ها */
+  font-size: var(--text-body-md);
+  font-weight: var(--font-weight-bold);
   margin-bottom: var(--space-2);
 }
 
@@ -53,7 +56,8 @@
 }
 
 .isOpen {
-  border-color: rgba(79, 70, 229, 0.4);
+  /* 👈 استفاده از متغیر سیستم برای حفظ یکپارچگی رنگ */
+  border-color: rgba(var(--accent-rgb), 0.4);
   box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
@@ -80,7 +84,8 @@
 
 .icon {
   font-family: monospace;
-  font-size: 1.5rem;
+  /* 👈 هاردکد 1.5rem حذف و به متغیر متصل شد */
+  font-size: var(--text-card-title);
   color: var(--color-text-secondary);
   transition: color var(--transition-fast);
 }
@@ -93,7 +98,8 @@
 .answerWrapper {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 300ms var(--transition-normal);
+  /* 👈 هاردکد زمان حذف شد تا فقط از متغیر ترانزیشن استفاده کند */
+  transition: grid-template-rows var(--transition-normal);
 }
 
 .isOpen .answerWrapper {
@@ -115,7 +121,7 @@
 
 @media (max-width: 768px) {
   .section { padding: var(--section-pad-compact) 0; }
-  .questionText { font-size: var(--text-body-md); }
+  /* 👈 تغییرات دستی سایز فونت در موبایل پاک شد. توکن‌ها خودشان این کار را می‌کنند. */
   .questionBtn { padding: var(--space-4); }
-  .answerText { padding: 0 var(--space-4) var(--space-4); font-size: var(--text-body-sm); }
+  .answerText { padding: 0 var(--space-4) var(--space-4); }
 }

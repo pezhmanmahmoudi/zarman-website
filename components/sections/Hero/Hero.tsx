@@ -9,7 +9,7 @@ import { Info } from "lucide-react";
 import styles from "./Hero.module.css";
 import { useRates } from "@/context/RateContext";
 import {
-  WHATSAPP_NUMBER, // 👈 اضافه شد
+  WHATSAPP_NUMBER, 
   buildWhatsAppUrl,
   WHATSAPP_MESSAGE_TRANSFER_HELP,
 } from "@/lib/constants/contact";
@@ -18,7 +18,6 @@ export default function Hero() {
   const heroRef = useRef<HTMLElement | null>(null);
   const { currentRates, isLoading } = useRates();
 
-  // ۱. مقدار اولیه امن برای رندر سرور (SSR Safe)
   const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_TRANSFER_HELP)}`;
   const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
 
@@ -26,7 +25,6 @@ export default function Hero() {
 
   useEffect(() => {
     setMounted(true);
-    // ۲. آپدیت کردن لینک به نسخه نیتیو (whatsapp://) در صورت نیاز، بلافاصله بعد از لود صفحه
     setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_TRANSFER_HELP));
   }, []);
 
@@ -82,7 +80,6 @@ export default function Hero() {
               <Button href="/fa/register" variant="primary" size="lg" className={styles.btn}>
                 شروع ثبت‌نام
               </Button>
-              {/* 👇 اینجا دکمه از State می‌خواند */}
               <Button href={whatsappUrl} variant="secondary" size="lg" className={styles.btn} target="_blank" rel="noopener noreferrer">
                 تماس با ما
               </Button>
@@ -114,15 +111,16 @@ export default function Hero() {
                   <div className={styles.rateCol}>
                     <span className={styles.label}>فروش دلار استرالیا</span>
                     <strong className={styles.value}>
+                      {/* 👈 در اینجا سایزهای خطی به کلاس‌های توکن تغییر کردند */}
                       {isLoading ? (
-                        <span style={{ fontSize: '1rem' }}>در حال دریافت...</span>
+                        <span style={{ fontSize: 'var(--text-body-md)' }}>در حال دریافت...</span>
                       ) : currentRates.sellAUD ? (
                         <>
                           {currentRates.sellAUD!.toLocaleString("fa-IR")} 
                           <span className={styles.currency}>تومان</span>
                         </>
                       ) : (
-                        <span style={{ fontSize: '1.2rem', color: '#f59e0b' }}>تماس بگیرید</span>
+                        <span style={{ fontSize: 'var(--text-card-title)', color: 'var(--warning)' }}>تماس بگیرید</span>
                       )}
                     </strong>
                   </div>
@@ -132,15 +130,16 @@ export default function Hero() {
                   <div className={styles.rateCol}>
                     <span className={styles.label}>خرید دلار استرالیا</span>
                     <strong className={styles.value}>
+                      {/* 👈 در اینجا سایزهای خطی به کلاس‌های توکن تغییر کردند */}
                       {isLoading ? (
-                        <span style={{ fontSize: '1rem' }}>در حال دریافت...</span>
+                        <span style={{ fontSize: 'var(--text-body-md)' }}>در حال دریافت...</span>
                       ) : currentRates.buyAUD ? (
                         <>
                           {currentRates.buyAUD!.toLocaleString("fa-IR")} 
                           <span className={styles.currency}>تومان</span>
                         </>
                       ) : (
-                        <span style={{ fontSize: '1.2rem', color: '#f59e0b' }}>تماس بگیرید</span>
+                        <span style={{ fontSize: 'var(--text-card-title)', color: 'var(--warning)' }}>تماس بگیرید</span>
                       )}
                     </strong>
                   </div>

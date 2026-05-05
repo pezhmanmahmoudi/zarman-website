@@ -1,5 +1,5 @@
 /* Zarman Exchange - Premium Fintech Design Tokens
-  Version: 1.1.0 (Added English Font Stack)
+  Version: 1.2.0 (Persian Legibility Scale Bump)
   Architecture: Semantic CSS Variables
 */
 
@@ -39,45 +39,45 @@
   
   /* =========================================
      2. TYPOGRAPHY SYSTEM (Persian-First + English Inter)
-     Assuming base 16px (1rem = 16px)
+     Base shifted to 18px equivalent for Persian
      ========================================= */
   
   /* Font Families */
   --font-primary: "Peyda", "IRANSansX", system-ui, -apple-system, sans-serif;
   
-  /* ترکیب متغیر --font-en (که از layout.tsx می‌آید) با فونت‌های پشتیبان سیستم */
+  /* ترکیب متغیر --font-en با فونت‌های پشتیبان سیستم */
   --font-en-stack: var(--font-en), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   
-  /* Font Sizes */
-  --text-display-xl: 4rem;      /* ~64px - Hero Main */
-  --text-display-l: 3.25rem;    /* ~52px - Large impact */
-  --text-section-title: 2.5rem; /* ~40px - H2 Section Titles */
-  --text-card-title: 1.5rem;    /* ~24px - H3 Card Titles */
-  --text-body-lg: 1.125rem;     /* ~18px - Lead paragraphs */
-  --text-body-md: 1rem;         /* ~16px - Standard body */
-   --text-body-sm: 1rem;         /* ~16px - Small UI elements and mobile-safe controls */
-   --text-caption: 0.875rem;     /* ~14px - Meta text with better readability */
+  /* Font Sizes - 🚀 Base shifted up for Persian Legibility */
+  --text-display-xl: 4.5rem;      /* ~72px - Hero Main */
+  --text-display-l: 3.5rem;       /* ~56px - Large impact */
+  --text-section-title: 2.75rem;  /* ~44px - H2 Section Titles */
+  --text-card-title: 1.75rem;     /* ~28px - H3 Card Titles */
+  --text-body-lg: 1.25rem;        /* ~20px - Lead paragraphs / Subtitles */
+  --text-body-md: 1.125rem;       /* ~18px - Standard body (پایه جدید متن فارسی) */
+  --text-body-sm: 1rem;           /* ~16px - Small UI elements and safe controls */
+  --text-caption: 0.875rem;       /* ~14px - Meta text / Legal footer */
 
-   /* Form/UI Control Baseline */
-   --text-control: 1rem;         /* 16px - Prevent iOS input zoom and improve legibility */
-   --control-min-height: 2.75rem;/* 44px - Recommended touch target baseline */
+  /* Form/UI Control Baseline */
+  --text-control: 1rem;           /* 16px - Prevent iOS input zoom */
+  --control-min-height: 2.75rem;  /* 44px - Recommended touch target baseline */
 
-  /* Font Weights (Controlled - No unnecessary boldness) */
+  /* Font Weights (Controlled) */
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
-  --font-weight-bold: 700;      /* Use sparingly */
+  --font-weight-bold: 700;
 
   /* Line Heights */
   --leading-tight: 1.15;        /* For Display & Section Titles */
   --leading-snug: 1.3;          /* For Card Titles */
-   --leading-relaxed: 1.75;      /* For Persian body readability without loose rhythm */
+  --leading-relaxed: 1.75;      /* For Persian body readability without loose rhythm */
 
   /* =========================================
      3. SPACING & LAYOUT SYSTEM (Rhythmic)
      ========================================= */
   
-  /* Micro Spacing (Internal Component padding/margins) */
+  /* Micro Spacing */
   --space-1: 0.25rem;  /* 4px */
   --space-2: 0.5rem;   /* 8px */
   --space-3: 0.75rem;  /* 12px */
@@ -87,7 +87,7 @@
   --space-12: 3rem;    /* 48px */
   --space-16: 4rem;    /* 64px */
 
-  /* Macro Spacing (Section Vertical Padding) - To be adjusted via Media Queries */
+  /* Macro Spacing */
   --section-pad-compact: 5rem;  /* 80px base */
   --section-pad-major: 8.75rem; /* 140px base for desktop */
 
@@ -96,48 +96,43 @@
   --container-padding: 1.5rem;  /* 24px side padding on mobile/tablet */
 
   /* =========================================
-     4. RADII & SHAPES (Structured, not toy-like)
+     4. RADII & SHAPES 
      ========================================= */
   
-  --radius-sm: 0.375rem; /* 6px - Small badges, inputs */
-  --radius-md: 0.5rem;   /* 8px - Buttons, Inner cards */
-  --radius-lg: 0.75rem;  /* 12px - Main feature cards */
-  --radius-xl: 1rem;     /* 16px - Large containers, Dialogs */
-  --radius-pill: 9999px; /* Only for specific UI tags, NEVER for hero shapes */
+  --radius-sm: 0.375rem; /* 6px */
+  --radius-md: 0.5rem;   /* 8px */
+  --radius-lg: 0.75rem;  /* 12px */
+  --radius-xl: 1rem;     /* 16px */
+  --radius-pill: 9999px; 
 
   /* =========================================
-     5. ELEVATION & GLOWS (Strictly Controlled)
+     5. ELEVATION & GLOWS 
      ========================================= */
   
-  /* Box Shadows - Dark UI needs subtle black shadows, not blurry gray ones */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
-  
-  /* Inner Highlights - Creates the "machined glass" premium feel */
   --highlight-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
-
-  /* Focused Glow - Used via pseudo-elements, NOT standard box-shadow */
   --glow-indigo: 0 0 80px -20px rgba(79, 70, 229, 0.3);
 
   /* =========================================
-     6. MOTION & TRANSITIONS (Smooth & Professional)
+     6. MOTION & TRANSITIONS 
      ========================================= */
   
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 400ms cubic-bezier(0.22, 1, 0.36, 1); /* For structural reveals */
+  --transition-slow: 400ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* =========================================
-   Responsive Overrides for Macro Spacing
+   Responsive Overrides 
    ========================================= */
 
 @media (max-width: 1024px) { /* Tablet */
   :root {
     --section-pad-major: 6.5rem;   /* 104px */
     --section-pad-compact: 4.5rem; /* 72px */
-    --text-display-xl: 3rem;       /* ~48px */
-    --text-section-title: 2rem;    /* ~32px */
+    --text-display-xl: 3.5rem;     /* ~56px */
+    --text-section-title: 2.25rem; /* ~36px */
   }
 }
 
@@ -145,9 +140,17 @@
   :root {
     --section-pad-major: 5rem;     /* 80px */
     --section-pad-compact: 4rem;   /* 64px */
-    --text-display-xl: 2.25rem;    /* ~36px */
-    --text-display-l: 2rem;        /* ~32px */
-    --text-section-title: 1.75rem; /* ~28px */
-    --text-body-lg: 1rem;          /* ~16px */
+    
+    /* Display & Titles */
+    --text-display-xl: 2.75rem;    /* ~44px */
+    --text-display-l: 2.25rem;     /* ~36px */
+    --text-section-title: 2rem;    /* ~32px */
+    --text-card-title: 1.5rem;     /* ~24px */
+    
+    /* 🚀 Body Text Hierarchy (Optimized for Mobile Persian) */
+    --text-body-lg: 1.25rem;       /* ~20px - پاراگراف‌های لید و زیرتیترها */
+    --text-body-md: 1.125rem;      /* ~18px - متن استاندارد بدنه موبایل */
+    --text-body-sm: 1rem;          /* ~16px - متون ریز و UI (در موبایل زیر ۱۶ پیکسل باعث ریز شدن می‌شود) */
+    --text-caption: 0.875rem;      /* ~14px - فقط برای فوتر و کپی‌رایت */
   }
 }
