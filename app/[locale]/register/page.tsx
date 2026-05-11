@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import styles from "@/styles/Register.module.css";
 import { 
-  ArrowLeft, Eye, EyeOff, MailCheck, ShieldCheck
+  ArrowLeft, Eye, EyeOff, MailCheck, ShieldCheck, CheckCircle2
 } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
@@ -73,7 +73,6 @@ export default function RegisterPage() {
     try {
       const fullPhoneNumber = `${formData.phoneCode}${formData.mobile}`;
       
-      // 1. Check if user already exists
       const { data: checkData, error: checkError } = await supabase.rpc('check_user_exists', { p_email: formData.email, p_phone: fullPhoneNumber });
       if (checkError) { alert("Security Check Failed: " + checkError.message); setLoading(false); return; }
 
@@ -87,7 +86,6 @@ export default function RegisterPage() {
         setErrors(duplicateErrors); setLoading(false); return;
       }
 
-      // 2. Sign up the user (Without address and DOB since those move to dashboard)
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -98,13 +96,12 @@ export default function RegisterPage() {
             last_name: formData.lastName,
             mobile_number: fullPhoneNumber,
           },
-          emailRedirectTo: `${window.location.origin}/fa/auth/confirm`, 
+          emailRedirectTo: `${window.location.origin}/fa/auth/callback?next=/fa/auth/confirm`,
         }
       });
 
       if (error) { alert("Error during registration: " + error.message); return; }
       
-      // 3. Move to Verification Step
       setStep(2); 
 
     } catch (error) { 
@@ -120,7 +117,8 @@ export default function RegisterPage() {
         <AuthGradient />
       </div>
 
-      <div className={styles.card}>
+      <div className={`${styles.card} ${step === 2 ? styles.confirmCard : ''}`}>
+        
         <div className={styles.topNav}>
           <Link href="/" className={styles.backHome} aria-label="Back to Website"><ArrowLeft size={18} strokeWidth={2.5} /></Link>
         </div>
@@ -211,39 +209,62 @@ export default function RegisterPage() {
                   <input type="checkbox" name="termsAccepted" checked={formData.termsAccepted} onChange={handleChange} />
                   <span>I agree to the <Link href="/en/legal/terms" target="_blank">Terms & Conditions</Link>. <span className={styles.req}>*</span></span>
                 </label>
-                {errors.policies && <span className={styles.errorText} style={{ marginTop: '4px' }}>{errors.policies}</span>}
+                {errors.policies && <span className={`${styles.errorText} ${styles.marginTopXs}`}>{errors.policies}</span>}
               </div>
 
               <div className={styles.btnWrapperRight}>
-                <Button type="button" onClick={handleRegister} variant="primary" rightIcon={<ShieldCheck />} loading={loading} style={{ width: '100%' }}>
+                <Button type="button" onClick={handleRegister} variant="primary" rightIcon={<ShieldCheck />} loading={loading} fullWidth>
                   Create Account
                 </Button>
               </div>
             </div>
           )}
 
-          {step === 2 && (
-            <div className={styles.verifyBox}>
-              <MailCheck size={64} className={styles.verifyIcon} style={{ marginBottom: "20px" }} />
-              <h2 className={styles.title}>Verification Required</h2>
-              <p className={styles.subtitle} style={{ lineHeight: 1.6 }}>
-                We've received your details! To complete your registration, please <strong>open your email</strong> and click the verification link we just sent to <strong style={{color: '#0f172a'}}>{formData.email}</strong>.
-              </p>
-              <div style={{ backgroundColor: "#ecfdf5", border: "1px solid #a7f3d0", padding: "16px", borderRadius: "12px", marginTop: "24px", width: "100%" }}>
-                <p style={{ color: "#059669", margin: 0, fontWeight: 600, fontSize: "0.9rem" }}>
-                  Your account will be activated immediately after clicking the link.
-                </p>
+        {step === 2 && (
+                    <div className={styles.cleanVerifyBox}>
+                      
+                      <div className={styles.inlineHeader}>
+                        <div className={styles.iconBadge}>
+                          <MailCheck size={24} color="#3848f5" strokeWidth={2.5} />
+                        </div>
+                        <h2 className={styles.inlineTitle}>
+                          Verification Required
+                        </h2>
+                      </div>
+                      
+                      <div className={styles.emailInfoWrapper}>
+                        <p className={styles.cleanSubtitle}>
+                          We've received your details! Please <strong>open your email</strong> and click the verification link we just sent to:
+                        </p>
+                        
+                        <div className={styles.emailBadge}>
+                          {formData.email}
+                        </div>
+                      </div>
+
+                      <div className={styles.verificationNote}>
+                        <p className={styles.verificationNoteText}>
+                          <CheckCircle2 size={20} color="#10b981" strokeWidth={2.5} className={styles.flexShrinkZero} />
+                          <span>Your account will be activated immediately after clicking the link.</span>
+                        </p>
+                      </div>
+
+                      <div className={styles.btnContainer}>
+                        <Button href="/fa/login" variant="primary" size="lg" fullWidth>
+                          Return to Login
+                        </Button>
+                      </div>
+
+                    </div>
+                  )}
+                </div>
+
+                {step === 1 && (
+                  <div className={styles.footerText}>
+                    Already have an account? <Link href="/fa/login" className={styles.footerLink}>Log in</Link>
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </div>
-
-        {step === 1 && (
-          <div className={styles.footerText}>
-            Already have an account? <Link href="/fa/login" className={styles.footerLink}>Log in</Link>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+          );
+        }

@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import { ShieldCheck, LogIn } from "lucide-react";
+import { ShieldCheck, LogIn, CheckCircle2 } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
 import styles from "@/styles/Register.module.css"; 
@@ -27,20 +27,32 @@ export default function ConfirmEmailPage() {
           />
         </div>
         
-        <div className={styles.verifyBox}>
-          <div className={styles.successIconBox}>
-             <div className={styles.successIconCircle}>
-               <ShieldCheck size={56} color="var(--success, #10b981)" />
-             </div>
+        <div className={styles.cleanVerifyBox}>
+          
+          <div className={styles.inlineHeader}>
+            <div className={`${styles.iconBadge} ${styles.iconBadgeSuccess}`}>
+              <ShieldCheck size={35} color="#2500f7" strokeWidth={2.5} />
+            </div>
+            <h2 className={styles.inlineTitle}>
+              Email Confirmed
+            </h2>
           </div>
           
-          <h2 className={`${styles.title} ${styles.confirmTitle}`}>
-            Identity Verified Securely
-          </h2>
-          
-          <p className={`${styles.subtitle} ${styles.confirmSubtitle}`}>
-            Your email address has been successfully verified. Your Zarman Exchange account is now protected and ready for secure access.
-          </p>
+          <div className={styles.emailInfoWrapper}>
+            <p className={styles.cleanSubtitle}>
+              Your email address has been successfully verified. 
+            </p>
+          </div>
+
+
+          <div className={styles.verificationNote}>
+            <p className={styles.verificationNoteText}>
+              <CheckCircle2 size={20} color="#10b981" strokeWidth={2.5} className={styles.flexShrinkZero} />
+                <span> 
+                  Your Zarman Exchange account is now ready for secure access.
+                </span>
+            </p>
+          </div>
 
           <div className={styles.btnContainer}>
             <Button href="/fa/login" variant="primary" size="lg" fullWidth rightIcon={<LogIn />}>

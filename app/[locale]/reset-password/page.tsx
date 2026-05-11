@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image"; 
 import { useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css";
-import { Eye, EyeOff, ShieldCheck, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, CheckCircle, CheckCircle2 } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
 import { supabase } from "@/lib/supabase";
@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
         <AuthGradient />
       </div>
 
-      <div className={`${styles.card} ${styles.confirmCard}`}>
+      <div className={`${styles.card} ${styles.authCardSmall}`}>
         
         <div className={styles.logoContainer}>
           <Image 
@@ -75,16 +75,31 @@ export default function ResetPasswordPage() {
         </div>
         
         {success ? (
-          <div className={styles.verifyBox}>
-            <div className={styles.successIconBox}>
-              <div className={styles.successIconCircle}>
-                <CheckCircle size={56} color="var(--success, #10b981)" />
+          <div className={styles.cleanVerifyBox}>
+            <div className={styles.inlineHeader}>
+              <div className={`${styles.iconBadge} ${styles.iconBadgeSuccess}`}>
+                <CheckCircle size={35} color="#2500f7" strokeWidth={2.5} />
               </div>
+              <h2 className={styles.inlineTitle}>
+                Password Updated
+              </h2>
             </div>
-            <h2 className={styles.confirmTitle}>Password Updated</h2>
-            <p className={styles.confirmSubtitle}>
-              Your password has been changed successfully. Redirecting you to the dashboard...
-            </p>
+            
+            <div className={styles.emailInfoWrapper}>
+              <p className={styles.cleanSubtitle}>
+                Your password has been changed successfully. 
+              </p>
+            </div>
+
+            <div className={styles.verificationNote}>
+              <p className={styles.verificationNoteText}>
+                <CheckCircle2 size={20} color="#10b981" strokeWidth={2.5} className={styles.flexShrinkZero} />
+                  <span> 
+                    Redirecting you to the dashboard...
+                  </span>
+              </p>
+            </div>
+
           </div>
         ) : (
           <>
@@ -95,9 +110,9 @@ export default function ResetPasswordPage() {
 
             <div className={styles.formBody}>
               <div className={styles.stepContent}>
-                {error && <div className={styles.errorText} style={{ textAlign: 'center', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '8px', border: '1px solid #fca5a5' }}>{error}</div>}
+                {error && <div className={styles.globalErrorBox}>{error}</div>}
 
-                <form onSubmit={handleUpdatePassword} className={styles.btnContainer} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <form onSubmit={handleUpdatePassword} className={styles.formContainer}>
                   
                   <div className={styles.inputGroup}>
                     <label>New Password <span className={styles.req}>*</span></label>

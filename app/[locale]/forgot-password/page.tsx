@@ -21,8 +21,20 @@ export default function ForgotPasswordPage() {
     setError("");
     setMessage("");
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", email.toLowerCase().trim())
+      .maybeSingle();
+
+    if (!profile) {
+      setError("No account found with this email address.");
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/fa/reset-password`,
+      redirectTo: `${window.location.origin}/fa/auth/callback?next=/fa/reset-password`,
     });
 
     if (error) {
@@ -39,8 +51,7 @@ export default function ForgotPasswordPage() {
         <AuthGradient />
       </div>
 
-      {/* 🚀 استفاده از کلاس confirmCard برای ابعاد استاندارد فین‌تک */}
-      <div className={`${styles.card} ${styles.confirmCard}`}>
+      <div className={`${styles.card} ${styles.authCardSmall}`}>
         
         <div className={styles.topNav}>
           <Link href="/fa/login" className={styles.backHome} aria-label="Back to Login">
@@ -60,16 +71,28 @@ export default function ForgotPasswordPage() {
         </div>
 
         {message ? (
-          <div className={styles.verifyBox}>
-            <div className={styles.successIconBox}>
-              <div className={styles.successIconCircle}>
-                <MailCheck size={56} color="var(--success, #10b981)" />
+          <div className={styles.cleanVerifyBox}>
+            <div className={styles.inlineHeader}>
+              <div className={styles.iconBadge}>
+                <MailCheck size={35} color="#2500f7" strokeWidth={2.5} />
+              </div>
+              <h2 className={styles.inlineTitle}>
+                Check Your Email
+              </h2>
+            </div>
+            
+            <div className={styles.emailInfoWrapper}>
+              <p className={styles.cleanSubtitle}>
+                A password reset link has been sent to:
+              </p>
+              
+              <div className={styles.emailBadge}>
+                {email}
               </div>
             </div>
-            <h2 className={styles.confirmTitle}>Check Your Email</h2>
-            <p className={styles.confirmSubtitle}>{message}</p>
+            
             <div className={styles.btnContainer}>
-              <Button href="/fa/login" variant="ghost" fullWidth>
+              <Button href="/fa/login" variant="primary" size="lg" fullWidth>
                 Return to Login
               </Button>
             </div>
@@ -83,9 +106,9 @@ export default function ForgotPasswordPage() {
 
             <div className={styles.formBody}>
               <div className={styles.stepContent}>
-                {error && <div className={styles.errorText} style={{ textAlign: 'center', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '8px', border: '1px solid #fca5a5' }}>{error}</div>}
+                {error && <div className={styles.globalErrorBox}>{error}</div>}
 
-                <form onSubmit={handleResetPassword} className={styles.btnContainer} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <form onSubmit={handleResetPassword} className={styles.formContainer}>
                   <div className={styles.inputGroup}>
                     <label htmlFor="email">Email Address</label>
                     <input 

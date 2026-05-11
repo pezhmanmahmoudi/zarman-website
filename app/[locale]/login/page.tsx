@@ -42,16 +42,14 @@ export default function LoginPage() {
         <AuthGradient />
       </div>
 
-      <div className={styles.card} style={{ maxWidth: "480px" }}>
+      <div className={`${styles.card} ${styles.authCardSmall}`}>
         
-        {/* دکمه دایره‌ای بازگشت */}
         <div className={styles.topNav}>
           <Link href="/" className={styles.backHome} aria-label="Back to Website">
             <ArrowLeft size={18} strokeWidth={2.5} />
           </Link>
         </div>
 
-        {/* لوگو */}
         <div className={styles.logoContainer}>
           <Image 
             src="/images/logo-no-text-light.svg" 
@@ -70,12 +68,11 @@ export default function LoginPage() {
 
         <div className={styles.formBody}>
           <div className={styles.stepContent}>
-            {error && <div className={styles.errorText} style={{ textAlign: 'center', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '8px', border: '1px solid #fca5a5', marginTop: '10px' }}>{error}</div>}
+            {error && <div className={styles.globalErrorBox}>{error}</div>}
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <form onSubmit={handleSubmit} className={styles.formContainer}>
               <div className={styles.inputGroup}>
                 <label htmlFor="email">Email Address</label>
-                {/* 🚀 کلاس enInput اعمال شد */}
                 <input 
                   id="email" 
                   type="email" 
@@ -88,15 +85,13 @@ export default function LoginPage() {
               </div>
 
               <div className={styles.inputGroup}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <label htmlFor="password" style={{ marginBottom: 0 }}>Password</label>
-                  {/* 🚀 استایل‌دهی حرفه‌ای به Forgot Password */}
+                <div className={styles.flexBetween}>
+                  <label htmlFor="password" className={styles.labelNoMargin}>Password</label>
                   <Link href="/fa/forgot-password" className={styles.forgotLink}>
                     Forgot Password?
                   </Link>
                 </div>
                 <div className={styles.passwordWrapper}>
-                  {/* 🚀 کلاس enInput اعمال شد */}
                   <input 
                     id="password" 
                     type={showPassword ? "text" : "password"} 
@@ -112,7 +107,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className={styles.btnWrapperRight} style={{ marginTop: '8px' }}>
+              <div className={`${styles.btnWrapperRight} ${styles.marginTopSm}`}>
                 <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
                   Log in
                 </Button>
