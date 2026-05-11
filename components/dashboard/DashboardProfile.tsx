@@ -176,19 +176,19 @@ export function DashboardProfile({ profile }: { profile: any }) {
 
               <div className={styles.inputGroup}>
                 <label>Residential Address (Street) <span className={styles.req}>*</span></label>
-                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="آدرس دقیق محل سکونت (خیابان، پلاک، واحد)" className={errors.address ? styles.errorBorder : ""} />
+                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="آدرس دقیق محل سکونت (خیابان، واحد)" className={errors.address ? styles.errorBorder : ""} />
                 {errors.address && <span className={styles.errorText}>{errors.address}</span>}
               </div>
 
               <div className={styles.row3}>
                 <div className={styles.inputGroup}>
                   <label>City / Suburb <span className={styles.req}>*</span></label>
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="شهر / حومه" className={errors.city ? styles.errorBorder : ""} />
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="شهر" className={errors.city ? styles.errorBorder : ""} />
                   {errors.city && <span className={styles.errorText}>{errors.city}</span>}
                 </div>
                 <div className={styles.inputGroup}>
                   <label>State <span className={styles.req}>*</span></label>
-                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="ایالت (مثلاً NSW)" className={errors.state ? styles.errorBorder : ""} />
+                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="ایالت" className={errors.state ? styles.errorBorder : ""} />
                   {errors.state && <span className={styles.errorText}>{errors.state}</span>}
                 </div>
                 <div className={styles.inputGroup}>

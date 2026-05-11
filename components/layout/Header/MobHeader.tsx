@@ -197,7 +197,7 @@ export default function MobHeader({
 
             <div className={styles.menuFooter}>
               <p>زرمان اکسچنج</p>
-              <p className={styles.menuFooterSub}>تجربه‌ای روشن‌تر برای کاربران ایران–استرالیا</p>
+              <p className={styles.menuFooterSub}>تجربه‌ای هوشمند برای تبادل ارز</p>
             </div>
           </nav>
         </div>

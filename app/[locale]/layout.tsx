@@ -2,6 +2,7 @@ import { Inter } from "next/font/google";
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import "../globals.css";
+import { JsonLdSchema } from "@/components/JsonLdSchema";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -44,6 +45,46 @@ export async function generateMetadata({
     ? "Zarman Exchange - Tailored AUD to IRT Remittance"
     : "صرافی زرمان | پلتفرم تبادل ارز استرالیا و ایران";
 
+  const keywordsEn = [
+    "Zarman Exchange",
+    "Zarman Money Exchange",
+    "Australia Iran money transfer",
+    "AUD to IRT exchange rate",
+    "AUD to Toman exchange",
+    "send money Australia to Iran",
+    "AUSTRAC registered remittance Australia",
+    "Iranian remittance service Australia",
+    "secure money transfer Australia Iran",
+    "best exchange rate Australia Iran",
+    "AUD IRT exchange rate today",
+    "online currency exchange Australia",
+    "remittance fintech Australia",
+  ];
+
+  const keywordsFa = [
+    "صرافی زرمان",
+    "صرافی آنلاین استرالیا",
+    "حواله به ایران از استرالیا",
+    "انتقال پول از استرالیا به ایران",
+    "ارسال پول به ایران",
+    "نرخ دلار استرالیا به تومان",
+    "نرخ ارز AUD به IRT",
+    "بهترین صرافی استرالیا",
+    "حواله دلار استرالیا",
+    "صرافی معتبر استرالیا",
+    "ارسال حواله به ایران",
+    "تبادل ارز دلار استرالیا",
+    "نرخ تبادل دلار استرالیا به تومان امروز",
+    "صرافی ثبت شده استرالیا",
+    "خدمات حواله ایرانی در استرالیا",
+    "ارز AUD به تومان",
+    "پلتفرم تبادل ارز استرالیا و ایران",
+  ];
+
+  const keywords = isEn
+    ? keywordsEn
+    : [...keywordsFa, ...keywordsEn];
+
   return {
     metadataBase: new URL(productionUrl),
     title: {
@@ -52,6 +93,21 @@ export async function generateMetadata({
     },
     description: defaultDescription,
     applicationName: siteName,
+    keywords,
+    authors: [{ name: "Zarman Exchange Pty Ltd", url: productionUrl }],
+    creator: "Zarman Exchange Pty Ltd",
+    publisher: "Zarman Exchange Pty Ltd",
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-snippet": -1,
+        "max-image-preview": "large",
+        "max-video-preview": -1,
+      },
+    },
     icons: {
       icon: [
         { url: "/favicon.ico", sizes: "any" },
@@ -59,36 +115,46 @@ export async function generateMetadata({
         { url: "/images/icon-512.png", sizes: "512x512", type: "image/png" },
       ],
       shortcut: ["/favicon.ico"],
-      apple: [{ url: "/images/icon-192.png" }],
+      apple: [
+        { url: "/images/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      ],
     },
     manifest: "/manifest.webmanifest",
     openGraph: {
       type: "website",
+      url: `${productionUrl}/${locale}`,
       siteName,
       title: defaultTitle,
       description: defaultDescription,
       locale: openGraphLocale,
+      alternateLocale: isEn ? "fa_IR" : "en_AU",
       images: [
         {
           url: socialPreviewImage,
           width: 1200,
           height: 630,
           alt: altText,
+          type: "image/png",
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
+      site: "@zarmanexchange",
+      creator: "@zarmanexchange",
       title: defaultTitle,
       description: defaultDescription,
-      images: [socialPreviewImage],
+      images: [{ url: socialPreviewImage, alt: altText }],
     },
     alternates: {
+      canonical: `${productionUrl}/${locale}`,
       languages: {
-        fa: "/fa",
-        en: "/en",
+        "fa": `${productionUrl}/fa`,
+        "en": `${productionUrl}/en`,
+        "x-default": `${productionUrl}/fa`,
       },
     },
+    category: "finance",
   };
 }
 
@@ -111,6 +177,7 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir} data-scroll-behavior="smooth">
       <body className={`${fontClass} min-h-screen antialiased bg-[#080B12] text-white`}>
+        <JsonLdSchema locale={locale} />
         <main id="main-content">{children}</main>
       </body>
     </html>
