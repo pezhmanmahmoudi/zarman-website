@@ -1,0 +1,460 @@
+/**
+ * AdminShell.module.css
+ * Premium Light Theme with SVG Logo Integration
+ */
+
+.adminShell {
+  --bg-app:           #fbfcfd; 
+  --bg-sidebar:       #ffffff;
+  --bg-card:          #ffffff;
+  --bg-soft:          #f4f6f8;
+  --text-main:        #111827;
+  --text-soft:        #4b5563;
+  --text-dim:         #6b7280;
+  --border-soft:      #eaecf0;
+  --border-med:       #d0d5dd;
+  --accent:           #4338ca;
+  --accent-hover:     #3730a3;
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-card: 0 4px 6px -2px rgba(16, 24, 40, 0.03), 0 12px 16px -4px rgba(16, 24, 40, 0.08);
+
+  --sidebar-width: 280px;
+
+  --font-en-stack: 'Inter', system-ui, -apple-system, sans-serif;
+
+display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  height: 100vh; /* فال‌بک برای مرورگرهای قدیمی‌تر */
+  height: 100dvh;
+  overflow: hidden; 
+  direction: ltr;
+  font-family: var(--font-en-stack);
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+.adminShell *,
+.adminShell *::before,
+.adminShell *::after {
+  box-sizing: border-box;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-soft);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebarHeader {
+  position: relative;
+  padding: 2rem 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.closeSidebarBtn {
+  display: none; /* مخفی در دسکتاپ */
+}
+
+/* ── Mobile Menu Button (Desktop Base) ── */
+.mobileMenuBtn {
+  display: none; /* کلید حل مشکل شما: در دسکتاپ کاملاً مخفی می‌شود */
+}
+
+.sidebarBrand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  gap: 0.75rem;
+  transition: opacity 0.2s;
+}
+
+.sidebarBrand:hover {
+  opacity: 0.8;
+}
+
+.brandIconWrapper {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-soft);
+  border-radius: 1rem;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brandName {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.brandSub {
+  font-size: 0.6875rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.sidebarScrollArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 1rem;
+}
+
+.navSection {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 0.75rem 0.75rem;
+}
+
+.navSectionSpaced {
+  margin-top: 1.5rem;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  color: var(--text-soft);
+  text-decoration: none;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s ease;
+  margin: 0.25rem 0;
+}
+
+.navIconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  transition: color 0.2s;
+}
+
+.navLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.navItem:hover {
+  background: var(--bg-soft);
+  color: var(--text-main);
+}
+
+.navItem:hover .navIconWrapper {
+  color: var(--text-main);
+}
+
+.navItemActive {
+  background: rgba(67, 56, 202, 0.06);
+  color: var(--accent);
+}
+
+.navItemActive .navIconWrapper {
+  color: var(--accent);
+}
+
+.navItemActive .navLabel {
+  font-weight: 600;
+}
+
+.navBadge {
+  margin-left: auto;
+  background: rgba(var(--danger-rgb), 0.1);
+  color: var(--danger);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 100px;
+  min-width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+}
+
+.navBadgeWarning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+/* ── User Footer Card ── */
+.sidebarFooter {
+  padding: 1.25rem 1rem;
+  border-top: 1px solid var(--border-soft);
+  background: var(--bg-sidebar);
+  margin-top: auto; 
+}
+
+.adminProfileCard {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 1rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.adminProfileHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0; /* جلوگیری از شکستن لی‌آوت توسط ایمیل طولانی */
+}
+
+.adminAvatar {
+  width: 36px;
+  height: 36px;
+  background: rgba(67, 56, 202, 0.1);
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.adminAvatarIcon {
+  color: var(--accent);
+}
+
+.adminInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  flex: 1; /* گرفتن تمام فضای باقی‌مانده */
+  min-width: 0;
+}
+
+.adminRole {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.adminEmail {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logoutBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  border: 1px solid #fca5a5;
+  color: #dc2626; 
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.logoutBtn:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+/* ── Main Area ── */
+.mainArea {
+  min-width: 0;
+  min-height: 0; /* 🔴 کلید اصلی حل مشکل: جلوگیری از کش آمدن Grid با محتوای طولانی */
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-app);
+  height: 100%;
+  overflow-y: auto; 
+  -webkit-overflow-scrolling: touch; /* اسکرول نرم و استاندارد در گوشی‌های اپل */
+  position: relative;
+}
+
+.topBar {
+  position: -webkit-sticky; /* پشتیبانی اختصاصی سافاری */
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-soft);
+  padding: 0 2rem;
+  height: 72px; /* استفاده از ارتفاع ثابت به جای min-height برای پایداری sticky */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0; /* جلوگیری از فشرده شدن هدر */
+  width: 100%;
+}
+
+.pageTitle {
+  font-size: 1.25rem !important; /* سایز بزرگ و یکسان برای همه صفحه‌ها */
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.topBarActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.pageContent {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  flex: 1;
+}
+
+/* ── Mobile Responsive (Fully Optimized) ── */
+@media (max-width: 900px) {
+  .adminShell { 
+    grid-template-columns: minmax(0, 1fr); 
+  }
+  
+  /* --- Sidebar & Backdrop --- */
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--sidebar-width);
+    transform: translateX(-100%);
+    z-index: 100000; /* بالاترین لایه برای سایدبار */
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.1);
+  }
+
+  .sidebarHeader {
+    position: relative; 
+    padding-top: 1.5rem;
+  }
+  
+  .sidebarOpen { 
+    transform: translateX(0); 
+  }
+  
+  .mobileBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 99999; /* زیر سایدبار، روی بقیه صفحه */
+    display: block;
+  }
+  
+  .closeSidebarBtn {
+    display: flex; 
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 0.5rem;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    cursor: pointer;
+    z-index: 100001; 
+  }
+  
+  .closeSidebarBtn:hover {
+    background: var(--border-soft);
+    color: var(--text-main);
+  }
+
+  /* --- Hamburger Button --- */
+.mobileMenuBtn {
+    display: flex; 
+    position: fixed;
+    top: 10px; /* تنظیم دقیق در وسط هدر 64 پیکسلی */
+    left: 12px;
+    z-index: 150; 
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border-soft);
+    border-radius: 0.5rem;
+    color: var(--text-main);
+    width: 44px; 
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+  }
+  
+  .mobileMenuBtn:active {
+    transform: scale(0.95);
+  }
+
+  /* --- TopBar (Sticky Header) --- */
+  .topBar { 
+      padding: 0 1rem 0 4.5rem; /* حاشیه امن برای دکمه همبرگری */
+      flex-direction: row; /* اجبار به یک خط بودن */
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.5rem;
+      height: 64px; /* ارتفاع ثابت موبایل */
+      min-height: auto;
+    } 
+  
+  /* --- Page Title & Badges --- */
+.pageTitle { 
+    font-size: 1rem !important; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; /* اگر اسم صفحه طولانی بود، ۳ نقطه می‌شود تا بج را خراب نکند */
+    flex-shrink: 1; 
+    margin: 0;
+  }
+
+  /* تنظیم سایز عناصر داخل هدر بدون به هم ریختن چیدمان */
+  .topBar > div,
+  .topBar span[class*="badge"] {
+    flex-shrink: 0 !important; /* بج هرگز نباید فشرده یا مچاله شود */
+    zoom: 0.85; /* سایز بج را کمی متناسب با موبایل کوچک می‌کند */
+  }
+  
+ .pageContent { padding: 1rem; }
+}

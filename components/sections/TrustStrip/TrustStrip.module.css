@@ -120,6 +120,7 @@
   font-size: var(--text-caption); /* 👈 ۱۴ پیکسل استاندارد */
   line-height: var(--leading-relaxed);
   padding: 0 4px; /* 👈 یک حاشیه امن نامرئی تا متن به دیواره‌های کارت نچسبد */
+   font-weight: var(--font-weight-semibold);
 }
 
   

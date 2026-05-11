@@ -174,6 +174,7 @@
   max-width: 90%;
   position: relative;
   z-index: 10;
+   font-weight: var(--font-weight-semibold);
 }
 
 .actions {

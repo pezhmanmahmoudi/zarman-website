@@ -10,6 +10,7 @@ import FinalCTA from "@/components/sections/FinalCTA/FinalCTA";
 import Footer from "@/components/layout/Footer/Footer";
 import MarketProviders from "@/components/providers/MarketProviders";
 import { getRatesSnapshot } from "@/lib/rates";
+import { getFinanceConfig } from "@/lib/finance-config";
 
 function SectionLoadingFallback({ label }: { label: string }) {
   return (
@@ -41,10 +42,13 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const rateSnapshot = await getRatesSnapshot();
+  const [rateSnapshot, financeConfig] = await Promise.all([
+    getRatesSnapshot(),
+    getFinanceConfig(),
+  ]);
 
   return (
-    <MarketProviders initialData={rateSnapshot}>
+    <MarketProviders initialData={rateSnapshot} initialFinanceConfig={financeConfig}>
       <Header />
       <div className="flex flex-col w-full relative">
         <Hero />

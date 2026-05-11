@@ -23,4 +23,5 @@
   line-height: var(--leading-relaxed);
   max-width: 600px;
   margin: 0;
+   font-weight: var(--font-weight-semibold);
 }

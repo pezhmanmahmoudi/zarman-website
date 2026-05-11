@@ -1,0 +1,408 @@
+/**
+ * AdminForms.module.css
+ * Light Theme Forms
+ */
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.input {
+  background: #ffffff;
+  border: 1px solid var(--border-soft);
+  border-radius: 0.5rem;
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-family: var(--font-en-stack);
+  padding: 0.625rem var(--space-3);
+  height: 42px;
+  width: 100%;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.input::placeholder {
+  color: var(--text-dim);
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
+
+.input.inputError {
+  border-color: var(--danger);
+}
+
+.textarea {
+  background: #ffffff;
+  border: 1px solid var(--border-soft);
+  border-radius: 0.5rem;
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-family: var(--font-primary);
+  padding: var(--space-3);
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  direction: rtl;
+  outline: none;
+  transition: all 0.2s ease;
+  line-height: 1.6;
+}
+
+.textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
+
+.errorText {
+  font-size: 0.75rem;
+  color: var(--danger);
+}
+
+.hintText {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.75rem;
+}
+
+.toggleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggleLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.toggleDesc {
+  font-size: 0.75rem;
+  color: var(--text-soft);
+}
+
+.switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switchInput {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.switchSlider {
+  position: absolute;
+  inset: 0;
+  background: var(--border-med);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.switchSlider::before {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 4px;
+  top: 4px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.switchInput:checked + .switchSlider {
+  background: var(--success);
+}
+
+.switchInput:checked + .switchSlider::before {
+  transform: translateX(20px);
+}
+
+.btnPrimary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font-en-stack);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  transition: all 0.15s ease;
+  min-height: 42px;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 4px 6px -1px rgba(var(--accent-rgb), 0.2);
+}
+
+.btnPrimary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  background: #ffffff;
+  color: var(--text-main);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font-en-stack);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  transition: all 0.15s ease;
+  min-height: 42px;
+}
+
+.btnSecondary:hover:not(:disabled) {
+  background: var(--bg-soft);
+  border-color: var(--border-med);
+}
+
+.btnDanger {
+  background: rgba(var(--danger-rgb), 0.05);
+  color: var(--danger);
+  border: 1px solid rgba(var(--danger-rgb), 0.2);
+  border-radius: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font-en-stack);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  transition: all 0.15s ease;
+  min-height: 42px;
+}
+
+.btnDanger:hover:not(:disabled) {
+  background: rgba(var(--danger-rgb), 0.1);
+}
+
+.formActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding-top: var(--space-4);
+}
+
+.saveStatus {
+  font-size: 0.8125rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 500;
+}
+
+.saveStatusSuccess { color: var(--success); }
+.saveStatusError   { color: var(--danger); }
+
+.divider {
+  height: 1px;
+  background: var(--border-soft);
+  margin: var(--space-6) 0;
+}
+
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.formSectionTitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.searchRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.searchInputWrap {
+  flex: 1;
+  min-width: 250px;
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+}
+
+.inputWithIcon {
+  padding-left: 38px;
+}
+
+.btnSecondaryCompact {
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+}
+
+.infoPill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  background: var(--bg-soft);
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+
+.infoPillValue {
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.labelInfo {
+  color: var(--info);
+}
+
+.labelSuccess {
+  color: var(--success);
+}
+
+.labelDanger {
+  color: var(--danger);
+}
+
+.labelInline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.relative {
+  position: relative;
+}
+
+.currencyPrefix {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.inputCurrency {
+  padding-left: 28px;
+  font-size: 1rem;
+  font-weight: 600;
+  height: 48px;
+}
+
+.toggleRowDanger {
+  background: rgba(var(--danger-rgb), 0.03);
+  border-color: rgba(var(--danger-rgb), 0.1);
+}
+
+.fieldFadeIn {
+  animation: adminFadeIn 0.3s ease;
+}
+
+.textareaDanger {
+  border-color: rgba(var(--danger-rgb), 0.3);
+  background-color: #fff;
+}
+
+.actionBar {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  box-shadow: var(--shadow-card);
+}
+
+.actionBarMeta {
+  flex: 1;
+}
+
+.saveStatusStrong {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.saveHint {
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+}
+
+.btnPrimaryWide {
+  padding: 0.75rem 2rem;
+  font-size: 0.9375rem;
+}
+
+@keyframes adminFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

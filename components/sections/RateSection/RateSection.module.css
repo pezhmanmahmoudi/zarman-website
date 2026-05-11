@@ -46,6 +46,8 @@
   font-family: var(--font-primary);
   font-size: var(--text-body-md);
   line-height: var(--leading-relaxed);
+  font-weight: var(--font-weight-semibold);
+  
 }
 
 .grid {

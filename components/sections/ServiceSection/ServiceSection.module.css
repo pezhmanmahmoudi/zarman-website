@@ -76,6 +76,7 @@
   font-size: var(--text-body-md); 
   line-height: var(--leading-relaxed);
   max-width: 60ch;
+   font-weight: var(--font-weight-semibold);
 }
 
 /* Stage & Guides */
@@ -203,6 +204,7 @@
   color: var(--color-text-secondary);
   max-width: 46ch;
   margin: 0;
+   font-weight: var(--font-weight-semibold);
 }
 
 

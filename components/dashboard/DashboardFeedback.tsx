@@ -15,7 +15,7 @@ export function DashboardFeedback({ profileId }: { profileId: string }) {
     if (!profileId || !feedback.trim() || feedbackSubmitting) return;
     try {
       setFeedbackSubmitting(true); setFeedbackStatus("در حال ثبت...");
-      const { error } = await supabase.from("testimonials").insert([{ user_id: profileId, rating, message: feedback.trim() }]);
+      const { error } = await supabase.from("testimonials").insert([{ user_id: profileId, rating, message: feedback.trim(), status: "pending" }]);
       if (error) { setFeedbackStatus("خطا در ثبت نظر. لطفاً دوباره تلاش کنید."); return; }
       setFeedback(""); setRating(5); setFeedbackStatus("نظر شما با موفقیت ثبت شد. سپاسگزاریم!");
     } finally { setFeedbackSubmitting(false); }

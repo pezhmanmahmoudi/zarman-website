@@ -64,6 +64,7 @@ async function fetchRatesSnapshot(): Promise<RateSnapshot> {
     fromDate.setUTCDate(fromDate.getUTCDate() - HISTORY_WINDOW_DAYS);
     const fromDateISO = fromDate.toISOString().slice(0, 10);
 
+    // Fetch historical chart data — single source of truth for rates.
     const { data, error } = await supabase
       .from("rates_history")
       .select("id, created_at, date, buy_aud, sell_aud")
@@ -101,4 +102,5 @@ async function fetchRatesSnapshot(): Promise<RateSnapshot> {
 
 export const getRatesSnapshot = unstable_cache(fetchRatesSnapshot, ["rates-snapshot-v1"], {
   revalidate: 300,
+  tags: ["rates-snapshot-v1"],
 });

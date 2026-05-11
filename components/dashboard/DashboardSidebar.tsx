@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import Image from "next/image";
 import { Calculator, History, UserCircle2, Star, LogOut, Sun, Moon } from "lucide-react";
 import styles from "@/styles/dashboard/DashboardSidebar.module.css";
@@ -26,6 +26,7 @@ export function DashboardSidebar({
   setTheme,
 }: DashboardSidebarProps) {
   const router = useRouter();
+  const sidebarRef = useRef<HTMLElement>(null);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -37,7 +38,14 @@ export function DashboardSidebar({
   };
 
   useEffect(() => {
-    if (!mobileMenuOpen) return;
+    if (!mobileMenuOpen) {
+      // Move focus out of the sidebar before aria-hidden is applied
+      const active = document.activeElement as HTMLElement | null;
+      if (active && sidebarRef.current?.contains(active)) {
+        active.blur();
+      }
+      return;
+    }
 
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -66,6 +74,7 @@ export function DashboardSidebar({
       />
 
       <aside
+        ref={sidebarRef}
         id="dashboard-mobile-sidebar"
         className={`${styles.sidebar} ${
           mobileMenuOpen ? styles.sidebarOpen : ""
@@ -138,7 +147,7 @@ export function DashboardSidebar({
               }}
             >
               <UserCircle2 size={20} />
-              <span>پروفایل و KYC</span>
+              <span>احراز هویت</span>
             </button>
 
             <button

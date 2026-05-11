@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from "react";
-import { Calculator, AlertTriangle, Lock, MessageSquare, ChevronDown, ServerCrash, Loader2 } from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
+import { Calculator, AlertTriangle, Lock, MessageSquare, ChevronDown, ServerCrash, Loader2, PauseCircle } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/[locale]/dashboard/dashboard.types"; 
-import { FINANCE_CONFIG } from "@/lib/pricing";
+import { useFinanceConfig } from "@/context/FinanceConfigContext";
+import { calcAppliedFee } from "@/lib/pricing";
 import { buildWhatsAppUrl } from "@/lib/constants/contact";
+import { supabase } from "@/lib/supabase";
 
 function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]); }
 function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹"; return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d))); }
@@ -58,9 +60,27 @@ export function DashboardRequestHub({
 }: RequestHubProps) { 
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [marketActive, setMarketActive] = useState<boolean>(true);
+  const [pauseMessage, setPauseMessage] = useState<string>("");
+  const financeConfig = useFinanceConfig();
+
+  useEffect(() => {
+    supabase
+      .from("rates_history")
+      .select("market_active, pause_message")
+      .order("date", { ascending: false })
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setMarketActive(data.market_active ?? true);
+          setPauseMessage(data.pause_message ?? "");
+        }
+      });
+  }, []);
 
   const rawAmount = getRawNumber(amountStr);
-  const appliedFee = (rawAmount > 0 && rawAmount < FINANCE_CONFIG.FEE_THRESHOLD) ? FINANCE_CONFIG.APPLIED_FEE : 0;
+  const appliedFee = calcAppliedFee(rawAmount, financeConfig);
   const isRateOffline = baseRate === null || tailoredRate === null;
 
   const effectiveAud = useMemo(() => {
@@ -80,7 +100,7 @@ export function DashboardRequestHub({
   };
 
   const submit = async () => {
-    if (!profile || !isApproved || rawAmount <= 0 || isRateOffline || isSubmitting) return;
+    if (!profile || !isApproved || rawAmount <= 0 || isRateOffline || isSubmitting || !marketActive) return;
 
     setIsSubmitting(true);
 
@@ -135,7 +155,15 @@ export function DashboardRequestHub({
 
   return (
     <article className={cardStyles.panelCard}>
-      {isRateOffline && (
+      {!marketActive && (
+        <div className={`${styles.lockOverlay} ${styles.offlineOverlay}`}>
+          <PauseCircle size={48} className={`${styles.lockIcon} ${styles.offlineIcon}`} />
+          <h3 className={styles.lockTitle}>بازار موقتاً متوقف شده است</h3>
+          <p className={styles.lockText}>{pauseMessage || "در حال حاضر امکان ثبت درخواست وجود ندارد. لطفاً بعداً مراجعه کنید."}</p>
+        </div>
+      )}
+
+      {marketActive && isRateOffline && (
         <div className={`${styles.lockOverlay} ${styles.offlineOverlay}`}>
           <ServerCrash size={48} className={`${styles.lockIcon} ${styles.offlineIcon}`} />
           <h3 className={styles.lockTitle}>ارتباط با سرور جهانی نرخ قطع است</h3>
@@ -143,11 +171,11 @@ export function DashboardRequestHub({
         </div>
       )}
 
-      {!isApproved && !isRateOffline && (
+      {marketActive && !isApproved && !isRateOffline && (
         <div className={styles.lockOverlay}>
           <Lock size={48} className={styles.lockIcon} />
           <h3 className={styles.lockTitle}>دسترسی محدود است</h3>
-          <p className={styles.lockText}>مطابق با الزامات مالی و احراز هویت، برای ثبت درخواست جدید ابتدا باید مدارک هویتی شما تکمیل و توسط مدیریت تایید شود.</p>
+          <p className={styles.lockText}>مطابق با الزامات مالی و احراز هویت، برای ثبت درخواست جدید ابتدا باید مدارک هویتی شما تکمیل و توسط مدیریت تایید شود. به قسمت "احراز هویت" بروید و اطلاعات خود را تکمیل کنید. </p>
         </div>
       )}
       
@@ -181,8 +209,8 @@ export function DashboardRequestHub({
               <span className={styles.feeWarning}>
                 <AlertTriangle size={14} /> 
                 {txType === "buy_aud"
-                  ? `افزوده شدن ${toFaDigits(String(FINANCE_CONFIG.APPLIED_FEE))} دلار کارمزد`
-                  : `کسر ${toFaDigits(String(FINANCE_CONFIG.APPLIED_FEE))} دلار کارمزد`}
+                  ? `افزوده شدن ${toFaDigits(String(financeConfig.applied_fee))} دلار کارمزد`
+                  : `کسر ${toFaDigits(String(financeConfig.applied_fee))} دلار کارمزد`}
               </span>
             )}
           </div>
@@ -218,7 +246,7 @@ export function DashboardRequestHub({
             </span>
           )}
         </div>
-        <button className={cardStyles.primaryButton} onClick={submit} disabled={!isApproved || rawAmount <= 0 || isRateOffline || isSubmitting} type="button">
+        <button className={cardStyles.primaryButton} onClick={submit} disabled={!isApproved || rawAmount <= 0 || isRateOffline || isSubmitting || !marketActive} type="button">
           {isSubmitting ? (
             <><Loader2 className="lucide-spin" size={20} /> در حال پردازش امن...</>
           ) : (

@@ -66,10 +66,11 @@ export default function TestimonialSection() {
   useEffect(() => {
     async function fetchTestimonials() {
       try {
-        // 🛡️ فقط دریافت نظرات - بدون ارتباط با تیبل تراکنش‌ها
+        // 🛡️ فقط دریافت نظرات تایید شده توسط ادمین
         const { data: testData, error: testError } = await supabase
           .from('testimonials')
           .select('rating, message, profiles(first_name, last_name)')
+          .eq('status', 'approved')
           .order('created_at', { ascending: false });
 
         if (testError) throw testError;

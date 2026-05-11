@@ -1,0 +1,490 @@
+/**
+ * AdminTable.module.css
+ * Premium Polished Tables (Fixed Padding)
+ */
+
+.tableWrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border-radius: 0 0 1rem 1rem;
+  box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.05); /* Faint edge shadow to indicate scroll */
+  width: 100%;
+}
+.tableWrap::-webkit-scrollbar {
+  display: none;
+}
+
+.table {
+  width: 100%;
+  min-width: 700px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table thead tr {
+  border-bottom: 1px solid var(--border-med);
+  background: var(--bg-app);
+}
+
+/* فاصله داخلی هدر جدول استاندارد شد */
+.table th {
+  padding: 0.875rem 1.5rem; 
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* فاصله داخلی سلول‌های جدول استاندارد شد */
+.table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-main);
+  font-weight: 500;
+  vertical-align: middle;
+  transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover td {
+  background-color: var(--bg-hover);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cellMono {
+  font-family: var(--font-en-stack);
+  letter-spacing: 0.01em;
+}
+
+.cellDim {
+  color: var(--text-soft);
+}
+
+.cellSmall {
+  font-size: 0.75rem;
+}
+
+.cellActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+
+/* ── Compact pill-button group (desktop table actions) ── */
+.btnGroup {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.btnGroup .btnAction {
+  border-radius: 0;
+  border: none;
+  border-right: 1px solid var(--border-soft);
+  box-shadow: none;
+  padding: 5px 9px;
+  font-size: 0.6875rem;
+  gap: 3px;
+}
+
+.btnGroup .btnAction:last-child {
+  border-right: none;
+}
+
+.btnGroup .btnAction:first-child {
+  border-top-left-radius: calc(0.5rem - 1px);
+  border-bottom-left-radius: calc(0.5rem - 1px);
+}
+
+.btnGroup .btnAction:last-child {
+  border-top-right-radius: calc(0.5rem - 1px);
+  border-bottom-right-radius: calc(0.5rem - 1px);
+}
+
+/* stand-alone compact button (icon + tiny text) */
+.btnActionCompact {
+  padding: 4px 8px;
+  font-size: 0.6875rem;
+  gap: 3px;
+  border-radius: 0.375rem;
+}
+
+.cellTruncate {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cellRtl {
+  direction: rtl;
+  text-align: right;
+  font-family: var(--font-primary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badgePending  { color: #b45309;  background: #fef3c7; border: 1px solid #fde68a; }
+.badgeApproved { color: #059669;  background: #d1fae5; border: 1px solid #a7f3d0; }
+.badgeRejected { color: #dc2626;  background: #fee2e2; border: 1px solid #fecaca; }
+.badgeReview   { color: #2563eb;  background: #dbeafe; border: 1px solid #bfdbfe; }
+.badgeArchived { color: #475569;  background: #f1f5f9; border: 1px solid #e2e8f0; }
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.txBuy  { color: var(--accent); background: rgba(var(--accent-rgb), 0.1); border: 1px solid rgba(var(--accent-rgb), 0.2); }
+.txSell { color: var(--success); background: rgba(var(--success-rgb), 0.1); border: 1px solid rgba(var(--success-rgb), 0.2); }
+
+.btnAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btnAction:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnAction:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+.btnApprove {
+  background: #ffffff;
+  color: #16a34a;
+  border-color: #bbf7d0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.btnApprove:not(:disabled):hover {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.btnReject {
+  background: #ffffff;
+  color: #ea580c;
+  border-color: #fecaca;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.btnReject:not(:disabled):hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.btnArchive {
+  background: #ffffff;
+  color: #64748b;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.btnArchive:not(:disabled):hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.btnViewDocs {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+.btnViewDocs:not(:disabled):hover {
+  background: #dbeafe;
+}
+
+.stars {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--warning);
+}
+
+.starFilled { color: var(--warning); }
+.starEmpty  { color: var(--border-med); }
+
+.filterBar {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1 1 100%;
+  min-width: 0; /* Prevents overflow from flex items */
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--border-med);
+  border-radius: 0.5rem;
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-family: var(--font-en-stack);
+  padding: 0.625rem 1rem;
+  height: 42px; /* Slightly taller for mobile tap targets */
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.searchInput::placeholder {
+  color: var(--text-dim);
+}
+
+.searchInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  font-size: 0.75rem;
+  color: var(--text-soft);
+}
+
+.paginationBtn {
+  background: #ffffff;
+  border: 1px solid var(--border-soft);
+  border-radius: 0.375rem;
+  color: var(--text-main);
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.paginationBtn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-med);
+}
+
+.paginationBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.badgeCompact {
+  font-size: 0.75rem;
+  padding: 6px 12px;
+}
+
+.badgeArchivedMuted {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.rowTintWarning {
+  background: rgba(var(--warning-rgb), 0.02);
+}
+
+.rowTransparent {
+  background: transparent;
+}
+
+.cellStrong {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.cellSubtleTop {
+  margin-top: 2px;
+}
+
+.cellSmallEmail {
+  font-size: 0.8125rem;
+}
+
+.cellSmallPhone {
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.cellUpper {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cellCapitalize {
+  text-transform: capitalize;
+}
+
+.cellProcessed {
+  font-size: 0.75rem;
+}
+
+.cellMax150 {
+  max-width: 150px;
+}
+
+.cellMax180 {
+  max-width: 180px;
+}
+
+.cellMax280 {
+  max-width: 280px;
+  padding: 12px 16px;
+}
+
+.cellMax300 {
+  max-width: 300px;
+  padding: 12px 16px;
+}
+
+.cellMax320 {
+  max-width: 320px;
+  padding: 12px 16px;
+}
+
+.tableWrapTopBorder {
+  border-top: 1px solid var(--border-soft);
+}
+
+.tableWrapTopFlat {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.tableWrapNoBorder {
+  border: none;
+  border-top: 1px solid var(--border-soft);
+}
+
+.theadTransparent {
+  background: transparent;
+}
+
+.codeChip {
+  background: var(--bg-soft);
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--text-soft);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-en-stack);
+  border: 1px solid var(--border-soft);
+  font-size: 0.75rem;
+}
+
+.quotePending {
+  border-right: 3px solid var(--border-med);
+  padding-right: 12px;
+  font-style: italic;
+  color: var(--text-soft);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.quoteHistory {
+  border-right: 3px solid var(--border-soft);
+  padding-right: 12px;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.quoteUser {
+  border-right: 2px solid var(--border-soft);
+  padding-right: 10px;
+  color: var(--text-soft);
+  font-size: 0.875rem;
+}
+
+.iconShiftRight {
+  margin-right: 2px;
+}
+
+.paginationFooter {
+  padding: 1rem;
+  text-align: center;
+  border-top: 1px solid var(--border-soft);
+  background: var(--bg-soft);
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.paginationNote {
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+  align-self: center;
+}
+
+.table tbody tr {
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+/* هایلایت شدن ردیف هنگام رفتن موس روی آن */
+.table tbody tr:hover {
+  background-color: var(--bg-soft); /* استفاده از رنگ پس‌زمینه ملایم */
+  /* اگر می‌خواهید هایلایت کمی مشخص‌تر باشد، می‌توانید به جای خط بالا از این استفاده کنید: */
+  /* background-color: rgba(var(--accent-rgb), 0.04); */
+}
+
+
+/* کوچک کردن پدینگ جدول‌ها فقط در صفحه‌های موبایل */
+@media (max-width: 900px) {
+  .table th {
+    padding: 0.75rem 0.75rem; /* کاهش پدینگ هدر جدول */
+    font-size: 0.625rem;
+  }
+  
+  .table td {
+    padding: 0.75rem 0.75rem; /* کاهش پدینگ سلول‌ها */
+    font-size: 0.8125rem;
+  }
+
+  /* دکمه‌های اکشن (تایید/رد) در جدول هم کمی کوچکتر شوند */
+  .btnAction {
+    padding: 4px 8px;
+    font-size: 0.6875rem;
+  }
+}

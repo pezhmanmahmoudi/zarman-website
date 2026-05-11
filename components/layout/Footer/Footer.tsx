@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -13,15 +15,15 @@ export default function Footer() {
           <Link href="#hero" aria-label="بازگشت به بالای صفحه" className={styles.logoLink}>
             <Image
               src="/images/logo-white-text-and-ring.svg"
-              alt="لوگوی زرمان اکسچنج"
+              alt="لوگوی زرمان"
               width={220}
               height={100}
               className={styles.logoImg}
             />
           </Link>
           <p className={styles.brandDesc}>
-            پلتفرم نوین خدمات ارزی و انتقال سرمایه میان ایران و استرالیا. <br />
-            طراحی شده برای امنیت، شفافیت و سرعت در تک‌تک تراکنش‌های مالی شما.
+            پلتفرم جامع مدیریت پرداخت‌ها و حوالجات ارزی. <br />
+            ما اینجاییم تا تجربه‌ای بی‌مرز، قانونمند و آسوده از خدمات ارزی را برای شما رقم بزنیم.
           </p>
         </div>
 
@@ -68,13 +70,29 @@ export default function Footer() {
 
         </div>
 
+        {/* بخش اطلاعات حقوقی و سلب مسئولیت (جدید) */}
+        <div className={styles.legalDisclaimer}>
+          <strong>اطلاعات حقوقی</strong>
+          <p>
+            پلتفرم مالی زرمان تحت مالکیت حقوقی Zarman Exchange Pty Ltd فعالیت می‌کند. ما به‌عنوان یک موسسه مالی مجاز، با کد IND100907570 در سازمان اطلاعات مالی استرالیا (AUSTRAC) به ثبت رسیده‌ایم. شماره‌های ثبت تجاری و مالیاتی شرکت عبارتند از: ABN 70 692 742 957 و ACN 692 742 957.
+          </p>
+          <p>
+            اطلاعات این وب‌سایت صرفاً آگاهی‌بخشیِ عمومی است و توصیه مالی تلقی نمی‌شود؛ لذا پیش از هر اقدامی شرایط شخصی خود را بسنجید. تداوم استفاده شما از این وب‌سایت، نشان‌دهنده موافقت کامل با «شرایط و مقررات استفاده» و «خط‌مشی حریم خصوصی» زرمان خواهد بود.
+          </p>
+        </div>
+
         {/* بخش پایینی: کپی‌رایت */}
         <div className={styles.bottom}>
-          <p className={styles.copyright}>
-            © {new Date().getFullYear()} Zarman Exchange Pty Ltd.
-            <br className={styles.mobileBreak} />
-            کلیه حقوق مادی، معنوی و محتوای این وب‌سایت محفوظ و متعلق به صرافی زرمان می‌باشد.
-          </p>
+          <div className={styles.copyrightWrapper}>
+            <p dir="ltr" className={styles.copyrightEn}>
+              &copy; {new Date().getFullYear()} Zarman. All rights reserved.
+              {<span className={styles.poweredBy}> Designed by Zarman Team</span> }
+            </p>
+            
+            <p dir="rtl" className={styles.copyrightFa}>
+              کلیه حقوق مادی و معنوی این وب‌سایت محفوظ و متعلق به پلتفرم زرمان می‌باشد.
+            </p>
+          </div>
         </div>
       </div>
     </footer>

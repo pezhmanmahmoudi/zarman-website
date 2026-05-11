@@ -28,12 +28,9 @@
   --shadow-card: 0 20px 40px -10px rgba(0, 0, 0, 0.08),
     0 0 0 1px rgba(0, 0, 0, 0.02);
 
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+display: block; 
   min-height: 100dvh;
   direction: rtl;
-  
-  /* 🚀 تغییر به توکن فونت سراسری */
   font-family: var(--font-primary);
   background-color: var(--bg-app);
   color: var(--text-main);
@@ -70,14 +67,20 @@
 }
 
 .loadingState {
-  min-height: 100dvh;
-  width: 100%;
+  position: fixed; /* یا absolute اگر والد نسبی است */
+  inset: 0; /* معادل top: 0; right: 0; bottom: 0; left: 0; */
   display: flex;
   align-items: center;
   justify-content: center;
+  
+  /* استایل‌های متن شما */
   color: var(--text-soft);
   font-weight: var(--font-weight-bold);
-  font-size: var(--text-body-md); /* جایگزین 1rem */
+  font-size: var(--text-body-md);
+  
+  /* (اختیاری) برای جلوگیری از تداخل با عناصر زیرین */
+  z-index: 9999;
+  background-color: var(--bg-default); /* رنگ پس‌زمینه خود را قرار دهید */
 }
 
 .mobileBackdrop {
@@ -89,12 +92,17 @@
 }
 
 .mainArea {
+/* 🚀 ایجاد فضای خالی برای سایدبار ثابت 🚀 */
+  margin-right: 280px; 
+  width: calc(100% - 280px);
+  
+  min-height: 100vh;
   min-width: 0;
   padding: 40px;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: var(--space-6); /* جایگزین 24px */
+  gap: var(--space-6);
 }
 
 /* =====================================
@@ -259,5 +267,9 @@
   .dashboardWrapper { grid-template-columns: 1fr; }
   .mobileBackdrop { display: flex; }
   .mobileTopbar { display: flex; }
-  .mainArea { padding: 20px; }
+  .mainArea {
+    margin-right: 0; /* حذف حاشیه در موبایل چون سایدبار مخفی می‌شود */
+    width: 100%;
+    padding: 20px;
+  }
 }

@@ -25,9 +25,9 @@ export default function FinalCTA() {
           
           {/* 👈 نام کلاس به استانداردهای ما تغییر کرد */}
           <div className={styles.header}>
-            <h2 className={styles.title}>آماده‌اید تا تجربه مالی متفاوتی داشته باشید؟</h2>
+            <h2 className={styles.title}>مدیریت مالی؛ بدون مرز، بدون دغدغه.</h2>
             <p className={styles.subtitle}>
-              همین حالا حساب کاربری خود را بسازید و اولین انتقال خود را با امنیت، سرعت و شفافیت کامل انجام دهید.
+             فرآیندهای پیچیده‌ی سنتی را فراموش کنید. همین حالا کنترل کامل تراکنش‌های ارزی خود را در یک اکوسیستم یکپارچه به دست بگیرید.
             </p>
             <div className={styles.actions}>
               <Button href="/fa/register" variant="primary" size="lg">

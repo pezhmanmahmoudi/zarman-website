@@ -62,6 +62,7 @@
   font-size: var(--text-body-md);
   line-height: var(--leading-relaxed);
   margin: 0 0 var(--space-8) 0;
+   font-weight: var(--font-weight-semibold);
 }
 
 .actions {

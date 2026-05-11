@@ -5,7 +5,7 @@ import styles from "./ConverterFa.module.css";
 import Button from "@/components/ui/Button/Button";
 import { ArrowLeft, ArrowDownCircle, Info, UserCircle, AlertTriangle, ChevronDown } from "lucide-react";
 import { useRates } from "@/context/RateContext";
-import { FINANCE_CONFIG } from "@/lib/pricing";
+import { useFinanceConfig } from "@/context/FinanceConfigContext";
 import { buildWhatsAppUrl } from "@/lib/constants/contact";
 
 type Currency = "AUD" | "IRT";
@@ -36,6 +36,7 @@ export default function ConverterFa() {
   const [amountText, setAmountText] = useState<string>("۳،۰۰۰");
   const [from, setFrom] = useState<Currency>("AUD");
   const { currentRates, isLoading } = useRates();
+  const financeConfig = useFinanceConfig();
 
   // 🛡️ اگر نرخ وجود نداشت، مقدار 0 در نظر گرفته می‌شود تا جلوی ارور null گرفته شود
   const rawRate = from === "AUD" ? currentRates.buyAUD : currentRates.sellAUD;
@@ -48,10 +49,10 @@ export default function ConverterFa() {
   let isFeeApplied = false;
   if (amountNum > 0 && safeRate > 0) {
     if (from === "AUD") {
-      isFeeApplied = amountNum < FINANCE_CONFIG.FEE_THRESHOLD;
+      isFeeApplied = amountNum < financeConfig.fee_threshold;
     } else {
       const rawAud = amountNum / safeRate;
-      isFeeApplied = rawAud > 0 && rawAud < FINANCE_CONFIG.FEE_THRESHOLD;
+      isFeeApplied = rawAud > 0 && rawAud < financeConfig.fee_threshold;
     }
   }
 
@@ -61,7 +62,7 @@ export default function ConverterFa() {
     let finalValue = 0;
 
     if (from === "AUD") {
-      const feeInAud = isFeeApplied ? FINANCE_CONFIG.APPLIED_FEE : 0;
+      const feeInAud = isFeeApplied ? financeConfig.applied_fee : 0;
       const netAud = Math.max(0, amountNum - feeInAud);
       finalValue = netAud * safeRate;
     } else {
@@ -157,7 +158,7 @@ export default function ConverterFa() {
             {isFeeApplied && (
               <span className={styles.feeWarning}>
                 <AlertTriangle size={14} />
-                این تراکنش دارای کارمزد {toFaDigits(String(FINANCE_CONFIG.APPLIED_FEE))} دلار است
+                این تراکنش دارای کارمزد {toFaDigits(String(financeConfig.applied_fee))} دلار است
               </span>
             )}
           </div>
@@ -185,12 +186,12 @@ export default function ConverterFa() {
         <div className={styles.noteItem}>
           <Info size={16} strokeWidth={2} />
             <span>
-             توجه: برای تراکنش‌های کمتر از {formatNumberFa(FINANCE_CONFIG.FEE_THRESHOLD)} دلار، مبلغ {toFaDigits(String(FINANCE_CONFIG.APPLIED_FEE))} دلار به عنوان کارمزد کسر می‌گردد که در کادر بالا محاسبه شده است.
+             توجه: برای تراکنش‌های کمتر از {formatNumberFa(financeConfig.fee_threshold)} دلار، مبلغ {toFaDigits(String(financeConfig.applied_fee))} دلار به عنوان کارمزد کسر می‌گردد که در کادر بالا محاسبه میشود.
           </span>
         </div>
         <div className={styles.noteItem}>
           <UserCircle size={16} strokeWidth={2} />
-          <span>برای شخصی‌سازی قیمت و پیگیری وضعیت تراکنش، توصیه می‌شود وارد پروفایل کاربری خود شده و از پنل اختصاصی درخواست دهید.</span>
+          <span>برای شخصی‌سازی قیمت توصیه می‌شود وارد پروفایل کاربری خود شده و از پنل اختصاصی درخواست دهید.</span>
         </div>
       </div>
 

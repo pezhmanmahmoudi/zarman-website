@@ -48,6 +48,7 @@
   font-family: var(--font-primary);
   font-size: var(--text-body-md); 
   line-height: var(--leading-relaxed);
+   font-weight: var(--font-weight-semibold);
 }
 
 /* ========== GRID & CARDS ========== */
@@ -155,7 +156,7 @@
   font-size: var(--text-caption); 
   line-height: var(--leading-relaxed);
   /* 👈 هاردکد 400 حذف و به توکن متصل شد */
-  font-weight: var(--font-weight-regular);
+  font-weight: var(--font-weight-semibold );
   /* 👈 پدینگ 4px حذف و به توکن متصل شد */
   padding: 0 var(--space-1); 
 }
@@ -212,6 +213,7 @@
   font-size: var(--text-body-md); 
   line-height: var(--leading-relaxed);
   max-width: 600px;
+   font-weight: var(--font-weight-semibold);
 }
 
 .ctaActions {

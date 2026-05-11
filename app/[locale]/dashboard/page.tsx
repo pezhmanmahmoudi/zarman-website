@@ -14,12 +14,14 @@ import { DashboardTransactionHistory } from "@/components/dashboard/DashboardTra
 import { DashboardProfile } from "@/components/dashboard/DashboardProfile";
 import { DashboardFeedback } from "@/components/dashboard/DashboardFeedback";
 import { AlertTriangle, X } from "lucide-react"; 
-import { FINANCE_CONFIG } from "@/lib/pricing";
+import { useFinanceConfig } from "@/context/FinanceConfigContext";
+import { calcLoyaltyDiscount } from "@/lib/pricing";
 
 
 export default function ZarmanDashboard() {
   const rateContext = useRates();
   const { profile, transactions, loading, sessionChecked } = useDashboardData();
+  const financeConfig = useFinanceConfig();
 
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -60,12 +62,8 @@ export default function ZarmanDashboard() {
   }, [approvedTransactions]);
 
   const loyaltyBonus = useMemo(() => {
-    if (spread === 0 || approvedVolume === 0) return 0;
-    const volumeSteps = Math.floor(approvedVolume / FINANCE_CONFIG.DISCOUNT_STEP_VOLUME);
-    const rawDiscountPercent = volumeSteps * FINANCE_CONFIG.DISCOUNT_PERCENT_PER_STEP;
-    const finalDiscountPercent = Math.min(rawDiscountPercent, FINANCE_CONFIG.MAX_DISCOUNT_PERCENT);  
-    return spread * finalDiscountPercent;
-  }, [approvedVolume, spread]);
+    return calcLoyaltyDiscount(approvedVolume, spread, financeConfig);
+  }, [approvedVolume, spread, financeConfig]);
 
   const tailoredRate = useMemo(() => {
     if (baseRate === null) return null;
@@ -79,43 +77,6 @@ export default function ZarmanDashboard() {
     const fullName = String(profile.full_name || "").trim();
     if (fullName) return fullName;
     return `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "مشتری عزیز";
-  }, [profile]);
-
-  const profileFields = useMemo(() => {
-    if (!profile) return [];
-    
-    const fullAddress = [
-      profile.address, 
-      profile.suburb, 
-      profile.city, 
-      profile.state, 
-      profile.postal_code, 
-      profile.country
-    ].filter(Boolean).join(" - ");
-
-    let docTypeFa = "آپلود نشده";
-    const dt = String(profile.document_type || "").toLowerCase();
-    if (dt === 'passport') docTypeFa = 'پاسپورت';
-    else if (dt === 'driver_license' || dt.includes('license')) docTypeFa = 'گواهینامه رانندگی (لایسنس)';
-    else if (dt === 'national_id') docTypeFa = 'کارت ملی';
-    else if (dt && dt !== "undefined") docTypeFa = dt;
-
-    let dobEn = "—";
-    const dobRaw = profile.dob || profile.date_of_birth || profile.birth_date;
-    if (dobRaw) {
-      const d = new Date(String(dobRaw));
-      if (!isNaN(d.getTime())) dobEn = d.toLocaleDateString("en-US");
-    }
-
-    return [
-      { id: 'fname', label: "نام", value: profile.first_name || "—", dir: "ltr" },
-      { id: 'lname', label: "نام خانوادگی", value: profile.last_name || "—", dir: "ltr" },
-      { id: 'phone', label: "شماره تماس", value: profile.mobile_number || profile.phone_number || "—", dir: "ltr" },
-      { id: 'email', label: "ایمیل", value: profile.email || "—", dir: "ltr" },
-      { id: 'dob', label: "تاریخ تولد", value: dobEn, dir: "ltr" },
-      { id: 'address', label: "محل سکونت", value: fullAddress || "—", dir: "ltr" },
-      { id: 'doc', label: "مدارک بارگذاری شده", value: docTypeFa, dir: "rtl" }
-    ];
   }, [profile]);
 
   const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud") => {
@@ -139,12 +100,10 @@ export default function ZarmanDashboard() {
   };
 
   const executeDeleteTransaction = async () => {
-    // 🛡️ چک کردن مستقیم برای اطمینان تایپ‌اسکریپت
     if (deleteConfirmId === null) return;
     
     setIsDeleting(true);
     try {
-      // استفاده از ! برای اطمینان از عدم وجود null
       const result = await deleteTransactionSecurely(deleteConfirmId!);
       if (result?.error) {
         alert(`حذف تراکنش ناموفق بود: ${result.error}`);
@@ -159,7 +118,7 @@ export default function ZarmanDashboard() {
     }
   };
 
-  if (!sessionChecked || loading) return <div className={shellStyles.dashboardWrapper} data-theme={theme}><div className={shellStyles.loadingState}>در حال برقراری اتصال امن با دیتابیس...</div></div>;
+  if (!sessionChecked || loading) return <div className={shellStyles.dashboardWrapper} data-theme={theme}><div className={shellStyles.loadingState}>در حال برقراری اتصال با دیتابیس...</div></div>;
 
   return (
     <div className={shellStyles.dashboardWrapper} data-theme={theme}>
@@ -179,7 +138,10 @@ export default function ZarmanDashboard() {
         )}
         
         {activeTab === "history" && <DashboardTransactionHistory transactions={transactions} totalVolume={approvedVolume} onDeleteTransaction={handleDeleteRequest} />}
-        {activeTab === "profile" && <DashboardProfile profileFields={profileFields} profileId={profile?.id} />}
+        
+        {/* 🚀 ارور تایپ‌اسکریپت از اینجا حل شد 🚀 */}
+        {activeTab === "profile" && <DashboardProfile profile={profile} />}
+        
         {activeTab === "feedback" && <DashboardFeedback profileId={profile?.id || ""} />}
 
         {deleteConfirmId && (

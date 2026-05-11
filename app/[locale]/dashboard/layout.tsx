@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next"; // 👈 اضافه شدن ابزار سئو
 import MarketProviders from "@/components/providers/MarketProviders";
 import { getRatesSnapshot } from "@/lib/rates";
+import { getFinanceConfig } from "@/lib/finance-config";
 
 // 🚀 سئوی اختصاصی و امنیتی داشبورد
 export const metadata: Metadata = {
@@ -14,10 +15,13 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
-  const rateSnapshot = await getRatesSnapshot();
+  const [rateSnapshot, financeConfig] = await Promise.all([
+    getRatesSnapshot(),
+    getFinanceConfig(),
+  ]);
 
   return (
-    <MarketProviders initialData={rateSnapshot} withSmoothScroll={false}>
+    <MarketProviders initialData={rateSnapshot} initialFinanceConfig={financeConfig} withSmoothScroll={false}>
       {children}
     </MarketProviders>
   );

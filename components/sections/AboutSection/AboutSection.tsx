@@ -62,7 +62,7 @@ export default function About() {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1.0, ease: EASE, delay: 0.28 }}
                 >
-                  انتقال پول بین ایران و استرالیا
+                  پل اعتماد میان دو کشور
                 </motion.h2>
 
                 <motion.p
@@ -71,18 +71,26 @@ export default function About() {
                   initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 26 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 1.05, ease: EASE, delay: 0.42 }}
-                >
-                  زرمان پلتفرمی مدرن است که با هدف ساده‌سازی فرآیند انتقال ارز برای ایرانیان
-                  مقیم استرالیا طراحی شده است.
-                </motion.p>
+               >
+                                «صرافی  زرمان» یک استارتاپ مالی ایرانی–استرالیایی است که با هدف ارائه خدمات 
+                امن، سریع و قابل‌اعتماد برای نقل‌ و انتقالات مالی میان ایران و استرالیا 
+                شکل گرفته است. ما با چالش‌ها و دغدغه‌های انتقال پول در این مسیر به‌خوبی 
+                آشنا هستیم و تلاش می‌کنیم تجربه‌ای ساده‌تر، شفاف‌تر و مطمئن‌تر را برای 
+                هموطنان عزیز فراهم کنیم. 
+                <br />
+                <br />
+                                زرمان با اخذ مجوز رسمی خدمات مالی و ارزی در استرالیا به شماره 100907570
+                و تحت نظارت قوانین مبارزه با پول‌شویی و تأمین مالی تروریسم فعالیت می‌کند.
 
-                <motion.div
-                  className={styles.actions}
-                  viewport={VIEWPORT}
-                  initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 22 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.95, ease: EASE, delay: 0.58 }}
-                >
+              </motion.p>
+
+              <motion.div
+                className={styles.actions}
+                viewport={VIEWPORT}
+                initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 22 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.95, ease: EASE, delay: 0.58 }}
+              >
                   <Button href="/fa/register" variant="primary" size="lg" className={styles.actionBtn}>
                     شروع ثبت‌نام
                   </Button>

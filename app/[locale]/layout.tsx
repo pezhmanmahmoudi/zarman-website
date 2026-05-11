@@ -109,7 +109,7 @@ export default async function LocaleLayout({
   const fontClass = locale === "en" ? inter.variable : "";
 
   return (
-    <html lang={locale} dir={dir}>
+    <html lang={locale} dir={dir} data-scroll-behavior="smooth">
       <body className={`${fontClass} min-h-screen antialiased bg-[#080B12] text-white`}>
         <main id="main-content">{children}</main>
       </body>

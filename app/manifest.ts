@@ -17,11 +17,6 @@ export default function manifest(): MetadataRoute.Manifest {
     dir: "rtl", 
     icons: [
       {
-        src: "/favicon.ico",
-        sizes: "any",
-        type: "image/x-icon",
-      },
-      {
         src: "/images/icon-192.png",
         sizes: "192x192",
         type: "image/png",

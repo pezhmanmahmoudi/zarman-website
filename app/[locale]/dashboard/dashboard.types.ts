@@ -31,5 +31,6 @@ export type Transaction = {
   type: "buy_aud" | "sell_aud";
   amount_aud: number;
   equivalent_toman: number;
+  status: "pending" | "approved" | "rejected" | "cancelled";
   created_at: string;
 };

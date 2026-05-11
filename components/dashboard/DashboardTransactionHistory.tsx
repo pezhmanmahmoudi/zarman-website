@@ -41,9 +41,9 @@ export function DashboardTransactionHistory({ transactions, totalVolume, onDelet
               <tr key={tx.id}>
                 <td dir="ltr" className={styles.tableDate}>
                   {new Date(tx.created_at).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric"
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "2-digit"
                   })}
                 </td>
                 
@@ -53,7 +53,7 @@ export function DashboardTransactionHistory({ transactions, totalVolume, onDelet
                   </span>
                 </td>
                 
-                <td dir="ltr" className={styles.tableMoney}>${Number(tx.amount_aud).toLocaleString("en-US")}</td>
+                <td dir="ltr" className={styles.tableMoney}>${Number(tx.amount_aud).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 
                 <td className={styles.tableToman}>{formatToman(tx.equivalent_toman)}</td>
                 

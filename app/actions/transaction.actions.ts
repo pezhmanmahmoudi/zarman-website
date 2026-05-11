@@ -1,7 +1,8 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { FINANCE_CONFIG } from "@/lib/pricing";
+import { getFinanceConfig } from "@/lib/finance-config";
+import { calcLoyaltyDiscount, calcAppliedFee } from "@/lib/pricing";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 
 const supabaseAdmin = createClient(
@@ -40,28 +41,29 @@ export async function processTransactionSecurely({ rawAmount, txType }: { rawAmo
 
     const spread = Math.abs(rateData.sell_aud - rateData.buy_aud);
 
-    // ۲. بررسی سوابق
-    const { data: userTxs, error: txError } = await supabaseAdmin
-      .from("transactions")
-      .select("amount_aud")
-      .eq("user_id", authenticatedUserId)
-      .eq("status", "approved");
-    if (txError) {
+    // ۲. بررسی سوابق و دریافت تنظیمات مالی (موازی)
+    const [userTxsResult, financeConfig] = await Promise.all([
+      supabaseAdmin
+        .from("transactions")
+        .select("amount_aud")
+        .eq("user_id", authenticatedUserId)
+        .eq("status", "approved"),
+      getFinanceConfig(),
+    ]);
+    if (userTxsResult.error) {
       return { error: "دریافت سوابق تراکنش با مشکل مواجه شد." };
     }
 
-    const approvedVolume = userTxs?.reduce((sum, tx) => sum + Number(tx.amount_aud || 0), 0) || 0;
+    const approvedVolume =
+      userTxsResult.data?.reduce((sum, tx) => sum + Number(tx.amount_aud || 0), 0) || 0;
 
-    // ۳. محاسبات وفاداری
-    const volumeSteps = Math.floor(approvedVolume / FINANCE_CONFIG.DISCOUNT_STEP_VOLUME);
-    const rawDiscountPercent = volumeSteps * FINANCE_CONFIG.DISCOUNT_PERCENT_PER_STEP;
-    const finalDiscountPercent = Math.min(rawDiscountPercent, FINANCE_CONFIG.MAX_DISCOUNT_PERCENT);
-    const loyaltyBonus = spread * finalDiscountPercent;
+    // ۳. محاسبات وفاداری (با تنظیمات دینامیک از دیتابیس)
+    const loyaltyBonus = calcLoyaltyDiscount(approvedVolume, spread, financeConfig);
 
     const baseRate = txType === "buy_aud" ? rateData.sell_aud : rateData.buy_aud;
     const tailoredRate = txType === "buy_aud" ? baseRate - loyaltyBonus : baseRate + loyaltyBonus;
 
-    const appliedFee = (rawAmount > 0 && rawAmount < FINANCE_CONFIG.FEE_THRESHOLD) ? FINANCE_CONFIG.APPLIED_FEE : 0;
+    const appliedFee = calcAppliedFee(rawAmount, financeConfig);
     const effectiveAud = txType === "buy_aud" ? rawAmount + appliedFee : Math.max(rawAmount - appliedFee, 0);
     const equivalentToman = Math.round(effectiveAud * tailoredRate);
 
