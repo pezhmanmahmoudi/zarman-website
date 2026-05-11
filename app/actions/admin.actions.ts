@@ -595,8 +595,7 @@ export async function getSystemSettings() {
   const { data, error } = await db
     .from("rates_history")
     .select(
-      "buy_aud, sell_aud, date, source, note, market_active, pause_message, " +
-      "discount_step_volume, discount_percent_per_step, max_discount_percent, fee_threshold, applied_fee",
+      "buy_aud, sell_aud, date, source, note, market_active, pause_message, discount_step_volume, discount_percent_per_step, max_discount_percent, fee_threshold, applied_fee"
     )
     .order("date", { ascending: false })
     .limit(1)
@@ -700,8 +699,8 @@ export async function updateSystemSettings({
   }
 
   // Bust both caches: rates snapshot (hero/chart) and finance config (fee/discount logic).
-  revalidateTag("rates-snapshot-v1");
-  revalidateTag("system-settings");
+  revalidateTag("rates-snapshot-v1", "default");
+  revalidateTag("system-settings", "default");
 
   return { success: true };
 }
