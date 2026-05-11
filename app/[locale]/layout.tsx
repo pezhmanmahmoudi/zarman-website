@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import "../globals.css";
 import { JsonLdSchema } from "@/components/JsonLdSchema";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/react";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -179,6 +181,8 @@ export default async function LocaleLayout({
       <body className={`${fontClass} min-h-screen antialiased bg-[#080B12] text-white`}>
         <JsonLdSchema locale={locale} />
         <main id="main-content">{children}</main>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
