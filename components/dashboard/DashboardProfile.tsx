@@ -254,14 +254,14 @@ export function DashboardProfile({ profile }: { profile: any }) {
                     <label className={styles.finePrintLabel}>
                       <input type="checkbox" name="consentNotice" checked={formData.consentNotice} onChange={handleChange} />
                       <span>
-                        I have read and agree to the <a href="/en/legal/privacy-policy" target="_blank">Privacy Policy</a> & <a href="/en/legal/dvs-notice" target="_blank">Verification Notice</a>. <span className={styles.req}>*</span>
+                        I have read and agree to the <a href="/en/legal/privacy-policy" target="_blank">Privacy Policy</a> & <a href="/en/legal/dvs-notice" target="_blank">Verification Notice</a>. <span className={styles.req}></span>
                       </span>
                     </label>
                     
                     <label className={styles.finePrintLabel}>
                       <input type="checkbox" name="consentDVS" checked={formData.consentDVS} onChange={handleChange} />
                       <span>
-                        I consent to Zarman Exchange verifying my personal details and ID documents via official records (DVS) as per the <a href="/en/legal/dvs-consent" target="_blank">Identity Verification Consent</a>. <span className={styles.req}>*</span>
+                        I consent to Zarman Exchange verifying my personal details and ID documents via official records (DVS) as per the <a href="/en/legal/dvs-consent" target="_blank">Identity Verification Consent</a>. <span className={styles.req}></span>
                       </span>
                     </label>
                     

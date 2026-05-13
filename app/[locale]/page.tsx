@@ -12,6 +12,14 @@ import MarketProviders from "@/components/providers/MarketProviders";
 import { getRatesSnapshot } from "@/lib/rates";
 import { getFinanceConfig } from "@/lib/finance-config";
 
+// ۱. فعال‌سازی کش ۵ دقیقه‌ای برای کل صفحه (ISR)
+export const revalidate = 300; 
+
+// ۲. تولید استاتیک مسیرهای اصلی در زمان دیپلوی برای سرعت حداکثری
+export function generateStaticParams() {
+  return [{ locale: 'fa' }, { locale: 'en' }];
+}
+
 function SectionLoadingFallback({ label }: { label: string }) {
   return (
     <div role="status" className="w-full" style={{ minHeight: "320px", backgroundColor: "#080B12" }}>
@@ -42,6 +50,8 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
+  // این کوئری‌ها حالا فقط هر ۵ دقیقه یک‌بار در پس‌زمینه اجرا می‌شوند
+  // و کاربر دیگر منتظر پاسخ دیتابیس نمی‌ماند.
   const [rateSnapshot, financeConfig] = await Promise.all([
     getRatesSnapshot(),
     getFinanceConfig(),

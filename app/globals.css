@@ -101,11 +101,11 @@ h1, h2, h3, h4, h5, h6 {
    📱 مدیریت هوشمند زوم در سافاری iOS (تفکیک فارسی و انگلیسی) 
    ==================================================== */
 @media (max-width: 768px) {
-  /* ۱. سایز ۱۹ پیکسل برای جلوگیری از پرش فونت فارسی (Peyda) */
+  /* ۱. سایز ۱۸ پیکسل برای جلوگیری از پرش فونت فارسی (Peyda) */
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
   select,
   textarea {
-    font-size: 19px !important;
+    font-size: 18px !important;
   }
 
   /* ۲. سایز ۱۶ پیکسل برای اینپوت‌های انگلیسی (Inter) جهت حفظ ظرافت ظاهر فرم‌ها */

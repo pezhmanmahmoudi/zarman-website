@@ -160,6 +160,54 @@ export async function createKycDocumentSignedUrl({
 }
 
 // ---------------------------------------------------------------------------
+// sendTelegramKycNotification — fires an admin alert via the Telegram Bot API.
+// Credentials are read from server-only env vars (never exposed to the client).
+// ---------------------------------------------------------------------------
+async function sendTelegramKycNotification({
+  firstName,
+  lastName,
+  email,
+}: {
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+}) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
+
+  if (!token || !chatId) {
+    // Credentials not configured — skip silently.
+    return;
+  }
+
+  const fullName =
+    [firstName, lastName].filter(Boolean).join(" ").trim() || "Unknown";
+  const displayEmail = email || "N/A";
+
+  const text =
+    `🔔 A user has completed their profile in the Dashboard and is waiting for KYC verification.\n\n` +
+    `👤 Name: ${fullName}\n` +
+    `📧 Email: ${displayEmail}`;
+
+  const url = `https://api.telegram.org/bot${token}/sendMessage`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: "HTML",
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Telegram API error ${response.status}: ${body}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // submitKycData — AUSTRAC-compliant identity submission (no document images).
 // Must run server-side: uses service role to bypass RLS so that kyc_status
 // is set atomically and can never be forged from the browser.
@@ -225,7 +273,7 @@ export async function submitKycData(payload: {
   // 3. Immutability guard — approved profiles cannot be re-submitted.
   const { data: current, error: fetchError } = await supabaseAdmin
     .from("profiles")
-    .select("kyc_status")
+    .select("kyc_status, first_name, last_name")
     .eq("id", userId)
     .single();
   if (fetchError) {
@@ -261,7 +309,18 @@ export async function submitKycData(payload: {
     return { error: `Failed to save identity data: ${updateError.message}` };
   }
 
-  // 5. Audit-log the DVS consent — non-fatal if it fails.
+  // 5. Send Telegram admin notification — non-fatal if it fails.
+  try {
+    await sendTelegramKycNotification({
+      firstName: current?.first_name ?? null,
+      lastName: current?.last_name ?? null,
+      email: authData.user.email ?? null,
+    });
+  } catch {
+    // Notification failure must never block the user response.
+  }
+
+  // 6. Audit-log the DVS consent — non-fatal if it fails.
   try {
     await supabaseAdmin.from("audit_logs").insert([
       {

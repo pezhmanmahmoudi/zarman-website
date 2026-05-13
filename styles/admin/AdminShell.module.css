@@ -403,28 +403,36 @@ display: grid;
   }
 
   /* --- Hamburger Button --- */
-.mobileMenuBtn {
-    display: flex; 
+  .mobileMenuBtn {
+    display: flex;
     position: fixed;
-    top: 10px; /* تنظیم دقیق در وسط هدر 64 پیکسلی */
+    top: 10px;
     left: 12px;
-    z-index: 150; 
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid var(--border-soft);
-    border-radius: 0.5rem;
+    z-index: 150;
+    background: #ffffff;
+    border: 1.5px solid var(--border-med);
+    border-radius: 0.625rem;
     color: var(--text-main);
-    width: 44px; 
+    width: 44px;
     height: 44px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+    box-shadow:
+      0 1px 3px rgba(16, 24, 40, 0.1),
+      0 4px 12px rgba(16, 24, 40, 0.06);
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
   }
-  
+
+  .mobileMenuBtn:hover {
+    background: var(--bg-soft);
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(67, 56, 202, 0.15);
+  }
+
   .mobileMenuBtn:active {
-    transform: scale(0.95);
+    transform: scale(0.93);
+    background: var(--bg-soft);
   }
 
   /* --- TopBar (Sticky Header) --- */
@@ -449,11 +457,14 @@ display: grid;
     margin: 0;
   }
 
-  /* تنظیم سایز عناصر داخل هدر بدون به هم ریختن چیدمان */
-  .topBar > div,
-  .topBar span[class*="badge"] {
-    flex-shrink: 0 !important; /* بج هرگز نباید فشرده یا مچاله شود */
-    zoom: 0.85; /* سایز بج را کمی متناسب با موبایل کوچک می‌کند */
+  /* Badges in topBar — constrain size cleanly on mobile, no zoom hack */
+  .topBar .topBarActions {
+    flex-shrink: 0;
+  }
+
+  .topBar .topBarActions span {
+    font-size: 0.6875rem;
+    padding: 0.2rem 0.55rem;
   }
   
  .pageContent { padding: 1rem; }

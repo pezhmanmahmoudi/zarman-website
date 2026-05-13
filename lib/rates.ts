@@ -10,8 +10,8 @@ type HistoricalRateRow = {
   sell_aud: number | null;
 };
 
-const HISTORY_WINDOW_DAYS = 365 * 5;
-const MAX_HISTORY_ROWS = 4000;
+const HISTORY_WINDOW_DAYS = 365 * 4;
+const MAX_HISTORY_ROWS = 1500;
 
 const emptySnapshot: RateSnapshot = {
   currentRates: {

@@ -3,14 +3,17 @@
 /**
  * AdminConfirmDialog — replaces native window.confirm().
  *
- * Renders an inline fixed-position modal (no portal) so it inherits
- * the CSS custom properties from the parent .adminShell scope.
+ * Renders via React portal onto document.body so it is never clipped by
+ * a scrollable ancestor (e.g. the mainArea overflow-y:auto container on
+ * iOS Safari). On mobile it presents as a bottom-sheet; on desktop it is
+ * a centred modal.
  *
  * Usage (via useAdminFeedback hook):
  *   const { confirm, dialogProps } = useAdminFeedback();
  *   <AdminConfirmDialog {...dialogProps} />
  */
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Check, X, Archive, AlertTriangle, HelpCircle, Loader2 } from "lucide-react";
 import styles from "@/styles/admin/AdminDialog.module.css";
 
@@ -61,18 +64,54 @@ export function AdminConfirmDialog({
   onConfirm,
   onCancel,
 }: AdminConfirmDialogProps) {
+  // Lock body scroll while dialog is open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  // Keyboard: Escape closes, Tab traps inside dialog
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onCancel(); return; }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          "button:not([disabled])"
+        );
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last  = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+    // Auto-focus the cancel button for safe default
+    setTimeout(() => dialogRef.current?.querySelector<HTMLElement>(`.${styles.btnCancel}`)?.focus(), 0);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [open, onCancel]);
+
   if (!open) return null;
 
-  return (
+  const content = (
     <div
       className={styles.overlay}
       role="dialog"
       aria-modal="true"
       aria-labelledby="admin-dialog-title"
-      // Prevent clicks on the backdrop from bubbling up to table rows, etc.
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        // Close on backdrop click
+        if (e.target === e.currentTarget && !loading) onCancel();
+      }}
     >
-      <div className={styles.dialog}>
+      <div ref={dialogRef} className={styles.dialog}>
         <div className={`${styles.iconWrap} ${VARIANT_ICON_CLASS[variant]}`}>
           {VARIANT_ICON[variant]}
         </div>
@@ -104,4 +143,6 @@ export function AdminConfirmDialog({
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 }

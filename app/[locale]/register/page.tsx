@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css";
 import { 
-  ArrowLeft, Eye, EyeOff, MailCheck, ShieldCheck, CheckCircle2
+  ArrowLeft, Eye, EyeOff, ShieldCheck, KeyRound, CheckCircle2
 } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
@@ -19,7 +20,10 @@ const countryCodes = [
   { code: "+98", label: "IR (+98)" }
 ];
 
+const OTP_LENGTH = 6;
+
 export default function RegisterPage() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
@@ -33,6 +37,20 @@ export default function RegisterPage() {
     password: "", confirmPassword: "",
     termsAccepted: false, privacyAccepted: false,
   });
+
+  // OTP state
+  const [otpDigits, setOtpDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [otpError, setOtpError] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpSuccess, setOtpSuccess] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>(Array(OTP_LENGTH).fill(null));
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -86,7 +104,7 @@ export default function RegisterPage() {
         setErrors(duplicateErrors); setLoading(false); return;
       }
 
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -96,12 +114,12 @@ export default function RegisterPage() {
             last_name: formData.lastName,
             mobile_number: fullPhoneNumber,
           },
-          emailRedirectTo: `${window.location.origin}/fa/auth/callback?next=/fa/auth/confirm`,
         }
       });
 
-      if (error) { alert("Error during registration: " + error.message); return; }
-      
+      if (error) { setErrors({ general: error.message }); return; }
+
+      setResendCooldown(60);
       setStep(2); 
 
     } catch (error) { 
@@ -109,6 +127,82 @@ export default function RegisterPage() {
     } finally { 
       setLoading(false); 
     }
+  };
+
+  // OTP digit change — digits only, auto-advance focus
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const digit = value.slice(-1);
+    const newDigits = [...otpDigits];
+    newDigits[index] = digit;
+    setOtpDigits(newDigits);
+    setOtpError("");
+    if (digit && index < OTP_LENGTH - 1) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otpDigits[index] && index > 0) {
+      const newDigits = [...otpDigits];
+      newDigits[index - 1] = "";
+      setOtpDigits(newDigits);
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
+    if (!pasted) return;
+    const newDigits = Array(OTP_LENGTH).fill("");
+    pasted.split("").forEach((ch, i) => { newDigits[i] = ch; });
+    setOtpDigits(newDigits);
+    otpRefs.current[Math.min(pasted.length, OTP_LENGTH - 1)]?.focus();
+  };
+
+  const handleVerifyOtp = async () => {
+    const code = otpDigits.join("");
+    if (code.length < OTP_LENGTH) {
+      setOtpError("Please enter all 6 digits.");
+      return;
+    }
+    setOtpLoading(true);
+    setOtpError("");
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: formData.email,
+      token: code,
+      type: "signup",
+    });
+
+    if (error) {
+      setOtpError("Invalid or expired code. Please try again.");
+      setOtpDigits(Array(OTP_LENGTH).fill(""));
+      otpRefs.current[0]?.focus();
+      setOtpLoading(false);
+      return;
+    }
+
+    setOtpSuccess(true);
+    setTimeout(() => router.push("/fa/dashboard"), 1500);
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    setOtpError("");
+    setOtpDigits(Array(OTP_LENGTH).fill(""));
+
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: formData.email,
+    });
+
+    if (error) {
+      setOtpError("Failed to resend code. Please try again.");
+      return;
+    }
+    setResendCooldown(60);
   };
 
   return (
@@ -137,6 +231,7 @@ export default function RegisterPage() {
         <div className={styles.formBody}>
           {step === 1 && (
             <div className={styles.stepContent}>
+              {errors.general && <div className={styles.globalErrorBox}>{errors.general}</div>}
               <div className={styles.formHint}>جهت یکپارچگی و تایید سریع‌تر حساب، لطفاً تمامی اطلاعات فرم را به زبان انگلیسی وارد کنید.</div>
 
               <div className={styles.row}>
@@ -203,11 +298,11 @@ export default function RegisterPage() {
               <div className={styles.policies}>
                 <label className={styles.checkboxLabel}>
                   <input type="checkbox" name="privacyAccepted" checked={formData.privacyAccepted} onChange={handleChange} />
-                  <span>I have read and agree to the <Link href="/en/legal/privacy-policy" target="_blank">Privacy Policy</Link>. <span className={styles.req}>*</span></span>
+                  <span>I have read and agree to the <Link href="/en/legal/privacy-policy" target="_blank">Privacy Policy</Link>. <span className={styles.req}></span></span>
                 </label>
                 <label className={styles.checkboxLabel}>
                   <input type="checkbox" name="termsAccepted" checked={formData.termsAccepted} onChange={handleChange} />
-                  <span>I agree to the <Link href="/en/legal/terms" target="_blank">Terms & Conditions</Link>. <span className={styles.req}>*</span></span>
+                  <span>I agree to the <Link href="/en/legal/terms" target="_blank">Terms & Conditions</Link>. <span className={styles.req}></span></span>
                 </label>
                 {errors.policies && <span className={`${styles.errorText} ${styles.marginTopXs}`}>{errors.policies}</span>}
               </div>
@@ -221,50 +316,109 @@ export default function RegisterPage() {
           )}
 
         {step === 2 && (
-                    <div className={styles.cleanVerifyBox}>
-                      
-                      <div className={styles.inlineHeader}>
-                        <div className={styles.iconBadge}>
-                          <MailCheck size={24} color="#3848f5" strokeWidth={2.5} />
-                        </div>
-                        <h2 className={styles.inlineTitle}>
-                          Verification Required
-                        </h2>
-                      </div>
-                      
-                      <div className={styles.emailInfoWrapper}>
-                        <p className={styles.cleanSubtitle}>
-                          We've received your details! Please <strong>open your email</strong> and click the verification link we just sent to:
-                        </p>
-                        
-                        <div className={styles.emailBadge}>
-                          {formData.email}
-                        </div>
-                      </div>
+          <div className={styles.cleanVerifyBox}>
 
-                      <div className={styles.verificationNote}>
-                        <p className={styles.verificationNoteText}>
-                          <CheckCircle2 size={20} color="#10b981" strokeWidth={2.5} className={styles.flexShrinkZero} />
-                          <span>Your account will be activated immediately after clicking the link.</span>
-                        </p>
-                      </div>
-
-                      <div className={styles.btnContainer}>
-                        <Button href="/fa/login" variant="primary" size="lg" fullWidth>
-                          Return to Login
-                        </Button>
-                      </div>
-
-                    </div>
-                  )}
+            {otpSuccess ? (
+              // ── Success state ──────────────────────────────────────────
+              <>
+                <div className={styles.inlineHeader}>
+                  <div className={`${styles.iconBadge} ${styles.iconBadgeSuccess}`}>
+                    <CheckCircle2 size={28} color="#10b981" strokeWidth={2.5} />
+                  </div>
+                  <h2 className={styles.inlineTitle}>Account Verified!</h2>
                 </div>
 
-                {step === 1 && (
-                  <div className={styles.footerText}>
-                    Already have an account? <Link href="/fa/login" className={styles.footerLink}>Log in</Link>
+                <div className={styles.emailInfoWrapper}>
+                  <p className={styles.cleanSubtitle}>
+                    Your account has been successfully verified.
+                  </p>
+                </div>
+
+                <div className={styles.verificationNote}>
+                  <p className={styles.verificationNoteText}>
+                    <CheckCircle2 size={20} color="#10b981" strokeWidth={2.5} className={styles.flexShrinkZero} />
+                    <span>Redirecting you to your dashboard…</span>
+                  </p>
+                </div>
+              </>
+            ) : (
+              // ── OTP input state ────────────────────────────────────────
+              <>
+                <div className={styles.inlineHeader}>
+                  <div className={styles.iconBadge}>
+                    <KeyRound size={24} color="#3848f5" strokeWidth={2.5} />
                   </div>
+                  <h2 className={styles.inlineTitle}>Verify Your Email</h2>
+                </div>
+
+                <div className={styles.emailInfoWrapper}>
+                  <p className={styles.cleanSubtitle}>
+                    Enter the 6-digit code we sent to:
+                  </p>
+                  <div className={styles.emailBadge}>{formData.email}</div>
+                </div>
+
+                <div className={styles.otpContainer}>
+                  {otpDigits.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => { otpRefs.current[i] = el; }}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      data-otp="true"
+                      onChange={(e) => handleOtpChange(i, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                      onPaste={i === 0 ? handleOtpPaste : undefined}
+                      className={`${styles.otpInput} ${otpError ? styles.otpInputError : ""}`}
+                      autoFocus={i === 0}
+                    />
+                  ))}
+                </div>
+
+                {otpError && (
+                  <div className={styles.globalErrorBox}>{otpError}</div>
                 )}
-              </div>
-            </div>
-          );
-        }
+
+                <div className={styles.btnContainer}>
+                  <Button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    rightIcon={<ShieldCheck />}
+                    loading={otpLoading}
+                  >
+                    Verify &amp; Activate Account
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        </div>
+
+        {step === 1 && (
+          <div className={styles.footerText}>
+            Already have an account? <Link href="/fa/login" className={styles.footerLink}>Log in</Link>
+          </div>
+        )}
+
+        {step === 2 && !otpSuccess && (
+          <div className={styles.footerText}>
+            Didn&apos;t receive the code?{" "}
+            {resendCooldown > 0 ? (
+              <span className={styles.resendCooldown}>Resend in {resendCooldown}s</span>
+            ) : (
+              <button type="button" onClick={handleResend} className={styles.footerLink} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                Resend Code
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

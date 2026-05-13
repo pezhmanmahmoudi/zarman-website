@@ -17,7 +17,39 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Refresh Supabase session cookies on every handled request.
+  // Determine whether this path actually requires an auth check.
+  // Public routes (landing page, login, register, etc.) skip the
+  // Supabase getUser() network call entirely, eliminating ~200-400ms
+  // of latency for the vast majority of visitors.
+  const isDashboardPath = locales.some((l) =>
+    pathname.startsWith(`/${l}/dashboard`)
+  )
+  const isAdminPath = pathname.startsWith('/admin')
+  const needsAuthCheck = isDashboardPath || isAdminPath
+
+  // ------------------------------------------------------------------
+  // Public routes — locale redirect only, no auth call.
+  // ------------------------------------------------------------------
+  if (!needsAuthCheck) {
+    const pathnameHasLocale = locales.some(
+      (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
+    )
+
+    if (!pathnameHasLocale) {
+      if (pathname === '/') {
+        return NextResponse.redirect(new URL(`/${defaultLocale}`, request.url))
+      }
+      return NextResponse.redirect(
+        new URL(`/${defaultLocale}${pathname}`, request.url)
+      )
+    }
+
+    return NextResponse.next()
+  }
+
+  // ------------------------------------------------------------------
+  // Auth-protected routes — validate session via Supabase.
+  // ------------------------------------------------------------------
   const { supabase, getResponse, applyPendingCookies } = createSupabaseProxyClient(request)
 
   // getUser() validates the JWT server-side — safer than getSession().
@@ -28,7 +60,7 @@ export async function proxy(request: NextRequest) {
   // ------------------------------------------------------------------
   // Admin routes (/admin/*)
   // ------------------------------------------------------------------
-  if (pathname.startsWith('/admin')) {
+  if (isAdminPath) {
     const isAdminLoginPage = pathname === '/admin/login'
     const isAdmin = !!user && user.app_metadata?.role === 'admin'
 
@@ -53,30 +85,11 @@ export async function proxy(request: NextRequest) {
   }
 
   // ------------------------------------------------------------------
-  // Customer routes — enforce locale prefix.
-  // ------------------------------------------------------------------
-  const pathnameHasLocale = locales.some(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
-  )
-
-  if (!pathnameHasLocale) {
-    if (pathname === '/') {
-      return applyPendingCookies(
-        NextResponse.redirect(new URL(`/${defaultLocale}`, request.url))
-      )
-    }
-    return applyPendingCookies(
-      NextResponse.redirect(new URL(`/${defaultLocale}${pathname}`, request.url))
-    )
-  }
-
-  // ------------------------------------------------------------------
   // Protect /[locale]/dashboard — require authenticated session.
   // ------------------------------------------------------------------
   const locale = pathname.startsWith('/en') ? 'en' : 'fa'
-  const isDashboard = pathname.startsWith(`/${locale}/dashboard`)
 
-  if (isDashboard && !user) {
+  if (!user) {
     return applyPendingCookies(
       NextResponse.redirect(new URL(`/${locale}/login`, request.url))
     )

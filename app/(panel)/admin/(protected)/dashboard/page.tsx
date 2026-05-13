@@ -68,9 +68,14 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className={shellStyles.pageContent}>
-        <div className={`${cardStyles.sectionHeader} ${cardStyles.sectionHeaderTight}`}>
+        <div className={`${cardStyles.sectionHeader} ${cardStyles.sectionHeaderMd}`}>
           <div>
-            <h1 className={cardStyles.sectionTitle}>Welcome to Control Panel</h1>
+            <h1 className={`${cardStyles.sectionTitle} ${cardStyles.sectionTitleWithIcon}`}>
+              <span className={cardStyles.sectionTitleIconAccent}>
+                <Activity size={24} strokeWidth={2.5} />
+              </span>
+              Welcome to Control Panel
+            </h1>
             <p className={cardStyles.sectionDesc}>
               Real-time summary of pending tasks and platform activity for Zarman Exchange.
             </p>

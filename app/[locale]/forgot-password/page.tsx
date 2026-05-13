@@ -1,25 +1,43 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image"; 
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css";
-import { ArrowLeft, MailCheck } from "lucide-react";
+import { ArrowLeft, KeyRound, ShieldCheck, CheckCircle2 } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
 import { supabase } from "@/lib/supabase";
 
+const OTP_LENGTH = 6;
+
 export default function ForgotPasswordPage() {
+  const router = useRouter();
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+  // OTP state
+  const [otpDigits, setOtpDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [otpError, setOtpError] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpSuccess, setOtpSuccess] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>(Array(OTP_LENGTH).fill(null));
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  // ── Step 1: request OTP ────────────────────────────────────────────────
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setMessage("");
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -33,16 +51,90 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/fa/auth/callback?next=/fa/reset-password`,
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+
+    if (resetError) {
+      setError(resetError.message);
+      setLoading(false);
+      return;
+    }
+
+    setResendCooldown(60);
+    setStep(2);
+    setLoading(false);
+  };
+
+  // ── OTP digit handlers ─────────────────────────────────────────────────
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const digit = value.slice(-1);
+    const newDigits = [...otpDigits];
+    newDigits[index] = digit;
+    setOtpDigits(newDigits);
+    setOtpError("");
+    if (digit && index < OTP_LENGTH - 1) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otpDigits[index] && index > 0) {
+      const newDigits = [...otpDigits];
+      newDigits[index - 1] = "";
+      setOtpDigits(newDigits);
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
+    if (!pasted) return;
+    const newDigits = Array(OTP_LENGTH).fill("");
+    pasted.split("").forEach((ch, i) => { newDigits[i] = ch; });
+    setOtpDigits(newDigits);
+    otpRefs.current[Math.min(pasted.length, OTP_LENGTH - 1)]?.focus();
+  };
+
+  // ── Step 2: verify OTP ─────────────────────────────────────────────────
+  const handleVerifyOtp = async () => {
+    const code = otpDigits.join("");
+    if (code.length < OTP_LENGTH) {
+      setOtpError("Please enter all 6 digits.");
+      return;
+    }
+    setOtpLoading(true);
+    setOtpError("");
+
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: "recovery",
     });
 
     if (error) {
-      setError(error.message);
-    } else {
-      setMessage("A password reset link has been sent to your email.");
+      setOtpError("Invalid or expired code. Please try again.");
+      setOtpDigits(Array(OTP_LENGTH).fill(""));
+      otpRefs.current[0]?.focus();
+      setOtpLoading(false);
+      return;
     }
-    setLoading(false);
+
+    setOtpSuccess(true);
+    setTimeout(() => router.push("/fa/reset-password"), 1500);
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    setOtpError("");
+    setOtpDigits(Array(OTP_LENGTH).fill(""));
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) {
+      setOtpError("Failed to resend code. Please try again.");
+      return;
+    }
+    setResendCooldown(60);
   };
 
   return (
@@ -51,8 +143,8 @@ export default function ForgotPasswordPage() {
         <AuthGradient />
       </div>
 
-      <div className={`${styles.card} ${styles.authCardSmall}`}>
-        
+      <div className={`${styles.card} ${step === 2 ? styles.confirmCard : styles.authCardSmall}`}>
+
         <div className={styles.topNav}>
           <Link href="/fa/login" className={styles.backHome} aria-label="Back to Login">
             <ArrowLeft size={18} strokeWidth={2.5} />
@@ -60,71 +152,45 @@ export default function ForgotPasswordPage() {
         </div>
 
         <div className={styles.logoContainer}>
-          <Image 
-            src="/images/logo-no-text-light.svg" 
-            alt="Zarman Logo" 
+          <Image
+            src="/images/logo-no-text-light.svg"
+            alt="Zarman Logo"
             width={80}
             height={80}
             priority
-            className={styles.logoImage} 
+            className={styles.logoImage}
           />
         </div>
 
-        {message ? (
-          <div className={styles.cleanVerifyBox}>
-            <div className={styles.inlineHeader}>
-              <div className={styles.iconBadge}>
-                <MailCheck size={35} color="#2500f7" strokeWidth={2.5} />
-              </div>
-              <h2 className={styles.inlineTitle}>
-                Check Your Email
-              </h2>
-            </div>
-            
-            <div className={styles.emailInfoWrapper}>
-              <p className={styles.cleanSubtitle}>
-                A password reset link has been sent to:
-              </p>
-              
-              <div className={styles.emailBadge}>
-                {email}
-              </div>
-            </div>
-            
-            <div className={styles.btnContainer}>
-              <Button href="/fa/login" variant="primary" size="lg" fullWidth>
-                Return to Login
-              </Button>
-            </div>
-          </div>
-        ) : (
+        {/* ── Step 1: email form ─────────────────────────────────────── */}
+        {step === 1 && (
           <>
             <div className={styles.header}>
               <h1 className={styles.title}>Reset Password</h1>
-              <p className={styles.subtitle}>Enter your email address and we'll send you a link to reset your password.</p>
+              <p className={styles.subtitle}>Enter your email and we&apos;ll send you a 6-digit code to reset your password.</p>
             </div>
 
             <div className={styles.formBody}>
               <div className={styles.stepContent}>
                 {error && <div className={styles.globalErrorBox}>{error}</div>}
 
-                <form onSubmit={handleResetPassword} className={styles.formContainer}>
+                <form onSubmit={handleSendOtp} className={styles.formContainer}>
                   <div className={styles.inputGroup}>
                     <label htmlFor="email">Email Address</label>
-                    <input 
-                      id="email" 
-                      type="email" 
+                    <input
+                      id="email"
+                      type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="آدرس ایمیل"
                       className={styles.enInput}
-                      required 
+                      required
                     />
                   </div>
 
-                  <div className={styles.btnWrapperRight}>
+                  <div className={`${styles.btnWrapperRight} ${styles.marginTopSm}`}>
                     <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
-                      Send Reset Link
+                      Send Code
                     </Button>
                   </div>
                 </form>
@@ -132,7 +198,105 @@ export default function ForgotPasswordPage() {
             </div>
           </>
         )}
+
+        {/* ── Step 2: OTP ───────────────────────────────────────────── */}
+        {step === 2 && (
+          <div className={styles.cleanVerifyBox}>
+
+            {otpSuccess ? (
+              <>
+                <div className={styles.inlineHeader}>
+                  <div className={`${styles.iconBadge} ${styles.iconBadgeSuccess}`}>
+                    <CheckCircle2 size={28} color="#10b981" strokeWidth={2.5} />
+                  </div>
+                  <h2 className={styles.inlineTitle}>Code Verified!</h2>
+                </div>
+
+                <div className={styles.emailInfoWrapper}>
+                  <p className={styles.cleanSubtitle}>
+                    Identity confirmed. Setting up your new password…
+                  </p>
+                </div>
+
+                <div className={styles.verificationNote}>
+                  <p className={styles.verificationNoteText}>
+                    <CheckCircle2 size={20} color="#10b981" strokeWidth={2.5} className={styles.flexShrinkZero} />
+                    <span>Redirecting you to the password reset form…</span>
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles.inlineHeader}>
+                  <div className={styles.iconBadge}>
+                    <KeyRound size={24} color="#3848f5" strokeWidth={2.5} />
+                  </div>
+                  <h2 className={styles.inlineTitle}>Check Your Email</h2>
+                </div>
+
+                <div className={styles.emailInfoWrapper}>
+                  <p className={styles.cleanSubtitle}>
+                    Enter the 6-digit code we sent to:
+                  </p>
+                  <div className={styles.emailBadge}>{email}</div>
+                </div>
+
+                <div className={styles.otpContainer}>
+                  {otpDigits.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => { otpRefs.current[i] = el; }}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      data-otp="true"
+                      onChange={(e) => handleOtpChange(i, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                      onPaste={i === 0 ? handleOtpPaste : undefined}
+                      className={`${styles.otpInput} ${otpError ? styles.otpInputError : ""}`}
+                      autoFocus={i === 0}
+                    />
+                  ))}
+                </div>
+
+                {otpError && (
+                  <div className={styles.globalErrorBox}>{otpError}</div>
+                )}
+
+                <div className={styles.btnContainer}>
+                  <Button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    rightIcon={<ShieldCheck />}
+                    loading={otpLoading}
+                  >
+                    Verify Code
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
       </div>
+
+      {step === 2 && !otpSuccess && (
+        <div className={styles.footerText}>
+          Didn&apos;t receive the code?{" "}
+          {resendCooldown > 0 ? (
+            <span className={styles.resendCooldown}>Resend in {resendCooldown}s</span>
+          ) : (
+            <button type="button" onClick={handleResend} className={styles.footerLink} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+              Resend Code
+            </button>
+          )}
+        </div>
+      )}
+
     </div>
   );
 }

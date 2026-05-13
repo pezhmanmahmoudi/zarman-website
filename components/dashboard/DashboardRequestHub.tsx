@@ -167,7 +167,7 @@ export function DashboardRequestHub({
         <div className={`${styles.lockOverlay} ${styles.offlineOverlay}`}>
           <ServerCrash size={48} className={`${styles.lockIcon} ${styles.offlineIcon}`} />
           <h3 className={styles.lockTitle}>ارتباط با سرور جهانی نرخ قطع است</h3>
-          <p className={styles.lockText}>متاسفانه در حال حاضر دریافت نرخ لحظه‌ای امکان‌پذیر نیست. برای جلوگیری از ضرر مالی، ثبت تراکنش موقتاً غیرفعال شده است. لطفاً دقایقی دیگر تلاش کنید.</p>
+          <p className={styles.lockText}>متاسفانه در حال حاضر دریافت نرخ لحظه‌ای امکان‌پذیر نیست. ثبت تراکنش موقتاً غیرفعال شده است. لطفاً دقایقی دیگر تلاش کنید.</p>
         </div>
       )}
 
@@ -175,7 +175,7 @@ export function DashboardRequestHub({
         <div className={styles.lockOverlay}>
           <Lock size={48} className={styles.lockIcon} />
           <h3 className={styles.lockTitle}>دسترسی محدود است</h3>
-          <p className={styles.lockText}>مطابق با الزامات مالی و احراز هویت، برای ثبت درخواست جدید ابتدا باید مدارک هویتی شما تکمیل و توسط مدیریت تایید شود. به قسمت "احراز هویت" بروید و اطلاعات خود را تکمیل کنید. </p>
+          <p className={styles.lockText}> برای ثبت درخواست جدید ابتدا باید مدارک هویتی شما تکمیل و توسط مدیریت تایید شود. به قسمت "احراز هویت" بروید و اطلاعات خود را تکمیل کنید. </p>
         </div>
       )}
       
