@@ -138,7 +138,15 @@ export default function MobHeader({
           </button>
 
           <Link href="/fa" className={styles.logoContainer} onClick={close} aria-label={brandAriaLabel}>
-            <Image src={logoSrc} alt="Zarman Logo" width={110} height={32} className={styles.logoImg} priority />
+            <Image 
+              src={logoSrc} 
+              alt="Zarman Logo" 
+              width={110} 
+              height={32} 
+              className={styles.logoImg} 
+              priority 
+              unoptimized // 👈 این خط باید اضافه شود
+            />
           </Link>
 
           {isAuthenticated ? (

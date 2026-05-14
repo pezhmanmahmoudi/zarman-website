@@ -13,7 +13,7 @@ const inter = Inter({
 });
 
 const productionUrl = "https://zarman.com.au";
-const socialPreviewImage = "/images/layout-logo.png";
+const socialPreviewImage = `${productionUrl}/images/layout-logo.png`;
 
 export const viewport: Viewport = {
   width: "device-width",
