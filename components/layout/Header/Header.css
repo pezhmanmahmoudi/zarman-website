@@ -57,9 +57,9 @@
   backdrop-filter: blur(24px) saturate(120%);
   -webkit-backdrop-filter: blur(24px) saturate(120%);
 
-  /* ۳. حاشیه ظریف و حذف سایه‌های کثیف‌کننده مشکی */
+  /* ۳. حاشیه ظریف و هماهنگ شدن گوشه‌ها با دکمه‌ها (12px) */
   border: 1px solid rgba(255, 255, 255, 0.08); 
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-lg);
   
   box-shadow: 
     0 12px 32px -8px rgba(0, 0, 0, 0.15), /* سایه بیرونی بسیار نرمال و پخش شده */

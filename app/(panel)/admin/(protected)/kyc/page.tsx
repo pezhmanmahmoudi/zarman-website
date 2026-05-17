@@ -1,5 +1,5 @@
 import React from "react";
-import { ShieldCheck, Clock, Archive, IdCard, Hash } from "lucide-react";
+import { ShieldCheck, Clock, Archive, IdCard, Hash, CalendarDays } from "lucide-react";
 import { getKycQueue, getKycHistory } from "@/app/actions/admin.actions";
 import { KycActionButtons } from "@/components/admin/KycActionButtons";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
@@ -124,9 +124,10 @@ export default async function KycQueuePage() {
                     const anyDocNum =
                       (user as Record<string, unknown>).license_number as string | null |undefined ||
                       (user as Record<string, unknown>).passport_number as string | null | undefined;
-                    const licenceNum = (user as Record<string, unknown>).license_number as string | null | undefined;
-                    const cardNum    = (user as Record<string, unknown>).card_number    as string | null | undefined;
-                    const passNum    = (user as Record<string, unknown>).passport_number as string | null | undefined;
+                    const licenceNum  = (user as Record<string, unknown>).license_number  as string | null | undefined;
+                    const cardNum     = (user as Record<string, unknown>).card_number     as string | null | undefined;
+                    const passNum     = (user as Record<string, unknown>).passport_number as string | null | undefined;
+                    const expiryDate  = (user as Record<string, unknown>).expiry_date     as string | null | undefined;
 
                     return (
                       <tr key={user.id} className={tableStyles.rowTintWarning}>
@@ -164,15 +165,15 @@ export default async function KycQueuePage() {
                               {user.document_type === "driver_license" && (
                                 <div 
                                   className={`${tableStyles.cellSmall} ${tableStyles.cellDim} ${tableStyles.cellMono}`}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
+                                  style={{ display: 'flex', flexDirection: 'column', gap: '3px', whiteSpace: 'nowrap' }}
                                 >
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }} title="Licence No.">
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Licence No.">
                                     <Hash size={10} /> {licenceNum ?? "—"}
+                                    {cardNum && <span style={{ opacity: 0.6 }}>| Card: {cardNum}</span>}
                                   </span>
-                                  
-                                  {cardNum && (
-                                    <span title="Card No.">
-                                      | Card: {cardNum}
+                                  {expiryDate && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Expiry Date">
+                                      <CalendarDays size={10} /> Exp: {expiryDate}
                                     </span>
                                   )}
                                 </div>
@@ -180,11 +181,16 @@ export default async function KycQueuePage() {
                               {user.document_type === "passport" && (
                                 <div 
                                   className={`${tableStyles.cellSmall} ${tableStyles.cellDim} ${tableStyles.cellMono}`}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                                  style={{ display: 'flex', flexDirection: 'column', gap: '3px', whiteSpace: 'nowrap' }}
                                 >
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }} title="Passport No.">
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Passport No.">
                                     <Hash size={10} /> {passNum ?? "—"}
                                   </span>
+                                  {expiryDate && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Expiry Date">
+                                      <CalendarDays size={10} /> Exp: {expiryDate}
+                                    </span>
+                                  )}
                                 </div>
                               )}
                             </div>

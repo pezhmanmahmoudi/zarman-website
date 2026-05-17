@@ -22,7 +22,7 @@ export function KycActionButtons({ userId, currentStatus }: { userId: string; cu
       onConfirm: async () => {
         const result = await approveKyc(userId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "KYC approved." }); router.refresh(); }
+        else { showToast({ type: "success", message: "KYC approved." }); setTimeout(() => router.refresh(), 2000); }
       },
     });
   };
@@ -36,7 +36,7 @@ export function KycActionButtons({ userId, currentStatus }: { userId: string; cu
       onConfirm: async () => {
         const result = await rejectKyc(userId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "KYC rejected." }); router.refresh(); }
+        else { showToast({ type: "success", message: "KYC rejected." }); setTimeout(() => router.refresh(), 2000); }
       },
     });
   };
@@ -50,7 +50,7 @@ export function KycActionButtons({ userId, currentStatus }: { userId: string; cu
       onConfirm: async () => {
         const result = await archiveKyc(userId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "KYC archived." }); router.refresh(); }
+        else { showToast({ type: "success", message: "KYC archived." }); setTimeout(() => router.refresh(), 2000); }
       },
     });
   };

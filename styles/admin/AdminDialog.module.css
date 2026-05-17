@@ -32,6 +32,8 @@
   justify-content: center;
   z-index: 99999;
   padding: 1.25rem;
+  /* Prevent inherited RTL from shifting the flex alignment off-centre */
+  direction: ltr;
 }
 
 /* ── Dialog card ──────────────────────────────────────────────────────────── */
@@ -46,6 +48,9 @@
     0 24px 64px rgba(0, 0, 0, 0.14),
     0 4px 16px rgba(0, 0, 0, 0.08);
   animation: dialogIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Override any inherited RTL direction from the parent page */
+  direction: ltr;
+  text-align: left;
 }
 
 @keyframes dialogIn {
@@ -160,6 +165,9 @@
     border-radius: 1.5rem 1.5rem 0 0;
     padding: 1.75rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    /* Re-declare explicitly — mobile override must not lose the base rule */
+    direction: ltr;
+    text-align: left;
   }
 
   @keyframes slideUp {

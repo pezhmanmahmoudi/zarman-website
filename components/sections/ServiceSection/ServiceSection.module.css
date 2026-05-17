@@ -73,7 +73,7 @@
   margin: 0 auto;
   color: var(--color-text-secondary);
   font-family: var(--font-primary);
-  font-size: var(--text-body-md); 
+  font-size: var(--text-body-sm); 
   line-height: var(--leading-relaxed);
   max-width: 60ch;
    font-weight: var(--font-weight-semibold);

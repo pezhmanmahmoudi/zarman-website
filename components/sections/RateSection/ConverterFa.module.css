@@ -271,4 +271,9 @@
   .card { padding: var(--space-6); }
   .faInput { font-size: 19px !important; } /* 🛡️ گارد محافظتی زوم iOS حفظ شد */
   .currencySelect { font-size: 19px !important; } /* 🛡️ گارد محافظتی زوم iOS حفظ شد */
+  
+  /* 👈 Increase font size for the CTA button on mobile */
+  .cta > * {
+    font-size: var(--text-body-md) !important;
+  }
 }

@@ -95,7 +95,8 @@
 /* سفارشی‌سازی ظاهر دراپ‌داون (Select) */
 .inputGroup select {
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  /* Default arrow — dark stroke, visible on light backgrounds */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 14px center;
   background-size: 16px;
@@ -103,23 +104,86 @@
   cursor: pointer;
 }
 
-/* آیکون تقویم بسیار ظریف و پریمیوم */
-.inputGroup input[type="date"]::-webkit-calendar-picker-indicator {
-  background-color: transparent;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233848f5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3e%3c/rect%3e%3cline x1='16' y1='2' x2='16' y2='6'%3e%3c/line%3e%3cline x1='8' y1='2' x2='8' y2='6'%3e%3c/line%3e%3cline x1='3' y1='10' x2='21' y2='10'%3e%3c/line%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 18px; 
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  opacity: 0.9;
-  transition: all 0.2s ease;
+/* Dark mode: light arrow so it shows against the dark input background */
+:global([data-theme="dark"]) .inputGroup select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
 }
 
-.inputGroup input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-  transform: scale(1.05); 
+/* Light mode: explicit dark arrow */
+:global([data-theme="light"]) .inputGroup select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+}
+
+/* Optgroup labels — dark mode */
+:global([data-theme="dark"]) .inputGroup select optgroup {
+  background-color: #0f172a !important;
+  color: #94a3b8 !important;
+}
+
+/* Optgroup labels — light mode */
+:global([data-theme="light"]) .inputGroup select optgroup {
+  background-color: #f8fafc !important;
+  color: #64748b !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Date input — 100% Native Drawer with Custom UI (iOS, Android, Desktop)
+   ───────────────────────────────────────────────────────────── */
+.inputGroup input[type="date"] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding-right: 44px !important;
+  font-size: 16px !important; /* جلوگیری از زوم در iOS */
+  position: relative; /* برای تراز کردن کشوی مخفی */
+  color: var(--text-main) !important; /* رنگ تاریخ انتخاب شده */
+
+  /* تزریق آیکون اختصاصی زرمان به عنوان پس‌زمینه (همیشه قابل دیدن) */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233848f5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3e%3crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3e%3c/rect%3e%3cline x1='16' y1='2' x2='16' y2='6'%3e%3c/line%3e%3cline x1='8' y1='2' x2='8' y2='6'%3e%3c/line%3e%3cline x1='3' y1='10' x2='21' y2='10'%3e%3c/line%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 18px !important;
+}
+
+/* آیکون پیش‌فرض سیستم‌عامل را مخفی می‌کنیم، اما به عنوان کلید نامرئی روی آیکون خودمان نگه می‌داریم تا کشو باز شود */
+.inputGroup input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute !important;
+  right: 10px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  opacity: 0 !important; /* نامرئی */
+  cursor: pointer !important;
+}
+
+/* وقتی تاریخ خالی است، رنگ متن پیش‌فرض را شفاف می‌کنیم تا باگ‌های iOS دیده نشود */
+.inputGroup input[type="date"].emptyDate {
+  color: transparent !important;
+}
+
+/* و به جای آن، دقیقا مثل دسکتاپ، Placeholder خودمان را سمت چپ تزریق می‌کنیم */
+.inputGroup input[type="date"].emptyDate::before {
+  content: attr(data-placeholder);
+  color: var(--text-soft) !important; /* رنگ خاکستری دقیقاً مثل Placeholder ها */
+  position: absolute;
+  left: 18px; /* هماهنگ با padding کادر */
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none; /* مزاحم تاچ کاربر نمی‌شود */
+  font-family: var(--font-en-stack);
+  font-size: inherit;
+}
+
+/* بازگرداندن سایز فونت برای دسکتاپ */
+@media screen and (min-width: 1024px) {
+  .inputGroup input[type="date"] {
+    font-size: 14.5px !important;
+  }
 }
 
 .inputGroup input:focus, .inputGroup select:focus { 
@@ -158,7 +222,7 @@
 .errorBorder { border-color: #ef4444 !important; background-color: rgba(239, 68, 68, 0.03) !important; }
 .errorText { color: #ef4444 !important; font-size: 12px; font-weight: 600; margin-top: 4px; font-family: var(--font-en-stack) !important; text-align: left; direction: ltr; }
 
-/* 🚀 استایل اختصاصی برای متون ارور فارسی (مثل چک‌باکس و سرور) 🚀 */
+/* استایل اختصاصی برای متون ارور فارسی */
 .errorTextFa {
   color: #ef4444 !important; 
   font-size: 13px; 
@@ -178,7 +242,7 @@
   padding: 24px; border-radius: 16px;
   border: 1px solid var(--border-soft); 
   display: flex; 
-  align-items: center; /* 🚀 رفع مشکل تراز عمودی (تغییر از flex-end به center) 🚀 */
+  align-items: center; 
   justify-content: space-between; gap: 32px;
   direction: ltr; 
 }
@@ -247,7 +311,7 @@
 .whatsappBtn:hover { background-color: #038535;  }
 
 /* =====================================
-   پیام‌های وضعیت سیستم (آپدیت به فارسی)
+   پیام‌های وضعیت سیستم 
    ===================================== */
 .successMessage {
   display: flex; align-items: center; justify-content: center; gap: 12px; color: #10b981;
@@ -260,8 +324,12 @@
 /* =====================================
    ریسبانسیو (Mobile & Tablet)
    ===================================== */
+@media (max-width: 960px) {
+  .row { grid-template-columns: 1fr; gap: 20px; }
+}
+
 @media (max-width: 850px) { 
-  .row, .row3 { grid-template-columns: 1fr; gap: 20px; } 
+  .row3 { grid-template-columns: 1fr; gap: 20px; } 
   .actionSection { flex-direction: column; align-items: flex-start; gap: 20px; }
   .legalCheckboxes { padding: 12px 4px; } 
   .btnWrapperRight { width: 100%; margin-top: 4px; }

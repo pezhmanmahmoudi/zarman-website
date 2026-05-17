@@ -194,6 +194,7 @@
   color: #16a34a;
   border-color: #bbf7d0;
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  text-align: left;
 }
 .btnApprove:not(:disabled):hover {
   background: #f0fdf4;
@@ -205,6 +206,7 @@
   color: #ea580c;
   border-color: #fecaca;
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  text-align: left;
 }
 .btnReject:not(:disabled):hover {
   background: #fef2f2;
@@ -216,6 +218,7 @@
   color: #64748b;
   border-color: #e2e8f0;
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  text-align: left;
 }
 .btnArchive:not(:disabled):hover {
   background: #f8fafc;
@@ -226,6 +229,7 @@
   background: #eff6ff;
   color: #2563eb;
   border: 1px solid #bfdbfe;
+  text-align: left;
 }
 .btnViewDocs:not(:disabled):hover {
   background: #dbeafe;

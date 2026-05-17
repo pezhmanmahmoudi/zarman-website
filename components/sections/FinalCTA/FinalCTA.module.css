@@ -59,7 +59,7 @@
   color: var(--color-text-secondary);
   font-family: var(--font-primary);
   /* 👈 سایز متعادل شد */
-  font-size: var(--text-body-md);
+  font-size: var(--text-body-sm);
   line-height: var(--leading-relaxed);
   margin: 0 0 var(--space-8) 0;
    font-weight: var(--font-weight-semibold);

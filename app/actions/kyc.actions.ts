@@ -231,6 +231,7 @@ export async function submitKycData(payload: {
   license_number?: string | null;
   card_number?: string | null;
   passport_number?: string | null;
+  expiry_date?: string | null;
   consent_notice: boolean;
   consent_dvs: boolean;
 }) {
@@ -265,6 +266,9 @@ export async function submitKycData(payload: {
   }
   if (payload.document_type === "passport" && !payload.passport_number) {
     return { error: "Passport number is required." };
+  }
+  if ((payload.document_type === "driver_license" || payload.document_type === "passport") && !payload.expiry_date) {
+    return { error: "Document expiry date is required." };
   }
   if (!payload.consent_notice || !payload.consent_dvs) {
     return { error: "DVS consent is required before submission." };
@@ -301,6 +305,7 @@ export async function submitKycData(payload: {
         payload.document_type === "driver_license" ? (payload.card_number ?? null) : null,
       passport_number:
         payload.document_type === "passport" ? (payload.passport_number ?? null) : null,
+      expiry_date: payload.expiry_date ?? null,
       kyc_status: "pending",
     })
     .eq("id", userId);

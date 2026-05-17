@@ -21,9 +21,10 @@ const ROWS: [string, (p: NonNullable<Profile>) => string | null | undefined][] =
   ["Address",         (p) => [p.address, p.city, p.state].filter(Boolean).join(", ") || null],
   ["Country",         (p) => p.country],
   ["Document Type",   (p) => p.document_type],
-  ["Licence Number",  (p) => (p as Record<string, unknown>).license_number as string | null],
-  ["Card Number",     (p) => (p as Record<string, unknown>).card_number as string | null],
-  ["Passport Number", (p) => (p as Record<string, unknown>).passport_number as string | null],
+  ["Licence Number",  (p) => (p as Record<string, unknown>).license_number  as string | null],
+  ["Card Number",     (p) => (p as Record<string, unknown>).card_number      as string | null],
+  ["Passport Number", (p) => (p as Record<string, unknown>).passport_number  as string | null],
+  ["Expiry Date",     (p) => (p as Record<string, unknown>).expiry_date      as string | null],
 ];
 
 export function UserKycManager({ profile }: UserKycManagerProps) {
