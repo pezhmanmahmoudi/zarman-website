@@ -143,15 +143,15 @@
     --section-pad-compact: 4rem;   /* 64px */
     
     /* Display & Titles */
-    --text-display-xl: 2.25rem;    /* ~44px */
-    --text-display-l: 1.75rem;     /* ~36px */
-    --text-section-title: 1.5rem;    /* ~32px */
-    --text-card-title: 1rem;     /* ~24px */
+    --text-display-xl: 2.5rem;    /* ~44px */
+    --text-display-l: 2rem;     /* ~36px */
+    --text-section-title: 1.75rem;    /* ~32px */
+    --text-card-title: 1.25rem;     /* ~24px */
     
     /* 🚀 Body Text Hierarchy (Optimized for Mobile Persian) */
     --text-body-lg: 1.125rem;       /* ~20px - پاراگراف‌های لید و زیرتیترها */
     --text-body-md: 1rem;      /* ~16px - متن استاندارد بدنه موبایل */
-    --text-body-sm: 0.775rem;          /* ~14px - متون ریز و UI (در موبایل زیر ۱۶ پیکسل باعث ریز شدن می‌شود) */
-    --text-caption: 0.675rem;      /* ~14px - فقط برای فوتر و کپی‌رایت */
+    --text-body-sm: 0.875rem;          /* ~14px - متون ریز و UI (در موبایل زیر ۱۶ پیکسل باعث ریز شدن می‌شود) */
+    --text-caption: 0.775rem;      /* ~14px - فقط برای فوتر و کپی‌رایت */
   }
 }

@@ -134,6 +134,7 @@ export default function ConverterFa() {
               dir="ltr"
               className={styles.faInput}
               placeholder="۰"
+              suppressHydrationWarning
             />
             <div className={styles.divider}></div>
             <div className={styles.selectWrapper}>
@@ -170,6 +171,7 @@ export default function ConverterFa() {
               dir="ltr"
               className={styles.faInput}
               placeholder="۰"
+              suppressHydrationWarning
             />
             <div className={styles.divider}></div>
             <div className={styles.selectWrapper}>
