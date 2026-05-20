@@ -32,6 +32,16 @@ export default function SessionTimeout({ timeoutMinutes = 15 }: { timeoutMinutes
     timeoutId.current = setTimeout(logoutUser, timeoutMinutes * 60 * 1000);
   };
 
+  // هندل کردن انقضای توکن رفرش - بدون وابستگی به مسیر
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT" && pathname.includes("/dashboard")) {
+        router.push("/fa/login?reason=session_expired");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [pathname]);
+
   useEffect(() => {
     // فقط در مسیرهای داشبورد این نگهبان فعال باشد
     if (!pathname.includes("/dashboard")) return;

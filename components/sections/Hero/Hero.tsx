@@ -30,18 +30,28 @@ export default function Hero() {
 
   useGSAP(
     () => {
-      if (!mounted) return;
+      if (!mounted) {
+        // JS has loaded — hide elements immediately so the stagger reveal
+        // can animate them in. The SSR/pre-render HTML has no hidden state,
+        // so Googlebot always sees the full H1 and text content.
+        gsap.set(`.${styles.eyebrow}`, { autoAlpha: 0, y: 18 });
+        gsap.set(`.${styles.title}`, { autoAlpha: 0, y: 28 });
+        gsap.set(`.${styles.subtitle}`, { autoAlpha: 0, y: 20 });
+        gsap.set(`.${styles.actions}`, { autoAlpha: 0, y: 16 });
+        gsap.set(`.${styles.meta}`, { autoAlpha: 0, y: 12 });
+        gsap.set(`.${styles.rateWidget}`, { autoAlpha: 0, x: -32, scale: 0.96 });
+        return;
+      }
 
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-      tl.fromTo(`.${styles.eyebrow}`, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.65 })
-        .fromTo(`.${styles.title}`, { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.9 }, "-=0.35")
-        .fromTo(`.${styles.subtitle}`, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.75 }, "-=0.5")
-        .fromTo(`.${styles.actions}`, { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.7 }, "-=0.45")
-        .fromTo(`.${styles.meta}`, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.6 }, "-=0.45")
-        .fromTo(
-          `.${styles.rateWidget}`, 
-          { autoAlpha: 0, x: -32, scale: 0.96 },
+      tl.to(`.${styles.eyebrow}`, { autoAlpha: 1, y: 0, duration: 0.65 })
+        .to(`.${styles.title}`, { autoAlpha: 1, y: 0, duration: 0.9 }, "-=0.35")
+        .to(`.${styles.subtitle}`, { autoAlpha: 1, y: 0, duration: 0.75 }, "-=0.5")
+        .to(`.${styles.actions}`, { autoAlpha: 1, y: 0, duration: 0.7 }, "-=0.45")
+        .to(`.${styles.meta}`, { autoAlpha: 1, y: 0, duration: 0.6 }, "-=0.45")
+        .to(
+          `.${styles.rateWidget}`,
           { autoAlpha: 1, x: 0, scale: 1, duration: 1.2 },
           "-=0.75"
         );
@@ -58,8 +68,8 @@ export default function Hero() {
         <div className={styles.layout}>
           
           <div className={styles.content}>
-            <p className={`${styles.eyebrow} ${styles.hiddenOnLoad}`}>صرافی زرمان</p>
-            <h1 className={`${styles.title} ${styles.hiddenOnLoad}`}>
+            <p className={styles.eyebrow}>صرافی زرمان</p>
+            <h1 className={styles.title}>
               از{' '}
               <span className={styles.tooltipWrapper}>
                 اولورو
@@ -72,11 +82,11 @@ export default function Hero() {
               <br />
               <span className={styles.titleAccent}>تنها در چند ساعت...</span>
             </h1>
-            <p className={`${styles.subtitle} ${styles.hiddenOnLoad}`}>
+            <p className={styles.subtitle}>
               ما تلاش می‌کنیم با تمرکز بر سرعت، شفافیت و پشتیبانی همیشگی، تجربه ثبت و پیگیری درخواست‌های مالی را برای شما آسان‌تر و روشن‌تر کنیم.
             </p>
             
-            <div className={`${styles.actions} ${styles.hiddenOnLoad}`}>
+            <div className={styles.actions}>
               <Button href="/fa/register" variant="primary" size="lg" className={styles.btn}>
                 شروع ثبت‌نام
               </Button>
@@ -85,7 +95,7 @@ export default function Hero() {
               </Button>
             </div>
 
-            <div className={`${styles.meta} ${styles.hiddenOnLoad}`}>
+            <div className={styles.meta}>
               <span>سریع</span><span className={styles.dot} />
               <span>شفاف</span><span className={styles.dot} />
               <span>شخصی سازی قیمت</span><span className={styles.dot} />
@@ -94,7 +104,7 @@ export default function Hero() {
           </div>
 
           <div className={styles.visual}>
-            <div className={`${styles.rateWidget} ${styles.hiddenOnLoad}`} aria-label="نرخ لحظه‌ای ارز">
+            <div className={styles.rateWidget} aria-label="نرخ لحظه‌ای ارز">
               <div className={styles.widgetHeader}>
                 <span className={styles.pulseDot}></span>
                 <span className={styles.status}>

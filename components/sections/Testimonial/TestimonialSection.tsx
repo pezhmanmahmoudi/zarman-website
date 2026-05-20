@@ -43,7 +43,7 @@ const ReviewCard = ({ review }: { review: any }) => (
     </div>
     
     <blockquote className={styles.textWrap}>
-      <p className={styles.text}>{review.text}</p>
+        <p className={styles.text} dir="auto">{review.text}</p>
     </blockquote>
     
     <figcaption className={styles.authorBox}>
@@ -100,9 +100,11 @@ export default function TestimonialSection() {
     fetchTestimonials();
   }, []);
 
-  const col1 = reviews.filter((_, i) => i % 3 === 0);
-  const col2 = reviews.filter((_, i) => i % 3 === 1);
-  const col3 = reviews.filter((_, i) => i % 3 === 2);
+  const rotate = (arr: any[], by: number) => [...arr.slice(by), ...arr.slice(0, by)];
+  const offset = Math.max(1, Math.floor(reviews.length / 3));
+  const col1 = reviews;
+  const col2 = rotate(reviews, offset);
+  const col3 = rotate(reviews, offset * 2);
 
   useGSAP(() => {
     const el = sectionRef.current;

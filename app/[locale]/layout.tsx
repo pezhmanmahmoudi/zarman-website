@@ -14,6 +14,9 @@ const inter = Inter({
 
 const productionUrl = "https://zarman.com.au";
 const socialPreviewImage = `${productionUrl}/images/layout-logo.png`;
+// Set NEXT_PUBLIC_GSC_VERIFICATION_TOKEN in .env.local with your Google Search Console token.
+// Never hardcode the token directly in source — keep it in the environment.
+const gscToken = process.env.NEXT_PUBLIC_GSC_VERIFICATION_TOKEN ?? "";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -35,7 +38,7 @@ export async function generateMetadata({
 
   const defaultTitle = isEn
     ? "Zarman Exchange | Premium & Tailored AUD/IRT Remittance"
-    : "ورود برای قیمت گذاری هوشمند و شخصی سازی شده | صرافی زرمان";
+    : siteName;
 
   const defaultDescription = isEn
     ? "Experience premium AUD/IRT remittance with Zarman Exchange. We offer dynamic, tailored exchange rates based on your transaction volume, ensuring you always receive the most competitive pricing alongside fast settlement and enterprise-grade compliance."
@@ -157,6 +160,7 @@ export async function generateMetadata({
       },
     },
     category: "finance",
+    ...(gscToken ? { verification: { google: gscToken } } : {}),
   };
 }
 

@@ -11,6 +11,16 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: [
           "/fa/dashboard/", // جلوگیری از ایندکس شدن پنل کاربری
+          "/en/dashboard/", // block English dashboard too
+          "/fa/login",
+          "/en/login",
+          "/fa/forgot-password",
+          "/en/forgot-password",
+          "/fa/reset-password",
+          "/en/reset-password",
+          "/fa/auth/",
+          "/en/auth/",
+          "/admin/",        // block admin panel routes
           "/api/",          // بستن تمام مسیرهای ای‌پی‌آی برای امنیت بیشتر
           "/_next/",        // جلوگیری از خزش فایل‌های داخلی نکست
         ],

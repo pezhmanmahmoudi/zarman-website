@@ -1,59 +1,77 @@
 import type { MetadataRoute } from "next";
+import { blogPosts } from "@/data/blog-posts";
+import { services } from "@/data/services";
 
 const productionUrl = "https://zarman.com.au";
 
-// Use a fixed recent date for stable caching; bump this on each major deploy.
-// Google treats frequently-changing lastmod on static pages as a trust signal —
-// but only if the content actually changed. We therefore assign realistic dates.
-const NOW = new Date();
-const WEEKLY_REFRESH = new Date(NOW);
-WEEKLY_REFRESH.setDate(NOW.getDate() - (NOW.getDay() === 0 ? 0 : NOW.getDay()));
-WEEKLY_REFRESH.setHours(0, 0, 0, 0);
+// ── Pinned content-change dates ──────────────────────────────────────────────
+// Home pages serve live rate data so "daily" + current date is legitimate.
+// All other static pages use a pinned date — bump LAST_CONTENT_UPDATE manually
+// when you make a meaningful content change. This prevents Google from treating
+// every build as a content change (a known spam signal for stable pages).
+const LAST_CONTENT_UPDATE = new Date("2026-05-01");
+const LAST_REGISTRATION_UPDATE = new Date("2025-10-01");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   // ── High-priority landing pages (both locales) ──────────────────────────
+  // Home pages contain a live rate widget — daily lastModified is honest here.
   const landingRoutes: MetadataRoute.Sitemap = [
-    // Persian home — primary market, highest signal
     {
       url: `${productionUrl}/fa`,
-      lastModified: NOW,
+      lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1.0,
     },
-    // English home
     {
       url: `${productionUrl}/en`,
-      lastModified: NOW,
+      lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.9,
     },
   ];
 
-  // ── Conversion pages ─────────────────────────────────────────────────────
+  // ── Service landing pages (high commercial intent) ────────────────────────
+  const serviceRoutes: MetadataRoute.Sitemap = services.map((s) => ({
+    url: `${productionUrl}/${s.locale}/services/${s.slug}`,
+    lastModified: LAST_CONTENT_UPDATE,
+    changeFrequency: "monthly" as const,
+    priority: 0.85,
+  }));
+
+  const serviceIndexRoutes: MetadataRoute.Sitemap = [
+    { url: `${productionUrl}/en/services`, lastModified: LAST_CONTENT_UPDATE, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${productionUrl}/fa/services`, lastModified: LAST_CONTENT_UPDATE, changeFrequency: "monthly" as const, priority: 0.8 },
+  ];
+
+  // ── Conversion pages (register only — login/auth are noindex) ────────────
   const conversionRoutes: MetadataRoute.Sitemap = [
     {
       url: `${productionUrl}/fa/register`,
-      lastModified: WEEKLY_REFRESH,
+      lastModified: LAST_REGISTRATION_UPDATE,
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
       url: `${productionUrl}/en/register`,
-      lastModified: WEEKLY_REFRESH,
+      lastModified: LAST_REGISTRATION_UPDATE,
       changeFrequency: "weekly",
       priority: 0.8,
     },
+  ];
+
+  // ── About / Compliance page (E-E-A-T trust signal) ──────────────────────
+  const aboutRoutes: MetadataRoute.Sitemap = [
     {
-      url: `${productionUrl}/fa/login`,
-      lastModified: WEEKLY_REFRESH,
-      changeFrequency: "weekly",
-      priority: 0.7,
+      url: `${productionUrl}/en/about`,
+      lastModified: LAST_CONTENT_UPDATE,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
     },
     {
-      url: `${productionUrl}/en/login`,
-      lastModified: WEEKLY_REFRESH,
-      changeFrequency: "weekly",
-      priority: 0.6,
+      url: `${productionUrl}/fa/about`,
+      lastModified: LAST_CONTENT_UPDATE,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
     },
   ];
 
@@ -80,5 +98,44 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]);
 
-  return [...landingRoutes, ...conversionRoutes, ...legalRoutes];
+  // ── Blog listing pages ────────────────────────────────────────────────────
+  // lastModified = the most recent article's publishedAt date, so it's honest.
+  const latestBlogDate = blogPosts.reduce<Date>((latest, post) => {
+    const d = new Date(post.publishedAt);
+    return d > latest ? d : latest;
+  }, new Date("2020-01-01"));
+
+  const blogListingRoutes: MetadataRoute.Sitemap = [
+    {
+      url: `${productionUrl}/en/blog`,
+      lastModified: latestBlogDate,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    },
+    {
+      url: `${productionUrl}/fa/blog`,
+      lastModified: latestBlogDate,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    },
+  ];
+
+  // ── Blog articles — derived from data source, never hardcoded ────────────
+  const blogArticleRoutes: MetadataRoute.Sitemap = blogPosts.map((post) => ({
+    url: `${productionUrl}/${post.locale}/blog/${post.slug}`,
+    lastModified: new Date(post.publishedAt),
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
+
+  return [
+    ...landingRoutes,
+    ...serviceIndexRoutes,
+    ...serviceRoutes,
+    ...conversionRoutes,
+    ...aboutRoutes,
+    ...blogListingRoutes,
+    ...blogArticleRoutes,
+    ...legalRoutes,
+  ];
 }

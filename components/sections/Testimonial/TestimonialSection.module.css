@@ -111,8 +111,8 @@
   gap: var(--space-6);
 }
 
-.scrollUp { animation: marqueeUp 45s linear infinite; }
-.scrollDown { animation: marqueeDown 45s linear infinite; }
+.scrollUp { animation: marqueeUp 75s linear infinite; }
+.scrollDown { animation: marqueeDown 75s linear infinite; }
 
 @keyframes marqueeUp {
   0% { transform: translateY(0); }
@@ -180,18 +180,34 @@
   font-size: var(--text-body-md);
   line-height: var(--leading-relaxed);
   margin: 0;
-  text-align: right; 
+  text-align: start; 
 }
 
 .authorBox {
   display: flex;
   align-items: center;
-  /* 👈 حذف هاردکد 16px */
   gap: var(--space-4);
   border-top: 1px solid var(--color-border-ghost);
-  /* 👈 حذف هاردکد 20px */
-  padding-top: var(--space-5);
+  
+  /* 👈 خط جداکننده را به پایین‌ترین حالت ممکن در کارت هل می‌دهد */
   margin-top: auto; 
+  
+  /* 👈 ایجاد فاصله استاندارد و امن بین آواتار/اسم و خط افقی بالای آن‌ها */
+  padding-top: 24px; 
+  
+  direction: ltr; 
+  justify-content: flex-start; 
+}
+
+.name {
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-bold);
+  margin: 0;
+  
+  /* 👈 اطمینان از چپ‌چین بودن متن */
+  text-align: left; 
 }
 
 .avatar {
@@ -218,14 +234,6 @@
   gap: var(--space-1); 
 }
 
-.name {
-  color: var(--color-text-primary);
-  font-family: var(--font-primary);
-  font-size: var(--text-body-sm);
-  font-weight: var(--font-weight-bold);
-  margin: 0;
-  text-align: right;
-}
 
 /* ==================
    Responsive
@@ -247,4 +255,17 @@
 @media (prefers-reduced-motion: reduce) {
   .track { animation: none !important; }
   .carouselMask { overflow-y: auto; mask-image: none; height: auto; }
+}
+
+@media (max-width: 768px) {
+  .section { padding: var(--section-pad-compact) 0; }
+  .columnsContainer { grid-template-columns: 1fr; }
+  .column:nth-child(2) { display: none; }
+  .carouselMask { height: 500px; }
+  
+  /* 👈 افزایش پدینگ داخلی کارت‌ها برای جلوگیری از چسبیدگی به لبه‌ها */
+  .card { 
+    /* می‌توانید از var(--space-6) هم استفاده کنید، اما 24px فضای امن‌تری در موبایل می‌دهد */
+    padding: 24px; 
+  }
 }

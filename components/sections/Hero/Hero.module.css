@@ -1,10 +1,7 @@
 /* Hero.module.css - Zarman Premium Standard */
 
-/* 👈 کلاس کمکی برای حل مشکل چشمک زدن هنگام لود صفحه */
-.hiddenOnLoad {
-  visibility: hidden;
-  opacity: 0;
-}
+/* NOTE: Initial hidden state for GSAP animations is now set via gsap.set() in Hero.tsx
+   so that the SSR HTML remains fully visible to Googlebot. */
 
 .hero {
   position: relative;
