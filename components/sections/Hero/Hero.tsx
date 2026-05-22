@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import Image from "next/image";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -16,6 +17,7 @@ import {
 
 export default function Hero() {
   const heroRef = useRef<HTMLElement | null>(null);
+  const { locale } = useParams<{ locale: string }>();
   const { currentRates, isLoading } = useRates();
 
   const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_TRANSFER_HELP)}`;
@@ -31,14 +33,10 @@ export default function Hero() {
   useGSAP(
     () => {
       if (!mounted) {
-        // JS has loaded — hide elements immediately so the stagger reveal
-        // can animate them in. The SSR/pre-render HTML has no hidden state,
-        // so Googlebot always sees the full H1 and text content.
+        // Only hide decorative elements (not semantic content like H1/subtitle/CTAs).
+        // Keeping textual content always visible ensures WRS/Googlebot snapshots the
+        // full H1 regardless of when the rendering snapshot is taken.
         gsap.set(`.${styles.eyebrow}`, { autoAlpha: 0, y: 18 });
-        gsap.set(`.${styles.title}`, { autoAlpha: 0, y: 28 });
-        gsap.set(`.${styles.subtitle}`, { autoAlpha: 0, y: 20 });
-        gsap.set(`.${styles.actions}`, { autoAlpha: 0, y: 16 });
-        gsap.set(`.${styles.meta}`, { autoAlpha: 0, y: 12 });
         gsap.set(`.${styles.rateWidget}`, { autoAlpha: 0, x: -32, scale: 0.96 });
         return;
       }
@@ -46,14 +44,10 @@ export default function Hero() {
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
       tl.to(`.${styles.eyebrow}`, { autoAlpha: 1, y: 0, duration: 0.65 })
-        .to(`.${styles.title}`, { autoAlpha: 1, y: 0, duration: 0.9 }, "-=0.35")
-        .to(`.${styles.subtitle}`, { autoAlpha: 1, y: 0, duration: 0.75 }, "-=0.5")
-        .to(`.${styles.actions}`, { autoAlpha: 1, y: 0, duration: 0.7 }, "-=0.45")
-        .to(`.${styles.meta}`, { autoAlpha: 1, y: 0, duration: 0.6 }, "-=0.45")
         .to(
           `.${styles.rateWidget}`,
           { autoAlpha: 1, x: 0, scale: 1, duration: 1.2 },
-          "-=0.75"
+          "-=0.5"
         );
     },
     { scope: heroRef, dependencies: [mounted] }
@@ -87,7 +81,7 @@ export default function Hero() {
             </p>
             
             <div className={styles.actions}>
-              <Button href="/fa/register" variant="primary" size="lg" className={styles.btn}>
+              <Button href={`/${locale}/register`} variant="primary" size="lg" className={styles.btn}>
                 شروع ثبت‌نام
               </Button>
               <Button href={whatsappUrl} variant="secondary" size="lg" className={styles.btn} target="_blank" rel="noopener noreferrer">

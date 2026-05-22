@@ -26,7 +26,7 @@ export async function generateMetadata({
       languages: {
         en: `${PRODUCTION_URL}/en/blog`,
         fa: `${PRODUCTION_URL}/fa/blog`,
-        "x-default": `${PRODUCTION_URL}/en/blog`,
+        "x-default": `${PRODUCTION_URL}/fa/blog`,
       },
     },
     robots: { index: true, follow: true },
