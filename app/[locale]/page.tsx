@@ -52,7 +52,7 @@ export async function generateMetadata({
 
   const pageTitle = isEn
     ? "AUD to IRT Remittance | Personalised Exchange Rates | Zarman Exchange"
-    : "صرافی زرمان | نرخ شخصی‌سازی‌شده حواله دلار استرالیا";
+    : "صرافی زرمان | نرخ شخصیسازیشده حواله دلار استرالیا";
 
   const pageDescription = isEn
     ? "Transfer AUD to Iran with dynamic, volume-based exchange rates. AUSTRAC-registered. Fast settlement. Enterprise-grade compliance. Start in minutes."
