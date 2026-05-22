@@ -50,18 +50,22 @@ export async function generateMetadata({
   const { locale } = await params;
   const isEn = locale === "en";
 
+  const pageTitle = isEn
+    ? "AUD to IRT Remittance | Personalised Exchange Rates | Zarman Exchange"
+    : "صرافی زرمان | نرخ شخصیسازیشده حواله دلار استرالیا";
+
+  const pageDescription = isEn
+    ? "Transfer AUD to Iran with dynamic, volume-based exchange rates. AUSTRAC-registered. Fast settlement. Enterprise-grade compliance. Start in minutes."
+    : "استارتاپ نوین برای تبادل دلار استرالیا (AUD) و تومان (IRT) با نرخ‌های شخصی‌سازی‌شده، تسویه فوری و پایبندی کامل به استانداردهای قانونی در استرالیا.";
+
   return {
-    title: isEn
-      ? "AUD to IRT Remittance | Personalised Exchange Rates | Zarman Exchange"
-      : "قیمت گذاری هوشمند و شخصی سازی شده | صرافی زرمان",
-    description: isEn
-      ? "Transfer AUD to Iran with dynamic, volume-based exchange rates. AUSTRAC-registered. Fast settlement. Enterprise-grade compliance. Start in minutes."
-      : "استارتاپ نوین برای تبادل دلار استرالیا (AUD) و تومان (IRT) با نرخ‌های شخصی سازی شده، تسویه فوری و پایبندی کامل به استانداردهای قانونی در استرالیا.",
+    title: pageTitle,
+    description: pageDescription,
     alternates: {
       canonical: `${PRODUCTION_URL}/${locale}`,
       languages: {
-        en: `${PRODUCTION_URL}/en`,
-        fa: `${PRODUCTION_URL}/fa`,
+        "en-AU": `${PRODUCTION_URL}/en`,
+        "fa-IR": `${PRODUCTION_URL}/fa`,
         "x-default": `${PRODUCTION_URL}/fa`,
       },
     },
@@ -90,6 +94,12 @@ export async function generateMetadata({
           "زرمان استرالیا",
           "زرمان ایران",
         ],
+    openGraph: {
+      type: "website",
+      url: `${PRODUCTION_URL}/${locale}`,
+      title: pageTitle,
+      description: pageDescription,
+    },
   };
 }
 

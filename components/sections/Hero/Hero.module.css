@@ -1,7 +1,8 @@
 /* Hero.module.css - Zarman Premium Standard */
 
-/* NOTE: Initial hidden state for GSAP animations is now set via gsap.set() in Hero.tsx
-   so that the SSR HTML remains fully visible to Googlebot. */
+/* NOTE: Only decorative elements (eyebrow label, rate widget) use GSAP entrance
+   animations. Semantic content (H1, subtitle, CTAs) is always visible so that
+   Google's Web Rendering Service snapshots the full page text. */
 
 .hero {
   position: relative;

@@ -151,14 +151,6 @@ export async function generateMetadata({
       description: defaultDescription,
       images: [{ url: socialPreviewImage, alt: altText }],
     },
-    alternates: {
-      canonical: `${productionUrl}/${locale}`,
-      languages: {
-        "fa": `${productionUrl}/fa`,
-        "en": `${productionUrl}/en`,
-        "x-default": `${productionUrl}/fa`,
-      },
-    },
     category: "finance",
     ...(gscToken ? { verification: { google: gscToken } } : {}),
   };
