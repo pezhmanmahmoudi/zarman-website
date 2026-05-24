@@ -32,14 +32,6 @@ export default function Hero() {
 
   useGSAP(
     () => {
-      if (!mounted) {
-        // Only hide decorative elements (not semantic content like H1/subtitle/CTAs).
-        // Keeping textual content always visible ensures WRS/Googlebot snapshots the
-        // full H1 regardless of when the rendering snapshot is taken.
-        gsap.set(`.${styles.eyebrow}`, { autoAlpha: 0, y: 18 });
-        gsap.set(`.${styles.rateWidget}`, { autoAlpha: 0, x: -32, scale: 0.96 });
-        return;
-      }
 
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
@@ -62,8 +54,8 @@ export default function Hero() {
         <div className={styles.layout}>
           
           <div className={styles.content}>
-            <p className={styles.eyebrow}>صرافی زرمان</p>
-            <h1 className={styles.title}>
+            <h1 className={styles.eyebrow}>صرافی زرمان</h1>
+            <h2 className={styles.title}>
               از{' '}
               <span className={styles.tooltipWrapper}>
                 اولورو
@@ -75,7 +67,7 @@ export default function Hero() {
               {' '}تا دماوند
               <br />
               <span className={styles.titleAccent}>تنها در چند ساعت...</span>
-            </h1>
+            </h2>
             <p className={styles.subtitle}>
               ما تلاش می‌کنیم با تمرکز بر سرعت، شفافیت و پشتیبانی همیشگی، تجربه ثبت و پیگیری درخواست‌های مالی را برای شما آسان‌تر و روشن‌تر کنیم.
             </p>

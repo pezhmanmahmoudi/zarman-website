@@ -31,6 +31,8 @@ export function UserTransactionTimeline({ transactions }: UserTransactionTimelin
               <th>Type</th>
               <th>AUD Amount</th>
               <th>Toman Equiv.</th>
+              <th>Source of Funds</th>
+              <th>Reason for Transfer</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -38,7 +40,7 @@ export function UserTransactionTimeline({ transactions }: UserTransactionTimelin
           <tbody>
             {transactions.length === 0 ? (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={8}>
                   <div className={`${cardStyles.emptyState} ${cardStyles.emptyStateCompact}`}>
                     <div className={cardStyles.emptyStateText}>
                       No transactions found for this user.
@@ -79,6 +81,12 @@ export function UserTransactionTimeline({ transactions }: UserTransactionTimelin
                   </td>
                   <td className={`${tableStyles.cellMono} ${tableStyles.cellDim}`} dir="ltr">
                     {Number(tx.equivalent_toman).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}T
+                  </td>
+                  <td className={tableStyles.cellSmall} style={{ maxWidth: "160px", whiteSpace: "normal" }}>
+                    {(tx as Record<string, unknown>).source_of_funds as string || <span style={{ color: "var(--text-dim, #888)" }}>—</span>}
+                  </td>
+                  <td className={tableStyles.cellSmall} style={{ maxWidth: "140px", whiteSpace: "normal" }}>
+                    {(tx as Record<string, unknown>).reason_for_transfer as string || <span style={{ color: "var(--text-dim, #888)" }}>—</span>}
                   </td>
                   <td>
                     <StatusBadge status={tx.status} />

@@ -76,7 +76,7 @@ export default function AdminLoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} suppressHydrationWarning>
           <div className={styles.fieldGroup}>
             <div>
               <label className={styles.label} htmlFor="admin-email">

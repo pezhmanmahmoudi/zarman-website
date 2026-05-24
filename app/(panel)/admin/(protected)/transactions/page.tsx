@@ -83,6 +83,12 @@ export default async function TransactionsPage() {
         <td className={`${tableStyles.cellMono} ${tableStyles.cellDim}`} dir="ltr">
           {Number(tx.equivalent_toman).toLocaleString("en-AU")} T
         </td>
+        <td>
+          <div className={tableStyles.cellStrong} style={{ fontSize: "0.78rem" }}>{tx.source_of_funds || <span style={{ color: "var(--text-dim, #888)" }}>—</span>}</div>
+        </td>
+        <td>
+          <div className={tableStyles.cellStrong} style={{ fontSize: "0.78rem" }}>{tx.reason_for_transfer || <span style={{ color: "var(--text-dim, #888)" }}>—</span>}</div>
+        </td>
         <td>{StatusBadge({ status: tx.status })}</td>
         {!isHistory && (
           <td>
@@ -151,6 +157,8 @@ export default async function TransactionsPage() {
                     <th>Type</th>
                     <th>Amount (AUD)</th>
                     <th>Equivalent (Toman)</th>
+                    <th>Source of Funds</th>
+                    <th>Reason for Transfer</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -188,6 +196,8 @@ export default async function TransactionsPage() {
                     <th>Type</th>
                     <th>Amount (AUD)</th>
                     <th>Equivalent (Toman)</th>
+                    <th>Source of Funds</th>
+                    <th>Reason for Transfer</th>
                     <th>Status</th>
                   </tr>
                 </thead>

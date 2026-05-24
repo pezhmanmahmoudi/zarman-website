@@ -353,7 +353,7 @@ export async function getPendingTransactions() {
   const { data, error } = await db
     .from("transactions")
     .select(
-      "id, user_id, type, amount_aud, equivalent_toman, status, created_at, profiles(first_name, last_name, email)"
+      "id, user_id, type, amount_aud, equivalent_toman, status, created_at, source_of_funds, reason_for_transfer, profiles(first_name, last_name, email)"
     )
     .eq("status", "pending")
     .order("created_at", { ascending: true }); // قدیمی‌ترین‌ها اول بررسی شوند
@@ -370,7 +370,7 @@ export async function getTransactionHistory(limitCount: number = DEFAULT_HISTORY
   const { data, error } = await db
     .from("transactions")
     .select(
-      "id, user_id, type, amount_aud, equivalent_toman, status, created_at, profiles(first_name, last_name, email)"
+      "id, user_id, type, amount_aud, equivalent_toman, status, created_at, source_of_funds, reason_for_transfer, profiles(first_name, last_name, email)"
     )
     .neq("status", "pending") // تراکنش‌های pending را از تاریخچه فیلتر می‌کنیم
     .order("created_at", { ascending: false }) // جدیدترین‌ها بالا باشند
@@ -756,7 +756,7 @@ export async function getUserFinancialProfile(userId: string) {
     db.from("profiles").select("*").eq("id", userId).single(),
     db
       .from("transactions")
-      .select("id, type, amount_aud, equivalent_toman, status, created_at")
+      .select("id, type, amount_aud, equivalent_toman, status, created_at, source_of_funds, reason_for_transfer")
       .eq("user_id", userId)
       .order("created_at", { ascending: false }),
     db

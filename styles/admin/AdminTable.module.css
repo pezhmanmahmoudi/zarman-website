@@ -6,19 +6,26 @@
 .tableWrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-med, #e2e8f0) transparent;
   border-radius: 0 0 1rem 1rem;
   box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.05); /* Faint edge shadow to indicate scroll */
   width: 100%;
 }
 .tableWrap::-webkit-scrollbar {
-  display: none;
+  height: 5px;
+}
+.tableWrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tableWrap::-webkit-scrollbar-thumb {
+  background: var(--border-med, #e2e8f0);
+  border-radius: 99px;
 }
 
 .table {
   width: 100%;
-  min-width: 700px;
+  min-width: 900px;
   border-collapse: collapse;
   font-size: 0.875rem;
 }

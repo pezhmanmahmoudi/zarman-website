@@ -1,0 +1,173 @@
+/* ExchangeHighlightSection.module.css - Matched with HowItWorks */
+
+.section {
+  position: relative;
+  background-color: var(--color-bg-base);
+  padding: var(--section-pad-major) 0;
+  overflow: hidden;
+  direction: rtl;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: 0 var(--container-padding);
+}
+
+.header {
+  max-width: 680px;
+  margin: 0 auto var(--space-16);
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-3);
+  color: var(--color-accent-secondary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-md);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.5px;
+}
+
+.title {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--text-section-title);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+  font-weight: var(--font-weight-bold);
+}
+
+.titleAccent {
+  background: linear-gradient(90deg, var(--color-accent-primary) 0%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  line-height: var(--leading-relaxed);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ========== GRID & CARDS (Matched Architecture) ========== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-6);
+  position: relative;
+  z-index: 2;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+  padding: var(--space-8) var(--space-6);
+  border-radius: var(--radius-xl);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-ghost);
+  box-shadow: var(--shadow-sm), var(--highlight-top);
+  overflow: hidden;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), var(--highlight-top);
+}
+
+/* ========== Icon Section (Matched) ========== */
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(124, 58, 237, 0.05) 100%);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  transition: transform var(--transition-normal);
+}
+
+.card:hover .iconWrapper {
+  transform: scale(1.05) translateY(-3px);
+}
+
+.icon {
+  color: var(--color-accent-secondary);
+}
+
+/* ========== Content Section ========== */
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.statGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-snug);
+}
+
+.statLabel {
+  color: var(--color-accent-primary);
+  font-family: var(--font-primary);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.cardText {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-family: var(--font-primary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-relaxed);
+  font-weight: var(--font-weight-semibold);
+  padding: 0 var(--space-1);
+}
+
+/* ==================
+   Responsive Architecture
+   ================== */
+@media (max-width: 1200px) {
+  .grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-8); }
+}
+
+@media (max-width: 1024px) {
+  .section { padding: var(--section-pad-compact) 0; }
+}
+
+@media (max-width: 768px) {
+  .grid { grid-template-columns: 1fr; gap: var(--space-6); }
+  .cardText { font-size: var(--text-body-sm); }
+}

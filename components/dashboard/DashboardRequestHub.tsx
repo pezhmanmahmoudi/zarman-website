@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Calculator, AlertTriangle, Lock, MessageSquare, ChevronDown, ServerCrash, Loader2, PauseCircle } from "lucide-react";
+import { Calculator, AlertTriangle, Lock, MessageSquare, ServerCrash, Loader2, PauseCircle } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/[locale]/dashboard/dashboard.types"; 
@@ -7,6 +7,7 @@ import { useFinanceConfig } from "@/context/FinanceConfigContext";
 import { calcAppliedFee } from "@/lib/pricing";
 import { buildWhatsAppUrl } from "@/lib/constants/contact";
 import { supabase } from "@/lib/supabase";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 
 function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]); }
 function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹"; return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d))); }
@@ -50,7 +51,7 @@ type RequestHubProps = {
   baseRate: number | null;     
   profile: Profile | null;     
   displayFullName: string;
-  onSaveTransaction: (rawAmount: number, txType: "buy_aud" | "sell_aud") => Promise<ServerTransactionResult | null>;
+  onSaveTransaction: (rawAmount: number, txType: "buy_aud" | "sell_aud", sourceOfFunds: string, reasonForTransfer: string) => Promise<ServerTransactionResult | null>;
 };
 
 export function DashboardRequestHub({ 
@@ -62,6 +63,8 @@ export function DashboardRequestHub({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [marketActive, setMarketActive] = useState<boolean>(true);
   const [pauseMessage, setPauseMessage] = useState<string>("");
+  const [sourceOfFunds, setSourceOfFunds] = useState("");
+  const [reasonForTransfer, setReasonForTransfer] = useState("");
   const financeConfig = useFinanceConfig();
 
   useEffect(() => {
@@ -101,11 +104,15 @@ export function DashboardRequestHub({
 
   const submit = async () => {
     if (!profile || !isApproved || rawAmount <= 0 || isRateOffline || isSubmitting || !marketActive) return;
+    if (!sourceOfFunds || !reasonForTransfer) {
+      alert("لطفاً منبع وجه و دلیل انتقال را انتخاب کنید.");
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
-      const serverData = await onSaveTransaction(rawAmount, txType);
+      const serverData = await onSaveTransaction(rawAmount, txType, sourceOfFunds, reasonForTransfer);
       
       if (!serverData) return; 
 
@@ -135,7 +142,10 @@ export function DashboardRequestHub({
         "- نرخ اختصاصی نهایی: " + fmtTailored + " تومان\n" +
         "- کارمزد: " + feeText + "\n" +
         "--------------------------\n" +
-        "* معادل نهایی: " + fmtResult + " تومان *\n\n" +
+        "* معادل نهایی: " + fmtResult + " تومان *\n" +
+        "--------------------------\n" +
+        "- منبع وجه: " + sourceOfFunds + "\n" +
+        "- دلیل انتقال: " + reasonForTransfer + "\n\n" +
         "لطفاً درخواست من را بررسی نمایید.";
 
       const finalUrl = buildWhatsAppUrl(text);
@@ -191,15 +201,16 @@ export function DashboardRequestHub({
       <div className={styles.formRow}>
         <div className={styles.inputBox}>
           <label className={styles.label}>نوع تراکنش ارزی از جانب مشتری</label>
-          <div className={styles.fieldGroup}>
-            <div className={styles.selectWrapper}>
-              <select className={styles.currencySelect} value={txType} onChange={(e) => setTxType(e.target.value as "buy_aud" | "sell_aud")} disabled={isSubmitting}>
-                <option value="buy_aud">خرید AUD (تومان می‌دهم، دلار می‌گیرم)</option>
-                <option value="sell_aud">فروش AUD (دلار می‌دهم، تومان می‌گیرم)</option>
-              </select>
-              <ChevronDown className={styles.selectChevron} size={16} strokeWidth={2.5} />
-            </div>
-          </div>
+            <SelectBox
+              value={txType}
+              onChange={(val) => setTxType(val as "buy_aud" | "sell_aud")}
+              dir="rtl"
+              labeledOptions={[
+                { value: "buy_aud",  label: "خرید AUD (تومان می‌دهم، دلار می‌گیرم)" },
+                { value: "sell_aud", label: "فروش AUD (دلار می‌دهم، تومان می‌گیرم)" },
+              ]}
+              disabled={isSubmitting}
+            />
         </div>
 
         <div className={styles.inputBox}>
@@ -230,6 +241,55 @@ export function DashboardRequestHub({
           <input type="text" value={isRateOffline ? "—" : formatNumberUI(resultNumber, true)} readOnly dir="ltr" className={`${styles.faInput} ${styles.resultInput}`} placeholder="۰" />
           <div className={styles.divider}></div>
           <span className={styles.currencyLabelFixed}>تومان</span>
+        </div>
+      </div>
+
+      {/* AUSTRAC-required fields */}
+      <div className={styles.formRow}>
+        <div className={styles.inputBox}>
+          <label className={styles.label}>منبع وجه (Source of Funds) <span className={styles.requiredMark}>*</span></label>
+          <SelectBox
+            value={sourceOfFunds}
+            onChange={setSourceOfFunds}
+            placeholder="Select Source of Funds"
+            disabled={isSubmitting}
+            options={[
+              "Employment income e.g. salary, bonus, commission",
+              "Business income e.g. earnings, profits",
+              "Family support or gift (overseas transfer)",
+              "Family support or gift (transfer within Australia)",
+              "Government benefits or grants",
+              "Compensation e.g. insurance, divorce settlement",
+              "Investment income e.g. interest, dividends, rent",
+              "Liquidation or sale of assets",
+              "Real estate",
+              "Super or pension",
+              "Windfall e.g. inheritance, redundancy, winnings",
+              "Loan",
+              "Tax refund",
+            ]}
+          />
+        </div>
+
+        <div className={styles.inputBox}>
+          <label className={styles.label}>دلیل انتقال (Reason for Transfer) <span className={styles.requiredMark}>*</span></label>
+          <SelectBox
+            value={reasonForTransfer}
+            onChange={setReasonForTransfer}
+            placeholder="Select reason"
+            disabled={isSubmitting}
+            options={[
+              "Support Family",
+              "Loan repayment",
+              "Personal savings / investment",
+              "Business payment",
+              "Education expenses",
+              "Medical expenses",
+              "Property purchase",
+              "Travel expenses",
+              "Other",
+            ]}
+          />
         </div>
       </div>
       

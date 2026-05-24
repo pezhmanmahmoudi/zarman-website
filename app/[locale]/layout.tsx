@@ -170,7 +170,7 @@ export default async function LocaleLayout({
   }
 
   const dir = locale === "fa" ? "rtl" : "ltr";
-  const fontClass = locale === "en" ? inter.variable : "";
+  const fontClass = inter.variable; // Inter is needed on both locales (Latin values, labels)
 
   return (
     <html lang={locale} dir={dir} data-scroll-behavior="smooth">

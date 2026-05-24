@@ -163,6 +163,34 @@
   background-color: var(--bg-card); 
   color: var(--text-main); 
 }
+
+/* For English-language selects (AUSTRAC fields) */
+.englishSelect {
+  direction: ltr;
+  text-align: left;
+  padding: 0 1.75rem 0 0.6rem;
+  font-size: var(--text-body-sm);
+  font-weight: 700;
+}
+.englishSelect option {
+  direction: ltr;
+  text-align: left;
+  padding: 4px 8px;
+}
+.englishChevron {
+  position: absolute;
+  right: 0;
+  left: auto;
+  color: var(--text-soft);
+  pointer-events: none;
+}
+
+.selectPlaceholder { color: var(--text-placeholder); }
+.requiredMark {
+  color: var(--danger, #e53e3e);
+  font-weight: 900;
+  font-family: system-ui, Arial, sans-serif;
+}
 .selectChevron { 
   position: absolute; 
   left: 0; 
@@ -230,4 +258,13 @@
   .lockOverlay { padding: var(--space-6); } 
   .lockTitle { font-size: var(--text-body-md); } 
   .resultInput { font-size: var(--text-body-lg); }
+}
+@media (max-width: 640px) {
+  /* Reduce height only — font-size stays ≥16px (managed by globals.css) */
+  .fieldGroup {
+    height: 3.25rem;
+  }
+  .label {
+    font-size: 0.72rem;
+  }
 }

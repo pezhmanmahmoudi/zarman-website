@@ -81,9 +81,8 @@ export default function DVSNoticePage() {
 
           <h2>Contact details</h2>
           <p>
-            Email: infor@zarman.com.au<br />
+            Email: info@zarman.com.au<br />
             Telephone: 0497851631<br />
-            Postal address: Privacy Officer, ZARMAN EXCHANGE PTY LTD, U W2608 108 Donnison st, Gosford, NSW, 2250
           </p>
         </div>
       </div>

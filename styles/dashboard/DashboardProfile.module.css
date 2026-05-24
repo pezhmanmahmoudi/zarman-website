@@ -186,6 +186,25 @@
   }
 }
 
+/* ── Mobile: compact inputs ──────────────────────── */
+@media (max-width: 640px) {
+  /* Reduce padding to shrink input height — font-size stays ≥16px (managed by globals.css) */
+  .inputGroup input,
+  .inputGroup select {
+    padding: 10px 14px !important;
+  }
+  .inputGroup input[type="date"] {
+    padding: 10px 40px 10px 14px !important;
+  }
+  .row {
+    gap: 14px;
+  }
+  .row3 {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+}
+
 .inputGroup input:focus, .inputGroup select:focus { 
   border-color: var(--accent) !important; 
   background-color: rgba(56, 72, 245, 0.02) !important;

@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
 import styles from "@/styles/About.module.css";
+import Button from "@/components/ui/Button/Button";
 
 const PRODUCTION_URL = "https://zarman.com.au";
 
@@ -99,7 +100,6 @@ export default async function AboutPage({
 
       <div className={styles.pageWrapper}>
         <div className={styles.container}>
-
           <div className={styles.topNav}>
             <Link href={`/${locale}`} className={styles.backHome} aria-label={isEn ? "Back to home" : "بازگشت به خانه"}>
               <BackIcon size={18} strokeWidth={2.5} />
@@ -118,18 +118,17 @@ export default async function AboutPage({
           </div>
 
           <header className={styles.header}>
-            <h1 className={styles.title}>
+            <h1 className={`${styles.title} ${isEn ? styles.titleEn : ''}`}>
               {isEn ? "About Zarman Exchange" : "درباره صرافی زرمان"}
             </h1>
-            <p className={styles.subtitle}>
+            <p className={`${styles.subtitle} ${isEn ? styles.subtitleEn : ''}`}>
               {isEn
                 ? "AUSTRAC Registered Remittance Dealer · ABN 70 692 742 957"
                 : "صرافی ثبت‌شده نزد AUSTRAC · شماره ABN: 70 692 742 957"}
             </p>
           </header>
 
-          <div className={styles.content}>
-
+          <div className={`${styles.content} ${isEn ? styles.contentEn : ''}`}>
             {isEn ? (
               <>
                 <h2>Who We Are</h2>
@@ -167,14 +166,19 @@ export default async function AboutPage({
                     <span className={styles.credentialLabel}>Country</span>
                     <span className={styles.credentialValue}>Australia</span>
                   </div>
-                  <a
-                    href="https://online.apps.austrac.gov.au/rsr/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.verifyLink}
-                  >
-                    Verify on AUSTRAC Register <ExternalLink size={14} />
-                  </a>
+                  <div className={styles.verifyBtnWrapper}>
+                    <Button
+                      href="https://online.apps.austrac.gov.au/rsr/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="primary"
+                      size="md"
+                      rightIcon={<ExternalLink size={16} />}
+                      className={styles.verifyBtn}
+                    >
+                      Verify on AUSTRAC Register
+                    </Button>
+                  </div>
                 </div>
 
                 <h2>What We Offer</h2>
@@ -200,9 +204,11 @@ export default async function AboutPage({
                 <p>
                   For enquiries, reach us via WhatsApp or register online to speak with our team directly.
                 </p>
-                <p>
-                  <Link href="/en/register">Register for a personalised rate →</Link>
-                </p>
+                <div className={styles.actionWrapper}>
+                  <Button href="/en/register" variant="primary" size="lg">
+                    Register for a personalised rate
+                  </Button>
+                </div>
               </>
             ) : (
               <>
@@ -241,14 +247,19 @@ export default async function AboutPage({
                     <span className={styles.credentialLabel}>کشور</span>
                     <span className={styles.credentialValue}>استرالیا</span>
                   </div>
-                  <a
-                    href="https://online.apps.austrac.gov.au/rsr/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.verifyLink}
-                  >
-                    تأیید در سامانه رسمی AUSTRAC <ExternalLink size={14} />
-                  </a>
+                  <div className={styles.verifyBtnWrapper}>
+                    <Button
+                      href="https://online.apps.austrac.gov.au/rsr/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="primary"
+                      size="md"
+                      rightIcon={<ExternalLink size={16} />}
+                      className={styles.verifyBtn}
+                    >
+                      تأیید در سامانه رسمی AUSTRAC
+                    </Button>
+                  </div>
                 </div>
 
                 <h2>خدمات ما</h2>
@@ -274,12 +285,13 @@ export default async function AboutPage({
                 <p>
                   برای استعلام از طریق واتساپ با ما در تماس باشید یا آنلاین ثبت‌نام کنید تا مستقیماً با تیم ما صحبت کنید.
                 </p>
-                <p>
-                  <Link href="/fa/register">ثبت‌نام برای دریافت نرخ شخصی →</Link>
-                </p>
+                <div className={styles.actionWrapper}>
+                  <Button href="/fa/register" variant="primary" size="lg">
+                    ثبت‌نام برای دریافت نرخ شخصی
+                  </Button>
+                </div>
               </>
             )}
-
           </div>
         </div>
       </div>

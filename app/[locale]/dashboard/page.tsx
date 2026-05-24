@@ -79,12 +79,14 @@ export default function ZarmanDashboard() {
     return `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "مشتری عزیز";
   }, [profile]);
 
-  const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud") => {
+  const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud", sourceOfFunds: string, reasonForTransfer: string) => {
     if (!profile || !profile.id || !isApproved || rawAmount <= 0) return null;
     
     const result = await processTransactionSecurely({
       rawAmount: rawAmount,
-      txType: currentTxType
+      txType: currentTxType,
+      sourceOfFunds,
+      reasonForTransfer,
     });
 
     if (result?.error) {

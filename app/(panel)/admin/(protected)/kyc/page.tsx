@@ -150,9 +150,9 @@ export default async function KycQueuePage() {
                         </td>
                         <td
                           className={`${tableStyles.cellTruncate} ${tableStyles.cellDim} ${tableStyles.cellMax150}`}
-                          title={[user.address, user.city, user.state, user.country].filter(Boolean).join(", ")}
+                          title={[user.address, user.city, user.state, (user as Record<string, unknown>).postcode as string, user.country].filter(Boolean).join(", ")}
                         >
-                          {[user.address, user.city, user.state].filter(Boolean).join(", ") || "—"}
+                          {[user.address, user.city, user.state, (user as Record<string, unknown>).postcode as string].filter(Boolean).join(", ") || "—"}
                         </td>
                         {/* Identity Document */}
                         <td>
@@ -167,6 +167,11 @@ export default async function KycQueuePage() {
                                   className={`${tableStyles.cellSmall} ${tableStyles.cellDim} ${tableStyles.cellMono}`}
                                   style={{ display: 'flex', flexDirection: 'column', gap: '3px', whiteSpace: 'nowrap' }}
                                 >
+                                  {(user as Record<string, unknown>).state_of_issue ? (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="State of Issue">
+                                      State: {String((user as Record<string, unknown>).state_of_issue)}
+                                    </span>
+                                  ) : null}
                                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Licence No.">
                                     <Hash size={10} /> {licenceNum ?? "—"}
                                     {cardNum && <span style={{ opacity: 0.6 }}>| Card: {cardNum}</span>}

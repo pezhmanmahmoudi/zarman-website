@@ -230,6 +230,7 @@ export async function submitKycData(payload: {
   document_type: string;
   license_number?: string | null;
   card_number?: string | null;
+  state_of_issue?: string | null;
   passport_number?: string | null;
   expiry_date?: string | null;
   consent_notice: boolean;
@@ -262,6 +263,9 @@ export async function submitKycData(payload: {
   if (payload.document_type === "driver_license") {
     if (!payload.license_number || !payload.card_number) {
       return { error: "Licence number and card number are required." };
+    }
+    if (!payload.state_of_issue) {
+      return { error: "State of issue is required for driver licence." };
     }
   }
   if (payload.document_type === "passport" && !payload.passport_number) {
@@ -303,6 +307,8 @@ export async function submitKycData(payload: {
         payload.document_type === "driver_license" ? (payload.license_number ?? null) : null,
       card_number:
         payload.document_type === "driver_license" ? (payload.card_number ?? null) : null,
+      state_of_issue:
+        payload.document_type === "driver_license" ? (payload.state_of_issue ?? null) : null,
       passport_number:
         payload.document_type === "passport" ? (payload.passport_number ?? null) : null,
       expiry_date: payload.expiry_date ?? null,

@@ -5,6 +5,7 @@ import { UserCircle2, ShieldCheck, AlertCircle, MessageCircle } from "lucide-rea
 import { submitKycData } from "@/app/actions/kyc.actions";
 import styles from "@/styles/dashboard/DashboardProfile.module.css";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 
 export function DashboardProfile({ profile }: { profile: any }) {
   const hasSubmittedData = Boolean(profile?.document_type && profile?.document_type !== "later" && profile?.document_type !== "");
@@ -13,7 +14,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
 
   const [formData, setFormData] = useState({
     dob: "", country: "Australia", address: "", city: "", state: "", postalCode: "",
-    docType: "", licenseNumber: "", cardNumber: "", passportNumber: "", expiryDate: "",
+    docType: "", licenseNumber: "", cardNumber: "", passportNumber: "", expiryDate: "", stateOfIssue: "",
     consentNotice: false, 
     consentDVS: false,    
   });
@@ -36,6 +37,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
         cardNumber: profile.card_number || "",
         passportNumber: profile.passport_number || "",
         expiryDate: profile.expiry_date || "",
+        stateOfIssue: profile.state_of_issue || "",
         consentNotice: false,
         consentDVS: false,
       });
@@ -64,6 +66,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
     if (formData.docType === "driver_license") {
       if (!formData.licenseNumber) newErrors.licenseNumber = "Licence Number is required.";
       if (!formData.cardNumber) newErrors.cardNumber = "Card Number is required.";
+      if (!formData.stateOfIssue) newErrors.stateOfIssue = "State of Issue is required.";
       if (!formData.expiryDate) newErrors.expiryDate = "Expiry Date is required.";
     }
     
@@ -98,6 +101,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
       document_type: formData.docType,
       license_number: formData.licenseNumber || null,
       card_number: formData.cardNumber || null,
+      state_of_issue: formData.stateOfIssue || null,
       passport_number: formData.passportNumber || null,
       expiry_date: formData.expiryDate || null,
       consent_notice: formData.consentNotice,
@@ -179,93 +183,41 @@ export function DashboardProfile({ profile }: { profile: any }) {
                 </div>
                 <div className={styles.inputGroup}>
                   <label>Country <span className={styles.req}>*</span></label>
-                  <select name="country" value={formData.country} onChange={handleChange}>
-                    <optgroup label="— Common —">
-                      <option value="Australia">Australia</option>
-                      <option value="Iran">Iran</option>
-                      <option value="United Arab Emirates">United Arab Emirates (UAE)</option>
-                      <option value="Canada">Canada</option>
-                      <option value="Turkey">Turkey</option>
-                      <option value="United Kingdom">United Kingdom</option>
-                      <option value="United States">United States</option>
-                      <option value="Germany">Germany</option>
-                      <option value="Sweden">Sweden</option>
-                      <option value="New Zealand">New Zealand</option>
-                    </optgroup>
-                    <optgroup label="— All Countries —">
-                      <option value="Afghanistan">Afghanistan</option>
-                      <option value="Albania">Albania</option>
-                      <option value="Algeria">Algeria</option>
-                      <option value="Argentina">Argentina</option>
-                      <option value="Armenia">Armenia</option>
-                      <option value="Austria">Austria</option>
-                      <option value="Azerbaijan">Azerbaijan</option>
-                      <option value="Bahrain">Bahrain</option>
-                      <option value="Bangladesh">Bangladesh</option>
-                      <option value="Belgium">Belgium</option>
-                      <option value="Brazil">Brazil</option>
-                      <option value="Bulgaria">Bulgaria</option>
-                      <option value="China">China</option>
-                      <option value="Croatia">Croatia</option>
-                      <option value="Cyprus">Cyprus</option>
-                      <option value="Czech Republic">Czech Republic</option>
-                      <option value="Denmark">Denmark</option>
-                      <option value="Egypt">Egypt</option>
-                      <option value="Estonia">Estonia</option>
-                      <option value="Finland">Finland</option>
-                      <option value="France">France</option>
-                      <option value="Georgia">Georgia</option>
-                      <option value="Greece">Greece</option>
-                      <option value="Hong Kong">Hong Kong</option>
-                      <option value="Hungary">Hungary</option>
-                      <option value="India">India</option>
-                      <option value="Indonesia">Indonesia</option>
-                      <option value="Iraq">Iraq</option>
-                      <option value="Ireland">Ireland</option>
-                      <option value="Italy">Italy</option>
-                      <option value="Japan">Japan</option>
-                      <option value="Jordan">Jordan</option>
-                      <option value="Kazakhstan">Kazakhstan</option>
-                      <option value="Kuwait">Kuwait</option>
-                      <option value="Kyrgyzstan">Kyrgyzstan</option>
-                      <option value="Latvia">Latvia</option>
-                      <option value="Lebanon">Lebanon</option>
-                      <option value="Libya">Libya</option>
-                      <option value="Lithuania">Lithuania</option>
-                      <option value="Malaysia">Malaysia</option>
-                      <option value="Mexico">Mexico</option>
-                      <option value="Netherlands">Netherlands</option>
-                      <option value="Nigeria">Nigeria</option>
-                      <option value="Norway">Norway</option>
-                      <option value="Oman">Oman</option>
-                      <option value="Pakistan">Pakistan</option>
-                      <option value="Philippines">Philippines</option>
-                      <option value="Poland">Poland</option>
-                      <option value="Portugal">Portugal</option>
-                      <option value="Qatar">Qatar</option>
-                      <option value="Romania">Romania</option>
-                      <option value="Russia">Russia</option>
-                      <option value="Saudi Arabia">Saudi Arabia</option>
-                      <option value="Serbia">Serbia</option>
-                      <option value="Singapore">Singapore</option>
-                      <option value="Slovakia">Slovakia</option>
-                      <option value="Slovenia">Slovenia</option>
-                      <option value="South Africa">South Africa</option>
-                      <option value="South Korea">South Korea</option>
-                      <option value="Spain">Spain</option>
-                      <option value="Sri Lanka">Sri Lanka</option>
-                      <option value="Switzerland">Switzerland</option>
-                      <option value="Syria">Syria</option>
-                      <option value="Tajikistan">Tajikistan</option>
-                      <option value="Thailand">Thailand</option>
-                      <option value="Tunisia">Tunisia</option>
-                      <option value="Turkmenistan">Turkmenistan</option>
-                      <option value="Ukraine">Ukraine</option>
-                      <option value="Uzbekistan">Uzbekistan</option>
-                      <option value="Vietnam">Vietnam</option>
-                      <option value="Yemen">Yemen</option>
-                    </optgroup>
-                  </select>
+                  <SelectBox
+                    value={formData.country}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, country: val }))}
+                    placeholder="Select country..."
+                    groups={[
+                      {
+                        label: "Common",
+                        options: [
+                          "Australia", "Iran", "United Arab Emirates", "Canada",
+                          "Turkey", "United Kingdom", "United States",
+                          "Germany", "Sweden", "New Zealand",
+                        ],
+                      },
+                      {
+                        label: "All Countries",
+                        options: [
+                          "Afghanistan","Albania","Algeria","Argentina","Armenia",
+                          "Austria","Azerbaijan","Bahrain","Bangladesh","Belgium",
+                          "Brazil","Bulgaria","China","Croatia","Cyprus",
+                          "Czech Republic","Denmark","Egypt","Estonia","Finland",
+                          "France","Georgia","Greece","Hong Kong","Hungary",
+                          "India","Indonesia","Iraq","Ireland","Italy",
+                          "Japan","Jordan","Kazakhstan","Kuwait","Kyrgyzstan",
+                          "Latvia","Lebanon","Libya","Lithuania","Malaysia",
+                          "Mexico","Netherlands","Nigeria","Norway","Oman",
+                          "Pakistan","Philippines","Poland","Portugal","Qatar",
+                          "Romania","Russia","Saudi Arabia","Serbia","Singapore",
+                          "Slovakia","Slovenia","South Africa","South Korea","Spain",
+                          "Sri Lanka","Switzerland","Syria","Tajikistan","Thailand",
+                          "Tunisia","Turkmenistan","Ukraine","Uzbekistan",
+                          "Vietnam","Yemen",
+                        ],
+                      },
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -295,40 +247,73 @@ export function DashboardProfile({ profile }: { profile: any }) {
 
               <div className={styles.inputGroup}>
                 <label>Identity Document <span className={styles.req}>*</span></label>
-                <select name="docType" value={formData.docType} onChange={handleChange} className={errors.docType ? styles.errorBorder : ""}>
-                  <option value="" disabled>Select Identity Document...</option>
-                  <option value="driver_license">Australian Driver's Licence</option>
-                  <option value="passport">Australian Passport</option>
-                  <option value="none">None of the above</option>
-                </select>
+                <SelectBox
+                  value={formData.docType}
+                  onChange={(val) => {
+                    setFormData((prev) => ({ ...prev, docType: val, stateOfIssue: "" }));
+                    if (errors.docType) setErrors((prev) => ({ ...prev, docType: "" }));
+                  }}
+                  placeholder="Select Identity Document..."
+                  labeledOptions={[
+                    { value: "driver_license", label: "Australian Driver's Licence" },
+                    { value: "passport",       label: "Australian Passport" },
+                    { value: "none",           label: "None of the above" },
+                  ]}
+                  disabled={isSubmitting}
+                />
                 {errors.docType && <span className={styles.errorText}>{errors.docType}</span>}
               </div>
 
               {formData.docType === "driver_license" && (
-                <div className={styles.row3}>
+                <>
                   <div className={styles.inputGroup}>
-                    <label>Licence Number <span className={styles.req}>*</span></label>
-                    <input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} placeholder="شماره گواهینامه" className={errors.licenseNumber ? styles.errorBorder : ""} />
-                    {errors.licenseNumber && <span className={styles.errorText}>{errors.licenseNumber}</span>}
-                  </div>
-                  <div className={styles.inputGroup}>
-                    <label>Card Number <span className={styles.req}>*</span></label>
-                    <input type="text" name="cardNumber" value={formData.cardNumber} onChange={handleChange} placeholder="شماره کارت (روی یا پشت گواهینامه)" className={errors.cardNumber ? styles.errorBorder : ""} />
-                    {errors.cardNumber && <span className={styles.errorText}>{errors.cardNumber}</span>}
-                  </div>
-                  <div className={styles.inputGroup}>
-                    <label>Expiry Date <span className={styles.req}>*</span></label>
-                    <input 
-                      type="date" 
-                      name="expiryDate" 
-                      value={formData.expiryDate} 
-                      onChange={handleChange} 
-                      data-placeholder="dd/mm/yyyy"
-                      className={`${!formData.expiryDate ? styles.emptyDate : ""} ${errors.expiryDate ? styles.errorBorder : ""}`} 
+                    <label>State of Issue <span className={styles.req}>*</span></label>
+                    <SelectBox
+                      value={formData.stateOfIssue}
+                      onChange={(val) => {
+                        setFormData((prev) => ({ ...prev, stateOfIssue: val }));
+                        if (errors.stateOfIssue) setErrors((prev) => ({ ...prev, stateOfIssue: "" }));
+                      }}
+                      placeholder="Select state..."
+                      labeledOptions={[
+                        { value: "ACT", label: "ACT (Australian Capital Territory)" },
+                        { value: "NSW", label: "NSW (New South Wales)" },
+                        { value: "NT",  label: "NT (Northern Territory)" },
+                        { value: "QLD", label: "QLD (Queensland)" },
+                        { value: "SA",  label: "SA (South Australia)" },
+                        { value: "TAS", label: "TAS (Tasmania)" },
+                        { value: "VIC", label: "VIC (Victoria)" },
+                        { value: "WA",  label: "WA (Western Australia)" },
+                      ]}
+                      disabled={isSubmitting}
                     />
-                    {errors.expiryDate && <span className={styles.errorText}>{errors.expiryDate}</span>}
+                    {errors.stateOfIssue && <span className={styles.errorText}>{errors.stateOfIssue}</span>}
                   </div>
-                </div>
+                  <div className={styles.row3}>
+                    <div className={styles.inputGroup}>
+                      <label>Licence Number <span className={styles.req}>*</span></label>
+                      <input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} placeholder="Licence number" className={errors.licenseNumber ? styles.errorBorder : ""} />
+                      {errors.licenseNumber && <span className={styles.errorText}>{errors.licenseNumber}</span>}
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label>Card Number <span className={styles.req}>*</span></label>
+                      <input type="text" name="cardNumber" value={formData.cardNumber} onChange={handleChange} placeholder="Card number (front or back)" className={errors.cardNumber ? styles.errorBorder : ""} />
+                      {errors.cardNumber && <span className={styles.errorText}>{errors.cardNumber}</span>}
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label>Expiry Date <span className={styles.req}>*</span></label>
+                      <input 
+                        type="date" 
+                        name="expiryDate" 
+                        value={formData.expiryDate} 
+                        onChange={handleChange} 
+                        data-placeholder="dd/mm/yyyy"
+                        className={`${!formData.expiryDate ? styles.emptyDate : ""} ${errors.expiryDate ? styles.errorBorder : ""}`} 
+                      />
+                      {errors.expiryDate && <span className={styles.errorText}>{errors.expiryDate}</span>}
+                    </div>
+                  </div>
+                </>
               )}
 
               {formData.docType === "passport" && (

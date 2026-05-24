@@ -108,9 +108,8 @@ export default function PrivacyPolicyPage() {
           <h2>10. Contact Us</h2>
           <p>For any privacy-related queries, please contact us:</p>
           <ul>
-            <li><strong>Email:</strong> infor@zarman.com.au</li>
+            <li><strong>Email:</strong> info@zarman.com.au</li>
             <li><strong>Phone:</strong> 0497851631</li>
-            <li><strong>Mail:</strong> U W2608 108 Donnison st, Gosford, NSW, 2250</li>
           </ul>
 
         </div>

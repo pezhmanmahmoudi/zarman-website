@@ -21,8 +21,10 @@ async function getAuthenticatedUserId() {
   return data.user.id;
 }
 
-export async function processTransactionSecurely({ rawAmount, txType }: { rawAmount: number, txType: "buy_aud" | "sell_aud" }) {
+export async function processTransactionSecurely({ rawAmount, txType, sourceOfFunds, reasonForTransfer }: { rawAmount: number, txType: "buy_aud" | "sell_aud", sourceOfFunds: string, reasonForTransfer: string }) {
   if (rawAmount <= 0) return { error: "اطلاعات نامعتبر است." };
+  if (!sourceOfFunds) return { error: "لطفاً منبع وجه را انتخاب کنید." };
+  if (!reasonForTransfer) return { error: "لطفاً دلیل انتقال را انتخاب کنید." };
 
   try {
     const authenticatedUserId = await getAuthenticatedUserId();
@@ -75,7 +77,9 @@ export async function processTransactionSecurely({ rawAmount, txType }: { rawAmo
         type: txType,
         amount_aud: rawAmount,
         equivalent_toman: equivalentToman,
-        status: "pending"
+        status: "pending",
+        source_of_funds: sourceOfFunds,
+        reason_for_transfer: reasonForTransfer,
       }]);
 
     if (insertError) return { error: "خطا در ثبت تراکنش." };
