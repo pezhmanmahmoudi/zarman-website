@@ -5,8 +5,13 @@ import { ArrowLeft } from "lucide-react";
 import styles from "@/styles/Legal.module.css";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description: "Privacy policy for Zarman Exchange.",
+  title: "Zarman Exchange Privacy Policy (Legal)",
+  description:
+    "Legal privacy policy and data handling terms for Zarman Exchange.",
+  robots: {
+    index: false,
+    follow: false,
+  },
   alternates: {
     canonical: "/en/legal/privacy-policy",
   },

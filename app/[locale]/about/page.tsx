@@ -17,8 +17,8 @@ export async function generateMetadata({
 
   return {
     title: isEn
-      ? "About Zarman Exchange | AUSTRAC Registered AUD/IRT Remittance"
-      : "درباره صرافی زرمان | مجاز AUSTRAC | حواله دلار استرالیا به تومان",
+      ? "Zarman Exchange | Personalized Change Rates"
+      : "صرافی زرمان | زرمان اکسچنج | نرخ شخصی سازی شده حواله دلار استرالیا",
     description: isEn
       ? "Zarman Exchange is an AUSTRAC-registered remittance dealer (ABN 70 692 742 957) specialising in AUD to IRT transfers. Learn about our compliance framework, mission, and team."
       : "صرافی زرمان یک استارتاپ مالی ایرانی–استرالیایی ثبت‌شده نزد AUSTRAC (ABN: 70 692 742 957) است. درباره چارچوب انطباق قانونی، مأموریت و تیم ما بیشتر بدانید.",
@@ -32,8 +32,8 @@ export async function generateMetadata({
     },
     openGraph: {
       title: isEn
-        ? "About Zarman Exchange | AUSTRAC Registered"
-        : "درباره صرافی زرمان | مجاز AUSTRAC",
+        ? "Zarman Exchange | Personalized Change Rates"
+        : "صرافی زرمان | زرمان اکسچنج | نرخ شخصی سازی شده حواله دلار استرالیا",
       description: isEn
         ? "AUSTRAC-registered AUD to IRT remittance. ABN 70 692 742 957. Enterprise-grade compliance and transparent pricing."
         : "صرافی مجاز ثبت‌شده نزد AUSTRAC برای حواله دلار استرالیا. ABN: 70 692 742 957.",

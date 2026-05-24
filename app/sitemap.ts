@@ -78,7 +78,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // ── Legal / compliance pages (trust signals for AUSTRAC context) ─────────
   const legalSlugs = [
     "terms",
-    "privacy-policy",
     "dvs-notice",
     "dvs-consent",
   ];
