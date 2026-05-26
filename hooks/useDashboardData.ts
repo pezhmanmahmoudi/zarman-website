@@ -44,7 +44,7 @@ export function useDashboardData() {
           supabase.from("profiles").select("*").eq("id", userId).single(),
            supabase
             .from("transactions")
-            .select("*")
+            .select("*, recipients(id, label, full_name, account_name)")
             .eq("user_id", userId)
             .order("created_at", { ascending: false }),
         ]);

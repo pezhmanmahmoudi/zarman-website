@@ -747,16 +747,25 @@ export async function searchUsers(query: string) {
 }
 
 export async function getUserFinancialProfile(userId: string) {
-  const db = await getAuthorizedServerClient();
+  // Verify admin session via SSR client (cookie-based auth check).
+  const ssrClient = await createSupabaseServerActionClient();
+  await requireAdmin(ssrClient);
+  // Use service-role client for all data queries so RLS on recipients
+  // (and any other user-scoped tables) does not block cross-user access.
+  const db = makeServiceRoleClient();
   if (!userId) throw new Error("Missing user ID.");
 
   // گرفتن پروفایل، تراکنش‌ها و فیدبک‌ها به صورت همزمان (موازی)
   const ratesSnapshot = await getRatesSnapshot();
-  const [profileRes, txRes, feedbackRes] = await Promise.all([
+  const [profileRes, txRes, feedbackRes, recipientsRes] = await Promise.all([
     db.from("profiles").select("*").eq("id", userId).single(),
     db
       .from("transactions")
-      .select("id, type, amount_aud, equivalent_toman, status, created_at, source_of_funds, reason_for_transfer")
+      .select(`
+        id, type, amount_aud, equivalent_toman, status, created_at,
+        source_of_funds, reason_for_transfer, promo_code, discount_amount, loyalty_discount,
+        recipients(id, direction, label, bank_type, bank_name, account_name, full_name)
+      `)
       .eq("user_id", userId)
       .order("created_at", { ascending: false }),
     db
@@ -764,12 +773,18 @@ export async function getUserFinancialProfile(userId: string) {
       .select("id, rating, message, status, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false }),
+    db
+      .from("recipients")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (profileRes.error) throw new Error(profileRes.error.message);
 
   const transactions = txRes.data ?? [];
-  const testimonials = feedbackRes.data ?? []; // اضافه شدن فیدبک‌ها
+  const testimonials = feedbackRes.data ?? [];
+  const recipients = recipientsRes.data ?? [];
   const approvedTxs = transactions.filter((t) => t.status === "approved");
   const approvedVolume = approvedTxs.reduce(
     (sum, t) => sum + Number(t.amount_aud || 0),
@@ -779,12 +794,182 @@ export async function getUserFinancialProfile(userId: string) {
   return {
     profile: profileRes.data,
     transactions,
-    testimonials, // پاس دادن فیدبک‌ها به فرانت‌اند
+    testimonials,
+    recipients,
     approvedVolume,
     approvedCount: approvedTxs.length,
     currentRates: ratesSnapshot.currentRates,
   };
 }
 
+// ===========================================================================
+// PROMO CODE MANAGEMENT (Admin CRUD)
+// ===========================================================================
 
+export type PromoCodePayload = {
+  code: string;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
+  max_uses?: number | null;
+  active?: boolean;
+  expires_at?: string | null;
+  description?: string | null;
+};
 
+export async function getPromoCodes() {
+  const db = await getAuthorizedServerClient();
+  const { data, error } = await db
+    .from("promo_codes")
+    .select("id, code, discount_type, discount_value, max_uses, used_count, active, expires_at, description, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function createPromoCode(payload: PromoCodePayload) {
+  const admin = await requireAdmin();
+  const db = makeServiceRoleClient();
+
+  const code = payload.code?.trim().toUpperCase();
+  if (!code) return { error: "Code is required." };
+  if (!["percentage", "fixed"].includes(payload.discount_type)) {
+    return { error: "Invalid discount_type." };
+  }
+  if (!Number.isFinite(payload.discount_value) || payload.discount_value <= 0) {
+    return { error: "discount_value must be a positive number." };
+  }
+  if (payload.discount_type === "percentage" && payload.discount_value > 100) {
+    return { error: "Percentage discount cannot exceed 100." };
+  }
+
+  const { data, error } = await db
+    .from("promo_codes")
+    .insert([{
+      code,
+      discount_type: payload.discount_type,
+      discount_value: payload.discount_value,
+      max_uses: payload.max_uses ?? null,
+      active: payload.active ?? true,
+      expires_at: payload.expires_at ?? null,
+      description: payload.description?.trim() ?? null,
+    }])
+    .select("*")
+    .single();
+
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "PROMO_CODE_CREATED",
+    targetType: "promo_code",
+    targetId: data.id,
+    newValue: data,
+  }).catch(() => {});
+
+  return { success: true, data };
+}
+
+export async function updatePromoCode(id: string, payload: Partial<PromoCodePayload>) {
+  const admin = await requireAdmin();
+  if (!id) return { error: "Missing promo code ID." };
+  const db = makeServiceRoleClient();
+
+  const update: Record<string, unknown> = {};
+  if (payload.code !== undefined) update.code = payload.code.trim().toUpperCase();
+  if (payload.discount_type !== undefined) update.discount_type = payload.discount_type;
+  if (payload.discount_value !== undefined) update.discount_value = payload.discount_value;
+  if (payload.max_uses !== undefined) update.max_uses = payload.max_uses;
+  if (payload.active !== undefined) update.active = payload.active;
+  if (payload.expires_at !== undefined) update.expires_at = payload.expires_at;
+  if (payload.description !== undefined) update.description = payload.description?.trim() ?? null;
+
+  const { error } = await db.from("promo_codes").update(update).eq("id", id);
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "PROMO_CODE_UPDATED",
+    targetType: "promo_code",
+    targetId: id,
+    newValue: update,
+  }).catch(() => {});
+
+  return { success: true };
+}
+
+export async function deletePromoCode(id: string) {
+  const admin = await requireAdmin();
+  if (!id) return { error: "Missing promo code ID." };
+  const db = makeServiceRoleClient();
+
+  const { error } = await db.from("promo_codes").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "PROMO_CODE_DELETED",
+    targetType: "promo_code",
+    targetId: id,
+  }).catch(() => {});
+
+  return { success: true };
+}
+
+// ===========================================================================
+// ADMIN TRANSACTION DETAIL (with recipient + promo data)
+// ===========================================================================
+export async function getPendingTransactionsWithDetails() {
+  const ssrClient = await createSupabaseServerActionClient();
+  await requireAdmin(ssrClient);
+  const db = makeServiceRoleClient();
+
+  const { data, error } = await db
+    .from("transactions")
+    .select(`
+      id, user_id, type, amount_aud, equivalent_toman, status, created_at,
+      source_of_funds, reason_for_transfer, receipt_sent,
+      promo_code, discount_amount, loyalty_discount, final_amount, reference_code,
+      profiles(first_name, last_name, email),
+      recipients(
+        id, direction, label, bank_type,
+        bank_name, bsb, account_number, account_name, residential_address, recipient_email, recipient_phone,
+        card_number, shaba_number, irt_account_number, full_name, irt_address, irt_phone
+      )
+    `)
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function getTransactionHistoryWithDetails(limitCount: number = DEFAULT_HISTORY_LIMIT) {
+  const ssrClient = await createSupabaseServerActionClient();
+  await requireAdmin(ssrClient);
+  const db = makeServiceRoleClient();
+  const safeLimit = clampInt(limitCount, 1, MAX_HISTORY_LIMIT, DEFAULT_HISTORY_LIMIT);
+
+  const { data, error } = await db
+    .from("transactions")
+    .select(`
+      id, user_id, type, amount_aud, equivalent_toman, status, created_at,
+      source_of_funds, reason_for_transfer, receipt_sent,
+      promo_code, discount_amount, loyalty_discount, final_amount, reference_code,
+      profiles(first_name, last_name, email),
+      recipients(
+        id, direction, label, bank_type,
+        bank_name, bsb, account_number, account_name, residential_address, recipient_email, recipient_phone,
+        card_number, shaba_number, irt_account_number, full_name, irt_address, irt_phone
+      )
+    `)
+    .neq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(safeLimit);
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}

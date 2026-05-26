@@ -1,13 +1,16 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Calculator, AlertTriangle, Lock, MessageSquare, ServerCrash, Loader2, PauseCircle } from "lucide-react";
+import { Calculator, AlertTriangle, Lock, MessageSquare, ServerCrash, Loader2, PauseCircle, Tag } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
-import { Profile } from "@/app/[locale]/dashboard/dashboard.types"; 
+import { Profile } from "@/app/[locale]/dashboard/dashboard.types";
+import type { Recipient } from "@/app/[locale]/dashboard/dashboard.types";
 import { useFinanceConfig } from "@/context/FinanceConfigContext";
 import { calcAppliedFee } from "@/lib/pricing";
 import { buildWhatsAppUrl } from "@/lib/constants/contact";
 import { supabase } from "@/lib/supabase";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import { RecipientModal } from "@/components/dashboard/RecipientModal";
+import { getRecipients, validatePromoCode } from "@/app/actions/transaction.actions";
 
 function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]); }
 function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹"; return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d))); }
@@ -38,6 +41,9 @@ type ServerTransactionResult = {
   equivalentToman: number;
   appliedFee: number;
   rawAmount: number;
+  discount_amount?: number;
+  final_amount?: number;
+  promo_code?: string | null;
 };
 
 type RequestHubProps = {
@@ -51,7 +57,14 @@ type RequestHubProps = {
   baseRate: number | null;     
   profile: Profile | null;     
   displayFullName: string;
-  onSaveTransaction: (rawAmount: number, txType: "buy_aud" | "sell_aud", sourceOfFunds: string, reasonForTransfer: string) => Promise<ServerTransactionResult | null>;
+  onSaveTransaction: (
+    rawAmount: number,
+    txType: "buy_aud" | "sell_aud",
+    sourceOfFunds: string,
+    reasonForTransfer: string,
+    recipientId?: string | null,
+    promoCode?: string | null,
+  ) => Promise<ServerTransactionResult | null>;
 };
 
 export function DashboardRequestHub({ 
@@ -66,6 +79,21 @@ export function DashboardRequestHub({
   const [sourceOfFunds, setSourceOfFunds] = useState("");
   const [reasonForTransfer, setReasonForTransfer] = useState("");
   const financeConfig = useFinanceConfig();
+
+  // Recipients
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string>("");
+  const [showRecipientModal, setShowRecipientModal] = useState(false);
+
+  // Promo code
+  const [promoInput, setPromoInput] = useState("");
+  const [promoValidating, setPromoValidating] = useState(false);
+  const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
+  const [promoFinal, setPromoFinal] = useState<number | null>(null);
+  const [promoMsg, setPromoMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
+  const [promoEffectiveRate, setPromoEffectiveRate] = useState<number | null>(null);
+  const [paymentLink, setPaymentLink] = useState("");
 
   useEffect(() => {
     supabase
@@ -82,6 +110,80 @@ export function DashboardRequestHub({
       });
   }, []);
 
+  // Load recipients when approved
+  useEffect(() => {
+    if (!isApproved) return;
+    getRecipients().then((res) => {
+      if ("data" in res && res.data) setRecipients(res.data);
+    });
+  }, [isApproved]);
+
+  const recipientDirection = txType === "buy_aud" ? "aud" : "irt";
+  const filteredRecipients = recipients.filter((r) => r.direction === recipientDirection);
+
+  const recipientOptions = [
+    { value: "__new__", label: "+ افزودن گیرنده جدید" },
+    { value: "__edu_exam__", label: "پرداخت برای آزمون، دانشگاه و ..." },
+    ...filteredRecipients.map((r) => ({ value: r.id, label: r.label })),
+  ];
+
+  const isEduPayment = selectedRecipientId === "__edu_exam__";
+
+  const handleRecipientChange = (val: string) => {
+    if (val === "__new__") {
+      setShowRecipientModal(true);
+      return;
+    }
+    setSelectedRecipientId(val);
+    if (val !== "__edu_exam__") setPaymentLink("");
+  };
+
+  useEffect(() => {
+    if (selectedRecipientId === "__edu_exam__") {
+      setReasonForTransfer("International Payment");
+    }
+  }, [selectedRecipientId]);
+
+  const handleRecipientCreated = (r: Recipient) => {
+    setRecipients((prev) => [r, ...prev]);
+    setSelectedRecipientId(r.id);
+  };
+
+  // Reset promo state when amount changes
+  const resetPromo = () => {
+    setPromoDiscount(null);
+    setPromoFinal(null);
+    setPromoMsg(null);
+    setAppliedPromoCode(null);
+    setPromoEffectiveRate(null);
+  };
+
+  const handleApplyPromo = async () => {
+    if (!promoInput.trim() || rawAmount <= 0 || isRateOffline || tailoredRate === null) return;
+    setPromoValidating(true);
+    setPromoMsg(null);
+    try {
+      const res = await validatePromoCode(promoInput.trim(), rawAmount, tailoredRate, txType);
+      if ("error" in res && res.error) {
+        setPromoMsg({ type: "error", text: res.error });
+        setPromoDiscount(null);
+        setPromoFinal(null);
+        setAppliedPromoCode(null);
+      } else if ("discount_amount" in res) {
+        setPromoDiscount(res.discount_amount ?? null);
+        setPromoFinal(res.final_amount ?? null);
+        setPromoEffectiveRate(res.effective_rate ?? null);
+        setAppliedPromoCode(promoInput.trim().toUpperCase());
+        const label = res.discount_type === "percentage"
+          ? `${res.discount_value}٪ بهبود نرخ`
+          : `${Number(res.discount_value).toLocaleString("fa-IR")} تومان بهبود نرخ`;
+        setPromoMsg({ type: "success", text: `کد تخفیف اعمال شد — ${label}` });
+      }
+    } finally {
+      setPromoValidating(false);
+    }
+  };
+
   const rawAmount = getRawNumber(amountStr);
   const appliedFee = calcAppliedFee(rawAmount, financeConfig);
   const isRateOffline = baseRate === null || tailoredRate === null;
@@ -92,27 +194,42 @@ export function DashboardRequestHub({
     else return Math.max(rawAmount - appliedFee, 0);
   }, [rawAmount, appliedFee, txType]);
 
-  const resultNumber = (rawAmount === 0 || isRateOffline) ? 0 : Math.round(effectiveAud * tailoredRate!);
+  const activeRate = promoEffectiveRate ?? tailoredRate;
+  const resultNumber = (rawAmount === 0 || isRateOffline) ? 0 : Math.round(effectiveAud * activeRate!);
 
+  // مسدودسازی تایپ حروف الفبا برای فیلد دلار به صورت هوشمند
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (val === "") { setAmountStr(""); return; }
-    if (val === "0" || val === "۰") { setAmountStr("۰"); return; }
+    let val = e.target.value;
+    
+    // فقط اجازه ورود اعداد انگلیسی، اعداد فارسی و ویرگول را می‌دهد
+    val = val.replace(/[^\d۰-۹,،]/g, ""); 
+    
+    if (val === "") { setAmountStr(""); resetPromo(); return; }
+    if (val === "0" || val === "۰") { setAmountStr("۰"); resetPromo(); return; }
+    
     const raw = getRawNumber(val);
     setAmountStr(formatNumberUI(raw, false));
+    resetPromo();
   };
 
   const submit = async () => {
     if (!profile || !isApproved || rawAmount <= 0 || isRateOffline || isSubmitting || !marketActive) return;
-    if (!sourceOfFunds || !reasonForTransfer) {
-      alert("لطفاً منبع وجه و دلیل انتقال را انتخاب کنید.");
+    if (!sourceOfFunds || !reasonForTransfer || !selectedRecipientId) {
+      alert("لطفاً تمامی فیلدهای اجباری (ستاره‌دار) را تکمیل نمایید.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const serverData = await onSaveTransaction(rawAmount, txType, sourceOfFunds, reasonForTransfer);
+      const serverData = await onSaveTransaction(
+        rawAmount,
+        txType,
+        sourceOfFunds,
+        reasonForTransfer,
+        selectedRecipientId || null,
+        appliedPromoCode,
+      );
       
       if (!serverData) return; 
 
@@ -130,6 +247,41 @@ export function DashboardRequestHub({
          feeText = txType === "buy_aud" ? `${serverData.appliedFee} AUD (اضافه شده)` : `${serverData.appliedFee} AUD (کسر شده)`;
       }
 
+      // Build recipient section
+      let recipientSection = "";
+      if (isEduPayment) {
+        recipientSection =
+          "--------------------------\n" +
+          "گیرنده: آزمون / دانشگاه / موسسه\n" +
+          (paymentLink ? `- لینک پرداخت: ${paymentLink}\n` : "");
+      } else {
+        const rec = recipients.find((r) => r.id === selectedRecipientId);
+        if (rec) {
+          recipientSection = "--------------------------\n📋 اطلاعات گیرنده:\n";
+          if (rec.direction === "aud") {
+            recipientSection += `- نام صاحب حساب: ${rec.account_name || "—"}\n`;
+            recipientSection += `- بانک: ${rec.bank_name || "—"}\n`;
+            recipientSection += `- BSB: ${rec.bsb || "—"}\n`;
+            recipientSection += `- شماره حساب: ${rec.account_number || "—"}\n`;
+            recipientSection += `- آدرس: ${rec.residential_address || "—"}\n`;
+            if (rec.recipient_phone) recipientSection += `- تلفن گیرنده: ${rec.recipient_phone}\n`;
+            if (rec.recipient_email) recipientSection += `- ایمیل گیرنده: ${rec.recipient_email}\n`;
+          } else {
+            recipientSection += `- نام صاحب حساب: ${rec.full_name || "—"}\n`;
+            if (rec.bank_type === "bank_melli") {
+              recipientSection += `- بانک: ملی ایران\n`;
+              recipientSection += `- شماره حساب: ${rec.irt_account_number || "—"}\n`;
+              recipientSection += `- شماره کارت: ${rec.card_number || "—"}\n`;
+            } else {
+              if (rec.bank_name) recipientSection += `- بانک: ${rec.bank_name}\n`;
+              recipientSection += `- شبا: ${rec.shaba_number || "—"}\n`;
+            }
+            if (rec.irt_phone) recipientSection += `- تلفن گیرنده: ${rec.irt_phone}\n`;
+            if (rec.irt_address) recipientSection += `- آدرس: ${rec.irt_address}\n`;
+          }
+        }
+      }
+
       const text = 
         "*** درخواست حواله اختصاصی زرمان ***\n\n" +
         "- مشتری: " + displayFullName + "\n" +
@@ -141,12 +293,14 @@ export function DashboardRequestHub({
         "- مجموع تخفیف وفاداری: " + fmtLoyaltyTotal + " تومان\n" +
         "- نرخ اختصاصی نهایی: " + fmtTailored + " تومان\n" +
         "- کارمزد: " + feeText + "\n" +
+        (serverData.promo_code ? `- کد تخفیف: ${serverData.promo_code} (صرفه‌جویی ${formatNumberWA(serverData.discount_amount ?? 0, true)} تومان)\n` : "") +
         "--------------------------\n" +
         "* معادل نهایی: " + fmtResult + " تومان *\n" +
         "--------------------------\n" +
         "- منبع وجه: " + sourceOfFunds + "\n" +
-        "- دلیل انتقال: " + reasonForTransfer + "\n\n" +
-        "لطفاً درخواست من را بررسی نمایید.";
+        "- دلیل انتقال: " + reasonForTransfer + "\n" +
+        (recipientSection ? "\n" + recipientSection : "") +
+        "\nلطفاً درخواست من را بررسی نمایید.";
 
       const finalUrl = buildWhatsAppUrl(text);
 
@@ -156,6 +310,10 @@ export function DashboardRequestHub({
         window.location.assign(finalUrl);
       }
       setAmountStr("");
+      resetPromo();
+      setPromoInput("");
+      setSelectedRecipientId("");
+      setPaymentLink("");
     } catch (error) {
       console.error(error);
     } finally {
@@ -215,7 +373,7 @@ export function DashboardRequestHub({
 
         <div className={styles.inputBox}>
           <div className={styles.labelRow}>
-            <label className={styles.label}>مقدار به دلار (AUD)</label>
+            <label className={styles.label}>مقدار به دلار (AUD) <span className={styles.requiredMark}>*</span></label>
             {appliedFee > 0 && (
               <span className={styles.feeWarning}>
                 <AlertTriangle size={14} /> 
@@ -225,26 +383,49 @@ export function DashboardRequestHub({
               </span>
             )}
           </div>
-          <div className={styles.fieldGroup}>
-            <input type="text" value={amountStr} onChange={handleInput} dir="ltr" className={styles.faInput} placeholder="۰" disabled={isRateOffline || isSubmitting} />
-            <div className={styles.divider}></div>
+          {/* استفاده از استایل هاب بازگردانی شده با دیوایدر قدیم */}
+          <div className={styles.hubFieldGroup}>
+            <input type="text" inputMode="numeric" value={amountStr} onChange={handleInput} dir="ltr" className={styles.hubFaInput} placeholder="۰" disabled={isRateOffline || isSubmitting} />
+            <div className={styles.hubDivider}></div>
             <span className={styles.currencyLabelFixed}>AUD</span>
           </div>
         </div>
       </div>
       
-      <div className={`${styles.inputBox} ${styles.lastInputBox}`}>
-        <label className={styles.label}>
-          {txType === "buy_aud" ? "مبلغ قابل پرداخت به تومان (IRT)" : "مبلغ دریافتی شما به تومان (IRT)"}
-        </label>
-        <div className={`${styles.fieldGroup} ${styles.locked}`}>
-          <input type="text" value={isRateOffline ? "—" : formatNumberUI(resultNumber, true)} readOnly dir="ltr" className={`${styles.faInput} ${styles.resultInput}`} placeholder="۰" />
-          <div className={styles.divider}></div>
-          <span className={styles.currencyLabelFixed}>تومان</span>
+      <div className={styles.formRow}>
+        <div className={styles.inputBox}>
+          <label className={styles.label}>انتخاب گیرنده <span className={styles.requiredMark}>*</span></label>
+          <SelectBox
+            value={selectedRecipientId}
+            onChange={handleRecipientChange}
+            placeholder="— انتخاب کنید —"
+            labeledOptions={recipientOptions}
+            disabled={isSubmitting}
+            dir="rtl"
+          />
         </div>
+        {isEduPayment ? (
+          <div className={styles.inputBox}>
+            <label className={styles.label}>لینک صفحه پرداخت <span className={styles.requiredMark}>*</span></label>
+            <div className={styles.hubFieldGroup}>
+              <input
+                type="url"
+                className={styles.hubEnInput}
+                placeholder="https://..."
+                value={paymentLink}
+                onChange={(e) => setPaymentLink(e.target.value)}
+                dir="ltr"
+                style={{ textAlign: "left" }}
+                disabled={isSubmitting}
+               />
+            </div>
+            <span className={styles.fieldHint}>لینک صفحه پرداخت آزمون، دانشگاه یا موسسه مربوطه</span>
+          </div>
+        ) : (
+          <div className={styles.inputBox} />
+        )}
       </div>
 
-      {/* AUSTRAC-required fields */}
       <div className={styles.formRow}>
         <div className={styles.inputBox}>
           <label className={styles.label}>منبع وجه (Source of Funds) <span className={styles.requiredMark}>*</span></label>
@@ -284,6 +465,7 @@ export function DashboardRequestHub({
               "Personal savings / investment",
               "Business payment",
               "Education expenses",
+              "International Payment",
               "Medical expenses",
               "Property purchase",
               "Travel expenses",
@@ -292,12 +474,64 @@ export function DashboardRequestHub({
           />
         </div>
       </div>
+
+      <div className={styles.formRow}>
+        <div className={styles.inputBox}>
+          <label className={styles.label}>
+            {txType === "buy_aud" ? "مبلغ قابل پرداخت به تومان (IRT)" : "مبلغ دریافتی شما به تومان (IRT)"}
+          </label>
+          <div className={`${styles.hubFieldGroup} ${styles.hubLocked}`}>
+            <input type="text" value={isRateOffline ? "—" : formatNumberUI(resultNumber, true)} readOnly dir="ltr" className={`${styles.hubFaInput} ${styles.hubResultInput}`} placeholder="۰" />
+            <div className={styles.hubDivider}></div>
+            <span className={styles.currencyLabelFixed}>تومان</span>
+          </div>
+          {promoDiscount !== null && promoDiscount > 0 && (
+            <p className={styles.promoSuccess}>
+              سود کد تخفیف: {formatNumberUI(promoDiscount, true)} تومان
+            </p>
+          )}
+        </div>
+
+        <div className={styles.inputBox}>
+          <label className={styles.label}>
+            <Tag size={14} style={{ display: "inline", verticalAlign: "middle", marginLeft: "4px" }} />
+            کد تخفیف (اختیاری)
+          </label>
+          <div className={styles.promoRow}>
+            <div className={styles.hubFieldGroup}>
+              <input
+                type="text"
+                className={styles.hubEnInput}
+                placeholder="PROMO2026"
+                value={promoInput}
+                onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                dir="ltr"
+                disabled={isSubmitting}
+              />
+            </div>
+            <button
+              className={styles.promoApplyBtn}
+              type="button"
+              onClick={handleApplyPromo}
+              disabled={promoValidating || isSubmitting || !promoInput.trim() || rawAmount <= 0}
+            >
+              {promoValidating ? <Loader2 className="lucide-spin" size={20} /> : "اعمال"}
+            </button>
+          </div>
+          {promoMsg && <p className={promoMsg.type === "success" ? styles.promoSuccess : styles.promoError}>{promoMsg.text}</p>}
+        </div>
+      </div>
       
       <div className={styles.summaryBox}>
         <div className={styles.summaryText}>
           <strong className={styles.summaryRate}>
-            نرخ اختصاصی شما: {isRateOffline ? "—" : formatNumberUI(tailoredRate, true)} تومان
+            نرخ اختصاصی شما: {isRateOffline ? "—" : formatNumberUI(activeRate, true)} تومان
           </strong>
+          {promoEffectiveRate && tailoredRate && !isRateOffline && (
+            <span className={styles.summaryHint}>
+              بهبودیافته با کد تخفیف — نرخ پایه: {formatNumberUI(tailoredRate, true)} تومان
+            </span>
+          )}
           {(loyaltyBonus > 0 && !isRateOffline) && (
             <span className={styles.summaryHint}>
               {rawAmount > 0 
@@ -314,6 +548,14 @@ export function DashboardRequestHub({
           )}
         </button>
       </div>
+
+      {showRecipientModal && (
+        <RecipientModal
+          direction={recipientDirection}
+          onClose={() => setShowRecipientModal(false)}
+          onCreated={handleRecipientCreated}
+        />
+      )}
     </article>
   );
 }

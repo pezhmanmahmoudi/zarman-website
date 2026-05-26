@@ -1,0 +1,362 @@
+/*
+ * RecipientModal.module.css
+ * Mobile-first, fully self-contained modal styles.
+ * On mobile  → bottom sheet sliding up from the bottom.
+ * On desktop → centred dialog with a subtle scale-in animation.
+ */
+
+/* ─────────────────────────────────────────────────────────────────
+   BACKDROP  (covers everything, including sticky headers at 10001)
+   ───────────────────────────────────────────────────────────────── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  align-items: flex-end;        /* sheet rises from bottom on mobile */
+  justify-content: center;
+  background: rgba(8, 12, 20, 0.72);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  /* prevent the page beneath from scrolling */
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   CARD  (the white/dark panel)
+   ───────────────────────────────────────────────────────────────── */
+.card {
+  position: relative;
+  z-index: 20001;
+  width: 100%;
+  max-height: 92dvh;             /* dynamic viewport — avoids browser-chrome overlap */
+  background: var(--bg-card);
+  border-radius: 20px 20px 0 0;
+  border: 1px solid var(--border-soft);
+  border-bottom: none;
+  box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: contain;  /* inner scroll does NOT propagate to page */
+  animation: sheetUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* drag-indicator pill */
+.card::before {
+  content: "";
+  display: block;
+  width: 38px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-soft);
+  margin: 10px auto 0;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+@keyframes sheetUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   HEADER  — sticky, 3-column grid so title is perfectly centred
+   ───────────────────────────────────────────────────────────────── */
+.header {
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  padding: 14px 18px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-card);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.title {
+  grid-column: 2;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+  font-family: var(--font-primary);
+  white-space: nowrap;
+}
+
+.closeBtn {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.closeBtn:hover {
+  background: var(--bg-soft);
+  color: var(--text-main);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   BODY  — scrollable content area
+   ───────────────────────────────────────────────────────────────── */
+.body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 20px 18px 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   SECTION  — logical field group with a heading
+   ───────────────────────────────────────────────────────────────── */
+.section {
+  margin-bottom: 35px;
+}
+
+.sectionTitle {
+  font-size: 0.720rem;
+  font-weight: 700;
+  color: #10b9818f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 14px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.212);
+  font-family: var(--font-primary);
+  text-align: right;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   ROW  — single-column on mobile, two-column on desktop
+   ───────────────────────────────────────────────────────────────── */
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.row:last-child { margin-bottom: 0; }
+
+/* ─────────────────────────────────────────────────────────────────
+   FIELD  — label + input wrapper pair
+   ───────────────────────────────────────────────────────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.field:last-child { margin-bottom: 0; }
+.row .field      { margin-bottom: 0; flex: 1; min-width: 0; }
+
+/* ─────────────────────────────────────────────────────────────────
+   LABEL
+   ───────────────────────────────────────────────────────────────── */
+.label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  font-family: var(--font-primary);
+  direction: rtl;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   LTR WRAPPER  — overrides direction for the AUD (English) form
+   ───────────────────────────────────────────────────────────────── */
+.ltr .sectionTitle {
+  direction: ltr;
+  text-align: left;
+}
+.ltr .label {
+  direction: ltr;
+}
+
+.req {
+  color: #ef4444;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 900;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   INPUT WRAPPER  — the styled box that wraps each <input>
+   ───────────────────────────────────────────────────────────────── */
+.inputWrap {
+  display: flex;
+  align-items: center;
+  height: 52px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-input);
+  border-radius: 12px;
+  padding: 0 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.inputWrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   INPUT  — the actual <input> element
+   ───────────────────────────────────────────────────────────────── */
+.input {
+  flex: 1;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  min-width: 0;
+}
+
+.input::placeholder {
+  color: var(--text-placeholder);
+  font-weight: 400;
+  font-size: 0.85rem;
+  letter-spacing: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   IBAN "IR" PREFIX
+   ───────────────────────────────────────────────────────────────── */
+.ibanPrefix {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  padding-right: 10px;
+  margin-right: 10px;
+  border-right: 1.5px solid var(--border-input);
+  height: 20px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   FOOTER  — sticky at the bottom, buttons stacked on mobile
+   ───────────────────────────────────────────────────────────────── */
+.footer {
+  padding: 14px 18px 20px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-soft);
+  background: var(--bg-card);
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+.saveBtn {
+  height: 52px;
+  width: 100%;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: filter 0.2s, opacity 0.2s;
+}
+.saveBtn:hover:not(:disabled) { filter: brightness(1.08); }
+.saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.cancelBtn {
+  height: 46px;
+  width: 100%;
+  border-radius: 12px;
+  border: 1.5px solid var(--border-soft);
+  background: transparent;
+  color: var(--text-soft);
+  font-family: var(--font-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.cancelBtn:hover:not(:disabled) { background: var(--bg-soft); color: var(--text-main); }
+.cancelBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ─────────────────────────────────────────────────────────────────
+   ERROR TEXT
+   ───────────────────────────────────────────────────────────────── */
+.error {
+  font-size: 0.8rem;
+  color: var(--danger);
+  font-weight: 600;
+  margin-bottom: 10px;
+  font-family: var(--font-primary);
+  direction: rtl;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DESKTOP & TABLET  (≥ 560 px)
+   ══════════════════════════════════════════════════════════════════ */
+@media (min-width: 560px) {
+  /* centred dialog instead of bottom sheet */
+  .backdrop {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .card {
+    max-width: 480px;
+    max-height: 90dvh;
+    border-radius: 20px;
+    border-bottom: 1px solid var(--border-soft);
+    animation: dialogIn 0.22s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+
+  /* hide the drag-pill on desktop */
+  .card::before { display: none; }
+
+  @keyframes dialogIn {
+    from { transform: scale(0.96) translateY(6px); opacity: 0; }
+    to   { transform: scale(1)    translateY(0);   opacity: 1; }
+  }
+
+  .header  { padding: 18px 24px; }
+  .body    { padding: 22px 24px 4px; }
+  .footer  {
+    padding: 14px 24px 22px;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .saveBtn   { width: auto; min-width: 150px; padding: 0 28px; }
+  .cancelBtn { width: auto; min-width: 90px;  padding: 0 20px; }
+}

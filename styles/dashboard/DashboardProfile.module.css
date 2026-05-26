@@ -4,6 +4,26 @@
 .profileHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .divider { height: 1px; background-color: var(--border-soft); margin: 36px 0; opacity: 0.7; }
 
+/* نشان دهنده مجموع صرفه‌جویی وفاداری */
+.loyaltySavings {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  direction: rtl;
+  background: rgba(var(--success-rgb), 0.07);
+  border: 1px solid rgba(var(--success-rgb), 0.22);
+  color: var(--success);
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: var(--font-primary);
+  margin-bottom: 24px;
+}
+.loyaltySavings strong {
+  font-weight: 800;
+}
+
 /* کانتینر کلی داشبورد */
 .mainContentWrapper { 
   width: 100%; 

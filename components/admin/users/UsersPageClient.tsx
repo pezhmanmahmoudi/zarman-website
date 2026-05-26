@@ -11,6 +11,7 @@ import { UserFinancialStats } from "@/components/admin/users/UserFinancialStats"
 import { UserKycManager } from "@/components/admin/users/UserKycManager";
 import { UserTransactionTimeline } from "@/components/admin/users/UserTransactionTimeline";
 import { UserFeedbackHistory } from "@/components/admin/users/UserFeedbackHistory";
+import { UserRecipientsPanel } from "@/components/admin/users/UserRecipientsPanel";
 
 type FinancialProfile = Awaited<ReturnType<typeof getUserFinancialProfile>>;
 
@@ -90,6 +91,7 @@ export function UsersPageClient({ financeConfig }: { financeConfig: FinanceConfi
             />
             <UserKycManager profile={selectedUser.profile} />
             <UserTransactionTimeline transactions={selectedUser.transactions} />
+            <UserRecipientsPanel recipients={(selectedUser as any).recipients ?? []} />
             <UserFeedbackHistory testimonials={selectedUser.testimonials} />
           </div>
         )}

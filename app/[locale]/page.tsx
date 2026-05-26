@@ -51,8 +51,9 @@ export async function generateMetadata({
   const { locale } = await params;
   const isEn = locale === "en";
 
-  const pageTitle =
-    "صرافی زرمان | Zarman Exchange | بهترین نرخ دلار استرالیا";
+  const pageTitle = isEn
+    ? "AUD to IRT Remittance | Personalised Exchange Rates | Zarman Exchange"
+    : "صرافی زرمان | نرخ شخصی‌سازی شده حواله دلار استرالیا";
 
   const pageDescription = isEn
     ? "Transfer AUD to Iran with dynamic, volume-based exchange rates. AUSTRAC-registered. Fast settlement. Enterprise-grade compliance. Start in minutes."

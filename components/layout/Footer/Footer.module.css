@@ -139,6 +139,24 @@
   line-height: var(--leading-relaxed);
   text-align: center;
   font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.contactIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.65;
+  flex-shrink: 0;
+  color: var(--color-accent-primary);
+}
+
+.contactSvgIcon {
+  display: block;
+  filter: invert(1) brightness(0.8);
 }
 
 /* ==================

@@ -1,6 +1,6 @@
 import React from "react";
-import { Settings, SlidersHorizontal } from "lucide-react";
-import { getSystemSettings } from "@/app/actions/admin.actions";
+import { SlidersHorizontal } from "lucide-react";
+import { getSystemSettings, getPromoCodes } from "@/app/actions/admin.actions";
 import { SystemSettingsForm } from "@/components/admin/SystemSettingsForm";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
@@ -8,7 +8,10 @@ import cardStyles from "@/styles/admin/AdminCards.module.css";
 export const metadata = { title: "System Settings | Zarman Admin" };
 
 export default async function SettingsPage() {
-  const settings = await getSystemSettings();
+  const [settings, promoCodes] = await Promise.all([
+    getSystemSettings(),
+    getPromoCodes(),
+  ]);
 
   return (
     <>
@@ -33,8 +36,8 @@ export default async function SettingsPage() {
           </div>
         </div>
 
-        {/* Form Component */}
-        <SystemSettingsForm initialSettings={settings} />
+        {/* Form Component — includes Promo Code Management section */}
+        <SystemSettingsForm initialSettings={settings} initialCodes={promoCodes ?? []} />
       </div>
     </>
   );
