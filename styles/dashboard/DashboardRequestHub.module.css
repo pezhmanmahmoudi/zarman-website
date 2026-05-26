@@ -24,7 +24,7 @@
 .lockText { max-width: 560px; line-height: var(--leading-relaxed); color: rgba(255, 255, 255, 0.92); margin: 0; }
 
 /* =======================================
-   عنوان محاسبه‌گر (مرکز چین)
+   عنوان محاسبه‌گر 
    ======================================= */
 .titleWrapper { 
   width: 100%; 
@@ -60,6 +60,10 @@
   flex-direction: column; 
   gap: var(--space-2); 
   min-width: 0; 
+  margin-bottom: var(--space-4);
+}
+.formRow .inputBox {
+  margin-bottom: 0; /* جلوگیری از فاصله دوگانه در گرید */
 }
 .lastInputBox { margin-bottom: var(--space-6); }
 
@@ -69,15 +73,25 @@
   align-items: center; 
 }
 .label { 
-  font-weight: 800; 
+  font-weight: 600; 
   font-size: var(--text-body-sm); 
   color: var(--text-soft); 
 }
 
+/* رفع قطعی مشکل ستاره قرمز */
+.requiredMark {
+  color: var(--danger, #ef4444) !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-weight: 900 !important;
+  margin-right: 4px;
+  display: inline-block;
+  font-size: 1.1em;
+}
+
 /* =======================================
-   گروه فیلدها (طراحی شبیه ConverterFa)
+   کلاس‌های اختصاصی داشبورد اصلی (نسخه قدیم)
    ======================================= */
-.fieldGroup {
+.hubFieldGroup {
   display: flex;
   align-items: center;
   background-color: var(--bg-input); 
@@ -85,6 +99,82 @@
   border-radius: var(--radius-lg);
   padding: 0 var(--space-4); 
   height: 4rem; 
+  box-sizing: border-box; 
+  transition: all 0.2s ease;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+}
+.hubFieldGroup:focus-within { 
+  border-color: var(--accent); 
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15); 
+}
+.hubLocked { 
+  background-color: var(--bg-soft); 
+  border-color: rgba(var(--accent-rgb), 0.2); 
+}
+
+.hubFaInput {
+  flex: 1;
+  height: 100%; 
+  background: transparent;
+  border: none;
+  color: var(--text-main); 
+  font-family: var(--font-primary) !important; 
+  font-size: var(--text-body-lg) !important; 
+  line-height: normal !important; 
+  font-weight: 800 !important; 
+  outline: none;
+  width: 100%;
+  text-align: right !important; 
+  direction: ltr !important; 
+}
+.hubFaInput::placeholder { color: var(--text-placeholder); font-weight: 500; }
+
+.hubEnInput {
+  flex: 1;
+  height: 100%; 
+  background: transparent;
+  border: none;
+  color: var(--text-main); 
+  font-family: 'Inter', -apple-system, sans-serif !important; 
+  font-size: 1.1rem !important; 
+  font-weight: 700 !important;
+  outline: none;
+  width: 100%;
+  text-align: right !important; 
+  direction: ltr !important; 
+  letter-spacing: 1px;
+}
+.hubEnInput::placeholder { 
+  color: var(--text-placeholder); 
+  font-weight: 500;
+  font-family: var(--font-primary) !important;
+  letter-spacing: normal;
+}
+
+.hubResultInput { 
+  color: var(--accent) !important; 
+  font-size: var(--text-card-title) !important; 
+  font-weight: 900 !important; 
+}
+
+.hubDivider { 
+  width: 1px; 
+  height: var(--space-6); 
+  background-color: var(--border-input); 
+  margin: 0 var(--space-4); 
+}
+
+/* =======================================
+   گروه فیلدها و اینپوت‌ها (ویژه مودال و سایر بخش‌ها)
+   ======================================= */
+.fieldGroup {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-input); 
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-md); 
+  padding: 0 var(--space-4); 
+  height: 3.5rem;
   box-sizing: border-box; 
   transition: all 0.2s ease;
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
@@ -98,9 +188,7 @@
   border-color: rgba(var(--accent-rgb), 0.2); 
 }
 
-/* =======================================
-   اینپوت‌های عددی (ضد پرش و فونت فارسی)
-   ======================================= */
+/* ورودی پایه (فارسی / عمومی) */
 .faInput {
   flex: 1;
   height: 100%; 
@@ -108,114 +196,111 @@
   border: none;
   color: var(--text-main); 
   font-family: var(--font-primary) !important; 
-  font-size: var(--text-body-lg); 
+  font-size: 0.95rem; 
   line-height: normal !important; 
-  font-weight: 800;
+  font-weight: 500; 
   outline: none;
   width: 100%;
-  text-align: right !important; 
-  direction: ltr !important; 
 }
-.faInput::placeholder { 
-  color: var(--text-placeholder); 
+.faInput::placeholder { color: var(--text-placeholder); font-weight: 400; }
+
+/* ورودی‌های انگلیسی (ایمیل، نام حساب استرالیا) */
+.enInput {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.5px;
 }
-.resultInput { 
-  color: var(--accent); 
-  font-size: var(--text-card-title); 
-  font-weight: 900; 
+.enInput::placeholder {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 0.875rem !important;
+  font-weight: 400 !important;
+  letter-spacing: normal;
+  color: var(--text-placeholder);
 }
 
-/* خط جداکننده بین عدد و واحد پولی */
-.divider { 
-  width: 1px; 
-  height: var(--space-6); 
-  background-color: var(--border-input); 
-  margin: 0 var(--space-4); 
-}
-
-/* =======================================
-   سلکتور کاستوم (برای انتخاب ارز)
-   ======================================= */
-.selectWrapper { 
-  position: relative; 
-  display: flex; 
-  align-items: center; 
-  width: 100%; 
-  height: 100%; 
-}
-.currencySelect {
-  width: 100%;
-  height: 100%; 
-  border: none;
+/* ورودی‌های هوشمند (اعداد، شبا، کارت و...) */
+.ltrWhenFilled {
+  flex: 1;
+  height: 100%;
   background: transparent;
-  direction: rtl;
-  padding: 0 0 0 1.75rem; 
-  font-family: var(--font-primary);
-  line-height: normal !important; 
-  font-weight: 800;
-  color: var(--text-main);
+  border: none;
   outline: none;
-  cursor: pointer;
-  appearance: none;
+  color: var(--text-main);
+  transition: all 0.2s;
 }
-
-.currencySelect option { 
-  background-color: var(--bg-card); 
-  color: var(--text-main); 
+/* حالت خالی: راست‌چین و فارسی */
+.ltrWhenFilled:placeholder-shown {
+  direction: rtl !important;
+  text-align: right !important;
+  font-family: var(--font-primary) !important;
+  font-size: 0.95rem !important;
+  font-weight: 400 !important;
 }
-
-/* For English-language selects (AUSTRAC fields) */
-.englishSelect {
-  direction: ltr;
-  text-align: left;
-  padding: 0 1.75rem 0 0.6rem;
-  font-size: var(--text-body-sm);
-  font-weight: 700;
-}
-.englishSelect option {
-  direction: ltr;
-  text-align: left;
-  padding: 4px 8px;
-}
-.englishChevron {
-  position: absolute;
-  right: 0;
-  left: auto;
-  color: var(--text-soft);
-  pointer-events: none;
-}
-
-.selectPlaceholder { color: var(--text-placeholder); }
-.requiredMark {
-  color: var(--danger, #e53e3e);
-  font-weight: 900;
-  font-family: system-ui, Arial, sans-serif;
-}
-.selectChevron { 
-  position: absolute; 
-  left: 0; 
-  color: var(--text-soft); 
-  pointer-events: none; 
-}
-
-.currencyLabelFixed { 
-  font-size: var(--text-body-sm); 
-  font-weight: 800; 
-  color: var(--text-soft); 
-  white-space: nowrap; 
+/* حالت پر شده: چپ‌چین و اعداد استاندارد (Inter) */
+.ltrWhenFilled:not(:placeholder-shown) {
+  direction: ltr !important;
+  text-align: left !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 2px; 
 }
 
 /* =======================================
-   باکس هشدار و خلاصه وضعیت نهایی
+   آیتم‌های استاتیک فرم‌ها (مثل IR اول شبا)
    ======================================= */
-.feeWarning { 
-  display: flex; 
-  align-items: center; 
-  gap: var(--space-1); 
-  color: var(--warning); 
-  font-size: var(--text-caption); 
-  font-weight: 800; 
+.staticPrefix {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  padding-right: 10px;
+  margin-right: 10px;
+  border-right: 1px solid var(--border-input);
+  display: flex;
+  align-items: center;
+  height: 50%;
 }
+
+/* =======================================
+   کد تخفیف و هشدارها
+   ======================================= */
+.promoRow { 
+  display: grid; 
+  grid-template-columns: 1fr auto; 
+  gap: var(--space-3); 
+  align-items: center; 
+}
+.promoRow .inputBox { flex: 1; margin-bottom: 0; }
+.promoApplyBtn {
+  height: 4rem; 
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--font-primary);
+  font-weight: 700;
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.promoApplyBtn:hover:not(:disabled) { background: var(--accent); color: var(--color-text-primary); }
+.promoApplyBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.promoSuccess { font-size: var(--text-body-sm); color: var(--success); font-weight: 700; margin-top: var(--space-2); }
+.promoError { font-size: var(--text-body-sm); color: var(--danger); font-weight: 700; margin-top: var(--space-2); }
+.fieldHint { font-size: var(--text-caption); color: var(--text-soft); font-weight: 500; margin-top: var(--space-1); display: block; }
+.feeWarning { display: flex; align-items: center; gap: var(--space-1); color: var(--warning); font-size: var(--text-caption); font-weight: 700; }
+
+/* =======================================
+   باکس خلاصه وضعیت نهایی
+   ======================================= */
 .summaryBox { 
   background: var(--bg-soft); 
   padding: var(--space-6); 
@@ -225,46 +310,28 @@
   align-items: center; 
   gap: var(--space-4); 
   margin-top: var(--space-2); 
-  border: 1px dashed var(--accent); 
+  border: 1px solid var(--border-soft); 
 }
-.summaryText { min-width: 0; }
-.summaryRate { 
-  color: var(--accent); 
-  display: block; 
-  font-size: var(--text-body-lg); 
-  font-weight: 900; 
-}
-.summaryHint { 
-  font-size: var(--text-body-sm); 
-  color: var(--success); 
-  margin-top: var(--space-2); 
-  display: block; 
-  font-weight: 700; 
-}
+.summaryText { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.summaryRate { color: var(--accent); display: block; font-size: var(--text-body-lg); font-weight: 800; }
+.summaryHint { font-size: var(--text-body-sm); color: var(--success); display: block; font-weight: 600; }
 
 /* =======================================
-   ریسپانسیو (موبایل و تبلت)
+   ریسپانسیو کامل
    ======================================= */
 @media (max-width: 768px) { 
-  .formRow { grid-template-columns: 1fr; } 
+  .formRow { 
+    grid-template-columns: 1fr; 
+    gap: var(--space-6);
+  } 
   .summaryBox { 
     flex-direction: column; 
     align-items: stretch; 
     text-align: center; 
   } 
 }
+
 @media (max-width: 520px) { 
-  .summaryBox { padding: var(--space-4); } 
-  .lockOverlay { padding: var(--space-6); } 
-  .lockTitle { font-size: var(--text-body-md); } 
-  .resultInput { font-size: var(--text-body-lg); }
-}
-@media (max-width: 640px) {
-  /* Reduce height only — font-size stays ≥16px (managed by globals.css) */
-  .fieldGroup {
-    height: 3.25rem;
-  }
-  .label {
-    font-size: 0.72rem;
-  }
+  .promoRow { flex-direction: column; align-items: stretch; }
+  .hubFaInput { font-size: 1.35rem !important; }
 }

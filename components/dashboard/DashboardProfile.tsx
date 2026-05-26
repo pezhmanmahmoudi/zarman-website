@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { UserCircle2, ShieldCheck, AlertCircle, MessageCircle } from "lucide-react";
+import { UserCircle2, ShieldCheck, AlertCircle, MessageCircle, Star } from "lucide-react";
 import { submitKycData } from "@/app/actions/kyc.actions";
 import styles from "@/styles/dashboard/DashboardProfile.module.css";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import { formatToman } from "@/app/[locale]/dashboard/dashboard.utils";
 
 export function DashboardProfile({ profile }: { profile: any }) {
   const hasSubmittedData = Boolean(profile?.document_type && profile?.document_type !== "later" && profile?.document_type !== "");
@@ -128,6 +129,13 @@ export function DashboardProfile({ profile }: { profile: any }) {
           <UserCircle2 size={24} /> اطلاعات هویتی و امنیتی
         </h2>
       </div>
+
+      {Number(profile?.loyalty_discount_toman ?? 0) > 0 && (
+        <div className={styles.loyaltySavings}>
+          <Star size={16} />
+          <span>مجموع صرفه‌جویی وفاداری: <strong>{formatToman(Number(profile.loyalty_discount_toman))}</strong></span>
+        </div>
+      )}
       
       <div className={styles.mainContentWrapper}>
         <div className={styles.formCompact}>

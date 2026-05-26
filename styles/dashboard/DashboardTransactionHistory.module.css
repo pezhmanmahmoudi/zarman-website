@@ -2,7 +2,7 @@
 .tableTitle { margin: 0 !important; }
 
 .tableWrap { overflow-x: auto; border: 1px solid var(--border-soft); border-radius: var(--radius-xl); background: transparent; }
-.historyTable { width: 100%; min-width: 680px; border-collapse: collapse; text-align: center; }
+.historyTable { width: 100%; min-width: 760px; border-collapse: collapse; text-align: center; }
 
 .historyTable th { 
   color: var(--text-dim); 
@@ -27,8 +27,9 @@
 .historyTable tr:hover td { background-color: var(--bg-soft); }
 .emptyTable { text-align: center; padding: var(--space-12) !important; color: var(--text-dim); }
 
-.tableDate { font-family: var(--font-en-stack) !important; letter-spacing: 0.5px; }
-.tableMoney { font-weight: var(--font-weight-semibold) !important; font-family: var(--font-en-stack) !important; color: var(--text-main); }
+.tableRef  { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; font-size: 0.82rem !important; font-weight: 600; letter-spacing: 0.5px; color: var(--color-accent-primary); }
+.tableDate { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; font-size: 0.83rem !important; font-weight: 500; letter-spacing: 0.3px; }
+.tableMoney { font-weight: 600 !important; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; font-size: 0.9rem !important; color: var(--text-main); }
 .tableToman { font-weight: var(--font-weight-bold) !important; }
 
 /* استایل نوع تراکنش */
@@ -88,6 +89,44 @@
 .deleteBtn:hover { background: rgba(var(--danger-rgb), 0.1); opacity: 1; transform: scale(1.05); }
 .noAction { color: var(--text-dim); font-weight: var(--font-weight-regular); }
 
+/* Recipient cell — uses label ("Name — Bank") which can be long */
+.recipientCell {
+  font-size: 0.83rem;
+  font-weight: 600;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Discount cell — stacks promo + loyalty rows in one column */
+.discountCell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: center;
+}
+.promoRow, .loyaltyRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.promoRow  { color: var(--accent);  }
+.loyaltyRow { color: var(--warning); }
+.discountType {
+  font-size: 0.7rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.discountAmt {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 /* 🚀 حل مشکل بهم‌ریختگی هدر تراکنش‌ها در موبایل (رفتن به خط بعد) */
 @media (max-width: 768px) {
   .headerWrap {
@@ -102,4 +141,39 @@
     justify-content: center;
     width: 100%;
   }
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-4) 0 var(--space-2);
+}
+.pageBtn {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text-soft);
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.pageBtn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.pageBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+.pageInfo {
+  font-size: var(--text-body-sm);
+  color: var(--text-soft);
+  font-family: var(--font-en-stack);
+  font-weight: 700;
+  min-width: 3rem;
+  text-align: center;
 }

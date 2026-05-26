@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env NEXT_DISABLE_TURBOPACK=1 next dev",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "@pdf-lib/fontkit": "^1.1.1",
+    "@radix-ui/react-select": "^2.2.6",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
     "@react-three/postprocessing": "^3.0.4",
@@ -25,11 +27,14 @@
     "lenis": "^1.3.23",
     "lucide-react": "^0.562.0",
     "next": "16.0.10",
+    "pdf-lib": "^1.17.1",
     "postprocessing": "^6.38.2",
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-globe.gl": "^2.37.0",
     "recharts": "^3.8.1",
+    "resend": "^6.12.4",
+    "sharp": "^0.34.5",
     "three": "0.182.0",
     "three-globe": "^2.45.0",
     "three-stdlib": "^2.36.1"

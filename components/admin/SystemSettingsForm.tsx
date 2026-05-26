@@ -3,11 +3,13 @@
 import React, { useState, useTransition } from "react";
 import { 
   Save, CheckCircle, AlertTriangle, TrendingUp, Power, 
-  CalendarClock, Settings2, Percent, Banknote 
+  CalendarClock, Settings2, Percent, Banknote, Tag
 } from "lucide-react";
 import formStyles from "@/styles/admin/AdminForms.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import { updateSystemSettings } from "@/app/actions/admin.actions";
+import { PromoCodeManager } from "@/components/admin/PromoCodeManager";
+import type { PromoCode } from "@/app/[locale]/dashboard/dashboard.types";
 
 type SystemSettings = {
   buy_rate: number | null;
@@ -26,8 +28,10 @@ type SystemSettings = {
 
 export function SystemSettingsForm({
   initialSettings,
+  initialCodes,
 }: {
   initialSettings: SystemSettings;
+  initialCodes: PromoCode[];
 }) {
   // Rates & Market States
   const [buyRate, setBuyRate] = useState(initialSettings.buy_rate ? String(initialSettings.buy_rate) : "");
@@ -233,7 +237,22 @@ export function SystemSettingsForm({
           <Save size={18} /> {isPending ? "Applying..." : "Save Settings"}
         </button>
       </div>
-      
+
+      {/* ── Promo Code Management ── */}
+      <div className={cardStyles.panelMt}>
+        <div className={`${cardStyles.sectionHeader} ${cardStyles.sectionHeaderMd}`}>
+          <h2 className={`${cardStyles.sectionTitle} ${cardStyles.sectionTitleWithIcon}`}>
+            <span className={cardStyles.sectionTitleIconAccent}>
+              <Tag size={20} strokeWidth={2.5} />
+            </span>
+            Promo Codes
+          </h2>
+          <p className={cardStyles.sectionDesc}>
+            Create and manage promotional discount codes. Percentage codes improve the customer&apos;s exchange rate; fixed codes reduce the AUD amount.
+          </p>
+        </div>
+        <PromoCodeManager initialCodes={initialCodes} />
+      </div>
     </div>
   );
 }

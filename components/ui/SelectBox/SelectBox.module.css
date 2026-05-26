@@ -177,7 +177,7 @@
 }
 .option:hover {
   background: rgba(var(--accent-rgb), 0.12);
-  color: var(--color-text-primary);
+  color: var(--accent);
 }
 .optionSelected {
   background: rgba(var(--accent-rgb), 0.18);
