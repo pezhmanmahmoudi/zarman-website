@@ -1,214 +1,332 @@
-// Pure TypeScript HTML template — no React Email dependency needed.
-// Resend accepts a plain HTML string directly.
+﻿"use client";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+import React, { useState, useTransition, useOptimistic } from "react";
+import { useRouter } from "next/navigation";
+import { Plus, Trash2, ToggleLeft, ToggleRight, Tag } from "lucide-react";
+import formStyles from "@/styles/admin/AdminForms.module.css";
+import cardStyles from "@/styles/admin/AdminCards.module.css";
+import tableStyles from "@/styles/admin/AdminTable.module.css";
+import {
+  createPromoCode,
+  updatePromoCode,
+  deletePromoCode,
+} from "@/app/actions/admin.actions";
+import type { PromoCode } from "@/app/[locale]/dashboard/dashboard.types";
+import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
+import { AdminToast } from "@/components/admin/ui/AdminToast";
+import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 
-export interface TransactionReceiptProps {
-  referenceId: string | number;
-  transactionDate: string;
+// ΓöÇΓöÇΓöÇ Empty creation form state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
-  senderFullName: string;
-  senderPhone: string;
-  senderAddress: string;
+const EMPTY_FORM = {
+  code: "",
+  discount_type: "percentage" as "percentage" | "fixed",
+  discount_value: "",
+  max_uses: "",
+  expires_at: "",
+  description: "",
+};
 
-  receiverFullName: string;
-  receiverPhone: string;
-  receiverAddress: string;
-  receiverBankDetail?: string;
+// ΓöÇΓöÇΓöÇ PromoCodeManager component ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
-  amountSent: string;
-  amountReceived: string;
+export function PromoCodeManager({
+  initialCodes,
+}: {
+  initialCodes: PromoCode[];
+}) {
+  const router = useRouter();
+  const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
 
-  promoCode?: string | null;
-  sourceOfFunds?: string | null;
-}
+  const [codes, setCodesOptimistic] = useOptimistic(initialCodes);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [formError, setFormError] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+  // ΓöÇΓöÇ Create ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
-function esc(value: unknown): string {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+  const handleCreate = () => {
+    const code = form.code.trim().toUpperCase();
+    if (!code) { setFormError("Code is required."); return; }
+    const value = parseFloat(form.discount_value);
+    if (!Number.isFinite(value) || value <= 0) {
+      setFormError("Discount value must be a positive number.");
+      return;
+    }
+    if (form.discount_type === "percentage" && value > 100) {
+      setFormError("Percentage discount cannot exceed 100.");
+      return;
+    }
+    setFormError("");
 
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("en-AU", {
-      day: "numeric", month: "long", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
+    startTransition(async () => {
+      const result = await createPromoCode({
+        code,
+        discount_type: form.discount_type,
+        discount_value: value,
+        max_uses: form.max_uses ? parseInt(form.max_uses, 10) : null,
+        expires_at: form.expires_at || null,
+        description: form.description || null,
+        active: true,
+      });
+      if (result.error) {
+        showToast({ type: "error", message: result.error });
+      } else {
+        showToast({ type: "success", message: `Promo code "${code}" created.` });
+        setForm(EMPTY_FORM);
+        setShowForm(false);
+        router.refresh();
+      }
     });
-  } catch {
-    return iso;
-  }
-}
+  };
 
-/** One label/value row inside a details card. Returns empty string if value is falsy. */
-function detailRow(label: string, value: string | null | undefined): string {
-  if (!value) return "";
-  return `<tr>
-    <td style="padding:10px 0 0 0;color:#94A3B8;font-family:'Inter',Arial,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.04em;width:35%;vertical-align:top;">[${esc(label)}]</td>
-    <td style="padding:10px 0 0 0;color:#F8FAFC;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:500;vertical-align:top;">${esc(value)}</td>
-  </tr>`;
-}
+  // ΓöÇΓöÇ Toggle active ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
-// ─── Main render function ─────────────────────────────────────────────────────
+  const handleToggle = (c: PromoCode) => {
+    const next = !c.active;
+    startTransition(async () => {
+      setCodesOptimistic((prev) =>
+        prev.map((x) => (x.id === c.id ? { ...x, active: next } : x))
+      );
+      const result = await updatePromoCode(c.id, { active: next });
+      if (result.error) showToast({ type: "error", message: result.error });
+      else router.refresh();
+    });
+  };
 
-export function renderTransactionReceiptHtml(props: TransactionReceiptProps): string {
-  const {
-    referenceId, transactionDate,
-    senderFullName, senderPhone, senderAddress,
-    receiverFullName, receiverPhone, receiverAddress, receiverBankDetail,
-    amountSent, amountReceived,
-    promoCode, sourceOfFunds,
-  } = props;
+  // ΓöÇΓöÇ Delete ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
-  const dateStr = esc(formatDate(transactionDate));
-  const ref     = esc(String(referenceId));
-  const F       = `'Inter','Helvetica Neue',Helvetica,Arial,sans-serif`;
+  const handleDelete = (c: PromoCode) => {
+    confirm({
+      title: "Delete Promo Code",
+      message: `Delete "${c.code}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "danger",
+      onConfirm: async () => {
+        const result = await deletePromoCode(c.id);
+        if (result.error) showToast({ type: "error", message: result.error });
+        else {
+          showToast({ type: "success", message: `"${c.code}" deleted.` });
+          router.refresh();
+        }
+      },
+    });
+  };
 
-  // Colors based on premium fintech dark theme
-  const bgBody = "#F0F2F5";
-  const bgCardOuter = "#0B0E14";
-  const bgCardInner = "#111620";
-  const bgDetailsCard = "#1A2235";
-  const textPrimary = "#FFFFFF";
-  const textSecondary = "#94A3B8";
-  const accentBlue = "#2563EB";
-  const successGreen = "#10B981";
+  // ΓöÇΓöÇ Render ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
-  return `<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
-  <meta name="supported-color-schemes" content="light dark"/>
-  <title>Transaction Receipt — Zarman Exchange</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-  <style>:root{color-scheme:light dark;}body{margin:0;padding:0;background:${bgBody};}</style>
-</head>
-<body style="margin:0;padding:0;background:${bgBody};font-family:${F};-webkit-font-smoothing:antialiased;">
+  return (
+    <>
+      <AdminConfirmDialog {...dialogProps} />
+      <AdminToast {...toastProps} />
 
-<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:${bgBody};padding:40px 16px 56px;">
-<tr><td align="center">
+      <div className={cardStyles.panelBody}>
+        {/* Action bar */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+          <button
+            type="button"
+            className={formStyles.btnPrimary}
+            onClick={() => { setShowForm((v) => !v); setFormError(""); }}
+          >
+            <Plus size={16} />
+            {showForm ? "Cancel" : "New Promo Code"}
+          </button>
+        </div>
 
-<table width="600" cellpadding="0" cellspacing="0" role="presentation"
-       style="max-width:600px;width:100%;background:${bgCardOuter};border-radius:24px;overflow:hidden;
-              box-shadow:0 10px 40px rgba(0,0,0,0.15);">
+        {/* Creation form */}
+        {showForm && (
+          <div className={cardStyles.panel} style={{ marginBottom: "1.5rem", background: "var(--bg-soft)" }}>
+            <div className={`${cardStyles.panelHeader} ${cardStyles.panelHeaderTight}`}>
+              <h4 className={`${cardStyles.panelTitle} ${cardStyles.panelTitleAccent}`}>
+                <Tag size={16} /> New Promo Code
+              </h4>
+            </div>
+            <div className={cardStyles.panelBody}>
+              <div className={formStyles.fieldRow} style={{ marginBottom: "1rem" }}>
+                <div className={formStyles.fieldGroup}>
+                  <label className={formStyles.label}>Code *</label>
+                  <input
+                    type="text"
+                    className={formStyles.input}
+                    placeholder="e.g. SUMMER20"
+                    value={form.code}
+                    onChange={(e) => setForm({ ...form, code: e.target.value })}
+                  />
+                </div>
+                <div className={formStyles.fieldGroup}>
+                  <label className={formStyles.label}>Type *</label>
+                  <select
+                    className={formStyles.input}
+                    value={form.discount_type}
+                    onChange={(e) =>
+                      setForm({ ...form, discount_type: e.target.value as "percentage" | "fixed" })
+                    }
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed">Fixed (AUD)</option>
+                  </select>
+                </div>
+                <div className={formStyles.fieldGroup}>
+                  <label className={formStyles.label}>
+                    Value * {form.discount_type === "percentage" ? "(%)" : "(AUD)"}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className={formStyles.input}
+                    placeholder="e.g. 10"
+                    value={form.discount_value}
+                    onChange={(e) => setForm({ ...form, discount_value: e.target.value })}
+                  />
+                </div>
+                <div className={formStyles.fieldGroup}>
+                  <label className={formStyles.label}>Max Uses</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    className={formStyles.input}
+                    placeholder="Unlimited"
+                    value={form.max_uses}
+                    onChange={(e) => setForm({ ...form, max_uses: e.target.value })}
+                  />
+                </div>
+                <div className={formStyles.fieldGroup}>
+                  <label className={formStyles.label}>Expires At</label>
+                  <input
+                    type="date"
+                    className={formStyles.input}
+                    value={form.expires_at}
+                    onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
+                  />
+                </div>
+                <div className={formStyles.fieldGroup}>
+                  <label className={formStyles.label}>Description</label>
+                  <input
+                    type="text"
+                    className={formStyles.input}
+                    placeholder="Optional note"
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  />
+                </div>
+              </div>
 
-  <tr>
-    <td style="padding:40px 44px 30px;text-align:center;">
-      <img src="https://zarman.com.au/images/logo-no-text-light.svg" alt="Zarman Exchange"
-           width="64" height="64" style="display:block;margin:0 auto 16px;width:64px;height:64px;border:0;"/>
-      <div style="color:${textPrimary};font-family:${F};font-size:22px;font-weight:800;
-                  letter-spacing:0.15em;text-transform:uppercase;margin-bottom:8px;">Zarman Exchange</div>
-      <div style="color:${textSecondary};font-family:${F};font-size:10px;font-weight:500;
-                  letter-spacing:0.05em;margin-bottom:24px;">ABN: 70 692 742 957 &nbsp;|&nbsp; ACN: 692 742 957 &nbsp;|&nbsp; AUSTRAC: ND100907570</div>
-      
-      <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto;">
-        <tr>
-          <td style="border: 2px solid ${successGreen}; border-radius: 30px; padding: 12px 24px; text-align: center;">
-            <div style="color:${successGreen};font-family:${F};font-size:10px;font-weight:600;letter-spacing:0.05em;margin-bottom:4px;">Receipt for</div>
-            <div style="color:${successGreen};font-family:${F};font-size:18px;font-weight:700;">&#10003;&nbsp;Transaction Successful</div>
-          </td>
-        </tr>
-      </table>
-      
-      <div style="color:${textSecondary};font-family:${F};font-size:12px;font-weight:500;margin-top:16px;">
-        Date: ${dateStr} &nbsp;|&nbsp; Reference: #${ref}
+              {formError && <p className={formStyles.errorText} style={{ marginBottom: "0.75rem" }}>{formError}</p>}
+
+              <div style={{ display: "flex", gap: "0.75rem" }}>
+                <button
+                  type="button"
+                  className={formStyles.btnPrimary}
+                  onClick={handleCreate}
+                  disabled={isPending}
+                >
+                  {isPending ? "CreatingΓÇª" : "Create Code"}
+                </button>
+                <button
+                  type="button"
+                  className={formStyles.btnSecondary}
+                  onClick={() => { setShowForm(false); setFormError(""); setForm(EMPTY_FORM); }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Codes table */}
+        {codes.length === 0 ? (
+          <div className={`${cardStyles.emptyState} ${cardStyles.emptyStateLoose}`}>
+            <div className={cardStyles.emptyStateIcon}><Tag size={28} /></div>
+            <p className={cardStyles.emptyStateText}>No promo codes yet.</p>
+          </div>
+        ) : (
+          <div className={tableStyles.tableWrap}>
+            <table className={tableStyles.table}>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Type</th>
+                  <th>Value</th>
+                  <th>Uses</th>
+                  <th>Expires</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {codes.map((c) => (
+                  <tr key={c.id}>
+                    <td>
+                      <span style={{ fontWeight: 700, fontFamily: "var(--font-en-stack, monospace)", letterSpacing: "0.05em" }}>
+                        {c.code}
+                      </span>
+                      {c.description && (
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-soft)", marginTop: "2px" }}>
+                          {c.description}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ textTransform: "capitalize" }}>{c.discount_type}</td>
+                    <td>
+                      {c.discount_type === "percentage"
+                        ? `${c.discount_value}%`
+                        : `$${c.discount_value}`}
+                    </td>
+                    <td>
+                      {c.used_count}
+                      {c.max_uses ? ` / ${c.max_uses}` : " / Γê₧"}
+                    </td>
+                    <td>
+                      {c.expires_at
+                        ? new Date(c.expires_at).toLocaleDateString("en-AU")
+                        : "ΓÇö"}
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          color: c.active ? "var(--success)" : "var(--text-soft)",
+                        }}
+                      >
+                        {c.active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td>
+                      <div className={tableStyles.cellActions}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggle(c)}
+                          className={`${tableStyles.btnAction} ${c.active ? tableStyles.btnReject : tableStyles.btnApprove}`}
+                          title={c.active ? "Deactivate" : "Activate"}
+                        >
+                          {c.active ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
+                          {c.active ? "Disable" : "Enable"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(c)}
+                          className={`${tableStyles.btnAction} ${tableStyles.btnReject}`}
+                          title="Delete promo code"
+                        >
+                          <Trash2 size={12} />
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-    </td>
-  </tr>
-
-  <tr>
-    <td style="padding:0 44px 32px;text-align:center;">
-      <div style="color:${textPrimary};font-family:${F};font-size:16px;font-weight:500;letter-spacing:0.02em;">From Uluru to Damavand</div>
-      <div style="color:${textSecondary};font-family:${F};font-size:12px;font-weight:400;margin-top:4px;">Just in a few hours</div>
-    </td>
-  </tr>
-
-  <tr>
-    <td bgcolor="${bgCardInner}" style="background:${bgCardInner};padding:40px 44px;">
-      
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-             style="border:1px solid ${accentBlue};border-radius:16px;background:${bgDetailsCard};margin-bottom:24px;">
-        <tr>
-          <td style="padding:24px;">
-            <div style="color:${accentBlue};font-family:${F};font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:20px;">Sender Details</div>
-            
-            <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-              <tr>
-                <td style="width:50%;vertical-align:top;">
-                  <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-                    <tr><td style="color:${textPrimary};font-family:${F};font-size:14px;font-weight:700;padding-bottom:12px;text-decoration:underline;">[${esc(senderFullName || "—")}]</td></tr>
-                    <tr><td style="color:${textPrimary};font-family:${F};font-size:14px;font-weight:500;padding-bottom:8px;">[${esc(senderPhone)}]</td></tr>
-                    <tr><td style="color:${textPrimary};font-family:${F};font-size:14px;font-weight:500;">[${esc(senderAddress)}]</td></tr>
-                  </table>
-                </td>
-                <td style="width:50%;vertical-align:middle;text-align:right;border-left:1px solid rgba(255,255,255,0.1);padding-left:24px;">
-                   <div style="color:${textSecondary};font-family:${F};font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Amount Sent</div>
-                   <div style="color:#D946EF;font-family:${F};font-size:24px;font-weight:800;letter-spacing:0.02em;">[${esc(amountSent).replace(/تومان/g, 'IRT')}]</div>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:24px;">
-        <tr><td align="center"><div style="height:24px;border-left:1px dashed ${accentBlue};width:1px;margin-top:-24px;"></div></td></tr>
-      </table>
-
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-             style="border:1px solid ${accentBlue};border-radius:16px;background:${bgDetailsCard};">
-        <tr>
-          <td style="padding:24px;">
-            <div style="color:${accentBlue};font-family:${F};font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:20px;">Receiver Details</div>
-            
-            <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-              <tr>
-                <td style="width:50%;vertical-align:top;">
-                  <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-                    <tr><td style="color:${textPrimary};font-family:${F};font-size:14px;font-weight:700;padding-bottom:12px;text-decoration:underline;">[${esc(receiverFullName || "—")}]</td></tr>
-                    <tr><td style="color:${textPrimary};font-family:${F};font-size:14px;font-weight:500;padding-bottom:8px;">[${esc(receiverPhone)}]</td></tr>
-                    <tr><td style="color:${textPrimary};font-family:${F};font-size:14px;font-weight:500;">[${esc(receiverAddress)}]</td></tr>
-                  </table>
-                </td>
-                <td style="width:50%;vertical-align:middle;text-align:right;border-left:1px solid rgba(255,255,255,0.1);padding-left:24px;">
-                   <div style="color:${textSecondary};font-family:${F};font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Amount Received</div>
-                   <div style="color:#D946EF;font-family:${F};font-size:24px;font-weight:800;letter-spacing:0.02em;">[${esc(amountReceived).replace(/تومان/g, 'IRT')}]</div>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-
-    </td>
-  </tr>
-
-  <tr>
-    <td bgcolor="${bgCardInner}" style="background:${bgCardInner};padding:0 44px 40px;">
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-top:1px solid rgba(255,255,255,0.1);padding-top:24px;">
-        <tr>
-          <td style="color:${textPrimary};font-family:${F};font-size:12px;font-weight:500;width:50%;">
-            &#127760;&nbsp;&nbsp;www.zarman.com.au
-          </td>
-          <td style="color:${textPrimary};font-family:${F};font-size:12px;font-weight:500;width:50%;text-align:right;">
-            &#128222;&nbsp;&nbsp;+61 497 851 631
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-
-</table>
-</td></tr>
-</table>
-
-</body>
-</html>`;
+    </>
+  );
 }
