@@ -1,4 +1,4 @@
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import "../globals.css";
@@ -6,8 +6,12 @@ import { JsonLdSchema } from "@/components/JsonLdSchema";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
 
-const inter = Inter({
-  subsets: ["latin"],
+const inter = localFont({
+  src: [
+    { path: "../../public/fonts/Inter-Regular.woff2", weight: "400", style: "normal" },
+    { path: "../../public/fonts/Inter-SemiBold.ttf", weight: "600", style: "normal" },
+    { path: "../../public/fonts/Inter-Bold.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-en",
   display: "swap",
 });
