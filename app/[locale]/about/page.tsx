@@ -6,6 +6,7 @@ import styles from "@/styles/About.module.css";
 import Button from "@/components/ui/Button/Button";
 
 const PRODUCTION_URL = "https://zarman.com.au";
+const SOCIAL_IMAGE = `${PRODUCTION_URL}/images/layout-logo.png`;
 
 export async function generateMetadata({
   params,
@@ -39,7 +40,9 @@ export async function generateMetadata({
         : "صرافی مجاز ثبت‌شده نزد AUSTRAC برای حواله دلار استرالیا. ABN: 70 692 742 957.",
       url: `${PRODUCTION_URL}/${locale}/about`,
       type: "website",
+      images: [{ url: SOCIAL_IMAGE, width: 1200, height: 630 }],
     },
+    robots: { index: true, follow: true },
   };
 }
 

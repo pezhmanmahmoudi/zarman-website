@@ -5,6 +5,7 @@ import styles from "@/styles/Blog.module.css";
 import { blogPosts } from "@/data/blog-posts";
 
 const PRODUCTION_URL = "https://zarman.com.au";
+const SOCIAL_IMAGE = `${PRODUCTION_URL}/images/layout-logo.png`;
 
 export async function generateMetadata({
   params,
@@ -30,6 +31,17 @@ export async function generateMetadata({
       },
     },
     robots: { index: true, follow: true },
+    openGraph: {
+      title: isEn
+        ? "Blog | AUD/IRT Exchange Rate Guides & Remittance Tips"
+        : "مقالات | راهنمای نرخ ارز و حواله از استرالیا",
+      description: isEn
+        ? "Expert guides on AUD to IRT exchange rates, how to send money from Australia to Iran, AUSTRAC compliance, and getting the best remittance rate."
+        : "راهنماهای تخصصی درباره نرخ دلار استرالیا به تومان، ارسال حواله از استرالیا به ایران، قوانین AUSTRAC، و دریافت بهترین نرخ صرافی.",
+      url: `${PRODUCTION_URL}/${locale}/blog`,
+      type: "website",
+      images: [{ url: SOCIAL_IMAGE, width: 1200, height: 630 }],
+    },
   };
 }
 

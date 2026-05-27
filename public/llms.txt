@@ -1,0 +1,39 @@
+# Zarman Exchange
+
+> Zarman Exchange (Zarman Exchange Pty Ltd, ABN: 70 692 742 957) is an AUSTRAC-registered online remittance and currency exchange platform specialising in AUD to IRT (Iranian Toman) transfers for the Australian-Iranian community.
+
+## About
+
+Zarman Exchange provides secure, fast, and competitively priced international money transfer services from Australia to Iran. The platform offers dynamic, volume-based exchange rates and enterprise-grade compliance under Australian financial regulations.
+
+- Registered with AUSTRAC as a Remittance Dealer
+- ABN: 70 692 742 957
+- Serving the Australian-Iranian community
+- Specialises in AUD ↔ IRT (Australian Dollar to Iranian Toman) exchange
+- Website available in English (en-AU) and Persian (fa-IR)
+
+## Key Pages
+
+- Homepage (English): https://zarman.com.au/en
+- Homepage (Persian / فارسی): https://zarman.com.au/fa
+- Services: https://zarman.com.au/en/services
+- About: https://zarman.com.au/en/about
+- Register: https://zarman.com.au/en/register
+- Blog: https://zarman.com.au/en/blog
+
+## Services
+
+- AUD to IRT international money transfer
+- Real-time currency exchange rates (AUD/IRT)
+- Volume-based personalised exchange rates
+- Secure online remittance platform
+- AUSTRAC-compliant compliance framework
+
+## Contact & Social
+
+- Website: https://zarman.com.au
+- LinkedIn: https://www.linkedin.com/company/zarman-exchange
+
+## Sitemap
+
+https://zarman.com.au/sitemap.xml

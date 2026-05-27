@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -13,7 +14,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function DVSNoticePage() {
+export default async function DVSNoticePage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  if (locale === "fa") redirect("/en/legal/dvs-notice");
   return (
     <div className={styles.pageWrapper}>
       <div className={styles.container}>
