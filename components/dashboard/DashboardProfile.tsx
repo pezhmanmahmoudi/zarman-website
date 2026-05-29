@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { UserCircle2, ShieldCheck, AlertCircle, MessageCircle, Star } from "lucide-react";
-import { submitKycData } from "@/app/actions/kyc.actions";
+import { submitKycData, savePersonalData } from "@/app/actions/kyc.actions";
 import styles from "@/styles/dashboard/DashboardProfile.module.css";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
@@ -62,23 +62,26 @@ export function DashboardProfile({ profile }: { profile: any }) {
     if (!formData.city) newErrors.city = "City is required.";
     if (!formData.state) newErrors.state = "State is required.";
     if (!formData.postalCode) newErrors.postalCode = "Postal Code is required.";
-    if (!formData.docType) newErrors.docType = "Identity Document is required.";
-    
-    if (formData.docType === "driver_license") {
-      if (!formData.licenseNumber) newErrors.licenseNumber = "Licence Number is required.";
-      if (!formData.cardNumber) newErrors.cardNumber = "Card Number is required.";
-      if (!formData.stateOfIssue) newErrors.stateOfIssue = "State of Issue is required.";
-      if (!formData.expiryDate) newErrors.expiryDate = "Expiry Date is required.";
-    }
-    
-    if (formData.docType === "passport") {
-      if (!formData.passportNumber) newErrors.passportNumber = "Document Number is required.";
-      if (!formData.expiryDate) newErrors.expiryDate = "Expiry Date is required.";
-    }
 
-    if (formData.docType !== "none") {
-      if (!formData.consentNotice || !formData.consentDVS) {
-        newErrors.consents = "لطفاً جهت انجام استعلام هویتی، هر دو مورد حقوقی را تایید کنید.";
+    if (formData.country === "Australia") {
+      if (!formData.docType) newErrors.docType = "Identity Document is required.";
+
+      if (formData.docType === "driver_license") {
+        if (!formData.licenseNumber) newErrors.licenseNumber = "Licence Number is required.";
+        if (!formData.cardNumber) newErrors.cardNumber = "Card Number is required.";
+        if (!formData.stateOfIssue) newErrors.stateOfIssue = "State of Issue is required.";
+        if (!formData.expiryDate) newErrors.expiryDate = "Expiry Date is required.";
+      }
+
+      if (formData.docType === "passport") {
+        if (!formData.passportNumber) newErrors.passportNumber = "Document Number is required.";
+        if (!formData.expiryDate) newErrors.expiryDate = "Expiry Date is required.";
+      }
+
+      if (formData.docType && formData.docType !== "none") {
+        if (!formData.consentNotice || !formData.consentDVS) {
+          newErrors.consents = "لطفاً جهت انجام استعلام هویتی، هر دو مورد حقوقی را تایید کنید.";
+        }
       }
     }
 
@@ -87,7 +90,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
   };
 
   const handleSubmit = async () => {
-    if (formData.docType === "none" || !validateForm()) return;
+    if (!validateForm()) return;
 
     setIsSubmitting(true);
     setSubmitStatus({ type: "", msg: "" });
@@ -114,6 +117,36 @@ export function DashboardProfile({ profile }: { profile: any }) {
     } else {
       setSubmitStatus({ type: "success", msg: "اطلاعات هویتی شما با موفقیت ثبت شد." });
       setTimeout(() => window.location.reload(), 1500);
+    }
+
+    setIsSubmitting(false);
+  };
+
+  const handleWhatsAppSubmit = async () => {
+    if (!validateForm()) return;
+
+    // Open blank window immediately (avoids popup blocker before async gap)
+    const win = window.open("", "_blank");
+
+    setIsSubmitting(true);
+    setSubmitStatus({ type: "", msg: "" });
+
+    const result = await savePersonalData({
+      dob: formData.dob,
+      country: formData.country,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
+      postcode: formData.postalCode,
+    });
+
+    if (result.error) {
+      win?.close();
+      setSubmitStatus({ type: "error", msg: result.error });
+    } else {
+      if (win) win.location.href = whatsappLink;
+      setSubmitStatus({ type: "success", msg: "اطلاعات ذخیره شد. در حال انتقال به واتس‌اپ..." });
+      setTimeout(() => window.location.reload(), 2500);
     }
 
     setIsSubmitting(false);
@@ -253,132 +286,146 @@ export function DashboardProfile({ profile }: { profile: any }) {
                 </div>
               </div>
 
-              <div className={styles.inputGroup}>
-                <label>Identity Document <span className={styles.req}>*</span></label>
-                <SelectBox
-                  value={formData.docType}
-                  onChange={(val) => {
-                    setFormData((prev) => ({ ...prev, docType: val, stateOfIssue: "" }));
-                    if (errors.docType) setErrors((prev) => ({ ...prev, docType: "" }));
-                  }}
-                  placeholder="Select Identity Document..."
-                  labeledOptions={[
-                    { value: "driver_license", label: "Australian Driver's Licence" },
-                    { value: "passport",       label: "Australian Passport" },
-                    { value: "none",           label: "None of the above" },
-                  ]}
-                  disabled={isSubmitting}
-                />
-                {errors.docType && <span className={styles.errorText}>{errors.docType}</span>}
-              </div>
-
-              {formData.docType === "driver_license" && (
+              {formData.country === "Australia" && (
                 <>
                   <div className={styles.inputGroup}>
-                    <label>State of Issue <span className={styles.req}>*</span></label>
+                    <label>Identity Document <span className={styles.req}>*</span></label>
                     <SelectBox
-                      value={formData.stateOfIssue}
+                      value={formData.docType}
                       onChange={(val) => {
-                        setFormData((prev) => ({ ...prev, stateOfIssue: val }));
-                        if (errors.stateOfIssue) setErrors((prev) => ({ ...prev, stateOfIssue: "" }));
+                        setFormData((prev) => ({ ...prev, docType: val, stateOfIssue: "" }));
+                        if (errors.docType) setErrors((prev) => ({ ...prev, docType: "" }));
                       }}
-                      placeholder="Select state..."
+                      placeholder="Select Identity Document..."
                       labeledOptions={[
-                        { value: "ACT", label: "ACT (Australian Capital Territory)" },
-                        { value: "NSW", label: "NSW (New South Wales)" },
-                        { value: "NT",  label: "NT (Northern Territory)" },
-                        { value: "QLD", label: "QLD (Queensland)" },
-                        { value: "SA",  label: "SA (South Australia)" },
-                        { value: "TAS", label: "TAS (Tasmania)" },
-                        { value: "VIC", label: "VIC (Victoria)" },
-                        { value: "WA",  label: "WA (Western Australia)" },
+                        { value: "driver_license", label: "Australian Driver's Licence" },
+                        { value: "passport",       label: "Australian Passport" },
+                        { value: "none",           label: "None of the above" },
                       ]}
                       disabled={isSubmitting}
                     />
-                    {errors.stateOfIssue && <span className={styles.errorText}>{errors.stateOfIssue}</span>}
+                    {errors.docType && <span className={styles.errorText}>{errors.docType}</span>}
                   </div>
-                  <div className={styles.row3}>
-                    <div className={styles.inputGroup}>
-                      <label>Licence Number <span className={styles.req}>*</span></label>
-                      <input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} placeholder="Licence number" className={errors.licenseNumber ? styles.errorBorder : ""} />
-                      {errors.licenseNumber && <span className={styles.errorText}>{errors.licenseNumber}</span>}
+
+                  {formData.docType === "driver_license" && (
+                    <>
+                      <div className={styles.inputGroup}>
+                        <label>State of Issue <span className={styles.req}>*</span></label>
+                        <SelectBox
+                          value={formData.stateOfIssue}
+                          onChange={(val) => {
+                            setFormData((prev) => ({ ...prev, stateOfIssue: val }));
+                            if (errors.stateOfIssue) setErrors((prev) => ({ ...prev, stateOfIssue: "" }));
+                          }}
+                          placeholder="Select state..."
+                          labeledOptions={[
+                            { value: "ACT", label: "ACT (Australian Capital Territory)" },
+                            { value: "NSW", label: "NSW (New South Wales)" },
+                            { value: "NT",  label: "NT (Northern Territory)" },
+                            { value: "QLD", label: "QLD (Queensland)" },
+                            { value: "SA",  label: "SA (South Australia)" },
+                            { value: "TAS", label: "TAS (Tasmania)" },
+                            { value: "VIC", label: "VIC (Victoria)" },
+                            { value: "WA",  label: "WA (Western Australia)" },
+                          ]}
+                          disabled={isSubmitting}
+                        />
+                        {errors.stateOfIssue && <span className={styles.errorText}>{errors.stateOfIssue}</span>}
+                      </div>
+                      <div className={styles.row3}>
+                        <div className={styles.inputGroup}>
+                          <label>Licence Number <span className={styles.req}>*</span></label>
+                          <input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} placeholder="Licence number" className={errors.licenseNumber ? styles.errorBorder : ""} />
+                          {errors.licenseNumber && <span className={styles.errorText}>{errors.licenseNumber}</span>}
+                        </div>
+                        <div className={styles.inputGroup}>
+                          <label>Card Number <span className={styles.req}>*</span></label>
+                          <input type="text" name="cardNumber" value={formData.cardNumber} onChange={handleChange} placeholder="Card number (front or back)" className={errors.cardNumber ? styles.errorBorder : ""} />
+                          {errors.cardNumber && <span className={styles.errorText}>{errors.cardNumber}</span>}
+                        </div>
+                        <div className={styles.inputGroup}>
+                          <label>Expiry Date <span className={styles.req}>*</span></label>
+                          <input 
+                            type="date" 
+                            name="expiryDate" 
+                            value={formData.expiryDate} 
+                            onChange={handleChange} 
+                            data-placeholder="dd/mm/yyyy"
+                            className={`${!formData.expiryDate ? styles.emptyDate : ""} ${errors.expiryDate ? styles.errorBorder : ""}`} 
+                          />
+                          {errors.expiryDate && <span className={styles.errorText}>{errors.expiryDate}</span>}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {formData.docType === "passport" && (
+                    <div className={styles.row}>
+                      <div className={styles.inputGroup}>
+                        <label>Document Number <span className={styles.req}>*</span></label>
+                        <input type="text" name="passportNumber" value={formData.passportNumber} onChange={handleChange} placeholder="شماره پاسپورت" className={errors.passportNumber ? styles.errorBorder : ""} />
+                        {errors.passportNumber && <span className={styles.errorText}>{errors.passportNumber}</span>}
+                      </div>
+                      <div className={styles.inputGroup}>
+                        <label>Expiry Date <span className={styles.req}>*</span></label>
+                        <input 
+                          type="date" 
+                          name="expiryDate" 
+                          value={formData.expiryDate} 
+                          onChange={handleChange} 
+                          data-placeholder="dd/mm/yyyy"
+                          className={`${!formData.expiryDate ? styles.emptyDate : ""} ${errors.expiryDate ? styles.errorBorder : ""}`} 
+                        />
+                        {errors.expiryDate && <span className={styles.errorText}>{errors.expiryDate}</span>}
+                      </div>
                     </div>
-                    <div className={styles.inputGroup}>
-                      <label>Card Number <span className={styles.req}>*</span></label>
-                      <input type="text" name="cardNumber" value={formData.cardNumber} onChange={handleChange} placeholder="Card number (front or back)" className={errors.cardNumber ? styles.errorBorder : ""} />
-                      {errors.cardNumber && <span className={styles.errorText}>{errors.cardNumber}</span>}
+                  )}
+
+                  {formData.docType === "none" && (
+                    <div className={styles.whatsappBox}>
+                      <AlertCircle size={28} color="#25d366" style={{ marginBottom: "4px" }} />
+                      <h4 className={styles.persianSectionTitle} style={{ fontSize: '15px', color: '#25d366' }}>نیاز به راهنمایی دارید؟</h4>
+                      <p className={styles.persianSectionSubtitle} style={{ marginBottom: '12px', textAlign: 'center' }}>
+                        در صورتی که گواهینامه یا پاسپورت استرالیا ندارید، جهت بررسی مدارک جایگزین در واتس‌اپ پیام دهید.
+                      </p>
+                      <button type="button" onClick={handleWhatsAppSubmit} disabled={isSubmitting} className={styles.whatsappBtn} style={{ cursor: isSubmitting ? 'not-allowed' : 'pointer' }}>
+                        <MessageCircle size={18} /> {isSubmitting ? "در حال ارسال..." : "تماس با پشتیبانی در واتس‌اپ"}
+                      </button>
                     </div>
-                    <div className={styles.inputGroup}>
-                      <label>Expiry Date <span className={styles.req}>*</span></label>
-                      <input 
-                        type="date" 
-                        name="expiryDate" 
-                        value={formData.expiryDate} 
-                        onChange={handleChange} 
-                        data-placeholder="dd/mm/yyyy"
-                        className={`${!formData.expiryDate ? styles.emptyDate : ""} ${errors.expiryDate ? styles.errorBorder : ""}`} 
-                      />
-                      {errors.expiryDate && <span className={styles.errorText}>{errors.expiryDate}</span>}
+                  )}
+
+                  {formData.docType && formData.docType !== "none" && (
+                    <div className={styles.actionSection}>
+                      <div className={`${styles.legalCheckboxes} ${errors.consents ? styles.errorBorder : ""}`}>
+                        <label className={styles.finePrintLabel}>
+                          <input type="checkbox" name="consentNotice" checked={formData.consentNotice} onChange={handleChange} />
+                          <span>
+                            I have read and agree to the <a href="/en/legal/privacy-policy" target="_blank">Privacy Policy</a> & <a href="/en/legal/dvs-notice" target="_blank">Verification Notice</a>. <span className={styles.req}></span>
+                          </span>
+                        </label>
+
+                        <label className={styles.finePrintLabel}>
+                          <input type="checkbox" name="consentDVS" checked={formData.consentDVS} onChange={handleChange} />
+                          <span>
+                            I consent to Zarman Exchange verifying my personal details and ID documents via official records (DVS) as per the <a href="/en/legal/dvs-consent" target="_blank">Identity Verification Consent</a>. <span className={styles.req}></span>
+                          </span>
+                        </label>
+
+                        {errors.consents && <span className={styles.errorTextFa} style={{ marginTop: '8px' }}>{errors.consents}</span>}
+                      </div>
+
+                      <div className={styles.btnWrapperRight}>
+                        <button type="button" onClick={handleSubmit} disabled={isSubmitting} className={cardStyles.primaryButton} style={{ padding: '14px 36px', fontSize: '14px' }}>
+                          {isSubmitting ? "Submitting..." : "Submit Verification"}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </>
               )}
 
-              {formData.docType === "passport" && (
-                <div className={styles.row}>
-                  <div className={styles.inputGroup}>
-                    <label>Document Number <span className={styles.req}>*</span></label>
-                    <input type="text" name="passportNumber" value={formData.passportNumber} onChange={handleChange} placeholder="شماره پاسپورت" className={errors.passportNumber ? styles.errorBorder : ""} />
-                    {errors.passportNumber && <span className={styles.errorText}>{errors.passportNumber}</span>}
-                  </div>
-                  <div className={styles.inputGroup}>
-                    <label>Expiry Date <span className={styles.req}>*</span></label>
-                    <input 
-                      type="date" 
-                      name="expiryDate" 
-                      value={formData.expiryDate} 
-                      onChange={handleChange} 
-                      data-placeholder="dd/mm/yyyy"
-                      className={`${!formData.expiryDate ? styles.emptyDate : ""} ${errors.expiryDate ? styles.errorBorder : ""}`} 
-                    />
-                    {errors.expiryDate && <span className={styles.errorText}>{errors.expiryDate}</span>}
-                  </div>
-                </div>
-              )}
-
-              {formData.docType === "none" && (
-                <div className={styles.whatsappBox}>
-                  <AlertCircle size={28} color="#25d366" style={{ marginBottom: "4px" }} />
-                  <h4 className={styles.persianSectionTitle} style={{ fontSize: '15px', color: '#25d366' }}>نیاز به راهنمایی دارید؟</h4>
-                  <p className={styles.persianSectionSubtitle} style={{ marginBottom: '12px', textAlign: 'center' }}>
-                    در صورتی که گواهینامه یا پاسپورت استرالیا ندارید، جهت بررسی مدارک جایگزین در واتس‌اپ پیام دهید.
-                  </p>
-                  <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className={styles.whatsappBtn}>
-                    <MessageCircle size={18} /> تماس با پشتیبانی در واتس‌اپ
-                  </a>
-                </div>
-              )}
-
-              {formData.docType && formData.docType !== "none" && (
+              {formData.country !== "Australia" && (
                 <div className={styles.actionSection}>
-                  <div className={`${styles.legalCheckboxes} ${errors.consents ? styles.errorBorder : ""}`}>
-                    <label className={styles.finePrintLabel}>
-                      <input type="checkbox" name="consentNotice" checked={formData.consentNotice} onChange={handleChange} />
-                      <span>
-                        I have read and agree to the <a href="/en/legal/privacy-policy" target="_blank">Privacy Policy</a> & <a href="/en/legal/dvs-notice" target="_blank">Verification Notice</a>. <span className={styles.req}></span>
-                      </span>
-                    </label>
-                    
-                    <label className={styles.finePrintLabel}>
-                      <input type="checkbox" name="consentDVS" checked={formData.consentDVS} onChange={handleChange} />
-                      <span>
-                        I consent to Zarman Exchange verifying my personal details and ID documents via official records (DVS) as per the <a href="/en/legal/dvs-consent" target="_blank">Identity Verification Consent</a>. <span className={styles.req}></span>
-                      </span>
-                    </label>
-                    
-                    {errors.consents && <span className={styles.errorTextFa} style={{ marginTop: '8px' }}>{errors.consents}</span>}
-                  </div>
-
                   <div className={styles.btnWrapperRight}>
                     <button type="button" onClick={handleSubmit} disabled={isSubmitting} className={cardStyles.primaryButton} style={{ padding: '14px 36px', fontSize: '14px' }}>
                       {isSubmitting ? "Submitting..." : "Submit Verification"}
@@ -386,7 +433,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
                   </div>
                 </div>
               )}
-              
+
               {submitStatus.msg && (
                 <div className={submitStatus.type === "success" ? styles.successMessage : styles.errorTextFa} style={{ marginTop: submitStatus.type === "error" ? 12 : -12, padding: '0 24px' }}>
                   <p style={{textAlign: 'center', width: '100%', margin: 0}}>{submitStatus.msg}</p>

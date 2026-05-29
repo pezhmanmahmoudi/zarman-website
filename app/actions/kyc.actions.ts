@@ -176,7 +176,7 @@ async function sendTelegramKycNotification({
   const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
 
   if (!token || !chatId) {
-    // Credentials not configured — skip silently.
+    console.warn("[Telegram] Skipping notification: TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_CHAT_ID is not set in environment variables.");
     return;
   }
 
@@ -327,8 +327,8 @@ export async function submitKycData(payload: {
       lastName: current?.last_name ?? null,
       email: authData.user.email ?? null,
     });
-  } catch {
-    // Notification failure must never block the user response.
+  } catch (err) {
+    console.error("[submitKycData] Telegram notification failed:", err);
   }
 
   // 6. Audit-log the DVS consent — non-fatal if it fails.
@@ -350,6 +350,78 @@ export async function submitKycData(payload: {
     ]);
   } catch {
     // Consent is saved on the profile row; audit log failure is non-fatal.
+  }
+
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// savePersonalData — persists basic personal info (DOB, address, country)
+// for users who select "None of the above" for identity document. Sets
+// kyc_status to "pending" and fires a Telegram admin notification so the
+// admin panel and alerts work identically to the standard submitKycData flow.
+// ---------------------------------------------------------------------------
+export async function savePersonalData(payload: {
+  dob: string;
+  country: string;
+  address: string;
+  city: string;
+  state: string;
+  postcode: string;
+}) {
+  const supabaseServer = await createSupabaseServerActionClient();
+  const { data: authData, error: authError } = await supabaseServer.auth.getUser();
+  if (authError || !authData.user) {
+    return { error: "Unauthorized: no active session." };
+  }
+  const userId = authData.user.id;
+  if (!isUuidLocal(userId)) {
+    return { error: "Invalid session identifier." };
+  }
+
+  if (!payload.dob || !payload.address || !payload.city || !payload.state || !payload.postcode) {
+    return { error: "Missing required address or date-of-birth fields." };
+  }
+
+  const { data: current, error: fetchError } = await supabaseAdmin
+    .from("profiles")
+    .select("kyc_status, first_name, last_name")
+    .eq("id", userId)
+    .single();
+  if (fetchError) {
+    return { error: "Could not verify account status." };
+  }
+  if (current?.kyc_status === "approved") {
+    return { error: "Your identity has already been approved and cannot be modified." };
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from("profiles")
+    .update({
+      dob: payload.dob,
+      country: payload.country,
+      address: payload.address,
+      city: payload.city,
+      state: payload.state,
+      postcode: payload.postcode,
+      document_type: "none",
+      kyc_status: "pending",
+    })
+    .eq("id", userId);
+
+  if (updateError) {
+    return { error: `Failed to save personal data: ${updateError.message}` };
+  }
+
+  // Send Telegram admin notification — non-fatal if it fails.
+  try {
+    await sendTelegramKycNotification({
+      firstName: current?.first_name ?? null,
+      lastName: current?.last_name ?? null,
+      email: authData.user.email ?? null,
+    });
+  } catch (err) {
+    console.error("[savePersonalData] Telegram notification failed:", err);
   }
 
   return { success: true };
