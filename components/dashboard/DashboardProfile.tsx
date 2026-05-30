@@ -95,6 +95,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
     setIsSubmitting(true);
     setSubmitStatus({ type: "", msg: "" });
 
+    const isNonAustralian = formData.country !== "Australia";
     const result = await submitKycData({
       dob: formData.dob,
       country: formData.country,
@@ -102,14 +103,14 @@ export function DashboardProfile({ profile }: { profile: any }) {
       city: formData.city,
       state: formData.state,
       postcode: formData.postalCode,
-      document_type: formData.docType,
+      document_type: isNonAustralian ? "none" : formData.docType,
       license_number: formData.licenseNumber || null,
       card_number: formData.cardNumber || null,
       state_of_issue: formData.stateOfIssue || null,
       passport_number: formData.passportNumber || null,
       expiry_date: formData.expiryDate || null,
-      consent_notice: formData.consentNotice,
-      consent_dvs: formData.consentDVS,
+      consent_notice: isNonAustralian ? true : formData.consentNotice,
+      consent_dvs: isNonAustralian ? true : formData.consentDVS,
     });
 
     if (result.error) {

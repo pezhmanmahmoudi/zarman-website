@@ -212,7 +212,7 @@ async function sendTelegramKycNotification({
 // Must run server-side: uses service role to bypass RLS so that kyc_status
 // is set atomically and can never be forged from the browser.
 // ---------------------------------------------------------------------------
-const ALLOWED_DOC_TYPES = new Set(["driver_license", "passport"]);
+const ALLOWED_DOC_TYPES = new Set(["driver_license", "passport", "none"]);
 
 function isUuidLocal(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -274,7 +274,7 @@ export async function submitKycData(payload: {
   if ((payload.document_type === "driver_license" || payload.document_type === "passport") && !payload.expiry_date) {
     return { error: "Document expiry date is required." };
   }
-  if (!payload.consent_notice || !payload.consent_dvs) {
+  if (payload.document_type !== "none" && (!payload.consent_notice || !payload.consent_dvs)) {
     return { error: "DVS consent is required before submission." };
   }
 
