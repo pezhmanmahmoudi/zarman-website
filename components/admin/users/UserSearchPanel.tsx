@@ -15,6 +15,7 @@ export type UserRow = {
   mobile_number: string | null;
   kyc_status: string | null;
   created_at: string;
+  customer_code?: string | null;
 };
 
 interface UserSearchPanelProps {
@@ -92,6 +93,11 @@ export function UserSearchPanel({
                   <tr key={u.id}>
                     <td className={tableStyles.cellStrong}>
                       {u.first_name} {u.last_name}
+                      {u.customer_code && (
+                        <div style={{ fontSize: "0.65rem", color: "var(--text-dim)", fontFamily: "monospace", marginTop: "2px", fontWeight: 400 }}>
+                          ({u.customer_code})
+                        </div>
+                      )}
                     </td>
                     <td>
                       <div className={`${tableStyles.cellDim} ${tableStyles.cellSmallEmail}`}>

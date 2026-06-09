@@ -1,12 +1,17 @@
 import React from "react";
+import Link from "next/link";
 import { ShieldCheck, Clock, Archive, IdCard, Hash, CalendarDays } from "lucide-react";
 import { getKycQueue, getKycHistory } from "@/app/actions/admin.actions";
 import { KycActionButtons } from "@/components/admin/KycActionButtons";
+import { EditableCustomerCode } from "@/components/admin/EditableCustomerCode";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 
 export const metadata = { title: "KYC Queue | Zarman Admin" };
+
+const PAGE_SIZE = 10;
 
 function StatusBadge({ status }: { status: string | null }) {
   if (!status) return <span className={`${tableStyles.badge} ${tableStyles.badgePending}`}>Pending</span>;
@@ -49,8 +54,18 @@ function StatusBadge({ status }: { status: string | null }) {
   );
 }
 
-export default async function KycQueuePage() {
-  const [queue, history] = await Promise.all([getKycQueue(), getKycHistory(50)]);
+export default async function KycQueuePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const params = await searchParams;
+  const currentPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+
+  const [queue, { data: history, total }] = await Promise.all([
+    getKycQueue(),
+    getKycHistory(currentPage, PAGE_SIZE),
+  ]);
 
   function docLabel(type: string | null | undefined) {
     if (type === "driver_license") return "Driver's Licence";
@@ -110,6 +125,7 @@ export default async function KycQueuePage() {
               <table className={tableStyles.table}>
                 <thead>
                   <tr>
+                    <th>Customer Code</th>
                     <th>Customer Info</th>
                     <th>Contact</th>
                     <th>DOB</th>
@@ -131,13 +147,22 @@ export default async function KycQueuePage() {
 
                     return (
                       <tr key={user.id} className={tableStyles.rowTintWarning}>
+                        {/* Customer Code — editable */}
                         <td>
-                          <div className={tableStyles.cellStrong}>
-                            {user.first_name} {user.last_name}
-                          </div>
-                          <div className={`${tableStyles.cellSmall} ${tableStyles.cellDim} ${tableStyles.cellSubtleTop}`}>
-                            Joined: {user.created_at ? new Date(user.created_at).toLocaleDateString("en-AU") : "—"}
-                          </div>
+                          <EditableCustomerCode
+                            userId={user.id}
+                            currentCode={(user as Record<string, unknown>).customer_code as string | null}
+                          />
+                        </td>
+                        <td>
+                          <Link href={`/admin/users?userId=${user.id}`} style={{ color: "inherit", textDecoration: "none" }}>
+                            <div className={tableStyles.cellStrong} style={{ color: "var(--accent, #2563eb)" }}>
+                              {user.first_name} {user.last_name}
+                            </div>
+                            <div className={`${tableStyles.cellSmall} ${tableStyles.cellDim} ${tableStyles.cellSubtleTop}`}>
+                              Joined: {user.created_at ? new Date(user.created_at).toLocaleDateString("en-AU") : "—"}
+                            </div>
+                          </Link>
                         </td>
                         <td>
                           <div className={`${tableStyles.cellDim} ${tableStyles.cellSmallEmail}`}>{user.email ?? "—"}</div>
@@ -218,12 +243,12 @@ export default async function KycQueuePage() {
           )}
         </div>
 
-        {/* 2. KYC History Panel (با لیمیت 50 نفر و استایل بهینه) */}
+        {/* 2. KYC History Panel — paginated */}
         <div className={`${cardStyles.panel} ${cardStyles.panelSoft} ${cardStyles.panelMt}`}>
           <div className={cardStyles.panelHeader}>
             <h2 className={cardStyles.panelTitle}>
               <Archive size={18} color="var(--text-dim)" />
-              Recent History (Last 50 records)
+              KYC History ({total} total)
             </h2>
           </div>
           
@@ -234,55 +259,58 @@ export default async function KycQueuePage() {
               </div>
             </div>
           ) : (
-            <div className={`${tableStyles.tableWrap} ${tableStyles.tableWrapTopBorder} ${tableStyles.tableWrapTopFlat}`}>
-              <table className={tableStyles.table}>
-                <thead className={tableStyles.theadTransparent}>
-                  <tr>
-                    <th>Customer Name</th>
-                    <th>Email</th>
-                    <th>Document Type</th>
-                    <th>Joined</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((user) => (
-                    <tr key={user.id}>
-                      <td className={tableStyles.cellStrong}>
-                        {user.first_name} {user.last_name}
-                      </td>
-                      <td className={tableStyles.cellDim}>{user.email ?? "—"}</td>
-                      <td className={`${tableStyles.cellDim} ${tableStyles.cellCapitalize}`}>
-                        {docLabel(user.document_type)}
-                      </td>
-                      <td className={`${tableStyles.cellMono} ${tableStyles.cellSmall} ${tableStyles.cellDim}`}>
-                        {user.created_at ? new Date(user.created_at).toLocaleDateString("en-AU") : "—"}
-                      </td>
-                      <td><StatusBadge status={user.kyc_status} /></td>
-                      <td>
-                        <KycActionButtons userId={user.id} currentStatus={user.kyc_status ?? undefined} />
-                      </td>
+            <>
+              <div className={`${tableStyles.tableWrap} ${tableStyles.tableWrapTopBorder} ${tableStyles.tableWrapTopFlat}`}>
+                <table className={tableStyles.table}>
+                  <thead className={tableStyles.theadTransparent}>
+                    <tr>
+                      <th>Customer Code</th>
+                      <th>Customer Name</th>
+                      <th>Email</th>
+                      <th>Document Type</th>
+                      <th>Joined</th>
+                      <th>Status</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          
-          {/* بخش Footer برای راهنمای Pagination */}
-          {history.length >= 50 && (
-            <div className={tableStyles.paginationFooter}>
-               <button className={tableStyles.paginationBtn} disabled>
-                 Previous
-               </button>
-               <span className={tableStyles.paginationNote}>
-                 Showing top 50 records
-               </span>
-               <button className={tableStyles.paginationBtn}>
-                 Next
-               </button>
-            </div>
+                  </thead>
+                  <tbody>
+                    {history.map((user) => (
+                      <tr key={user.id}>
+                        <td>
+                          <EditableCustomerCode
+                            userId={user.id}
+                            currentCode={(user as Record<string, unknown>).customer_code as string | null}
+                          />
+                        </td>
+                        <td>
+                          <Link href={`/admin/users?userId=${user.id}`} style={{ color: "inherit", textDecoration: "none" }}>
+                            <span className={tableStyles.cellStrong} style={{ color: "var(--accent, #2563eb)" }}>
+                              {user.first_name} {user.last_name}
+                            </span>
+                          </Link>
+                        </td>
+                        <td className={tableStyles.cellDim}>{user.email ?? "—"}</td>
+                        <td className={`${tableStyles.cellDim} ${tableStyles.cellCapitalize}`}>
+                          {docLabel(user.document_type)}
+                        </td>
+                        <td className={`${tableStyles.cellMono} ${tableStyles.cellSmall} ${tableStyles.cellDim}`}>
+                          {user.created_at ? new Date(user.created_at).toLocaleDateString("en-AU") : "—"}
+                        </td>
+                        <td><StatusBadge status={user.kyc_status} /></td>
+                        <td>
+                          <KycActionButtons userId={user.id} currentStatus={user.kyc_status ?? undefined} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <AdminPagination
+                currentPage={currentPage}
+                totalCount={total}
+                pageSize={PAGE_SIZE}
+              />
+            </>
           )}
         </div>
       </div>

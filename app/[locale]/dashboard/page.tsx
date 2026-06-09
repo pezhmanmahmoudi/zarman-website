@@ -79,7 +79,7 @@ export default function ZarmanDashboard() {
     return `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "مشتری عزیز";
   }, [profile]);
 
-  const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud", sourceOfFunds: string, reasonForTransfer: string, recipientId?: string | null, promoCode?: string | null) => {
+  const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud", sourceOfFunds: string, reasonForTransfer: string, recipientId?: string | null, promoCode?: string | null, paymentLink?: string | null) => {
     if (!profile || !profile.id || !isApproved || rawAmount <= 0) return null;
     
     const result = await processTransactionSecurely({
@@ -89,6 +89,7 @@ export default function ZarmanDashboard() {
       reasonForTransfer,
       recipientId,
       promoCode,
+      paymentLink,
     });
 
     if (result?.error) {

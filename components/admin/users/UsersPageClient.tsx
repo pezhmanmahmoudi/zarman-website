@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import { Users } from "lucide-react";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
@@ -15,7 +15,13 @@ import { UserRecipientsPanel } from "@/components/admin/users/UserRecipientsPane
 
 type FinancialProfile = Awaited<ReturnType<typeof getUserFinancialProfile>>;
 
-export function UsersPageClient({ financeConfig }: { financeConfig: FinanceConfig }) {
+export function UsersPageClient({
+  financeConfig,
+  initialUserId,
+}: {
+  financeConfig: FinanceConfig;
+  initialUserId?: string;
+}) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserRow[]>([]);
   const [selectedUser, setSelectedUser] = useState<FinancialProfile | null>(null);
@@ -23,6 +29,16 @@ export function UsersPageClient({ financeConfig }: { financeConfig: FinanceConfi
 
   const [isSearching, startSearch] = useTransition();
   const [isLoading, startLoad] = useTransition();
+
+  // Auto-load profile when navigated here with a userId query param
+  useEffect(() => {
+    if (!initialUserId) return;
+    startLoad(async () => {
+      const profile = await getUserFinancialProfile(initialUserId);
+      setSelectedUser(profile);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialUserId]);
 
   const handleSearch = () => {
     if (!query.trim()) return;

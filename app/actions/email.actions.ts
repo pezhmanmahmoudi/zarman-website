@@ -115,7 +115,7 @@ export async function sendTransactionReceipt(
     .from("transactions")
     .select(`
       id, type, amount_aud, equivalent_toman, final_amount, status, created_at,
-      source_of_funds, reason_for_transfer, promo_code, reference_code,
+      source_of_funds, reason_for_transfer, promo_code, reference_code, payment_link,
       profiles(
         first_name, last_name, email, mobile_number,
         address, city, state, postcode
@@ -168,7 +168,14 @@ export async function sendTransactionReceipt(
       receiverAddress = recipient.irt_address ?? "";
     }
     receiverBankDetail = buildBankDetail(recipient);
+  } else {
+    // Edu / payment link transaction — no saved recipient
+    receiverFullName = "Exam / University / Institution";
   }
+
+  // Use payment_link stored in the DB (legacy fallback: parse from reason_for_transfer)
+  const paymentLinkMatch = (tx.reason_for_transfer ?? "").match(/لینک پرداخت:\s*(\S+)/);
+  const paymentLink = (tx as any).payment_link ?? (paymentLinkMatch ? paymentLinkMatch[1] : null);
 
   // For Buy AUD: customer sends Toman, receives AUD
   // For Sell AUD: customer sends AUD, receives Toman
@@ -194,6 +201,7 @@ export async function sendTransactionReceipt(
     amountReceived,
     promoCode: tx.promo_code ?? null,
     sourceOfFunds: tx.source_of_funds ?? null,
+    paymentLink,
   };
 
   const [emailHtml, pdfBytes] = await Promise.all([

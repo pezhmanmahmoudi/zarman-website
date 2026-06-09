@@ -64,6 +64,7 @@ type RequestHubProps = {
     reasonForTransfer: string,
     recipientId?: string | null,
     promoCode?: string | null,
+    paymentLink?: string | null,
   ) => Promise<ServerTransactionResult | null>;
 };
 
@@ -218,8 +219,17 @@ export function DashboardRequestHub({
       alert("لطفاً تمامی فیلدهای اجباری (ستاره‌دار) را تکمیل نمایید.");
       return;
     }
+    if (isEduPayment && !paymentLink.trim()) {
+      alert("لطفاً لینک صفحه پرداخت را وارد کنید.");
+      return;
+    }
 
     setIsSubmitting(true);
+
+    // ─── Pre-open WhatsApp window NOW (synchronous, direct user gesture) ───────
+    // Browsers block window.open called after an await. Opening with '' first,
+    // then navigating it after the async work, bypasses the popup blocker.
+    const whatsappWindow = window.open("", "_blank");
 
     try {
       const serverData = await onSaveTransaction(
@@ -229,9 +239,13 @@ export function DashboardRequestHub({
         reasonForTransfer,
         selectedRecipientId || null,
         appliedPromoCode,
+        isEduPayment ? (paymentLink.trim() || null) : null,
       );
       
-      if (!serverData) return; 
+      if (!serverData) {
+        whatsappWindow?.close();
+        return;
+      }
 
       const actionLabel = txType === "sell_aud" ? "فروش AUD (مشتری دلار می‌دهد)" : "خرید AUD (مشتری تومان می‌دهد)";
       const totalLoyalty = serverData.loyaltyBonus * serverData.rawAmount;
@@ -304,9 +318,11 @@ export function DashboardRequestHub({
 
       const finalUrl = buildWhatsAppUrl(text);
 
-      if (finalUrl.startsWith('http')) {
-        window.open(finalUrl, '_blank');
+      // Navigate the pre-opened window to the WhatsApp URL
+      if (whatsappWindow && !whatsappWindow.closed) {
+        whatsappWindow.location.href = finalUrl;
       } else {
+        // Fallback: pre-open was blocked — try direct navigation
         window.location.assign(finalUrl);
       }
       setAmountStr("");
@@ -315,6 +331,7 @@ export function DashboardRequestHub({
       setSelectedRecipientId("");
       setPaymentLink("");
     } catch (error) {
+      whatsappWindow?.close();
       console.error(error);
     } finally {
       setIsSubmitting(false);

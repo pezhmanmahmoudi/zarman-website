@@ -17,10 +17,11 @@ import tableStyles from "@/styles/admin/AdminTable.module.css";
 export const metadata = { title: "Dashboard | Zarman Admin" };
 
 export default async function AdminDashboardPage() {
-  const [stats, recentLogs] = await Promise.all([
+  const [stats, recentLogsResult] = await Promise.all([
     getAdminStats(),
-    getAuditLogs(0, 7),
+    getAuditLogs(1, 7),
   ]);
+  const recentLogs = recentLogsResult.data;
 
   const actionCards = [
     {

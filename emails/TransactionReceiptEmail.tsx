@@ -21,6 +21,7 @@ export interface TransactionReceiptProps {
 
   promoCode?: string | null;
   sourceOfFunds?: string | null;
+  paymentLink?: string | null;
 }
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ export function renderTransactionReceiptHtml(props: TransactionReceiptProps): st
     senderFullName, senderPhone, senderAddress,
     receiverFullName, receiverPhone, receiverAddress, receiverBankDetail,
     amountSent, amountReceived,
-    promoCode, sourceOfFunds,
+    promoCode, sourceOfFunds, paymentLink,
   } = props;
 
   const dateStr = esc(formatDate(transactionDate));
@@ -212,6 +213,10 @@ export function renderTransactionReceiptHtml(props: TransactionReceiptProps): st
             <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
               ${detailRow("Phone", receiverPhone)}
               ${detailRow("Address", receiverAddress)}
+              ${paymentLink ? `<tr>
+    <td style="padding:9px 0;border-top:1px solid #f1f5f9;color:#64748b;font-family:'Inter',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;width:38%;vertical-align:top;">Payment Link</td>
+    <td style="padding:9px 0;border-top:1px solid #f1f5f9;font-family:'Inter',Arial,sans-serif;font-size:12px;font-weight:500;vertical-align:top;text-align:right;"><a href="${esc(paymentLink)}" style="color:#2563eb;word-break:break-all;">${esc(paymentLink)}</a></td>
+  </tr>` : ""}
             </table>
           </td>
         </tr>

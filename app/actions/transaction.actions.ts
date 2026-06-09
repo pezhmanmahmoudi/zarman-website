@@ -45,6 +45,7 @@ export async function processTransactionSecurely({
   reasonForTransfer,
   recipientId,
   promoCode,
+  paymentLink,
 }: {
   rawAmount: number;
   txType: "buy_aud" | "sell_aud";
@@ -52,6 +53,7 @@ export async function processTransactionSecurely({
   reasonForTransfer: string;
   recipientId?: string | null;
   promoCode?: string | null;
+  paymentLink?: string | null;
 }) {
   if (rawAmount <= 0) return { error: "اطلاعات نامعتبر است." };
   if (!sourceOfFunds) return { error: "لطفاً منبع وجه را انتخاب کنید." };
@@ -166,7 +168,7 @@ export async function processTransactionSecurely({
       .from("transactions")
       .insert([{
         user_id: authenticatedUserId,
-        type: txType,
+        type: txType === "buy_aud" ? "sell_aud" : "buy_aud",
         amount_aud: rawAmount,
         equivalent_toman: equivalentToman,
         status: "pending",
@@ -178,6 +180,7 @@ export async function processTransactionSecurely({
         final_amount,
         loyalty_discount: loyalty_discount_toman,
         reference_code: referenceCode,
+        payment_link: paymentLink?.trim() || null,
       }]);
 
     if (insertError) return { error: "خطا در ثبت تراکنش." };

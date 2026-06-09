@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
@@ -48,6 +48,27 @@ function clampInt(value: number, min: number, max: number, fallback: number) {
   if (!Number.isFinite(value)) return fallback;
   const normalized = Math.trunc(value);
   return Math.min(max, Math.max(min, normalized));
+}
+
+// ---------------------------------------------------------------------------
+// Jalali (Shamsi) date helper — returns "YYYY/MM/DD" with zero-padded parts
+// ---------------------------------------------------------------------------
+function toJalaliStr(date: Date): string {
+  const gy = date.getUTCFullYear(), gm = date.getUTCMonth() + 1, gd = date.getUTCDate();
+  const gy1 = gy - 1600, gm1 = gm - 1, gd1 = gd - 1;
+  let g_d_no = 365 * gy1 + Math.floor((gy1 + 3) / 4) - Math.floor((gy1 + 99) / 100) + Math.floor((gy1 + 399) / 400);
+  const mDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (gy % 4 === 0 && (gy % 100 !== 0 || gy % 400 === 0)) mDays[1] = 29;
+  for (let i = 0; i < gm1; i++) g_d_no += mDays[i];
+  g_d_no += gd1;
+  let j_d_no = g_d_no - 79;
+  const j_np = Math.floor(j_d_no / 12053); j_d_no %= 12053;
+  let jy = 979 + 33 * j_np + 4 * Math.floor(j_d_no / 1461); j_d_no %= 1461;
+  if (j_d_no >= 366) { jy += Math.floor((j_d_no - 1) / 365); j_d_no = (j_d_no - 1) % 365; }
+  const jm2 = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
+  let jm = 0;
+  for (jm = 0; jm < 11 && j_d_no >= jm2[jm]; jm++) j_d_no -= jm2[jm];
+  return `${jy}/${String(jm + 1).padStart(2, "0")}/${String(j_d_no + 1).padStart(2, "0")}`;
 }
 
 function sanitizeSearchQuery(query: string) {
@@ -203,22 +224,29 @@ export async function getKycQueue() {
   return data ?? [];
 }
 
-// پارامتر limitCount با مقدار پیش‌فرض 50 اضافه شد
-export async function getKycHistory(limitCount: number = DEFAULT_HISTORY_LIMIT) {
+export async function getKycHistory(page: number = 1, pageSize: number = 10) {
   const db = await getAuthorizedServerClient();
-  const safeLimit = clampInt(limitCount, 1, MAX_HISTORY_LIMIT, DEFAULT_HISTORY_LIMIT);
+  const safePage = clampInt(page, 1, MAX_AUDIT_PAGE, 1);
+  const safePageSize = clampInt(pageSize, 1, 50, 10);
+  const offset = (safePage - 1) * safePageSize;
 
-  const { data, error } = await db
-    .from("profiles")
-    .select("id, first_name, last_name, email, kyc_status, document_type, created_at")
-    // در اینجا هر وضعیتی به جز در حال انتظارها را می‌گیریم
-    .neq("kyc_status", "pending")
-    .neq("kyc_status", "under_review")
-    .order("created_at", { ascending: false })
-    .limit(safeLimit); // اعمال محدودیت روی دیتابیس
+  const [countRes, dataRes] = await Promise.all([
+    db
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .neq("kyc_status", "pending")
+      .neq("kyc_status", "under_review"),
+    db
+      .from("profiles")
+      .select("id, first_name, last_name, email, kyc_status, document_type, created_at, customer_code")
+      .neq("kyc_status", "pending")
+      .neq("kyc_status", "under_review")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + safePageSize - 1),
+  ]);
 
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  if (dataRes.error) throw new Error(dataRes.error.message);
+  return { data: dataRes.data ?? [], total: countRes.count ?? 0 };
 }
 
 export async function approveKyc(userId: string) {
@@ -388,7 +416,11 @@ export async function approveTransaction(transactionId: string | number) {
 
   const { data: before } = await db
     .from("transactions")
-    .select("status, user_id, amount_aud, type")
+    .select(`
+      status, user_id, amount_aud, equivalent_toman, type, created_at, payment_link,
+      profiles(first_name, last_name, email),
+      recipients(full_name, account_name)
+    `)
     .eq("id", transactionId)
     .single();
 
@@ -404,6 +436,49 @@ export async function approveTransaction(transactionId: string | number) {
 
   if (error) return { error: error.message };
 
+  // ── Insert ledger snapshot ───────────────────────────────────────────────
+  try {
+    const { data: rateRow } = await db
+      .from("rates_history")
+      .select("buy_aud, applied_fee, fee_threshold")
+      .order("date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const audAmt   = Number(before.amount_aud ?? 0);
+    const tomanAmt = Number(before.equivalent_toman ?? 0);
+    const rate     = audAmt > 0 ? tomanAmt / audAmt : 0;
+    const feeThreshold = Number(rateRow?.fee_threshold ?? 1000);
+    const appliedFee   = Number(rateRow?.applied_fee   ?? 30);
+    const feeAud = audAmt > 0 && audAmt < feeThreshold ? appliedFee : 0;
+
+    const txDate = before.created_at ? new Date(before.created_at) : new Date();
+    const dateGregorian = txDate.toISOString().slice(0, 10);
+    const dateJalali    = toJalaliStr(txDate);
+
+    const profileArr = Array.isArray(before.profiles) ? before.profiles : [before.profiles];
+    const recipArr   = Array.isArray(before.recipients) ? before.recipients : [before.recipients];
+    const p = profileArr[0] as Record<string, unknown> | null;
+    const r = recipArr[0]   as Record<string, unknown> | null;
+    const sender    = p ? (`${p.first_name ?? ""} ${p.last_name ?? ""}`).trim() || String(p.email ?? "") : "";
+    const recipient = r ? (String(r.full_name ?? r.account_name ?? "")).trim() : ((before as any).payment_link ? "Payment Link" : "");
+
+    await db.from("ledger").insert([{
+      transaction_id:  String(transactionId),
+      date_gregorian:  dateGregorian,
+      date_jalali:     dateJalali,
+      type:            before.type,
+      exchange_rate:   rate,
+      amount_aud:      audAmt,
+      amount_toman:    tomanAmt,
+      sender,
+      recipient,
+      fee_aud:         feeAud,
+      created_by:      admin.id,
+    }]);
+  } catch { /* ledger insert failure must not block approval */ }
+
+  // ── Audit log ────────────────────────────────────────────────────────────
   try {
     await writeAuditLog({
       actorId: admin.id,
@@ -439,7 +514,7 @@ export async function rejectTransaction(transactionId: string | number) {
     .single();
 
   if (!before) return { error: "Transaction not found." };
-  if (before.status !== "pending") {
+  if (before.status !== "pending" && before.status !== "approved") {
     return { error: `Transaction is already '${before.status}'.` };
   }
 
@@ -527,12 +602,38 @@ export async function getFeedbackQueue() {
   const { data, error } = await db
     .from("testimonials")
     .select(
-      "id, user_id, rating, message, status, created_at, moderated_at, profiles(first_name, last_name, email)"
+      "id, user_id, rating, message, status, created_at, moderated_at, profiles(id, first_name, last_name, email, customer_code)"
     )
+    .eq("status", "pending")
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function getFeedbackHistory(page: number = 1, pageSize: number = 10) {
+  const db = await getAuthorizedServerClient();
+  const safePage = clampInt(page, 1, MAX_AUDIT_PAGE, 1);
+  const safePageSize = clampInt(pageSize, 1, 50, 10);
+  const offset = (safePage - 1) * safePageSize;
+
+  const [countRes, dataRes] = await Promise.all([
+    db
+      .from("testimonials")
+      .select("id", { count: "exact", head: true })
+      .neq("status", "pending"),
+    db
+      .from("testimonials")
+      .select(
+        "id, user_id, rating, message, status, created_at, moderated_at, profiles(id, first_name, last_name, email, customer_code)"
+      )
+      .neq("status", "pending")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + safePageSize - 1),
+  ]);
+
+  if (dataRes.error) throw new Error(dataRes.error.message);
+  return { data: dataRes.data ?? [], total: countRes.count ?? 0 };
 }
 
 export async function moderateFeedback(
@@ -708,23 +809,23 @@ export async function updateSystemSettings({
 // ===========================================================================
 // AUDIT LOGS
 // ===========================================================================
-export async function getAuditLogs(page = 0, pageSize = 50) {
+export async function getAuditLogs(page = 1, pageSize = 10) {
   const db = await getAuthorizedServerClient();
 
-  const safePage = clampInt(page, 0, MAX_AUDIT_PAGE, 0);
-  const safePageSize = clampInt(pageSize, 1, MAX_AUDIT_PAGE_SIZE, DEFAULT_AUDIT_PAGE_SIZE);
+  const safePage = clampInt(page, 1, MAX_AUDIT_PAGE, 1);
+  const safePageSize = clampInt(pageSize, 1, MAX_AUDIT_PAGE_SIZE, 10);
 
-  const from = safePage * safePageSize;
+  const from = (safePage - 1) * safePageSize;
   const to = from + safePageSize - 1;
 
-  const { data, error } = await db
+  const { data, error, count } = await db
     .from("audit_logs")
-    .select("id, actor_id, actor_email, action, target_type, target_id, old_value, new_value, created_at")
+    .select("id, actor_id, actor_email, action, target_type, target_id, old_value, new_value, created_at", { count: "exact" })
     .order("created_at", { ascending: false })
     .range(from, to);
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return { data: data ?? [], total: count ?? 0 };
 }
 
 // ===========================================================================
@@ -738,7 +839,7 @@ export async function searchUsers(query: string) {
 
   const { data, error } = await db
     .from("profiles")
-    .select("id, first_name, last_name, email, mobile_number, kyc_status, created_at")
+    .select("id, first_name, last_name, email, mobile_number, kyc_status, created_at, customer_code")
     .or(`email.ilike.%${trimmed}%,first_name.ilike.%${trimmed}%,last_name.ilike.%${trimmed}%,mobile_number.ilike.%${trimmed}%`)
     .limit(20);
 
@@ -931,9 +1032,9 @@ export async function getPendingTransactionsWithDetails() {
     .from("transactions")
     .select(`
       id, user_id, type, amount_aud, equivalent_toman, status, created_at,
-      source_of_funds, reason_for_transfer, receipt_sent,
+      source_of_funds, reason_for_transfer, receipt_sent, payment_link,
       promo_code, discount_amount, loyalty_discount, final_amount, reference_code,
-      profiles(first_name, last_name, email),
+      profiles(first_name, last_name, email, customer_code),
       recipients(
         id, direction, label, bank_type,
         bank_name, bsb, account_number, account_name, residential_address, recipient_email, recipient_phone,
@@ -947,29 +1048,395 @@ export async function getPendingTransactionsWithDetails() {
   return data ?? [];
 }
 
-export async function getTransactionHistoryWithDetails(limitCount: number = DEFAULT_HISTORY_LIMIT) {
+export async function getTransactionHistoryWithDetails(page: number = 1, pageSize: number = 10) {
   const ssrClient = await createSupabaseServerActionClient();
   await requireAdmin(ssrClient);
   const db = makeServiceRoleClient();
-  const safeLimit = clampInt(limitCount, 1, MAX_HISTORY_LIMIT, DEFAULT_HISTORY_LIMIT);
+  const safePage = clampInt(page, 1, MAX_AUDIT_PAGE, 1);
+  const safePageSize = clampInt(pageSize, 1, 50, 10);
+  const offset = (safePage - 1) * safePageSize;
 
-  const { data, error } = await db
+  const [countRes, dataRes] = await Promise.all([
+    db
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .neq("status", "pending"),
+    db
+      .from("transactions")
+      .select(`
+        id, user_id, type, amount_aud, equivalent_toman, status, created_at,
+        source_of_funds, reason_for_transfer, receipt_sent, payment_link,
+        promo_code, discount_amount, loyalty_discount, final_amount, reference_code,
+        profiles(first_name, last_name, email, customer_code),
+        recipients(
+          id, direction, label, bank_type,
+          bank_name, bsb, account_number, account_name, residential_address, recipient_email, recipient_phone,
+          card_number, shaba_number, irt_account_number, full_name, irt_address, irt_phone
+        )
+      `)
+      .neq("status", "pending")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + safePageSize - 1),
+  ]);
+
+  if (dataRes.error) throw new Error(dataRes.error.message);
+  return { data: dataRes.data ?? [], total: countRes.count ?? 0 };
+}
+
+// ===========================================================================
+// UPDATE TRANSACTION REFERENCE CODE
+// ===========================================================================
+export async function updateTransactionReferenceCode(
+  transactionId: string | number,
+  newCode: string
+) {
+  const admin = await requireAdmin();
+  if (!transactionId) return { error: "Missing transaction ID." };
+
+  const trimmedCode = newCode.trim().toUpperCase();
+  if (!trimmedCode) return { error: "Reference code cannot be empty." };
+  if (!/^[A-Z]{2}[0-9]{5}$/.test(trimmedCode)) {
+    return { error: "Invalid format. Expected 2 letters + 5 digits (e.g. ZE12345)." };
+  }
+
+  const db = makeServiceRoleClient();
+
+  const { data: existing } = await db
     .from("transactions")
-    .select(`
-      id, user_id, type, amount_aud, equivalent_toman, status, created_at,
-      source_of_funds, reason_for_transfer, receipt_sent,
-      promo_code, discount_amount, loyalty_discount, final_amount, reference_code,
-      profiles(first_name, last_name, email),
-      recipients(
-        id, direction, label, bank_type,
-        bank_name, bsb, account_number, account_name, residential_address, recipient_email, recipient_phone,
-        card_number, shaba_number, irt_account_number, full_name, irt_address, irt_phone
-      )
-    `)
-    .neq("status", "pending")
-    .order("created_at", { ascending: false })
-    .limit(safeLimit);
+    .select("id")
+    .eq("reference_code", trimmedCode)
+    .neq("id", String(transactionId))
+    .maybeSingle();
 
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  if (existing) return { error: "Reference code already in use." };
+
+  const { data: before } = await db
+    .from("transactions")
+    .select("reference_code")
+    .eq("id", transactionId)
+    .single();
+
+  const { error } = await db
+    .from("transactions")
+    .update({ reference_code: trimmedCode })
+    .eq("id", transactionId);
+
+  if (error) return { error: error.message };
+
+  try {
+    await writeAuditLog({
+      actorId: admin.id,
+      actorEmail: admin.email ?? "",
+      action: "TRANSACTION_REFERENCE_UPDATED",
+      targetType: "transaction",
+      targetId: String(transactionId),
+      oldValue: { reference_code: before?.reference_code },
+      newValue: { reference_code: trimmedCode },
+    });
+  } catch {}
+
+  return { success: true };
+}
+
+// ===========================================================================
+// UPDATE CUSTOMER CODE
+// ===========================================================================
+export async function updateCustomerCode(userId: string, newCode: string) {
+  const admin = await requireAdmin();
+  if (!userId) return { error: "Missing user ID." };
+
+  const trimmedCode = newCode.trim().toUpperCase();
+  if (!trimmedCode) return { error: "Customer code cannot be empty." };
+  if (!/^CZ\d{4}$/.test(trimmedCode)) {
+    return { error: "Invalid format. Use CZ followed by 4 digits (e.g. CZ0001)." };
+  }
+
+  const db = makeServiceRoleClient();
+
+  const { data: existing } = await db
+    .from("profiles")
+    .select("id")
+    .eq("customer_code", trimmedCode)
+    .neq("id", userId)
+    .maybeSingle();
+
+  if (existing) return { error: "Customer code already in use." };
+
+  const { data: before } = await db
+    .from("profiles")
+    .select("customer_code")
+    .eq("id", userId)
+    .single();
+
+  const { error } = await db
+    .from("profiles")
+    .update({ customer_code: trimmedCode })
+    .eq("id", userId);
+
+  if (error) return { error: error.message };
+
+  try {
+    await writeAuditLog({
+      actorId: admin.id,
+      actorEmail: admin.email ?? "",
+      action: "CUSTOMER_CODE_UPDATED",
+      targetType: "profile",
+      targetId: userId,
+      oldValue: { customer_code: before?.customer_code },
+      newValue: { customer_code: trimmedCode },
+    });
+  } catch {}
+
+  return { success: true };
+}
+
+// ===========================================================================
+// UPDATE TRANSACTION AMOUNT (AUD or Toman)
+// ===========================================================================
+export async function updateTransactionAmount(
+  transactionId: string | number,
+  field: "amount_aud" | "equivalent_toman",
+  newValue: number
+): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+  if (!transactionId) return { error: "Missing transaction ID." };
+
+  if (!Number.isFinite(newValue) || newValue <= 0) {
+    return { error: "Please enter a valid positive number." };
+  }
+
+  const db = makeServiceRoleClient();
+
+  const { data: before, error: fetchErr } = await db
+    .from("transactions")
+    .select(`id, amount_aud, equivalent_toman`)
+    .eq("id", String(transactionId))
+    .single();
+
+  if (fetchErr || !before) return { error: "Transaction not found." };
+
+  const { error: updateErr } = await db
+    .from("transactions")
+    .update({ [field]: newValue })
+    .eq("id", String(transactionId));
+
+  if (updateErr) return { error: updateErr.message };
+
+  try {
+    await writeAuditLog({
+      actorId: admin.id,
+      actorEmail: admin.email ?? "",
+      action: "TRANSACTION_AMOUNT_UPDATED",
+      targetType: "transaction",
+      targetId: String(transactionId),
+      oldValue: { field, value: (before as Record<string, unknown>)[field] },
+      newValue: { field, value: newValue },
+    });
+  } catch {}
+
+  return { success: true };
+}
+
+// ===========================================================================
+// LEDGER — all approved transactions for P&L tracking
+// ===========================================================================
+export async function getLedgerData(page = 1, pageSize = 20) {
+  const ssrClient = await createSupabaseServerActionClient();
+  await requireAdmin(ssrClient);
+  const db = makeServiceRoleClient();
+
+  const safePage = clampInt(page, 1, MAX_AUDIT_PAGE, 1);
+  const safeSize = clampInt(pageSize, 1, 100, 20);
+  const offset   = (safePage - 1) * safeSize;
+
+  const [allRes, pageRes, rateRes] = await Promise.all([
+    // All ledger rows — for P&L metrics
+    db.from("ledger").select("type, amount_aud, amount_toman, fee_aud"),
+    // Paginated rows — for the table
+    db
+      .from("ledger")
+      .select("id, transaction_id, date_gregorian, date_jalali, type, exchange_rate, amount_aud, amount_toman, sender, recipient, fee_aud, notes, created_at")
+      .order("date_gregorian", { ascending: false })
+      .order("created_at",     { ascending: false })
+      .range(offset, offset + safeSize - 1),
+    // Current market rate
+    db
+      .from("rates_history")
+      .select("buy_aud")
+      .order("date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (allRes.error)  throw new Error(allRes.error.message);
+  if (pageRes.error) throw new Error(pageRes.error.message);
+
+  return {
+    allLedgerRows:  allRes.data  ?? [],
+    pageLedgerRows: pageRes.data ?? [],
+    total:          allRes.data?.length ?? 0,
+    currentBuyRate: Number(rateRes.data?.buy_aud ?? 0),
+  };
+}
+
+// ===========================================================================
+// LEDGER: Update any field in a ledger row
+// ===========================================================================
+export async function updateLedgerEntry(
+  id: string,
+  updates: {
+    date_gregorian?: string;
+    type?: "buy_aud" | "sell_aud";
+    exchange_rate?: number;
+    amount_aud?: number;
+    amount_toman?: number;
+    sender?: string;
+    recipient?: string;
+    fee_aud?: number;
+    notes?: string;
+  }
+): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+  if (!id) return { error: "Missing ledger entry ID." };
+
+  const patch: Record<string, unknown> = {};
+
+  if (updates.date_gregorian !== undefined) {
+    const d = new Date(updates.date_gregorian);
+    if (isNaN(d.getTime())) return { error: "Invalid date." };
+    patch.date_gregorian = updates.date_gregorian;
+    patch.date_jalali    = toJalaliStr(d);
+  }
+  if (updates.type !== undefined) {
+    if (!["buy_aud", "sell_aud"].includes(updates.type)) return { error: "Invalid type." };
+    patch.type = updates.type;
+  }
+  if (updates.exchange_rate !== undefined) {
+    if (!Number.isFinite(updates.exchange_rate) || updates.exchange_rate <= 0) return { error: "Invalid exchange rate." };
+    patch.exchange_rate = updates.exchange_rate;
+  }
+  if (updates.amount_aud !== undefined) {
+    if (!Number.isFinite(updates.amount_aud) || updates.amount_aud <= 0) return { error: "Invalid AUD amount." };
+    patch.amount_aud = updates.amount_aud;
+  }
+  if (updates.amount_toman !== undefined) {
+    if (!Number.isFinite(updates.amount_toman) || updates.amount_toman <= 0) return { error: "Invalid Toman amount." };
+    patch.amount_toman = updates.amount_toman;
+  }
+  if (updates.sender !== undefined) patch.sender = updates.sender.trim();
+  if (updates.recipient !== undefined) patch.recipient = updates.recipient.trim();
+  if (updates.fee_aud !== undefined) {
+    if (!Number.isFinite(updates.fee_aud) || updates.fee_aud < 0) return { error: "Invalid fee." };
+    patch.fee_aud = updates.fee_aud;
+  }
+  if (updates.notes !== undefined) patch.notes = updates.notes.trim() || null;
+
+  if (Object.keys(patch).length === 0) return { success: true };
+
+  const db = makeServiceRoleClient();
+  const { data: before } = await db.from("ledger").select("type, amount_aud, amount_toman, exchange_rate, fee_aud").eq("id", id).single();
+  const { error } = await db.from("ledger").update(patch).eq("id", id);
+  if (error) return { error: error.message };
+
+  try {
+    await writeAuditLog({
+      actorId:    admin.id,
+      actorEmail: admin.email ?? "",
+      action:     "LEDGER_ENTRY_UPDATED",
+      targetType: "ledger",
+      targetId:   id,
+      oldValue:   before,
+      newValue:   patch,
+    });
+  } catch {}
+
+  return { success: true };
+}
+
+// ===========================================================================
+// LEDGER: Add a manual ledger entry (no linked transaction)
+// ===========================================================================
+export async function addManualLedgerEntry({
+  type, amountAud, amountToman, exchangeRate, sender, recipient, feeAud, dateGregorian, notes,
+}: {
+  type: "buy_aud" | "sell_aud";
+  amountAud: number;
+  amountToman: number;
+  exchangeRate?: number;
+  sender?: string;
+  recipient?: string;
+  feeAud?: number;
+  dateGregorian?: string;  // "YYYY-MM-DD"
+  notes?: string;
+}): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+  if (!["buy_aud", "sell_aud"].includes(type)) return { error: "Invalid type." };
+  if (!Number.isFinite(amountAud)   || amountAud   <= 0) return { error: "Invalid AUD amount." };
+  if (!Number.isFinite(amountToman) || amountToman <= 0) return { error: "Invalid Toman amount." };
+  if (feeAud !== undefined && (!Number.isFinite(feeAud) || feeAud < 0)) return { error: "Invalid fee." };
+
+  const txDate  = dateGregorian ? new Date(dateGregorian + "T00:00:00.000Z") : new Date();
+  const dateGre = txDate.toISOString().slice(0, 10);
+  const dateJal = toJalaliStr(txDate);
+  const rate    = exchangeRate ?? (amountAud > 0 ? amountToman / amountAud : 0);
+
+  const db = makeServiceRoleClient();
+  const { error } = await db.from("ledger").insert([{
+    transaction_id:  null,
+    date_gregorian:  dateGre,
+    date_jalali:     dateJal,
+    type,
+    exchange_rate:   rate,
+    amount_aud:      amountAud,
+    amount_toman:    amountToman,
+    sender:          sender?.trim()    ?? "",
+    recipient:       recipient?.trim() ?? "",
+    fee_aud:         feeAud ?? 0,
+    notes:           notes?.trim() || null,
+    created_by:      admin.id,
+  }]);
+
+  if (error) return { error: error.message };
+
+  try {
+    await writeAuditLog({
+      actorId:    admin.id,
+      actorEmail: admin.email ?? "",
+      action:     "MANUAL_LEDGER_ENTRY_ADDED",
+      targetType: "ledger",
+      targetId:   dateGre,
+      newValue:   { type, amount_aud: amountAud, amount_toman: amountToman, sender, recipient, fee_aud: feeAud },
+    });
+  } catch {}
+
+  return { success: true };
+}
+
+// ===========================================================================
+// LEDGER: Delete a ledger entry
+// ===========================================================================
+export async function deleteLedgerEntry(
+  id: string,
+): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+  if (!id) return { error: "Missing ledger entry ID." };
+
+  const db = makeServiceRoleClient();
+  const { data: before } = await db.from("ledger").select("type, amount_aud, amount_toman, date_gregorian").eq("id", id).single();
+  const { error } = await db.from("ledger").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  try {
+    await writeAuditLog({
+      actorId:    admin.id,
+      actorEmail: admin.email ?? "",
+      action:     "LEDGER_ENTRY_DELETED",
+      targetType: "ledger",
+      targetId:   id,
+      oldValue:   before,
+      newValue:   null,
+    });
+  } catch {}
+
+  return { success: true };
 }

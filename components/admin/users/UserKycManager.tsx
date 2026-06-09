@@ -5,6 +5,7 @@ import { ShieldCheck } from "lucide-react";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
 import { KycActionButtons } from "@/components/admin/KycActionButtons";
+import { EditableCustomerCode } from "@/components/admin/EditableCustomerCode";
 import type { getUserFinancialProfile } from "@/app/actions/admin.actions";
 
 type Profile = Awaited<ReturnType<typeof getUserFinancialProfile>>["profile"];
@@ -38,8 +39,18 @@ export function UserKycManager({ profile }: UserKycManagerProps) {
       </div>
 
       <div className={cardStyles.panelBody}>
-        <dl className={cardStyles.kycDetailList}>
-          {ROWS.map(([label, getValue]) => {
+        <dl className={cardStyles.kycDetailList}>            {/* Customer Code — editable */}
+            <div className={cardStyles.kycDetailRow}>
+              <dt className={cardStyles.kycDetailRowLabel}>Customer Code</dt>
+              <dd className={cardStyles.kycDetailRowValue}>
+                {profile ? (
+                  <EditableCustomerCode
+                    userId={profile.id}
+                    currentCode={(profile as Record<string, unknown>).customer_code as string | null}
+                  />
+                ) : "—"}
+              </dd>
+            </div>          {ROWS.map(([label, getValue]) => {
             const value = profile ? getValue(profile) : null;
             return (
               <div key={label} className={cardStyles.kycDetailRow}>

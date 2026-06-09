@@ -1,12 +1,16 @@
 import React from "react";
+import Link from "next/link";
 import { MessageSquare, Star, Clock, Archive } from "lucide-react";
-import { getFeedbackQueue } from "@/app/actions/admin.actions";
+import { getFeedbackQueue, getFeedbackHistory } from "@/app/actions/admin.actions";
 import { FeedbackModerateButtons } from "@/components/admin/FeedbackModerateButtons";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 
 export const metadata = { title: "Feedback Moderation | Zarman Admin" };
+
+const PAGE_SIZE = 10;
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "approved")
@@ -46,11 +50,18 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-export default async function FeedbackPage() {
-  const queue = await getFeedbackQueue();
+export default async function FeedbackPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const params = await searchParams;
+  const currentPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
 
-  const pending = queue.filter((f) => f.status === "pending");
-  const moderated = queue.filter((f) => f.status !== "pending");
+  const [pending, { data: moderated, total }] = await Promise.all([
+    getFeedbackQueue(),
+    getFeedbackHistory(currentPage, PAGE_SIZE),
+  ]);
 
   return (
     <>
@@ -121,10 +132,17 @@ export default async function FeedbackPage() {
                           })}
                         </td>
                         <td>
-                          <div className={tableStyles.cellStrong}>{name}</div>
-                          <div className={`${tableStyles.cellSmall} ${tableStyles.cellDim} ${tableStyles.cellSubtleTop}`}>
-                            {profile?.email ?? ""}
-                          </div>
+                          <Link href={`/admin/users?userId=${f.user_id}`} style={{ color: "inherit", textDecoration: "none" }}>
+                            <div className={tableStyles.cellStrong} style={{ color: "var(--accent, #2563eb)" }}>{name}</div>
+                            <div className={`${tableStyles.cellSmall} ${tableStyles.cellDim} ${tableStyles.cellSubtleTop}`}>
+                              {profile?.email ?? ""}
+                            </div>
+                            {profile?.customer_code && (
+                              <div style={{ fontSize: "0.65rem", color: "var(--text-dim)", fontFamily: "monospace", marginTop: "2px" }}>
+                                ({profile.customer_code})
+                              </div>
+                            )}
+                          </Link>
                         </td>
                         <td>
                           <StarRating rating={f.rating ?? 5} />
@@ -149,66 +167,86 @@ export default async function FeedbackPage() {
           )}
         </div>
 
-        {/* 2. Moderated History (Archive Area) */}
-        {moderated.length > 0 && (
-          <div className={`${cardStyles.panel} ${cardStyles.panelSoft}`}>
-            <div className={cardStyles.panelHeader}>
-              <h2 className={cardStyles.panelTitle}>
-                <Archive size={18} color="var(--text-dim)" />
-                Moderation History
-              </h2>
-            </div>
-            <div className={`${tableStyles.tableWrap} ${tableStyles.tableWrapTopBorder} ${tableStyles.tableWrapTopFlat}`}>
-              <table className={tableStyles.table}>
-                <thead className={tableStyles.theadTransparent}>
-                  <tr>
-                    <th>Date</th>
-                    <th>Customer</th>
-                    <th>Rating</th>
-                    <th>Message</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {moderated.map((f) => {
-                    const profile = f.profiles as any;
-                    const name = profile
-                      ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
-                      : "—";
-                    return (
-                      <tr key={f.id}>
-                        <td className={`${tableStyles.cellMono} ${tableStyles.cellSmall} ${tableStyles.cellDim}`}>
-                          {new Date(f.created_at).toLocaleDateString("en-AU", {
-                            day: "2-digit", month: "2-digit", year: "2-digit",
-                          })}
-                        </td>
-                        <td className={tableStyles.cellStrong}>{name}</td>
-                        <td>
-                          <StarRating rating={f.rating ?? 5} />
-                        </td>
-                        <td className={tableStyles.cellMax280}>
-                          <div className={`${tableStyles.cellRtl} ${tableStyles.quoteHistory}`}>
-                            {f.message}
-                          </div>
-                        </td>
-                        <td>
-                          <StatusBadge status={f.status} />
-                        </td>
-                        <td>
-                          <FeedbackModerateButtons
-                            feedbackId={f.id}
-                            currentStatus={f.status}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+        {/* 2. Moderated History (paginated) */}
+        <div className={`${cardStyles.panel} ${cardStyles.panelSoft}`}>
+          <div className={cardStyles.panelHeader}>
+            <h2 className={cardStyles.panelTitle}>
+              <Archive size={18} color="var(--text-dim)" />
+              Moderation History ({total} total)
+            </h2>
           </div>
-        )}
+          {moderated.length === 0 ? (
+            <div className={`${cardStyles.emptyState} ${cardStyles.emptyStateCompact} ${cardStyles.emptyStateWithTopBorder}`}>
+              <div className={`${cardStyles.emptyStateText} ${cardStyles.emptyStateDim}`}>No moderated feedback yet.</div>
+            </div>
+          ) : (
+            <>
+              <div className={`${tableStyles.tableWrap} ${tableStyles.tableWrapTopBorder} ${tableStyles.tableWrapTopFlat}`}>
+                <table className={tableStyles.table}>
+                  <thead className={tableStyles.theadTransparent}>
+                    <tr>
+                      <th>Date</th>
+                      <th>Customer</th>
+                      <th>Rating</th>
+                      <th>Message</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {moderated.map((f) => {
+                      const profile = f.profiles as any;
+                      const name = profile
+                        ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
+                        : "—";
+                      return (
+                        <tr key={f.id}>
+                          <td className={`${tableStyles.cellMono} ${tableStyles.cellSmall} ${tableStyles.cellDim}`}>
+                            {new Date(f.created_at).toLocaleDateString("en-AU", {
+                              day: "2-digit", month: "2-digit", year: "2-digit",
+                            })}
+                          </td>
+                          <td>
+                            <Link href={`/admin/users?userId=${f.user_id}`} style={{ color: "inherit", textDecoration: "none" }}>
+                              <div className={tableStyles.cellStrong} style={{ color: "var(--accent, #2563eb)" }}>{name}</div>
+                              {profile?.customer_code && (
+                                <div style={{ fontSize: "0.65rem", color: "var(--text-dim)", fontFamily: "monospace", marginTop: "2px" }}>
+                                  ({profile.customer_code})
+                                </div>
+                              )}
+                            </Link>
+                          </td>
+                          <td>
+                            <StarRating rating={f.rating ?? 5} />
+                          </td>
+                          <td className={tableStyles.cellMax280}>
+                            <div className={`${tableStyles.cellRtl} ${tableStyles.quoteHistory}`}>
+                              {f.message}
+                            </div>
+                          </td>
+                          <td>
+                            <StatusBadge status={f.status} />
+                          </td>
+                          <td>
+                            <FeedbackModerateButtons
+                              feedbackId={f.id}
+                              currentStatus={f.status}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <AdminPagination
+                currentPage={currentPage}
+                totalCount={total}
+                pageSize={PAGE_SIZE}
+              />
+            </>
+          )}
+        </div>
       </div>
     </>
   );
