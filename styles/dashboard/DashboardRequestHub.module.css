@@ -20,8 +20,8 @@
 .offlineIcon { color: var(--color-text-primary) !important; }
 
 .lockIcon { margin-bottom: var(--space-4); color: var(--warning); }
-.lockTitle { font-size: var(--text-body-lg); margin: 0 0 var(--space-2) 0; font-weight: 900; }
-.lockText { max-width: 560px; line-height: var(--leading-relaxed); color: rgba(255, 255, 255, 0.92); margin: 0; }
+.lockTitle { font-size: 1.125rem; margin: 0 0 0.5rem 0; font-weight: 700; font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif); }
+.lockText { max-width: 520px; line-height: 1.75; color: rgba(255, 255, 255, 0.92); margin: 0; font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif); font-size: 0.9375rem; }
 
 /* =======================================
    عنوان محاسبه‌گر 
@@ -32,17 +32,18 @@
   justify-content: center; 
   align-items: center; 
 }
-.panelTitle { 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  width: 100%; 
-  gap: var(--space-3); 
-  font-size: var(--text-card-title); 
-  font-weight: 900; 
-  margin-bottom: var(--space-8); 
-  color: var(--text-main); 
-  text-align: center; 
+.panelTitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: var(--text-main);
+  text-align: center;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 .titleIcon { color: var(--accent); }
 
@@ -72,10 +73,11 @@
   justify-content: space-between; 
   align-items: center; 
 }
-.label { 
-  font-weight: 600; 
-  font-size: var(--text-body-sm); 
-  color: var(--text-soft); 
+.label {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--text-soft);
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 /* رفع قطعی مشکل ستاره قرمز */
@@ -94,61 +96,80 @@
 .hubFieldGroup {
   display: flex;
   align-items: center;
-  background-color: var(--bg-input); 
+  background-color: var(--bg-input);
   border: 1px solid var(--border-input);
-  border-radius: var(--radius-lg);
-  padding: 0 var(--space-4); 
-  height: 4rem; 
-  box-sizing: border-box; 
+  border-radius: 0.625rem;
+  padding: 0 1rem;
+  height: 3.5rem;
+  box-sizing: border-box;
   transition: all 0.2s ease;
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
 }
-.hubFieldGroup:focus-within { 
-  border-color: var(--accent); 
-  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15); 
+.hubFieldGroup:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.12);
 }
-.hubLocked { 
-  background-color: var(--bg-soft); 
-  border-color: rgba(var(--accent-rgb), 0.2); 
+.hubLocked {
+  background-color: var(--bg-soft);
+  border-color: rgba(67, 56, 202, 0.2);
 }
 
 .hubFaInput {
   flex: 1;
-  height: 100%; 
+  height: 100%;
   background: transparent;
   border: none;
-  color: var(--text-main); 
-  font-family: var(--font-primary) !important; 
-  font-size: var(--text-body-lg) !important; 
-  line-height: normal !important; 
-  font-weight: 800 !important; 
-  outline: none;
-  width: 100%;
-  text-align: right !important; 
-  direction: ltr !important; 
-}
-.hubFaInput::placeholder { color: var(--text-placeholder); font-weight: 500; }
-
-.hubEnInput {
-  flex: 1;
-  height: 100%; 
-  background: transparent;
-  border: none;
-  color: var(--text-main); 
-  font-family: 'Inter', -apple-system, sans-serif !important; 
-  font-size: 1.1rem !important; 
+  color: var(--text-main);
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif) !important;
+  font-size: 1.125rem !important;
+  line-height: normal !important;
   font-weight: 700 !important;
   outline: none;
   width: 100%;
-  text-align: right !important; 
-  direction: ltr !important; 
-  letter-spacing: 1px;
+  text-align: right !important;
+  direction: ltr !important;
 }
-.hubEnInput::placeholder { 
-  color: var(--text-placeholder); 
-  font-weight: 500;
-  font-family: var(--font-primary) !important;
+.hubFaInput::placeholder { color: var(--text-placeholder); font-weight: 500; font-family: var(--font-fa-stack, 'IRANSansX', sans-serif) !important; }
+
+.hubEnInput {
+  flex: 1;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-family: 'Inter', system-ui, sans-serif !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  outline: none;
+  width: 100%;
+  text-align: right !important;
+  direction: ltr !important;
+  letter-spacing: 0.5px;
+}
+.hubEnInput::placeholder {
+  color: var(--text-placeholder);
+  font-weight: 400;
+  font-family: 'IRANSansX', sans-serif !important;
   letter-spacing: normal;
+  text-align: right;
+}
+
+/* Left-aligned English inputs (URL, promo code) */
+.hubEnInputLtr {
+  text-align: left !important;
+  direction: ltr !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+  font-size: 0.9375rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.02em;
+}
+.hubEnInputLtr::placeholder {
+  text-align: left !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+  font-size: 0.9375rem !important;
+  letter-spacing: normal;
+  font-weight: 400 !important;
+  color: var(--text-placeholder);
 }
 
 .hubResultInput { 
@@ -191,14 +212,14 @@
 /* ورودی پایه (فارسی / عمومی) */
 .faInput {
   flex: 1;
-  height: 100%; 
+  height: 100%;
   background: transparent;
   border: none;
-  color: var(--text-main); 
-  font-family: var(--font-primary) !important; 
-  font-size: 0.95rem; 
-  line-height: normal !important; 
-  font-weight: 500; 
+  color: var(--text-main);
+  font-family: 'IRANSansX', 'Peyda', sans-serif !important;
+  font-size: 0.9375rem;
+  line-height: normal !important;
+  font-weight: 500;
   outline: none;
   width: 100%;
 }
@@ -274,15 +295,15 @@
 }
 .promoRow .inputBox { flex: 1; margin-bottom: 0; }
 .promoApplyBtn {
-  height: 4rem; 
-  padding: 0 var(--space-6);
-  border-radius: var(--radius-md);
+  height: 3.5rem;
+  padding: 0 1.25rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--accent);
   background: transparent;
   color: var(--accent);
-  font-family: var(--font-primary);
+  font-family: 'IRANSansX', 'Peyda', sans-serif;
   font-weight: 700;
-  font-size: var(--text-body-sm);
+  font-size: 0.875rem;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s;
@@ -290,48 +311,73 @@
   align-items: center;
   justify-content: center;
 }
-.promoApplyBtn:hover:not(:disabled) { background: var(--accent); color: var(--color-text-primary); }
+.promoApplyBtn:hover:not(:disabled) { background: var(--accent); color: #fff; }
 .promoApplyBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.promoSuccess { font-size: var(--text-body-sm); color: var(--success); font-weight: 700; margin-top: var(--space-2); }
-.promoError { font-size: var(--text-body-sm); color: var(--danger); font-weight: 700; margin-top: var(--space-2); }
-.fieldHint { font-size: var(--text-caption); color: var(--text-soft); font-weight: 500; margin-top: var(--space-1); display: block; }
-.feeWarning { display: flex; align-items: center; gap: var(--space-1); color: var(--warning); font-size: var(--text-caption); font-weight: 700; }
+.promoSuccess { font-size: 0.875rem; color: #059669; font-weight: 700; margin-top: 0.5rem; font-family: 'IRANSansX', 'Peyda', sans-serif; }
+.promoError   { font-size: 0.875rem; color: var(--danger); font-weight: 700; margin-top: 0.5rem; font-family: 'IRANSansX', 'Peyda', sans-serif; }
+.fieldHint    { font-size: 0.8125rem; color: var(--text-soft); font-weight: 500; margin-top: 0.25rem; display: block; font-family: 'IRANSansX', 'Peyda', sans-serif; }
+.feeWarning   { display: flex; align-items: center; gap: 0.25rem; color: var(--warning); font-size: 0.8125rem; font-weight: 700; font-family: 'IRANSansX', 'Peyda', sans-serif; }
 
 /* =======================================
    باکس خلاصه وضعیت نهایی
    ======================================= */
-.summaryBox { 
-  background: var(--bg-soft); 
-  padding: var(--space-6); 
-  border-radius: var(--radius-xl); 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  gap: var(--space-4); 
-  margin-top: var(--space-2); 
-  border: 1px solid var(--border-soft); 
+.summaryBox {
+  background: var(--bg-soft);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  border: 1px solid var(--border-soft);
 }
 .summaryText { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.summaryRate { color: var(--accent); display: block; font-size: var(--text-body-lg); font-weight: 800; }
-.summaryHint { font-size: var(--text-body-sm); color: var(--success); display: block; font-weight: 600; }
+.summaryRate {
+  color: var(--accent);
+  display: block;
+  font-size: 1.375rem;
+  font-weight: 800;
+  font-family: 'IRANSansX', 'Peyda', var(--font-en-stack), sans-serif;
+}
+.summaryHint {
+  font-size: 0.875rem;
+  color: #059669;
+  display: block;
+  font-weight: 600;
+  font-family: 'IRANSansX', 'Peyda', sans-serif;
+}
 
 /* =======================================
    ریسپانسیو کامل
    ======================================= */
-@media (max-width: 768px) { 
-  .formRow { 
-    grid-template-columns: 1fr; 
-    gap: var(--space-6);
-  } 
-  .summaryBox { 
-    flex-direction: column; 
-    align-items: stretch; 
-    text-align: center; 
-  } 
+@media (max-width: 768px) {
+  .formRow {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .summaryBox {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    gap: 1rem;
+  }
+  .summaryRate { font-size: 1.5rem; }
+  .panelTitle { font-size: 1.0625rem; margin-bottom: 1.25rem; }
+  .hubFieldGroup { height: 3.25rem; }
 }
 
-@media (max-width: 520px) { 
-  .promoRow { flex-direction: column; align-items: stretch; }
-  .hubFaInput { font-size: 1.35rem !important; }
+@media (max-width: 520px) {
+  .promoRow { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+  .promoApplyBtn { height: 3.25rem; width: 100%; }
+  /* iOS Safari: font-size ≥ 16px prevents zoom-on-focus */
+  .hubFaInput   { font-size: 1rem !important; }
+  .hubEnInput   { font-size: 1rem !important; }
+  .hubEnInputLtr { font-size: 1rem !important; }
+  .hubFieldGroup { height: 3.25rem; }
+  .label { font-size: 0.875rem; }
+  .fieldHint { font-size: 0.875rem; }
+  .formRow { gap: 0.875rem; }
+  .inputBox { margin-bottom: 0.75rem; }
 }

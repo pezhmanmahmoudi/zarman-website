@@ -79,7 +79,7 @@ export default function ZarmanDashboard() {
     return `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "مشتری عزیز";
   }, [profile]);
 
-  const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud", sourceOfFunds: string, reasonForTransfer: string, recipientId?: string | null, promoCode?: string | null, paymentLink?: string | null) => {
+  const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud", sourceOfFunds: string, reasonForTransfer: string, recipientId?: string | null, promoCode?: string | null, paymentLink?: string | null, agreedEquivalentToman?: number | null) => {
     if (!profile || !profile.id || !isApproved || rawAmount <= 0) return null;
     
     const result = await processTransactionSecurely({
@@ -90,6 +90,7 @@ export default function ZarmanDashboard() {
       recipientId,
       promoCode,
       paymentLink,
+      agreedEquivalentToman,
     });
 
     if (result?.error) {
@@ -132,7 +133,7 @@ export default function ZarmanDashboard() {
       <main className={shellStyles.mainArea}>
         <DashboardHeader firstName={profile?.first_name || "کاربر"} isApproved={isApproved} mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
         
-        <DashboardStats totalVolume={approvedVolume} transactionCount={approvedTransactions.length} baseRate={baseRate} loyaltyBonus={loyaltyBonus} txType={txType} />
+        <DashboardStats totalVolume={approvedVolume} transactionCount={approvedTransactions.length} baseRate={baseRate} loyaltyBonus={loyaltyBonus} loyaltySavings={profile?.loyalty_discount_toman ?? 0} tailoredRate={tailoredRate} txType={txType} />
         
         {activeTab === "hub" && (
           <DashboardRequestHub 
@@ -142,7 +143,7 @@ export default function ZarmanDashboard() {
           />
         )}
         
-        {activeTab === "history" && <DashboardTransactionHistory transactions={transactions} totalVolume={approvedVolume} onDeleteTransaction={handleDeleteRequest} />}
+        {activeTab === "history" && <DashboardTransactionHistory transactions={transactions} onDeleteTransaction={handleDeleteRequest} />}
         
         {/* 🚀 ارور تایپ‌اسکریپت از اینجا حل شد 🚀 */}
         {activeTab === "profile" && <DashboardProfile profile={profile} />}

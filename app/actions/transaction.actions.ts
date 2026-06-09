@@ -46,6 +46,7 @@ export async function processTransactionSecurely({
   recipientId,
   promoCode,
   paymentLink,
+  agreedEquivalentToman,
 }: {
   rawAmount: number;
   txType: "buy_aud" | "sell_aud";
@@ -54,6 +55,13 @@ export async function processTransactionSecurely({
   recipientId?: string | null;
   promoCode?: string | null;
   paymentLink?: string | null;
+  /**
+   * The Toman amount shown to the customer before submit (loyalty + promo applied).
+   * Stored as equivalent_toman when within ±15% of server calculation.
+   * This prevents discrepancies when rates_history spread changes between page
+   * load and form submission.
+   */
+  agreedEquivalentToman?: number | null;
 }) {
   if (rawAmount <= 0) return { error: "اطلاعات نامعتبر است." };
   if (!sourceOfFunds) return { error: "لطفاً منبع وجه را انتخاب کنید." };
@@ -140,7 +148,20 @@ export async function processTransactionSecurely({
     const effectiveAud = txType === "buy_aud"
       ? final_amount + appliedFee
       : Math.max(final_amount - appliedFee, 0);
-    const equivalentToman = Math.round(effectiveAud * promoAdjustedRate);
+    const serverEquivalentToman = Math.round(effectiveAud * promoAdjustedRate);
+
+    // Use client-agreed amount when it is within ±15 % of server's calculation.
+    // This preserves the rate the customer was shown (which includes loyalty)
+    // even when the rates_history spread has changed since the page loaded.
+    const clientToman = Number(agreedEquivalentToman);
+    const useClientToman =
+      Number.isFinite(clientToman) &&
+      clientToman > 0 &&
+      serverEquivalentToman > 0 &&
+      Math.abs(clientToman - serverEquivalentToman) / serverEquivalentToman < 0.15;
+
+    const equivalentToman = useClientToman ? clientToman : serverEquivalentToman;
+    const appliedRate = effectiveAud > 0 ? Math.round(equivalentToman / effectiveAud) : Math.round(promoAdjustedRate);
     const loyalty_discount_toman = loyaltyBonus > 0 ? Math.round(effectiveAud * loyaltyBonus) : 0;
 
     // ۵. اعتبارسنجی گیرنده (اگر انتخاب شده بود)
@@ -171,6 +192,7 @@ export async function processTransactionSecurely({
         type: txType === "buy_aud" ? "sell_aud" : "buy_aud",
         amount_aud: rawAmount,
         equivalent_toman: equivalentToman,
+        applied_rate: appliedRate,
         status: "pending",
         source_of_funds: sourceOfFunds,
         reason_for_transfer: reasonForTransfer,

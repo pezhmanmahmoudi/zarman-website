@@ -164,12 +164,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
         </h2>
       </div>
 
-      {Number(profile?.loyalty_discount_toman ?? 0) > 0 && (
-        <div className={styles.loyaltySavings}>
-          <Star size={16} />
-          <span>مجموع صرفه‌جویی وفاداری: <strong>{formatToman(Number(profile.loyalty_discount_toman))}</strong></span>
-        </div>
-      )}
+      {/* loyalty savings banner removed — now shown in stat cards */}
       
       <div className={styles.mainContentWrapper}>
         <div className={styles.formCompact}>
@@ -417,7 +412,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
 
                       <div className={styles.btnWrapperRight}>
                         <button type="button" onClick={handleSubmit} disabled={isSubmitting} className={cardStyles.primaryButton} style={{ padding: '14px 36px', fontSize: '14px' }}>
-                          {isSubmitting ? "Submitting..." : "Submit Verification"}
+                          {isSubmitting ? <><span className={cardStyles.spinner} aria-hidden="true" /> Submitting...</> : "Submit Verification"}
                         </button>
                       </div>
                     </div>
@@ -429,7 +424,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
                 <div className={styles.actionSection}>
                   <div className={styles.btnWrapperRight}>
                     <button type="button" onClick={handleSubmit} disabled={isSubmitting} className={cardStyles.primaryButton} style={{ padding: '14px 36px', fontSize: '14px' }}>
-                      {isSubmitting ? "Submitting..." : "Submit Verification"}
+                      {isSubmitting ? <><span className={cardStyles.spinner} aria-hidden="true" /> Submitting...</> : "Submit Verification"}
                     </button>
                   </div>
                 </div>

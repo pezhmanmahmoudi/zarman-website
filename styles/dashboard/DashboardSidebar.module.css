@@ -61,23 +61,23 @@
 
 .logoTitle {
   font-family: var(--font-en-stack) !important;
-  font-size: clamp(1.4rem, 2vw, var(--text-card-title));
-  font-weight: 900;
+  font-size: clamp(1.4rem, 2vw, 1.75rem);
+  font-weight: 800;
   margin: 0;
   background: linear-gradient(to right, #d503ff, #0d00ff);
   -webkit-background-clip: text;
-  background-clip: text; 
+  background-clip: text;
   -webkit-text-fill-color: transparent;
-  letter-spacing: 1px;
+  letter-spacing: -0.02em;
   line-height: 1;
 }
 
 .logoSubtitle {
   font-family: var(--font-en-stack) !important;
-  font-size: var(--text-caption);
-  font-weight: 800;
-  color: var(--text-soft);
-  letter-spacing: 0.22em;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.14em;
   margin: 0;
   text-transform: uppercase;
 }
@@ -98,13 +98,13 @@
 .navMenu { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; }
 
 .navItem {
-  display: flex; align-items: center; justify-content: flex-start; gap: var(--space-3);
-  padding: var(--space-3) var(--space-2);
-  border-radius: var(--radius-md);
-  color: var(--text-main); font-weight: var(--font-weight-semibold);
-  cursor: pointer; transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+  display: flex; align-items: center; justify-content: flex-start; gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--text-main); font-weight: 600;
+  cursor: pointer; transition: color 0.2s ease, background-color 0.2s ease;
   border: none; background: transparent; width: 100%; text-align: right;
-  font-family: var(--font-primary); font-size: var(--text-body-md); direction: rtl;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif); font-size: 0.9375rem; direction: rtl;
 }
 
 .navItem span { flex: 1; }

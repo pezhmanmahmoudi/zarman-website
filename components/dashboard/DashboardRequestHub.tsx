@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Calculator, AlertTriangle, Lock, MessageSquare, ServerCrash, Loader2, PauseCircle, Tag } from "lucide-react";
+import { Calculator, AlertTriangle, Lock, MessageSquare, ServerCrash, PauseCircle, Tag } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/[locale]/dashboard/dashboard.types";
@@ -16,7 +16,7 @@ function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => 
 function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹"; return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d))); }
 function getRawNumber(value: string) {
   let v = faToEnDigits(value);
-  v = v.replace(/،/g, "").replace(/,/g, "").replace(/\D/g, "");
+  v = v.replace(/٫/g, ".").replace(/،/g, "").replace(/,/g, "").replace(/[^\d.]/g, "");
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
@@ -25,7 +25,9 @@ function formatNumberUI(num: number | null, isToman: boolean = false) {
   if (num === null || !num) return "";
   const options = isToman ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
   const en = Number(num).toLocaleString("en-US", options);
-  return toFaDigits(en);
+  // Toman values get Persian digits; AUD amounts stay Latin
+  if (isToman) return toFaDigits(en).replace(/,/g, "،");
+  return en;
 }
 
 function formatNumberWA(num: number | null, isToman: boolean = false) {
@@ -65,6 +67,7 @@ type RequestHubProps = {
     recipientId?: string | null,
     promoCode?: string | null,
     paymentLink?: string | null,
+    agreedEquivalentToman?: number | null,
   ) => Promise<ServerTransactionResult | null>;
 };
 
@@ -73,6 +76,16 @@ export function DashboardRequestHub({
   loyaltyBonus, tailoredRate, baseRate, displayFullName, profile,
   onSaveTransaction
 }: RequestHubProps) { 
+  const amountInputRef = React.useRef<HTMLInputElement>(null);
+
+  const keepAmountCaretAtEnd = () => {
+    requestAnimationFrame(() => {
+      const el = amountInputRef.current;
+      if (!el) return;
+      const end = el.value.length;
+      el.setSelectionRange(end, end);
+    });
+  };
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [marketActive, setMarketActive] = useState<boolean>(true);
@@ -201,16 +214,53 @@ export function DashboardRequestHub({
   // مسدودسازی تایپ حروف الفبا برای فیلد دلار به صورت هوشمند
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
-    
-    // فقط اجازه ورود اعداد انگلیسی، اعداد فارسی و ویرگول را می‌دهد
-    val = val.replace(/[^\d۰-۹,،]/g, ""); 
-    
-    if (val === "") { setAmountStr(""); resetPromo(); return; }
-    if (val === "0" || val === "۰") { setAmountStr("۰"); resetPromo(); return; }
-    
-    const raw = getRawNumber(val);
-    setAmountStr(formatNumberUI(raw, false));
+
+    // Accept Persian/Latin digits and both decimal separators; normalize to "." internally.
+    val = val.replace(/٫/g, ".").replace(/[^\d۰-۹.]/g, "");
+    const normalized = faToEnDigits(val);
+
+    // Prevent more than one decimal point.
+    const dotCount = (normalized.match(/\./g) || []).length;
+    if (dotCount > 1) return;
+
+    if (normalized === "") {
+      setAmountStr("");
+      resetPromo();
+      keepAmountCaretAtEnd();
+      return;
+    }
+
+    if (normalized === ".") {
+      setAmountStr("۰.");
+      resetPromo();
+      keepAmountCaretAtEnd();
+      return;
+    }
+
+    if (normalized === "0") {
+      setAmountStr("۰");
+      resetPromo();
+      keepAmountCaretAtEnd();
+      return;
+    }
+
+    if (normalized.includes(".")) {
+      const [intRaw, decRaw = ""] = normalized.split(".");
+      const intNum = Number(intRaw || "0");
+      const intFormatted = toFaDigits(intNum.toLocaleString("en-US"));
+      const decLimited = decRaw.slice(0, 2);
+      const decFormatted = toFaDigits(decLimited);
+      const trailingDot = normalized.endsWith(".");
+      setAmountStr(trailingDot ? `${intFormatted}.` : `${intFormatted}.${decFormatted}`);
+      resetPromo();
+      keepAmountCaretAtEnd();
+      return;
+    }
+
+    const raw = getRawNumber(normalized);
+    setAmountStr(raw > 0 ? toFaDigits(Number(raw).toLocaleString("en-US", { maximumFractionDigits: 2 })) : "");
     resetPromo();
+    keepAmountCaretAtEnd();
   };
 
   const submit = async () => {
@@ -240,6 +290,7 @@ export function DashboardRequestHub({
         selectedRecipientId || null,
         appliedPromoCode,
         isEduPayment ? (paymentLink.trim() || null) : null,
+        resultNumber > 0 ? resultNumber : null,
       );
       
       if (!serverData) {
@@ -402,7 +453,20 @@ export function DashboardRequestHub({
           </div>
           {/* استفاده از استایل هاب بازگردانی شده با دیوایدر قدیم */}
           <div className={styles.hubFieldGroup}>
-            <input type="text" inputMode="numeric" value={amountStr} onChange={handleInput} dir="ltr" className={styles.hubFaInput} placeholder="۰" disabled={isRateOffline || isSubmitting} />
+            <input
+              ref={amountInputRef}
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9۰-۹.,٫]*"
+              value={amountStr}
+              onChange={handleInput}
+              onFocus={keepAmountCaretAtEnd}
+              onClick={keepAmountCaretAtEnd}
+              dir="ltr"
+              className={styles.hubFaInput}
+              placeholder="۰"
+              disabled={isRateOffline || isSubmitting}
+            />
             <div className={styles.hubDivider}></div>
             <span className={styles.currencyLabelFixed}>AUD</span>
           </div>
@@ -427,12 +491,11 @@ export function DashboardRequestHub({
             <div className={styles.hubFieldGroup}>
               <input
                 type="url"
-                className={styles.hubEnInput}
+                className={`${styles.hubEnInput} ${styles.hubEnInputLtr}`}
                 placeholder="https://..."
                 value={paymentLink}
                 onChange={(e) => setPaymentLink(e.target.value)}
                 dir="ltr"
-                style={{ textAlign: "left" }}
                 disabled={isSubmitting}
                />
             </div>
@@ -518,7 +581,7 @@ export function DashboardRequestHub({
             <div className={styles.hubFieldGroup}>
               <input
                 type="text"
-                className={styles.hubEnInput}
+                className={`${styles.hubEnInput} ${styles.hubEnInputLtr}`}
                 placeholder="PROMO2026"
                 value={promoInput}
                 onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
@@ -532,7 +595,7 @@ export function DashboardRequestHub({
               onClick={handleApplyPromo}
               disabled={promoValidating || isSubmitting || !promoInput.trim() || rawAmount <= 0}
             >
-              {promoValidating ? <Loader2 className="lucide-spin" size={20} /> : "اعمال"}
+              {promoValidating ? <><span className={cardStyles.spinner} aria-hidden="true" /></> : "اعمال"}
             </button>
           </div>
           {promoMsg && <p className={promoMsg.type === "success" ? styles.promoSuccess : styles.promoError}>{promoMsg.text}</p>}
@@ -557,9 +620,9 @@ export function DashboardRequestHub({
             </span>
           )}
         </div>
-        <button className={cardStyles.primaryButton} onClick={submit} disabled={!isApproved || rawAmount <= 0 || isRateOffline || isSubmitting || !marketActive} type="button">
+        <button className={`${cardStyles.primaryButton}${isSubmitting ? ` ${cardStyles.loading}` : ""}`} onClick={submit} disabled={!isApproved || rawAmount <= 0 || isRateOffline || isSubmitting || !marketActive} type="button">
           {isSubmitting ? (
-            <><Loader2 className="lucide-spin" size={20} /> در حال پردازش امن...</>
+            <><span className={cardStyles.spinner} aria-hidden="true" /> در حال پردازش امن...</>
           ) : (
             <><MessageSquare size={20} /> تایید و ارسال به واتس‌اپ</>
           )}

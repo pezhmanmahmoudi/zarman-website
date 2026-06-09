@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { History, Target, Trash2, ChevronLeft, ChevronRight, Tag, Star } from "lucide-react";
+import { History, Trash2, ChevronLeft, ChevronRight, Tag, Star } from "lucide-react";
 import { formatToman } from "@/app/[locale]/dashboard/dashboard.utils";
 import styles from "@/styles/dashboard/DashboardTransactionHistory.module.css";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 
 const PAGE_SIZE = 10;
 
-export function DashboardTransactionHistory({ transactions, totalVolume, onDeleteTransaction }: any) {
+export function DashboardTransactionHistory({ transactions, onDeleteTransaction }: any) {
   const [page, setPage] = useState(1);
 
   const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
@@ -24,11 +24,6 @@ export function DashboardTransactionHistory({ transactions, totalVolume, onDelet
         <h2 className={`${cardStyles.panelTitle} ${styles.tableTitle}`}>
           <History size={24} /> سوابق مالی و تراکنش‌ها
         </h2>
-        
-        <div className={styles.volumeBadge}>
-          <Target size={18} />
-          <span>حجم تبادلات تایید شده: <strong dir="ltr">{Number(totalVolume).toLocaleString("en-US")} AUD</strong></span>
-        </div>
       </div>
       
       <div className={styles.tableWrap}>

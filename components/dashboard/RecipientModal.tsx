@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X } from "lucide-react";
 import styles from "@/styles/dashboard/RecipientModal.module.css";
 import { createRecipient } from "@/app/actions/transaction.actions";
 import type { Recipient, RecipientDirection, BankType } from "@/app/[locale]/dashboard/dashboard.types";
@@ -326,9 +326,8 @@ export function RecipientModal({ direction, onClose, onCreated }: RecipientModal
 
           {/* ── Footer ── */}
           <div className={styles.footer}>
-            <button className={styles.saveBtn} type="submit" disabled={saving}>
-              {saving && <Loader2 className="lucide-spin" size={18} />}
-              {saving ? "در حال ذخیره..." : "ذخیره گیرنده"}
+            <button className={`${styles.saveBtn}${saving ? ` ${styles.loading}` : ""}`} type="submit" disabled={saving}>
+              {saving ? <><span className={styles.spinner} aria-hidden="true" /> در حال ذخیره...</> : "ذخیره گیرنده"}
             </button>
             <button className={styles.cancelBtn} onClick={onClose} type="button" disabled={saving}>
               انصراف

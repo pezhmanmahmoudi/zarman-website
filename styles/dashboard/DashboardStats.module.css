@@ -1,86 +1,144 @@
-.topStats { 
-  display: grid; 
-  grid-template-columns: repeat(4, minmax(0, 1fr)); 
-  gap: var(--space-4); 
-  margin-bottom: var(--space-6); 
+.topStats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 0;
 }
 
-.statCard { 
-  background: var(--bg-card); 
-  backdrop-filter: blur(12px);
-  padding: var(--space-4); 
-  border-radius: var(--radius-xl); 
-  justify-content: center; 
-  position: relative; 
-  border: 1px solid var(--border-soft); 
-  box-shadow: var(--shadow-card); 
-  display: flex; 
-  align-items: center; 
-  gap: var(--space-3); 
-  min-width: 0;  
-  transition: transform 0.2s ease; 
-}
-
-.statIcon { 
-  width: 42px; 
-  height: 42px; 
-  border-radius: var(--radius-md); 
-  display: grid; 
-  place-items: center; 
-  background: var(--bg-soft); 
-  color: var(--text-main); 
-  flex-shrink: 0;
-  position: absolute; 
-  right: var(--space-4); 
-}
-
-.statIconAccent { 
-  background: rgba(var(--success-rgb), 0.12); 
-  color: var(--success); 
-}
-
-.statLabel { 
-  display: block; 
-  text-align: center; 
-  font-size: var(--text-caption); 
-  color: var(--text-dim); 
-  margin-bottom: var(--space-1); 
-  font-weight: var(--font-weight-semibold); 
-}
-
-.statValue { 
-  font-size: var(--text-body-md); 
-  font-weight: 900; 
-  line-height: var(--leading-snug); 
-  overflow-wrap: anywhere; 
-  text-align: center; 
+.statCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-top: 3px solid transparent;
+  border-radius: 1rem;
+  padding: 1.5rem 1.25rem 1.375rem;
   display: flex;
-  justify-content: center; 
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.625rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
 }
 
-.successText { 
-  color: var(--success) !important; 
+.statCard:hover {
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08);
 }
 
-@media (max-width: 1280px) { 
-  .topStats { grid-template-columns: repeat(2, minmax(0, 1fr)); } 
+/* ── Icon ── */
+.statIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+  /* default — overridden by color variants below */
+  background: rgba(67, 56, 202, 0.10);
+  color: #4338ca;
 }
 
-@media (max-width: 720px) { 
-  .topStats { 
-    grid-template-columns: repeat(2, 1fr); 
-    gap: var(--space-3); 
-  } 
-  .statCard { 
-    flex-direction: column; 
-    text-align: center; 
-    padding: var(--space-4) var(--space-3); 
-    gap: var(--space-2); 
-  }
-  .statLabel { 
-    margin-bottom: 2px; 
-  }
-  .statIcon {
-    position: static; 
-  }
+.statCard:hover .statIcon { transform: scale(1.08); }
+
+/* ── Text block ── */
+.statLabel {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--text-soft);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  font-family: 'IRANSansX', sans-serif;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.statValue {
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  display: block;
+  font-family: 'Inter', 'IRANSansX', sans-serif;
+  letter-spacing: -0.03em;
+  margin: 0;
+  color: var(--text-main);
+}
+
+/* ═══════════════════════════════════════
+   Color Variants — one per card
+   ═══════════════════════════════════════ */
+
+/* 1. Indigo — Total Volume */
+.cardBlue { border-top-color: #5A4AE2; }
+.cardBlue .statIcon { background: rgba(90, 74, 226, 0.10); color: #5A4AE2; }
+.cardBlue .statValue { color: #5A4AE2; }
+
+/* 2. Violet — Transaction Count */
+.cardViolet { border-top-color: #C02AD0; }
+.cardViolet .statIcon { background: rgba(192, 42, 208, 0.10); color: #C02AD0; }
+.cardViolet .statValue { color: #C02AD0; }
+
+/* 3. Amber — Exchange Rate */
+.cardAmber { border-top-color: #d97706; }
+.cardAmber .statIcon { background: rgba(217, 119, 6, 0.10); color: #d97706; }
+.cardAmber .statValue { color: #b45309; }
+
+/* 4. Teal — Loyalty per transaction */
+.cardTeal { border-top-color: #2CB4CF; }
+.cardTeal .statIcon { background: rgba(44, 180, 207, 0.10); color: #2CB4CF; }
+.cardTeal .statValue { color: #2CB4CF; }
+
+/* 5. Emerald — Total Loyalty Savings */
+.cardGreen { border-top-color: #059669; }
+.cardGreen .statIcon { background: rgba(5, 150, 105, 0.10); color: #059669; }
+.cardGreen .statValue { color: #059669; }
+
+/* 6. Rose — Tailored Rate */
+.cardRose { border-top-color: #F89AA8; }
+.cardRose .statIcon { background: rgba(248, 154, 168, 0.10); color: #F89AA8; }
+.cardRose .statValue { color: #F89AA8; }
+
+/* keep for backwards-compat if used elsewhere */
+.statIconAccent { background: rgba(5, 150, 105, 0.10); color: #059669; }
+.successText { color: #059669 !important; }
+
+@media (max-width: 1280px) {
+  .topStats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .topStats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .topStats { gap: 0.75rem; }
+  .statCard { padding: 1.125rem 0.875rem; }
+  .statIcon { width: 42px; height: 42px; border-radius: 0.625rem; }
+  .statLabel { white-space: normal; font-size: 0.75rem; }
+  .statValue { font-size: 1.25rem; }
+  /* Re-assert card colors so mobile base styles don't override them */
+  .cardBlue .statValue   { color: #5A4AE2; }
+  .cardViolet .statValue { color: #C02AD0; }
+  .cardAmber .statValue  { color: #b45309; }
+  .cardTeal .statValue   { color: #2CB4CF; }
+  .cardGreen .statValue  { color: #059669; }
+  .cardRose .statValue   { color: #F89AA8; }
+  .cardBlue .statIcon   { background: rgba(90, 74, 226, 0.10);   color: #5A4AE2; }
+  .cardViolet .statIcon { background: rgba(192, 42, 208, 0.10);  color: #C02AD0; }
+  .cardAmber .statIcon  { background: rgba(217, 119, 6, 0.10);   color: #d97706; }
+  .cardTeal .statIcon   { background: rgba(44, 180, 207, 0.10);  color: #2CB4CF; }
+  .cardGreen .statIcon  { background: rgba(5, 150, 105, 0.10);   color: #059669; }
+  .cardRose .statIcon   { background: rgba(248, 154, 168, 0.10);   color: #F89AA8; }
+}
+
+@media (max-width: 400px) {
+  .topStats { grid-template-columns: 1fr 1fr; gap: 0.625rem; }
+  .statValue { font-size: 1.0625rem; }
 }

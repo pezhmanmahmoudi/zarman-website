@@ -12,6 +12,7 @@ import { UserKycManager } from "@/components/admin/users/UserKycManager";
 import { UserTransactionTimeline } from "@/components/admin/users/UserTransactionTimeline";
 import { UserFeedbackHistory } from "@/components/admin/users/UserFeedbackHistory";
 import { UserRecipientsPanel } from "@/components/admin/users/UserRecipientsPanel";
+import { AssistedOnboardingPanel } from "@/components/admin/users/AssistedOnboardingPanel";
 
 type FinancialProfile = Awaited<ReturnType<typeof getUserFinancialProfile>>;
 
@@ -57,6 +58,23 @@ export function UsersPageClient({
     });
   };
 
+  const handleCreated = (userId: string) => {
+    setQuery("");
+    setResults([]);
+    setSearched(false);
+    handleViewProfile(userId);
+  };
+
+  const handleTimelineTransactionCreated = () => {
+    if (!selectedUser?.profile?.id) return;
+    handleViewProfile(selectedUser.profile.id);
+  };
+
+  const handleRecipientCreated = () => {
+    if (!selectedUser?.profile?.id) return;
+    handleViewProfile(selectedUser.profile.id);
+  };
+
   const loyaltyDiscountPct = selectedUser
     ? calcLoyaltyDiscountPct(selectedUser.approvedVolume, financeConfig)
     : 0;
@@ -93,6 +111,8 @@ export function UsersPageClient({
           isLoadingProfile={isLoading}
         />
 
+        <AssistedOnboardingPanel onCreated={handleCreated} />
+
         {isLoading && (
           <div className={shellStyles.loadingState}>Loading complete profile data…</div>
         )}
@@ -106,8 +126,17 @@ export function UsersPageClient({
               currentRates={selectedUser.currentRates}
             />
             <UserKycManager profile={selectedUser.profile} />
-            <UserTransactionTimeline transactions={selectedUser.transactions} />
-            <UserRecipientsPanel recipients={(selectedUser as any).recipients ?? []} />
+            <UserTransactionTimeline
+              userId={selectedUser.profile?.id}
+              transactions={selectedUser.transactions}
+              recipients={(selectedUser as any).recipients ?? []}
+              onTransactionCreated={handleTimelineTransactionCreated}
+            />
+            <UserRecipientsPanel
+              userId={selectedUser.profile?.id}
+              recipients={(selectedUser as any).recipients ?? []}
+              onRecipientCreated={handleRecipientCreated}
+            />
             <UserFeedbackHistory testimonials={selectedUser.testimonials} />
           </div>
         )}

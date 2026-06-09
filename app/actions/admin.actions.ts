@@ -904,6 +904,467 @@ export async function getUserFinancialProfile(userId: string) {
 }
 
 // ===========================================================================
+// ASSISTED CUSTOMER ONBOARDING (Admin creates customer profile + recipient + tx)
+// ===========================================================================
+type AssistedRecipientPayload = {
+  direction: "aud" | "irt";
+  label: string;
+  bank_name?: string;
+  bsb?: string;
+  account_number?: string;
+  account_name?: string;
+  residential_address?: string;
+  recipient_email?: string;
+  recipient_phone?: string;
+  bank_type?: "bank_melli" | "other";
+  card_number?: string;
+  shaba_number?: string;
+  irt_account_number?: string;
+  full_name?: string;
+  irt_address?: string;
+  irt_phone?: string;
+};
+
+type AssistedTransactionPayload = {
+  create: boolean;
+  type: "buy_aud" | "sell_aud";
+  amount_aud: number;
+  equivalent_toman: number;
+  applied_rate?: number;
+  source_of_funds?: string;
+  reason_for_transfer?: string;
+  payment_link?: string;
+};
+
+export type AssistedOnboardingPayload = {
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  email: string;
+  mobile_number: string;
+  dob?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+  customer_code?: string;
+  kyc_status?: "pending" | "under_review" | "approved" | "rejected" | "archived";
+  // Identity document fields
+  document_type?: "driver_license" | "passport" | "none" | "";
+  license_number?: string;
+  card_number?: string;
+  state_of_issue?: string;
+  passport_number?: string;
+  expiry_date?: string;
+  recipient: AssistedRecipientPayload;
+  transaction?: AssistedTransactionPayload;
+};
+
+async function generateAdminReferenceCode(db: ReturnType<typeof makeServiceRoleClient>) {
+  for (let i = 0; i < 20; i += 1) {
+    const candidate = `ZE${Math.floor(10000 + Math.random() * 90000)}`;
+    const { data } = await db
+      .from("transactions")
+      .select("id")
+      .eq("reference_code", candidate)
+      .maybeSingle();
+    if (!data) return candidate;
+  }
+  throw new Error("Could not generate a unique reference code.");
+}
+
+export async function createAssistedCustomerOnboarding(payload: AssistedOnboardingPayload) {
+  const admin = await requireAdmin();
+  const db = makeServiceRoleClient();
+
+  const firstName = payload.first_name?.trim();
+  const lastName = payload.last_name?.trim();
+  const email = payload.email?.trim().toLowerCase();
+  const mobile = payload.mobile_number?.trim();
+
+  if (!firstName) return { error: "First name is required." };
+  if (!lastName) return { error: "Last name is required." };
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) return { error: "Valid email is required." };
+  if (!mobile) return { error: "Mobile number is required." };
+
+  const customerCode = payload.customer_code?.trim().toUpperCase() || null;
+  if (customerCode && !/^CZ\d{4}$/.test(customerCode)) {
+    return { error: "Customer code must be CZ + 4 digits (e.g. CZ0001)." };
+  }
+
+  if (!payload.recipient?.direction || !["aud", "irt"].includes(payload.recipient.direction)) {
+    return { error: "Recipient direction is required." };
+  }
+  if (!payload.recipient?.label?.trim()) {
+    return { error: "Recipient label is required." };
+  }
+
+  const { data: existingProfile } = await db
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+  if (existingProfile) {
+    return { error: "A customer with this email already exists." };
+  }
+
+  if (customerCode) {
+    const { data: existingCode } = await db
+      .from("profiles")
+      .select("id")
+      .eq("customer_code", customerCode)
+      .maybeSingle();
+    if (existingCode) {
+      return { error: "Customer code already exists." };
+    }
+  }
+
+  const tempPassword = `Zarman!${Math.random().toString(36).slice(2, 10)}${Date.now().toString().slice(-2)}`;
+  const { data: authCreated, error: authError } = await db.auth.admin.createUser({
+    email,
+    password: tempPassword,
+    email_confirm: true,
+    app_metadata: { role: "user" },
+    user_metadata: { first_name: firstName, last_name: lastName },
+  });
+
+  if (authError || !authCreated.user?.id) {
+    return { error: authError?.message ?? "Failed to create auth user." };
+  }
+
+  const userId = authCreated.user.id;
+
+  const middleName = payload.middle_name?.trim() || null;
+  const docType = payload.document_type?.trim() || null;
+  const isDriverLicense = docType === "driver_license";
+  const isPassport = docType === "passport";
+
+  const profilePatch = {
+    id: userId,
+    first_name: firstName,
+    last_name: lastName,
+    email,
+    mobile_number: mobile,
+    dob: payload.dob?.trim() || null,
+    address: payload.address?.trim() || null,
+    city: payload.city?.trim() || null,
+    state: payload.state?.trim() || null,
+    postcode: payload.postcode?.trim() || null,
+    country: payload.country?.trim() || null,
+    customer_code: customerCode,
+    kyc_status: payload.kyc_status ?? "pending",
+    // Document / identity fields
+    document_type: docType,
+    license_number: isDriverLicense ? (payload.license_number?.trim() || null) : null,
+    card_number: isDriverLicense ? (payload.card_number?.trim() || null) : null,
+    state_of_issue: isDriverLicense ? (payload.state_of_issue?.trim() || null) : null,
+    passport_number: isPassport ? (payload.passport_number?.trim() || null) : null,
+    expiry_date: (isDriverLicense || isPassport) ? (payload.expiry_date?.trim() || null) : null,
+  };
+
+  const { error: profileError } = await db
+    .from("profiles")
+    .upsert([profilePatch], { onConflict: "id" });
+
+  if (profileError) {
+    await db.auth.admin.deleteUser(userId).catch(() => {});
+    return { error: profileError.message };
+  }
+
+  const r = payload.recipient;
+  const recipientInsert: Record<string, unknown> = {
+    user_id: userId,
+    direction: r.direction,
+    label: r.label.trim(),
+  };
+
+  if (r.direction === "aud") {
+    recipientInsert.bank_name = r.bank_name?.trim() || null;
+    recipientInsert.bsb = r.bsb?.trim() || null;
+    recipientInsert.account_number = r.account_number?.trim() || null;
+    recipientInsert.account_name = r.account_name?.trim() || null;
+    recipientInsert.residential_address = r.residential_address?.trim() || null;
+    recipientInsert.recipient_email = r.recipient_email?.trim() || null;
+    recipientInsert.recipient_phone = r.recipient_phone?.trim() || null;
+  } else {
+    recipientInsert.bank_type = r.bank_type === "bank_melli" ? "bank_melli" : "other";
+    recipientInsert.bank_name = r.bank_name?.trim() || null;
+    recipientInsert.card_number = r.card_number?.trim() || null;
+    recipientInsert.shaba_number = r.shaba_number?.trim() || null;
+    recipientInsert.irt_account_number = r.irt_account_number?.trim() || null;
+    recipientInsert.full_name = r.full_name?.trim() || null;
+    recipientInsert.irt_address = r.irt_address?.trim() || null;
+    recipientInsert.irt_phone = r.irt_phone?.trim() || null;
+  }
+
+  const { data: recipientRow, error: recipientError } = await db
+    .from("recipients")
+    .insert([recipientInsert])
+    .select("id")
+    .single();
+
+  if (recipientError) {
+    try {
+      await db.from("profiles").delete().eq("id", userId);
+    } catch {}
+    await db.auth.admin.deleteUser(userId).catch(() => {});
+    return { error: recipientError.message };
+  }
+
+  let createdTransactionId: string | null = null;
+  if (payload.transaction?.create) {
+    const amountAud = Number(payload.transaction.amount_aud);
+    const toman = Number(payload.transaction.equivalent_toman);
+    if (!Number.isFinite(amountAud) || amountAud <= 0) {
+      return { error: "Transaction AUD amount must be a positive number." };
+    }
+    if (!Number.isFinite(toman) || toman <= 0) {
+      return { error: "Transaction Toman amount must be a positive number." };
+    }
+
+    const referenceCode = await generateAdminReferenceCode(db);
+    const txAppliedRate = Number(payload.transaction.applied_rate);
+    const appliedRate = Number.isFinite(txAppliedRate) && txAppliedRate > 0
+      ? txAppliedRate
+      : (amountAud > 0 ? Math.round(toman / amountAud) : 0);
+    const { data: txRow, error: txError } = await db
+      .from("transactions")
+      .insert([{
+        user_id: userId,
+        recipient_id: recipientRow.id,
+        type: payload.transaction.type,
+        amount_aud: amountAud,
+        equivalent_toman: toman,
+        applied_rate: appliedRate,
+        status: "pending",
+        source_of_funds: payload.transaction.source_of_funds?.trim() || null,
+        reason_for_transfer: payload.transaction.reason_for_transfer?.trim() || null,
+        payment_link: payload.transaction.payment_link?.trim() || null,
+        promo_code: null,
+        discount_amount: 0,
+        final_amount: amountAud,
+        loyalty_discount: 0,
+        reference_code: referenceCode,
+      }])
+      .select("id")
+      .single();
+
+    if (txError) return { error: txError.message };
+    createdTransactionId = txRow.id;
+  }
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "ASSISTED_CUSTOMER_CREATED",
+    targetType: "profile",
+    targetId: userId,
+    newValue: {
+      profile: {
+        id: userId,
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        mobile_number: mobile,
+        kyc_status: payload.kyc_status ?? "pending",
+        customer_code: customerCode,
+      },
+      recipient_id: recipientRow.id,
+      transaction_id: createdTransactionId,
+    },
+  }).catch(() => {});
+
+  return {
+    success: true,
+    userId,
+    recipientId: recipientRow.id,
+    transactionId: createdTransactionId,
+  };
+}
+
+export async function createAssistedTransactionForUser(payload: {
+  userId: string;
+  recipientId: string;
+  type: "buy_aud" | "sell_aud";
+  amount_aud: number;
+  equivalent_toman: number;
+  applied_rate?: number;
+  source_of_funds?: string;
+  reason_for_transfer?: string;
+  payment_link?: string;
+}) {
+  const admin = await requireAdmin();
+  const db = makeServiceRoleClient();
+
+  if (!payload.userId) return { error: "Missing user ID." };
+  if (!payload.recipientId) return { error: "Recipient selection is required." };
+  if (!payload.type || !["buy_aud", "sell_aud"].includes(payload.type)) {
+    return { error: "Invalid transaction type." };
+  }
+
+  const amountAud = Number(payload.amount_aud);
+  const toman = Number(payload.equivalent_toman);
+  if (!Number.isFinite(amountAud) || amountAud <= 0) {
+    return { error: "AUD amount must be a positive number." };
+  }
+  if (!Number.isFinite(toman) || toman <= 0) {
+    return { error: "Equivalent Toman must be a positive number." };
+  }
+
+  const { data: profileRow } = await db
+    .from("profiles")
+    .select("id")
+    .eq("id", payload.userId)
+    .maybeSingle();
+  if (!profileRow) return { error: "Customer profile not found." };
+
+  const { data: recipientRow } = await db
+    .from("recipients")
+    .select("id, user_id")
+    .eq("id", payload.recipientId)
+    .maybeSingle();
+  if (!recipientRow) return { error: "Selected recipient not found." };
+  if (recipientRow.user_id !== payload.userId) {
+    return { error: "Selected recipient does not belong to this customer." };
+  }
+
+  const referenceCode = await generateAdminReferenceCode(db);
+  const appliedRate = Number.isFinite(Number(payload.applied_rate)) && Number(payload.applied_rate) > 0
+    ? Number(payload.applied_rate)
+    : (amountAud > 0 ? Math.round(toman / amountAud) : 0);
+
+  const { data: txRow, error: txError } = await db
+    .from("transactions")
+    .insert([{
+      user_id: payload.userId,
+      recipient_id: payload.recipientId,
+      type: payload.type,
+      amount_aud: amountAud,
+      equivalent_toman: toman,
+      applied_rate: appliedRate,
+      status: "pending",
+      source_of_funds: payload.source_of_funds?.trim() || null,
+      reason_for_transfer: payload.reason_for_transfer?.trim() || null,
+      payment_link: payload.payment_link?.trim() || null,
+      promo_code: null,
+      discount_amount: 0,
+      final_amount: amountAud,
+      loyalty_discount: 0,
+      reference_code: referenceCode,
+    }])
+    .select("id")
+    .single();
+
+  if (txError) return { error: txError.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "ASSISTED_TRANSACTION_CREATED",
+    targetType: "transaction",
+    targetId: txRow.id,
+    newValue: {
+      user_id: payload.userId,
+      recipient_id: payload.recipientId,
+      type: payload.type,
+      amount_aud: amountAud,
+      equivalent_toman: toman,
+      status: "pending",
+      reference_code: referenceCode,
+    },
+  }).catch(() => {});
+
+  return { success: true, transactionId: txRow.id };
+}
+
+export async function createAssistedRecipientForUser(payload: {
+  userId: string;
+  direction: "aud" | "irt";
+  label: string;
+  bank_name?: string;
+  bsb?: string;
+  account_number?: string;
+  account_name?: string;
+  residential_address?: string;
+  recipient_email?: string;
+  recipient_phone?: string;
+  bank_type?: "bank_melli" | "other";
+  card_number?: string;
+  shaba_number?: string;
+  irt_account_number?: string;
+  full_name?: string;
+  irt_address?: string;
+  irt_phone?: string;
+}) {
+  const admin = await requireAdmin();
+  const db = makeServiceRoleClient();
+
+  if (!payload.userId) return { error: "Missing user ID." };
+  if (!payload.direction || !["aud", "irt"].includes(payload.direction)) {
+    return { error: "Recipient direction is required." };
+  }
+
+  const label = payload.label?.trim();
+  if (!label) return { error: "Recipient label is required." };
+
+  const { data: profileRow } = await db
+    .from("profiles")
+    .select("id")
+    .eq("id", payload.userId)
+    .maybeSingle();
+  if (!profileRow) return { error: "Customer profile not found." };
+
+  const insert: Record<string, unknown> = {
+    user_id: payload.userId,
+    direction: payload.direction,
+    label,
+  };
+
+  if (payload.direction === "aud") {
+    insert.bank_name = payload.bank_name?.trim() || null;
+    insert.bsb = payload.bsb?.trim() || null;
+    insert.account_number = payload.account_number?.trim() || null;
+    insert.account_name = payload.account_name?.trim() || null;
+    insert.residential_address = payload.residential_address?.trim() || null;
+    insert.recipient_email = payload.recipient_email?.trim() || null;
+    insert.recipient_phone = payload.recipient_phone?.trim() || null;
+  } else {
+    insert.bank_type = payload.bank_type === "bank_melli" ? "bank_melli" : "other";
+    insert.bank_name = payload.bank_name?.trim() || null;
+    insert.card_number = payload.card_number?.trim() || null;
+    insert.shaba_number = payload.shaba_number?.trim() || null;
+    insert.irt_account_number = payload.irt_account_number?.trim() || null;
+    insert.full_name = payload.full_name?.trim() || null;
+    insert.irt_address = payload.irt_address?.trim() || null;
+    insert.irt_phone = payload.irt_phone?.trim() || null;
+  }
+
+  const { data: recipientRow, error: recipientError } = await db
+    .from("recipients")
+    .insert([insert])
+    .select("id")
+    .single();
+
+  if (recipientError) return { error: recipientError.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "ASSISTED_RECIPIENT_CREATED",
+    targetType: "recipient",
+    targetId: recipientRow.id,
+    newValue: {
+      user_id: payload.userId,
+      direction: payload.direction,
+      label,
+    },
+  }).catch(() => {});
+
+  return { success: true, recipientId: recipientRow.id };
+}
+
+// ===========================================================================
 // PROMO CODE MANAGEMENT (Admin CRUD)
 // ===========================================================================
 

@@ -33,9 +33,9 @@
 /* =====================================
    تایپوگرافی و عناوین فارسی (راست‌چین)
    ===================================== */
-.persianTitle { font-family: var(--font-primary) !important; direction: rtl; gap: 8px; display: flex; }
-.persianSectionTitle { font-size: 1.15rem; color: var(--text-main); margin-bottom: 6px; font-weight: 800; font-family: var(--font-primary) !important; text-align: right; direction: rtl; }
-.persianSectionSubtitle { font-size: 0.9rem; color: var(--text-soft); margin-bottom: 24px; line-height: 1.7; font-family: var(--font-primary) !important; text-align: right; direction: rtl; }
+.persianTitle { font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif) !important; direction: rtl; gap: 8px; display: flex; }
+.persianSectionTitle { font-size: 1rem; color: var(--text-main); margin-bottom: 6px; font-weight: 700; font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif) !important; text-align: right; direction: rtl; }
+.persianSectionSubtitle { font-size: 0.875rem; color: var(--text-soft); margin-bottom: 24px; line-height: 1.75; font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif) !important; text-align: right; direction: rtl; }
 
 /* =====================================
    ساختار گرید فُرم‌ها (تنظیم قطعی وسط‌چین)
@@ -59,25 +59,29 @@
    طراحی پیشرفته Input و Select
    ===================================== */
 .inputGroup { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.inputGroup label { 
-  color: var(--text-main) !important; font-size: 13px; font-weight: 600; 
-  font-family: var(--font-en-stack) !important; text-align: left !important; direction: ltr !important; 
+.inputGroup label {
+  color: var(--text-soft) !important;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: var(--font-en-stack, 'Inter', sans-serif) !important;
+  text-align: left !important;
+  direction: ltr !important;
 }
 .req { color: #ef4444; margin-left: 4px; font-weight: 800; }
 
 .inputGroup input, .inputGroup select {
-  background-color: rgba(255, 255, 255, 0.03) !important; 
-  border: 1px solid var(--border-soft) !important;
-  border-radius: 12px; 
-  padding: 14px 18px; 
+  background-color: var(--bg-input, #ffffff) !important;
+  border: 1px solid var(--border-input, #d1d5db) !important;
+  border-radius: 0.625rem;
+  padding: 0.75rem 1rem;
   color: var(--text-main) !important;
-  font-family: var(--font-en-stack) !important; 
-  font-size: 14.5px !important; 
+  font-family: var(--font-en-stack, 'Inter', sans-serif) !important;
+  font-size: 0.9375rem !important;
   outline: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  width: 100%; 
-  box-sizing: border-box; 
-  direction: ltr !important; 
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+  direction: ltr !important;
   text-align: left !important;
 }
 

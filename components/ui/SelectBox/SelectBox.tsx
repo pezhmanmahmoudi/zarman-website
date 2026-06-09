@@ -125,7 +125,6 @@ export function SelectBox({
           aria-selected={isSelected}
           data-selected={isSelected}
           className={`${styles.option} ${isSelected ? styles.optionSelected : ""}`}
-          style={dir === "rtl" ? { direction: "rtl", fontFamily: "var(--font-primary)" } : undefined}
           onMouseDown={(e) => {
             e.preventDefault();
             onChange(opt);
@@ -133,7 +132,7 @@ export function SelectBox({
           }}
         >
           {isSelected && dir === "rtl" && <Check size={14} className={styles.checkIcon} strokeWidth={2.5} />}
-          <span style={dir === "rtl" ? { textAlign: "right", flex: 1 } : undefined}>{opt}</span>
+          <span className={styles.optionLabel}>{opt}</span>
           {isSelected && dir !== "rtl" && <Check size={14} className={styles.checkIcon} strokeWidth={2.5} />}
         </li>
       );
@@ -149,7 +148,6 @@ export function SelectBox({
           aria-selected={isSelected}
           data-selected={isSelected}
           className={`${styles.option} ${isSelected ? styles.optionSelected : ""}`}
-          style={dir === "rtl" ? { direction: "rtl", fontFamily: "var(--font-primary)" } : undefined}
           onMouseDown={(e) => {
             e.preventDefault();
             onChange(opt.value);
@@ -157,7 +155,7 @@ export function SelectBox({
           }}
         >
           {isSelected && dir === "rtl" && <Check size={14} className={styles.checkIcon} strokeWidth={2.5} />}
-          <span style={dir === "rtl" ? { textAlign: "right", flex: 1 } : undefined}>{opt.label}</span>
+          <span className={styles.optionLabel}>{opt.label}</span>
           {isSelected && dir !== "rtl" && <Check size={14} className={styles.checkIcon} strokeWidth={2.5} />}
         </li>
       );
@@ -180,14 +178,12 @@ export function SelectBox({
     return (
       <div
         className={`${styles.wrapper}${className ? " " + className : ""}`}
-        style={dir === "rtl" ? { direction: "rtl", position: "relative" } : { position: "relative" }}
         {...(dir ? { "data-dir": dir } : {})}
       >
         {/* Visual trigger — purely decorative on iOS */}
         <div className={`${styles.trigger} ${disabled ? styles.triggerDisabled : ""}`}>
           <span
             className={`${styles.triggerValue} ${!value ? styles.triggerPlaceholder : ""}`}
-            style={dir === "rtl" ? { textAlign: "right", fontFamily: "var(--font-primary)", direction: "rtl" } : undefined}
           >
             {displayLabel || placeholder}
           </span>
@@ -212,7 +208,6 @@ export function SelectBox({
     <div
       ref={wrapperRef}
       className={`${styles.wrapper}${className ? " " + className : ""}`}
-      style={dir === "rtl" ? { direction: "rtl" } : undefined}
       {...(dir ? { "data-dir": dir } : {})}
     >
       <div
@@ -227,7 +222,6 @@ export function SelectBox({
       >
         <span
           className={`${styles.triggerValue} ${!value ? styles.triggerPlaceholder : ""}`}
-          style={dir === "rtl" ? { textAlign: "right", fontFamily: "var(--font-primary)", direction: "rtl" } : undefined}
         >
           {displayLabel || placeholder}
         </span>
@@ -237,7 +231,6 @@ export function SelectBox({
       {open && (
         <div className={dropdownClass}>
           <ul id={id} ref={listRef} role="listbox" className={styles.list}
-            style={dir === "rtl" ? { direction: "rtl" } : undefined}
           >
             {groups
               ? groups.map((group) => (

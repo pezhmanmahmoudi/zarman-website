@@ -1,20 +1,95 @@
 "use client";
 
-import React from "react";
-import { ArrowLeftRight, Tag, Star } from "lucide-react";
+import React, { useMemo, useState, useTransition } from "react";
+import { ArrowLeftRight, PlusCircle, Tag, Star } from "lucide-react";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
+import formStyles from "@/styles/admin/AdminForms.module.css";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
 import { TransactionApproveButton } from "@/components/admin/TransactionApproveButton";
-import type { getUserFinancialProfile } from "@/app/actions/admin.actions";
+import { createAssistedTransactionForUser, type getUserFinancialProfile } from "@/app/actions/admin.actions";
 
 type Transactions = Awaited<ReturnType<typeof getUserFinancialProfile>>["transactions"];
+type Recipients = Awaited<ReturnType<typeof getUserFinancialProfile>>["recipients"];
 
 interface UserTransactionTimelineProps {
+  userId?: string;
   transactions: Transactions;
+  recipients: Recipients;
+  onTransactionCreated?: () => void;
 }
 
-export function UserTransactionTimeline({ transactions }: UserTransactionTimelineProps) {
+export function UserTransactionTimeline({ userId, transactions, recipients, onTransactionCreated }: UserTransactionTimelineProps) {
+  const [openAdd, setOpenAdd] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [status, setStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const recipientOptions = useMemo(() => {
+    return (recipients ?? []).map((r: any) => {
+      const primary = r.label || r.account_name || r.full_name || "Recipient";
+      const secondary = r.direction === "aud"
+        ? (r.bank_name || r.account_number || "AUD account")
+        : (r.bank_type === "bank_melli" ? "Bank Melli" : (r.bank_name || "IRT account"));
+      return {
+        id: String(r.id),
+        label: `${primary} - ${secondary}`,
+      };
+    });
+  }, [recipients]);
+
+  const [form, setForm] = useState({
+    recipientId: "",
+    type: "buy_aud",
+    amountAud: "",
+    equivalentToman: "",
+    appliedRate: "",
+    sourceOfFunds: "",
+    reasonForTransfer: "",
+    paymentLink: "",
+  });
+
+  const setField = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const submitAdd = () => {
+    if (!userId) {
+      setStatus({ type: "error", text: "Missing customer context." });
+      return;
+    }
+    setStatus(null);
+    startTransition(async () => {
+      const res = await createAssistedTransactionForUser({
+        userId,
+        recipientId: form.recipientId,
+        type: form.type as "buy_aud" | "sell_aud",
+        amount_aud: Number(form.amountAud || 0),
+        equivalent_toman: Number(form.equivalentToman || 0),
+        applied_rate: form.appliedRate ? Number(form.appliedRate) : undefined,
+        source_of_funds: form.sourceOfFunds || undefined,
+        reason_for_transfer: form.reasonForTransfer || undefined,
+        payment_link: form.paymentLink || undefined,
+      });
+
+      if ("error" in res && res.error) {
+        setStatus({ type: "error", text: res.error });
+        return;
+      }
+
+      setStatus({ type: "success", text: "Pending transaction created for this customer." });
+      setForm({
+        recipientId: "",
+        type: "buy_aud",
+        amountAud: "",
+        equivalentToman: "",
+        appliedRate: "",
+        sourceOfFunds: "",
+        reasonForTransfer: "",
+        paymentLink: "",
+      });
+      setOpenAdd(false);
+      onTransactionCreated?.();
+    });
+  };
+
   return (
     <div className={cardStyles.panel}>
       <div className={`${cardStyles.panelHeader} ${cardStyles.panelHeaderComfort}`}>
@@ -22,7 +97,77 @@ export function UserTransactionTimeline({ transactions }: UserTransactionTimelin
           <ArrowLeftRight size={18} color="var(--text-dim)" />
           Transactions Timeline
         </h2>
+        <button
+          type="button"
+          className={formStyles.btnPrimary}
+          onClick={() => {
+            setStatus(null);
+            setOpenAdd((v) => !v);
+          }}
+        >
+          <PlusCircle size={16} />
+          {openAdd ? "Cancel" : "Add Transaction"}
+        </button>
       </div>
+
+      {openAdd && (
+        <div className={cardStyles.panelBody} style={{ borderBottom: "1px solid var(--border-soft)", paddingTop: "1rem" }}>
+          <div className={formStyles.fieldRow}>
+            <div className={formStyles.fieldGroup}>
+              <label className={formStyles.label}>Recipient</label>
+              <select className={formStyles.input} value={form.recipientId} onChange={(e) => setField("recipientId", e.target.value)}>
+                <option value="">Select recipient</option>
+                {recipientOptions.map((r) => (
+                  <option key={r.id} value={r.id}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className={formStyles.fieldGroup}>
+              <label className={formStyles.label}>Type</label>
+              <select className={formStyles.input} value={form.type} onChange={(e) => setField("type", e.target.value)}>
+                <option value="buy_aud">Buy AUD</option>
+                <option value="sell_aud">Sell AUD</option>
+              </select>
+            </div>
+            <div className={formStyles.fieldGroup}>
+              <label className={formStyles.label}>AUD Amount</label>
+              <input type="number" step="0.01" className={formStyles.input} value={form.amountAud} onChange={(e) => setField("amountAud", e.target.value)} />
+            </div>
+            <div className={formStyles.fieldGroup}>
+              <label className={formStyles.label}>Equivalent Toman</label>
+              <input type="number" step="1" className={formStyles.input} value={form.equivalentToman} onChange={(e) => setField("equivalentToman", e.target.value)} />
+            </div>
+            <div className={formStyles.fieldGroup}>
+              <label className={formStyles.label}>Rate (Toman / AUD)</label>
+              <input type="number" step="1" className={formStyles.input} value={form.appliedRate} onChange={(e) => setField("appliedRate", e.target.value)} placeholder="e.g. 42000" />
+            </div>
+            <div className={formStyles.fieldGroup}>
+              <label className={formStyles.label}>Source of Funds</label>
+              <input className={formStyles.input} value={form.sourceOfFunds} onChange={(e) => setField("sourceOfFunds", e.target.value)} />
+            </div>
+            <div className={formStyles.fieldGroup}>
+              <label className={formStyles.label}>Reason for Transfer</label>
+              <input className={formStyles.input} value={form.reasonForTransfer} onChange={(e) => setField("reasonForTransfer", e.target.value)} />
+            </div>
+            <div className={formStyles.fieldGroup}>
+              <label className={formStyles.label}>Payment Link (optional)</label>
+              <input className={formStyles.input} value={form.paymentLink} onChange={(e) => setField("paymentLink", e.target.value)} placeholder="https://..." />
+            </div>
+          </div>
+
+          <div className={formStyles.formActions}>
+            <button type="button" className={formStyles.btnPrimary} onClick={submitAdd} disabled={isPending || !form.recipientId}>
+              {isPending ? "Saving..." : "Create Pending Transaction"}
+            </button>
+            {status && (
+              <span className={`${formStyles.saveStatus} ${status.type === "success" ? formStyles.saveStatusSuccess : formStyles.saveStatusError}`}>
+                {status.text}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className={tableStyles.tableWrap}>
         <table className={tableStyles.table}>
           <thead>

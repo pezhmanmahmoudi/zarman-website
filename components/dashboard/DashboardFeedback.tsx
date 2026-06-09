@@ -43,7 +43,9 @@ export function DashboardFeedback({ profileId }: { profileId: string }) {
       <textarea className={styles.feedbackTextarea} placeholder="پیشنهادات، انتقادات یا رضایت خود را در این کادر بنویسید..." value={feedback} onChange={(e) => setFeedback(e.target.value)} />
       <div className={styles.feedbackActions}>
         <button className={cardStyles.primaryButton} onClick={handleSubmitFeedback} disabled={!feedback.trim() || feedbackSubmitting} type="button">
-          <Send size={20} /> {feedbackSubmitting ? "در حال ثبت..." : "ثبت نهایی بازخورد در سیستم"}
+          {feedbackSubmitting
+            ? <><span className={cardStyles.spinner} aria-hidden="true" /> در حال ثبت...</>
+            : <><Send size={20} /> ثبت نهایی بازخورد در سیستم</>}
         </button>
         {feedbackStatus && <p className={styles.feedbackStatus}>{feedbackStatus}</p>}
       </div>

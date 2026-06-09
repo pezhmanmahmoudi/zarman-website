@@ -25,10 +25,12 @@ export function formatNumberFa(num: number, isToman = false) {
 }
 
 export function formatAUD(num: number) {
-  return `$${formatNumberFa(num)}`;
+  if (!num) return "$0";
+  return `$${Number(num).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
 export function formatToman(num: number) {
+  if (!num) return "—";
   return `${formatNumberFa(num, true)} تومان`;
 }
 

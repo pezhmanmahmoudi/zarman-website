@@ -80,11 +80,11 @@
 .title {
   grid-column: 2;
   text-align: center;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
-  font-family: var(--font-primary);
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   white-space: nowrap;
 }
 
@@ -129,15 +129,15 @@
 }
 
 .sectionTitle {
-  font-size: 0.720rem;
+  font-size: 0.6875rem;
   font-weight: 700;
-  color: #10b9818f;
+  color: #059669;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
   margin: 0 0 14px;
   padding-bottom: 6px;
-  border-bottom: 1px solid rgba(16, 185, 129, 0.212);
-  font-family: var(--font-primary);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.20);
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   text-align: right;
 }
 
@@ -168,10 +168,10 @@
    LABEL
    ───────────────────────────────────────────────────────────────── */
 .label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-soft);
-  font-family: var(--font-primary);
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   direction: rtl;
   display: flex;
   align-items: center;
@@ -282,7 +282,7 @@
   border: none;
   background: var(--accent);
   color: #fff;
-  font-family: var(--font-primary);
+  font-family: 'IRANSansX', sans-serif;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
@@ -293,7 +293,22 @@
   transition: filter 0.2s, opacity 0.2s;
 }
 .saveBtn:hover:not(:disabled) { filter: brightness(1.08); }
-.saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.saveBtn:disabled { opacity: 0.65; cursor: not-allowed; }
+.saveBtn.loading { pointer-events: none; }
+
+@keyframes saveSpin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  display: inline-block;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: saveSpin 0.65s linear infinite;
+  flex-shrink: 0;
+}
 
 .cancelBtn {
   height: 46px;

@@ -53,10 +53,10 @@ export function AdminSidebar({
   ];
 
   const manageItems: NavItem[] = [
-    { href: "/admin/ledger", label: "Ledger", icon: <BookOpen size={18} /> },
     { href: "/admin/users", label: "Users", icon: <Users size={18} /> },
     { href: "/admin/settings", label: "System Settings", icon: <Settings size={18} /> },
     { href: "/admin/audit", label: "Audit Logs", icon: <ClipboardList size={18} /> },
+    { href: "/admin/ledger", label: "Ledger", icon: <BookOpen size={18} /> },
   ];
 
   const handleLogout = async () => {
