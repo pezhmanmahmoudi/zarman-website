@@ -10,9 +10,21 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { DashboardRequestHub } from "@/components/dashboard/DashboardRequestHub";
-import { DashboardTransactionHistory } from "@/components/dashboard/DashboardTransactionHistory";
-import { DashboardProfile } from "@/components/dashboard/DashboardProfile";
-import { DashboardFeedback } from "@/components/dashboard/DashboardFeedback";
+import dynamic from "next/dynamic";
+
+// Lazy-load inactive tab components — not needed on initial render
+const DashboardTransactionHistory = dynamic(
+  () => import("@/components/dashboard/DashboardTransactionHistory").then(m => ({ default: m.DashboardTransactionHistory })),
+  { ssr: false, loading: () => <div className={shellStyles.loadingState}>در حال بارگذاری...</div> }
+);
+const DashboardProfile = dynamic(
+  () => import("@/components/dashboard/DashboardProfile").then(m => ({ default: m.DashboardProfile })),
+  { ssr: false, loading: () => <div className={shellStyles.loadingState}>در حال بارگذاری...</div> }
+);
+const DashboardFeedback = dynamic(
+  () => import("@/components/dashboard/DashboardFeedback").then(m => ({ default: m.DashboardFeedback })),
+  { ssr: false, loading: () => <div className={shellStyles.loadingState}>در حال بارگذاری...</div> }
+);
 import { AlertTriangle, X } from "lucide-react"; 
 import { useFinanceConfig } from "@/context/FinanceConfigContext";
 import { calcLoyaltyDiscount } from "@/lib/pricing";
