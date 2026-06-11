@@ -12,16 +12,7 @@ type Props = {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{
-      fontSize: "0.7rem",
-      fontWeight: 700,
-      textTransform: "uppercase" as const,
-      letterSpacing: "0.08em",
-      color: "var(--text-dim)",
-      padding: "0.25rem 0",
-      borderBottom: "1px solid var(--border-soft)",
-      marginBottom: "0.25rem",
-    }}>
+    <div className={cardStyles.sectionHeading}>
       {children}
     </div>
   );
@@ -89,21 +80,20 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
   const isDriverLicense = form.doc_type === "driver_license";
   const isPassport = form.doc_type === "passport";
 
-  // Derive a display label for the Section 4 recipient in real-time
-  const section4RecipientLabel = useMemo(() => {
-    const dir = form.recipient_direction === "aud" ? "AUD" : "IRT";
-    const lbl = form.recipient_label.trim();
-    const holder = form.recipient_direction === "aud"
-      ? form.account_name.trim()
-      : form.full_name.trim();
-    if (lbl) return `[${dir}] ${lbl}${holder ? ` – ${holder}` : ""}`;
-    return `[${dir}] Primary recipient${holder ? ` – ${holder}` : ""}`;
-  }, [form.recipient_direction, form.recipient_label, form.account_name, form.full_name]);
+  const recipientAutoLabel = useMemo(() => {
+    if (isAud) {
+      const accountName = form.account_name.trim();
+      const bankName = form.bank_name.trim();
+      return accountName || bankName
+        ? `${accountName} - ${bankName}`.replace(/^\s*[-]\s*|\s*[-]\s*$/g, "")
+        : "Primary recipient";
+    }
 
-  const profileName = useMemo(
-    () => [form.first_name, form.last_name].filter(Boolean).join(" "),
-    [form.first_name, form.last_name]
-  );
+    const fullName = form.full_name.trim();
+    const bankName = form.bank_name.trim();
+    const bankLabel = bankName || "Other";
+    return fullName ? `${fullName} - ${bankLabel}` : "Primary recipient";
+  }, [isAud, form.account_name, form.bank_name, form.full_name]);
 
   const setField = (key: string, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -133,7 +123,7 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
         expiry_date: (isDriverLicense || isPassport) ? (form.expiry_date || undefined) : undefined,
         recipient: {
           direction: form.recipient_direction as "aud" | "irt",
-          label: form.recipient_label,
+          label: recipientAutoLabel,
           bank_name: form.bank_name || undefined,
           bsb: form.bsb || undefined,
           account_number: form.account_number || undefined,
@@ -230,7 +220,7 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>Customer Code</label>
-                  <input className={formStyles.input} placeholder="CZ0001" value={form.customer_code} onChange={(e) => setField("customer_code", e.target.value.toUpperCase())} />
+                  <input className={formStyles.input} placeholder="Auto-generated if empty" value={form.customer_code} onChange={(e) => setField("customer_code", e.target.value)} />
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>KYC Status</label>
@@ -249,7 +239,7 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
               {/* ─── 2. Residential Address ─── */}
               <SectionHeading>2 — Residential Address</SectionHeading>
               <div className={formStyles.fieldRow}>
-                <div className={formStyles.fieldGroup} style={{ gridColumn: "1 / -1" }}>
+                <div className={`${formStyles.fieldGroup} ${formStyles.fieldGroupFull}`}>
                   <label className={formStyles.label}>Street Address</label>
                   <input className={formStyles.input} value={form.address} onChange={(e) => setField("address", e.target.value)} placeholder="123 Example St" />
                 </div>
@@ -332,15 +322,19 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
               <SectionHeading>4 — Recipient Account</SectionHeading>
               <div className={formStyles.fieldRow}>
                 <div className={formStyles.fieldGroup}>
-                  <label className={formStyles.label}>Direction</label>
+                  <label className={formStyles.label}>Recipient In</label>
                   <select className={formStyles.input} value={form.recipient_direction} onChange={(e) => setField("recipient_direction", e.target.value)}>
-                    <option value="aud">AUD Transfer (to Australia)</option>
-                    <option value="irt">IRT Transfer (to Iran)</option>
+                    <option value="aud">Australia</option>
+                    <option value="irt">Iran</option>
                   </select>
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>Recipient Label</label>
-                  <input className={formStyles.input} placeholder={profileName ? `${profileName} – Primary` : "Primary recipient"} value={form.recipient_label} onChange={(e) => setField("recipient_label", e.target.value)} />
+                  <input className={formStyles.input} value={recipientAutoLabel} readOnly />
+                </div>
+                <div className={formStyles.fieldGroup}>
+                      <label className={formStyles.label}>Full Name</label>
+                      <input className={formStyles.input} value={form.account_name} onChange={(e) => setField("account_name", e.target.value)} />
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>Bank Name</label>
@@ -349,16 +343,14 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
 
                 {isAud ? (
                   <>
-                    <div className={formStyles.fieldGroup}>
-                      <label className={formStyles.label}>Account Holder Name</label>
-                      <input className={formStyles.input} value={form.account_name} onChange={(e) => setField("account_name", e.target.value)} />
-                    </div>
+                    
+                  
                     <div className={formStyles.fieldGroup}>
                       <label className={formStyles.label}>BSB</label>
                       <input className={formStyles.input} value={form.bsb} onChange={(e) => setField("bsb", e.target.value)} placeholder="000-000" />
                     </div>
                     <div className={formStyles.fieldGroup}>
-                      <label className={formStyles.label}>Account Number</label>
+                      <label className={formStyles.label}>Acc. Number</label>
                       <input className={formStyles.input} value={form.account_number} onChange={(e) => setField("account_number", e.target.value)} />
                     </div>
                     <div className={formStyles.fieldGroup}>
@@ -370,30 +362,30 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                       <input className={formStyles.input} value={form.recipient_phone} onChange={(e) => setField("recipient_phone", e.target.value)} />
                     </div>
                     <div className={formStyles.fieldGroup}>
-                      <label className={formStyles.label}>Residential Address</label>
+                      <label className={formStyles.label}>Full Address</label>
                       <input className={formStyles.input} value={form.residential_address} onChange={(e) => setField("residential_address", e.target.value)} />
                     </div>
                   </>
                 ) : (
                   <>
                     <div className={formStyles.fieldGroup}>
-                      <label className={formStyles.label}>Full Name (Persian)</label>
-                      <input className={formStyles.input} value={form.full_name} onChange={(e) => setField("full_name", e.target.value)} />
-                    </div>
-                    <div className={formStyles.fieldGroup}>
-                      <label className={formStyles.label}>Card Number (16 digits)</label>
+                      <label className={formStyles.label}>Card Number</label>
                       <input className={formStyles.input} value={form.irt_card_number} onChange={(e) => setField("irt_card_number", e.target.value)} placeholder="6037xxxxxxxx" />
                     </div>
                     <div className={formStyles.fieldGroup}>
-                      <label className={formStyles.label}>Shaba (IBAN without IR)</label>
+                      <label className={formStyles.label}>Account Number</label>
+                      <input className={formStyles.input} value={form.irt_account_number} onChange={(e) => setField("irt_account_number", e.target.value)} />
+                    </div>
+                    <div className={formStyles.fieldGroup}>
+                      <label className={formStyles.label}>SHABA (IBAN)</label>
                       <input className={formStyles.input} value={form.shaba_number} onChange={(e) => setField("shaba_number", e.target.value)} placeholder="26 digits" />
                     </div>
                     <div className={formStyles.fieldGroup}>
-                      <label className={formStyles.label}>Phone (Iran)</label>
+                      <label className={formStyles.label}>Phone</label>
                       <input className={formStyles.input} value={form.irt_phone} onChange={(e) => setField("irt_phone", e.target.value)} />
                     </div>
                     <div className={formStyles.fieldGroup}>
-                      <label className={formStyles.label}>Address (Iran)</label>
+                      <label className={formStyles.label}>Full Address</label>
                       <input className={formStyles.input} value={form.irt_address} onChange={(e) => setField("irt_address", e.target.value)} />
                     </div>
                   </>
@@ -422,14 +414,14 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                   <div className={formStyles.fieldGroup}>
                     <label className={formStyles.label}>Recipient</label>
                     <select className={formStyles.input} value={form.tx_recipient} onChange={(e) => setField("tx_recipient", e.target.value)}>
-                      <option value="section4">{section4RecipientLabel}</option>
+                      <option value="section4">{recipientAutoLabel}</option>
                     </select>
                   </div>
                   <div className={formStyles.fieldGroup}>
                     <label className={formStyles.label}>Transaction Type</label>
                     <select className={formStyles.input} value={form.tx_type} onChange={(e) => setField("tx_type", e.target.value)}>
-                      <option value="buy_aud">Buy AUD (Iran → Australia)</option>
-                      <option value="sell_aud">Sell AUD (Australia → Iran)</option>
+                      <option value="buy_aud">Buy AUD</option>
+                      <option value="sell_aud">Sell AUD</option>
                     </select>
                   </div>
                   <div className={formStyles.fieldGroup}>

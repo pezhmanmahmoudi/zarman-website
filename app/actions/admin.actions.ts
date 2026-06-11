@@ -373,6 +373,98 @@ export async function archiveKyc(userId: string) {
   return { success: true };
 }
 
+export async function updateUserIdentityKycProfile(payload: {
+  userId: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  mobile_number?: string;
+  dob?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+  document_type?: "driver_license" | "passport" | "none" | "";
+  state_of_issue?: string;
+  license_number?: string;
+  card_number?: string;
+  passport_number?: string;
+  expiry_date?: string;
+  kyc_status?: "pending" | "under_review" | "approved" | "rejected" | "archived";
+}) {
+  const admin = await requireAdmin();
+  const db = makeServiceRoleClient();
+
+  if (!payload.userId) return { error: "Missing user ID." };
+
+  const { data: existingProfile, error: profileError } = await db
+    .from("profiles")
+    .select("id, email")
+    .eq("id", payload.userId)
+    .maybeSingle();
+
+  if (profileError) return { error: profileError.message };
+  if (!existingProfile) return { error: "Customer profile not found." };
+
+  const trimmedEmail = payload.email?.trim().toLowerCase() || null;
+  if (trimmedEmail && !/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
+    return { error: "Please provide a valid email." };
+  }
+
+  if (trimmedEmail && trimmedEmail !== existingProfile.email) {
+    const { data: duplicateEmail } = await db
+      .from("profiles")
+      .select("id")
+      .eq("email", trimmedEmail)
+      .neq("id", payload.userId)
+      .maybeSingle();
+
+    if (duplicateEmail) return { error: "This email is already in use by another customer." };
+  }
+
+  const patch: Record<string, unknown> = {
+    first_name: payload.first_name?.trim() || null,
+    last_name: payload.last_name?.trim() || null,
+    email: trimmedEmail,
+    mobile_number: payload.mobile_number?.trim() || null,
+    dob: payload.dob?.trim() || null,
+    address: payload.address?.trim() || null,
+    city: payload.city?.trim() || null,
+    state: payload.state?.trim() || null,
+    postcode: payload.postcode?.trim() || null,
+    country: payload.country?.trim() || null,
+    document_type: payload.document_type?.trim() || null,
+    state_of_issue: payload.state_of_issue?.trim() || null,
+    license_number: payload.license_number?.trim() || null,
+    card_number: payload.card_number?.trim() || null,
+    passport_number: payload.passport_number?.trim() || null,
+    expiry_date: payload.expiry_date?.trim() || null,
+  };
+
+  if (payload.kyc_status) {
+    patch.kyc_status = payload.kyc_status;
+  }
+
+  const { error: updateError } = await db
+    .from("profiles")
+    .update(patch)
+    .eq("id", payload.userId);
+
+  if (updateError) return { error: updateError.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "PROFILE_IDENTITY_KYC_UPDATED",
+    targetType: "profile",
+    targetId: payload.userId,
+    newValue: patch,
+  }).catch(() => {});
+
+  return { success: true };
+}
+
 // ===========================================================================
 // TRANSACTIONS QUEUE
 export async function getPendingTransactions() {
@@ -747,12 +839,16 @@ export async function updateSystemSettings({
 
   // Upsert into rates_history — single source of truth for both rates and market status.
   // Upsert by date so re-running the same day updates the existing row.
+  // updated_at is explicitly set here AND via a DB trigger, so it always reflects
+  // the exact moment this save was triggered — regardless of created_at immutability.
   const today = new Date().toISOString().slice(0, 10);
+  const now = new Date().toISOString();
   const { error } = await db
     .from("rates_history")
     .upsert(
       [{
         date: today,
+        updated_at: now,
         buy_aud: buyRate,
         sell_aud: sellRate,
         source: "admin",
@@ -863,8 +959,9 @@ export async function getUserFinancialProfile(userId: string) {
     db
       .from("transactions")
       .select(`
-        id, type, amount_aud, equivalent_toman, status, created_at,
-        source_of_funds, reason_for_transfer, promo_code, discount_amount, loyalty_discount,
+        id, recipient_id, type, amount_aud, equivalent_toman, status, created_at,
+        applied_rate, source_of_funds, reason_for_transfer, payment_link, reference_code,
+        promo_code, discount_amount, loyalty_discount,
         recipients(id, direction, label, bank_type, bank_name, account_name, full_name)
       `)
       .eq("user_id", userId)
@@ -974,6 +1071,19 @@ async function generateAdminReferenceCode(db: ReturnType<typeof makeServiceRoleC
   throw new Error("Could not generate a unique reference code.");
 }
 
+async function generateCustomerCode(db: ReturnType<typeof makeServiceRoleClient>) {
+  for (let i = 0; i < 30; i += 1) {
+    const candidate = `CZ${Math.floor(100000 + Math.random() * 900000)}`;
+    const { data } = await db
+      .from("profiles")
+      .select("id")
+      .eq("customer_code", candidate)
+      .maybeSingle();
+    if (!data) return candidate;
+  }
+  throw new Error("Could not generate a unique customer code.");
+}
+
 export async function createAssistedCustomerOnboarding(payload: AssistedOnboardingPayload) {
   const admin = await requireAdmin();
   const db = makeServiceRoleClient();
@@ -988,10 +1098,7 @@ export async function createAssistedCustomerOnboarding(payload: AssistedOnboardi
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) return { error: "Valid email is required." };
   if (!mobile) return { error: "Mobile number is required." };
 
-  const customerCode = payload.customer_code?.trim().toUpperCase() || null;
-  if (customerCode && !/^CZ\d{4}$/.test(customerCode)) {
-    return { error: "Customer code must be CZ + 4 digits (e.g. CZ0001)." };
-  }
+  const customerCodeInput = payload.customer_code?.trim();
 
   if (!payload.recipient?.direction || !["aud", "irt"].includes(payload.recipient.direction)) {
     return { error: "Recipient direction is required." };
@@ -1009,16 +1116,18 @@ export async function createAssistedCustomerOnboarding(payload: AssistedOnboardi
     return { error: "A customer with this email already exists." };
   }
 
-  if (customerCode) {
+  if (customerCodeInput) {
     const { data: existingCode } = await db
       .from("profiles")
       .select("id")
-      .eq("customer_code", customerCode)
+      .eq("customer_code", customerCodeInput)
       .maybeSingle();
     if (existingCode) {
       return { error: "Customer code already exists." };
     }
   }
+
+  const customerCode = customerCodeInput || await generateCustomerCode(db);
 
   const tempPassword = `Zarman!${Math.random().toString(36).slice(2, 10)}${Date.now().toString().slice(-2)}`;
   const { data: authCreated, error: authError } = await db.auth.admin.createUser({
@@ -1364,6 +1473,107 @@ export async function createAssistedRecipientForUser(payload: {
   return { success: true, recipientId: recipientRow.id };
 }
 
+export async function updateAssistedRecipientForUser(payload: {
+  recipientId: string;
+  userId: string;
+  direction: "aud" | "irt";
+  label: string;
+  bank_name?: string;
+  bsb?: string;
+  account_number?: string;
+  account_name?: string;
+  residential_address?: string;
+  recipient_email?: string;
+  recipient_phone?: string;
+  bank_type?: "bank_melli" | "other";
+  card_number?: string;
+  shaba_number?: string;
+  irt_account_number?: string;
+  full_name?: string;
+  irt_address?: string;
+  irt_phone?: string;
+}) {
+  const admin = await requireAdmin();
+  const db = makeServiceRoleClient();
+
+  if (!payload.recipientId) return { error: "Missing recipient ID." };
+  if (!payload.userId) return { error: "Missing user ID." };
+  if (!payload.direction || !["aud", "irt"].includes(payload.direction)) {
+    return { error: "Recipient direction is required." };
+  }
+
+  const label = payload.label?.trim();
+  if (!label) return { error: "Recipient label is required." };
+
+  const { data: recipientRow, error: recipientError } = await db
+    .from("recipients")
+    .select("id, user_id")
+    .eq("id", payload.recipientId)
+    .maybeSingle();
+
+  if (recipientError) return { error: recipientError.message };
+  if (!recipientRow) return { error: "Recipient not found." };
+  if (recipientRow.user_id !== payload.userId) {
+    return { error: "Recipient does not belong to this customer." };
+  }
+
+  const updatePatch: Record<string, unknown> = {
+    direction: payload.direction,
+    label,
+  };
+
+  if (payload.direction === "aud") {
+    updatePatch.bank_name = payload.bank_name?.trim() || null;
+    updatePatch.bsb = payload.bsb?.trim() || null;
+    updatePatch.account_number = payload.account_number?.trim() || null;
+    updatePatch.account_name = payload.account_name?.trim() || null;
+    updatePatch.residential_address = payload.residential_address?.trim() || null;
+    updatePatch.recipient_email = payload.recipient_email?.trim() || null;
+    updatePatch.recipient_phone = payload.recipient_phone?.trim() || null;
+    updatePatch.bank_type = null;
+    updatePatch.card_number = null;
+    updatePatch.shaba_number = null;
+    updatePatch.irt_account_number = null;
+    updatePatch.full_name = null;
+    updatePatch.irt_address = null;
+    updatePatch.irt_phone = null;
+  } else {
+    updatePatch.bank_type = payload.bank_type === "bank_melli" ? "bank_melli" : "other";
+    updatePatch.bank_name = payload.bank_name?.trim() || null;
+    updatePatch.card_number = payload.card_number?.trim() || null;
+    updatePatch.shaba_number = payload.shaba_number?.trim() || null;
+    updatePatch.irt_account_number = payload.irt_account_number?.trim() || null;
+    updatePatch.full_name = payload.full_name?.trim() || null;
+    updatePatch.irt_address = payload.irt_address?.trim() || null;
+    updatePatch.irt_phone = payload.irt_phone?.trim() || null;
+    updatePatch.bsb = null;
+    updatePatch.account_number = null;
+    updatePatch.account_name = null;
+    updatePatch.residential_address = null;
+    updatePatch.recipient_email = null;
+    updatePatch.recipient_phone = null;
+  }
+
+  const { error: updateError } = await db
+    .from("recipients")
+    .update(updatePatch)
+    .eq("id", payload.recipientId)
+    .eq("user_id", payload.userId);
+
+  if (updateError) return { error: updateError.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "ASSISTED_RECIPIENT_UPDATED",
+    targetType: "recipient",
+    targetId: payload.recipientId,
+    newValue: updatePatch,
+  }).catch(() => {});
+
+  return { success: true };
+}
+
 // ===========================================================================
 // PROMO CODE MANAGEMENT (Admin CRUD)
 // ===========================================================================
@@ -1385,7 +1595,7 @@ export async function getPromoCodes() {
     .select("id, code, discount_type, discount_value, max_uses, used_count, active, expires_at, description, created_at")
     .order("created_at", { ascending: false });
 
-  if (error) throw new Error(error.message);
+  if (error) return [];
   return data ?? [];
 }
 
@@ -1606,11 +1816,8 @@ export async function updateCustomerCode(userId: string, newCode: string) {
   const admin = await requireAdmin();
   if (!userId) return { error: "Missing user ID." };
 
-  const trimmedCode = newCode.trim().toUpperCase();
+  const trimmedCode = newCode.trim();
   if (!trimmedCode) return { error: "Customer code cannot be empty." };
-  if (!/^CZ\d{4}$/.test(trimmedCode)) {
-    return { error: "Invalid format. Use CZ followed by 4 digits (e.g. CZ0001)." };
-  }
 
   const db = makeServiceRoleClient();
 
@@ -1692,6 +1899,171 @@ export async function updateTransactionAmount(
       targetId: String(transactionId),
       oldValue: { field, value: (before as Record<string, unknown>)[field] },
       newValue: { field, value: newValue },
+    });
+  } catch {}
+
+  return { success: true };
+}
+
+// ===========================================================================
+// UPDATE FULL TRANSACTION ROW (CRM user timeline)
+// ===========================================================================
+export async function updateAssistedTransactionForUser(payload: {
+  transactionId: string;
+  userId: string;
+  recipientId: string;
+  type: "buy_aud" | "sell_aud";
+  amount_aud: number;
+  equivalent_toman: number;
+  applied_rate?: number;
+  source_of_funds?: string;
+  reason_for_transfer?: string;
+  payment_link?: string;
+  reference_code: string;
+  status: "pending" | "approved" | "rejected" | "archived" | "cancelled";
+}) {
+  const admin = await requireAdmin();
+  const db = makeServiceRoleClient();
+
+  if (!payload.transactionId) return { error: "Missing transaction ID." };
+  if (!payload.userId) return { error: "Missing user ID." };
+  if (!payload.recipientId) return { error: "Recipient is required." };
+  if (!payload.type || !["buy_aud", "sell_aud"].includes(payload.type)) {
+    return { error: "Invalid transaction type." };
+  }
+
+  const amountAud = Number(payload.amount_aud);
+  const toman = Number(payload.equivalent_toman);
+  if (!Number.isFinite(amountAud) || amountAud <= 0) {
+    return { error: "AUD amount must be a positive number." };
+  }
+  if (!Number.isFinite(toman) || toman <= 0) {
+    return { error: "Equivalent Toman must be a positive number." };
+  }
+
+  if (!payload.status || !["pending", "approved", "rejected", "archived", "cancelled"].includes(payload.status)) {
+    return { error: "Invalid transaction status." };
+  }
+
+  const trimmedCode = payload.reference_code.trim().toUpperCase();
+  if (!trimmedCode) return { error: "Reference code cannot be empty." };
+  if (!/^[A-Z]{2}[0-9]{5}$/.test(trimmedCode)) {
+    return { error: "Invalid reference code format. Expected 2 letters + 5 digits." };
+  }
+
+  const { data: txRow, error: txFetchError } = await db
+    .from("transactions")
+    .select("id, user_id, recipient_id, type, amount_aud, equivalent_toman, applied_rate, source_of_funds, reason_for_transfer, payment_link, reference_code, status")
+    .eq("id", payload.transactionId)
+    .maybeSingle();
+
+  if (txFetchError) return { error: txFetchError.message };
+  if (!txRow) return { error: "Transaction not found." };
+  if (txRow.user_id !== payload.userId) {
+    return { error: "Transaction does not belong to this customer." };
+  }
+
+  const { data: recipientRow, error: recipientError } = await db
+    .from("recipients")
+    .select("id, user_id")
+    .eq("id", payload.recipientId)
+    .maybeSingle();
+
+  if (recipientError) return { error: recipientError.message };
+  if (!recipientRow) return { error: "Selected recipient not found." };
+  if (recipientRow.user_id !== payload.userId) {
+    return { error: "Selected recipient does not belong to this customer." };
+  }
+
+  const { data: existingCodeRow } = await db
+    .from("transactions")
+    .select("id")
+    .eq("reference_code", trimmedCode)
+    .neq("id", payload.transactionId)
+    .maybeSingle();
+
+  if (existingCodeRow) return { error: "Reference code already in use." };
+
+  const appliedRate = Number.isFinite(Number(payload.applied_rate)) && Number(payload.applied_rate) > 0
+    ? Number(payload.applied_rate)
+    : (amountAud > 0 ? Math.round(toman / amountAud) : 0);
+
+  const updatePayload = {
+    recipient_id: payload.recipientId,
+    type: payload.type,
+    amount_aud: amountAud,
+    equivalent_toman: toman,
+    applied_rate: appliedRate,
+    source_of_funds: payload.source_of_funds?.trim() || null,
+    reason_for_transfer: payload.reason_for_transfer?.trim() || null,
+    payment_link: payload.payment_link?.trim() || null,
+    reference_code: trimmedCode,
+    status: payload.status,
+  };
+
+  const { error: updateError } = await db
+    .from("transactions")
+    .update(updatePayload)
+    .eq("id", payload.transactionId);
+
+  if (updateError) return { error: updateError.message };
+
+  try {
+    await writeAuditLog({
+      actorId: admin.id,
+      actorEmail: admin.email ?? "",
+      action: "ASSISTED_TRANSACTION_UPDATED",
+      targetType: "transaction",
+      targetId: payload.transactionId,
+      oldValue: txRow,
+      newValue: updatePayload,
+    });
+  } catch {}
+
+  return { success: true };
+}
+
+// ===========================================================================
+// HARD DELETE TRANSACTION (CRM user timeline)
+// ===========================================================================
+export async function deleteAssistedTransactionForUser(payload: {
+  transactionId: string;
+  userId: string;
+}) {
+  const admin = await requireAdmin();
+  const db = makeServiceRoleClient();
+
+  if (!payload.transactionId) return { error: "Missing transaction ID." };
+  if (!payload.userId) return { error: "Missing user ID." };
+
+  const { data: txRow, error: txFetchError } = await db
+    .from("transactions")
+    .select("id, user_id, recipient_id, type, amount_aud, equivalent_toman, status, reference_code")
+    .eq("id", payload.transactionId)
+    .maybeSingle();
+
+  if (txFetchError) return { error: txFetchError.message };
+  if (!txRow) return { error: "Transaction not found." };
+  if (txRow.user_id !== payload.userId) {
+    return { error: "Transaction does not belong to this customer." };
+  }
+
+  const { error: deleteError } = await db
+    .from("transactions")
+    .delete()
+    .eq("id", payload.transactionId)
+    .eq("user_id", payload.userId);
+
+  if (deleteError) return { error: deleteError.message };
+
+  try {
+    await writeAuditLog({
+      actorId: admin.id,
+      actorEmail: admin.email ?? "",
+      action: "ASSISTED_TRANSACTION_DELETED",
+      targetType: "transaction",
+      targetId: payload.transactionId,
+      oldValue: txRow,
     });
   } catch {}
 

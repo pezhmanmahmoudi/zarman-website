@@ -1,17 +1,20 @@
 "use client";
 
-import React from "react";
-import { ShieldCheck } from "lucide-react";
+import React, { useEffect, useState, useTransition } from "react";
+import { ShieldCheck, Pencil, Save, X } from "lucide-react";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
+import formStyles from "@/styles/admin/AdminForms.module.css";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
 import { KycActionButtons } from "@/components/admin/KycActionButtons";
 import { EditableCustomerCode } from "@/components/admin/EditableCustomerCode";
+import { updateUserIdentityKycProfile } from "@/app/actions/admin.actions";
 import type { getUserFinancialProfile } from "@/app/actions/admin.actions";
 
 type Profile = Awaited<ReturnType<typeof getUserFinancialProfile>>["profile"];
 
 interface UserKycManagerProps {
   profile: Profile;
+  onProfileUpdated?: () => void;
 }
 
 const ROWS: [string, (p: NonNullable<Profile>) => string | null | undefined][] = [
@@ -28,7 +31,92 @@ const ROWS: [string, (p: NonNullable<Profile>) => string | null | undefined][] =
   ["Expiry Date",     (p) => (p as Record<string, unknown>).expiry_date      as string | null],
 ];
 
-export function UserKycManager({ profile }: UserKycManagerProps) {
+export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProps) {
+  const [isPending, startTransition] = useTransition();
+  const [isEditing, setIsEditing] = useState(false);
+  const [status, setStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [form, setForm] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    mobile_number: "",
+    dob: "",
+    address: "",
+    city: "",
+    state: "",
+    postcode: "",
+    country: "",
+    document_type: "",
+    state_of_issue: "",
+    license_number: "",
+    card_number: "",
+    passport_number: "",
+    expiry_date: "",
+    kyc_status: "pending",
+  });
+
+  useEffect(() => {
+    if (!profile) return;
+    setForm({
+      first_name: profile.first_name ?? "",
+      last_name: profile.last_name ?? "",
+      email: profile.email ?? "",
+      mobile_number: profile.mobile_number ?? "",
+      dob: (profile as Record<string, unknown>).dob as string ?? "",
+      address: (profile as Record<string, unknown>).address as string ?? "",
+      city: (profile as Record<string, unknown>).city as string ?? "",
+      state: (profile as Record<string, unknown>).state as string ?? "",
+      postcode: (profile as Record<string, unknown>).postcode as string ?? "",
+      country: (profile as Record<string, unknown>).country as string ?? "",
+      document_type: (profile as Record<string, unknown>).document_type as string ?? "",
+      state_of_issue: (profile as Record<string, unknown>).state_of_issue as string ?? "",
+      license_number: (profile as Record<string, unknown>).license_number as string ?? "",
+      card_number: (profile as Record<string, unknown>).card_number as string ?? "",
+      passport_number: (profile as Record<string, unknown>).passport_number as string ?? "",
+      expiry_date: (profile as Record<string, unknown>).expiry_date as string ?? "",
+      kyc_status: (profile as Record<string, unknown>).kyc_status as string ?? "pending",
+    });
+  }, [profile]);
+
+  const setField = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const saveProfile = () => {
+    if (!profile?.id) return;
+
+    setStatus(null);
+    startTransition(async () => {
+      const res = await updateUserIdentityKycProfile({
+        userId: profile.id,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: form.email,
+        mobile_number: form.mobile_number,
+        dob: form.dob,
+        address: form.address,
+        city: form.city,
+        state: form.state,
+        postcode: form.postcode,
+        country: form.country,
+        document_type: form.document_type as "driver_license" | "passport" | "none" | "",
+        state_of_issue: form.state_of_issue,
+        license_number: form.license_number,
+        card_number: form.card_number,
+        passport_number: form.passport_number,
+        expiry_date: form.expiry_date,
+        kyc_status: form.kyc_status as "pending" | "under_review" | "approved" | "rejected" | "archived",
+      });
+
+      if ("error" in res && res.error) {
+        setStatus({ type: "error", text: res.error });
+        return;
+      }
+
+      setStatus({ type: "success", text: "Identity and KYC details updated." });
+      setIsEditing(false);
+      onProfileUpdated?.();
+    });
+  };
+
   return (
     <div className={cardStyles.panel}>
       <div className={`${cardStyles.panelHeader} ${cardStyles.panelHeaderComfort}`}>
@@ -36,9 +124,127 @@ export function UserKycManager({ profile }: UserKycManagerProps) {
           <ShieldCheck size={18} />
           Identity &amp; KYC Management
         </h2>
+        {!isEditing && (
+          <button type="button" className={formStyles.btnSecondary} onClick={() => setIsEditing(true)}>
+            <Pencil size={14} />
+            Edit Details
+          </button>
+        )}
       </div>
 
       <div className={cardStyles.panelBody}>
+        {status && (
+          <p className={`${formStyles.saveStatus} ${formStyles.saveStatusBlock} ${status.type === "success" ? formStyles.saveStatusSuccess : formStyles.saveStatusError}`}>
+            {status.text}
+          </p>
+        )}
+
+        {isEditing ? (
+          <>
+            <div className={formStyles.fieldRow}>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>First Name</label>
+                <input className={formStyles.input} value={form.first_name} onChange={(e) => setField("first_name", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Last Name</label>
+                <input className={formStyles.input} value={form.last_name} onChange={(e) => setField("last_name", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Email</label>
+                <input className={formStyles.input} value={form.email} onChange={(e) => setField("email", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Phone</label>
+                <input className={formStyles.input} value={form.mobile_number} onChange={(e) => setField("mobile_number", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Date of Birth</label>
+                <input type="date" className={formStyles.input} value={form.dob} onChange={(e) => setField("dob", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Street Address</label>
+                <input className={formStyles.input} value={form.address} onChange={(e) => setField("address", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>City</label>
+                <input className={formStyles.input} value={form.city} onChange={(e) => setField("city", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>State</label>
+                <input className={formStyles.input} value={form.state} onChange={(e) => setField("state", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Postcode</label>
+                <input className={formStyles.input} value={form.postcode} onChange={(e) => setField("postcode", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Country</label>
+                <input className={formStyles.input} value={form.country} onChange={(e) => setField("country", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Document Type</label>
+                <select className={formStyles.input} value={form.document_type} onChange={(e) => setField("document_type", e.target.value)}>
+                  <option value="">None</option>
+                  <option value="driver_license">Driver Licence</option>
+                  <option value="passport">Passport</option>
+                  <option value="none">None</option>
+                </select>
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>State of Issue</label>
+                <input className={formStyles.input} value={form.state_of_issue} onChange={(e) => setField("state_of_issue", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Licence Number</label>
+                <input className={formStyles.input} value={form.license_number} onChange={(e) => setField("license_number", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Card Number</label>
+                <input className={formStyles.input} value={form.card_number} onChange={(e) => setField("card_number", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Passport Number</label>
+                <input className={formStyles.input} value={form.passport_number} onChange={(e) => setField("passport_number", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Expiry Date</label>
+                <input type="date" className={formStyles.input} value={form.expiry_date} onChange={(e) => setField("expiry_date", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>KYC Status</label>
+                <select className={formStyles.input} value={form.kyc_status} onChange={(e) => setField("kyc_status", e.target.value)}>
+                  <option value="pending">Pending</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
+
+            <div className={formStyles.formActionsSpaced}>
+              <button
+                type="button"
+                className={`${formStyles.btnPrimary} ${formStyles.btnLg}`}
+                onClick={saveProfile}
+                disabled={isPending}
+              >
+                <Save size={14} />
+                {isPending ? "Saving..." : "Save Identity/KYC"}
+              </button>
+              <button
+                type="button"
+                className={`${formStyles.btnSecondary} ${formStyles.btnLg}`}
+                onClick={() => setIsEditing(false)}
+                disabled={isPending}
+              >
+                <X size={14} />
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
         <dl className={cardStyles.kycDetailList}>            {/* Customer Code — editable */}
             <div className={cardStyles.kycDetailRow}>
               <dt className={cardStyles.kycDetailRowLabel}>Customer Code</dt>
@@ -62,6 +268,7 @@ export function UserKycManager({ profile }: UserKycManagerProps) {
             );
           })}
         </dl>
+        )}
 
         <div className={cardStyles.kycStatusFooter}>
           <div className={cardStyles.kycStatusLeft}>

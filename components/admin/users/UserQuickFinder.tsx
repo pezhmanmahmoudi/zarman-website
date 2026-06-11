@@ -32,7 +32,7 @@ export function UserQuickFinder() {
   };
 
   return (
-    <div className={cardStyles.panel} style={{ marginBottom: "1rem" }}>
+    <div className={`${cardStyles.panel} ${cardStyles.panelMb1}`}>
       <div className={cardStyles.panelBody}>
         <div className={formStyles.searchRow}>
           <div className={formStyles.searchInputWrap}>
@@ -55,29 +55,20 @@ export function UserQuickFinder() {
         </div>
 
         {searched && (
-          <div style={{ marginTop: "0.875rem", display: "grid", gap: "0.5rem" }}>
+          <div className={formStyles.searchResultList}>
             {results.length === 0 ? (
-              <div style={{ fontSize: "0.8125rem", color: "var(--text-dim)" }}>No matching users found.</div>
+              <div className={formStyles.searchResultEmpty}>No matching users found.</div>
             ) : (
               results.slice(0, 6).map((u) => (
                 <Link
                   key={u.id}
                   href={`/admin/users?userId=${u.id}`}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "0.75rem",
-                    padding: "0.625rem 0.75rem",
-                    border: "1px solid var(--border-soft)",
-                    borderRadius: "0.5rem",
-                    textDecoration: "none",
-                    color: "inherit",
-                  }}
+                  className={formStyles.searchResultItem}
                 >
-                  <span style={{ fontWeight: 600, color: "var(--accent)" }}>
+                  <span className={formStyles.searchResultName}>
                     {(u.first_name ?? "") + " " + (u.last_name ?? "")}
                   </span>
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
+                  <span className={formStyles.searchResultMeta}>
                     {u.customer_code ? `${u.customer_code} • ` : ""}{u.email ?? u.mobile_number ?? "—"}
                   </span>
                 </Link>

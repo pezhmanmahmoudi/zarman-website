@@ -5,6 +5,7 @@ import type { ChartDataPoint, RateSnapshot } from "@/lib/rates-types";
 type HistoricalRateRow = {
   id: number | null;
   created_at: string | null;
+  updated_at: string | null;
   date: string | null;
   buy_aud: number | null;
   sell_aud: number | null;
@@ -67,7 +68,7 @@ async function fetchRatesSnapshot(): Promise<RateSnapshot> {
     // Fetch historical chart data — single source of truth for rates.
     const { data, error } = await supabase
       .from("rates_history")
-      .select("id, created_at, date, buy_aud, sell_aud")
+      .select("id, created_at, updated_at, date, buy_aud, sell_aud")
       .gte("date", fromDateISO)
       .order("date", { ascending: false })
       .limit(MAX_HISTORY_ROWS);
@@ -91,7 +92,8 @@ async function fetchRatesSnapshot(): Promise<RateSnapshot> {
       currentRates: {
         sellAUD: toSafePositiveNumber(latestRawRow.sell_aud),
         buyAUD: toSafePositiveNumber(latestRawRow.buy_aud),
-        lastUpdated: latestRawRow.date,
+        // Prefer updated_at (changes on every admin save) over created_at (immutable after INSERT)
+        lastUpdated: latestRawRow.updated_at ?? latestRawRow.created_at ?? latestRawRow.date,
       },
       chartDataDaily: normalizedData,
     };

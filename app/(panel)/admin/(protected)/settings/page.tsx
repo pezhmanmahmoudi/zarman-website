@@ -10,7 +10,7 @@ export const metadata = { title: "System Settings | Zarman Admin" };
 export default async function SettingsPage() {
   const [settings, promoCodes] = await Promise.all([
     getSystemSettings(),
-    getPromoCodes(),
+    getPromoCodes().catch(() => []),
   ]);
 
   return (

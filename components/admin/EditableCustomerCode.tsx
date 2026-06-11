@@ -25,7 +25,7 @@ export function EditableCustomerCode({ userId, currentCode }: EditableCustomerCo
       if ("error" in result && result.error) {
         setError(result.error);
       } else {
-        const saved = value.trim().toUpperCase();
+        const saved = value.trim();
         setDisplayCode(saved);
         setIsEditing(false);
         router.refresh();
@@ -46,11 +46,11 @@ export function EditableCustomerCode({ userId, currentCode }: EditableCustomerCo
           <input
             type="text"
             value={value}
-            onChange={(e) => setValue(e.target.value.toUpperCase())}
+            onChange={(e) => setValue(e.target.value)}
             style={{
               fontFamily: "monospace",
               fontSize: "0.8rem",
-              width: "76px",
+              width: "140px",
               padding: "3px 7px",
               border: "1.5px solid var(--accent)",
               borderRadius: "5px",
@@ -62,8 +62,8 @@ export function EditableCustomerCode({ userId, currentCode }: EditableCustomerCo
               if (e.key === "Escape") handleCancel();
             }}
             autoFocus
-            maxLength={6}
-            placeholder="CZ0001"
+            maxLength={32}
+            placeholder="e.g. CZ0001 or VIP-2026-01"
           />
           <button
             onClick={handleSave}

@@ -65,7 +65,7 @@ export function UserFinancialStats({
         </div>
         <div className={cardStyles.statValueBlock}>
           <div className={cardStyles.statValue}>
-            {Math.floor(loyaltyPerAudToman).toLocaleString("en-AU")} <span className={cardStyles.statLabel} style={{ display: 'inline-block', marginLeft: '0.25rem' }}>Toman</span>
+            {Math.floor(loyaltyPerAudToman).toLocaleString("en-AU")} <span className={`${cardStyles.statLabel} ${cardStyles.statLabelInline}`}>Toman</span>
           </div>
           <div className={cardStyles.statLabel}>Loyalty per AUD</div>
         </div>

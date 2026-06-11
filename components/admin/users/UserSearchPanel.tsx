@@ -94,7 +94,7 @@ export function UserSearchPanel({
                     <td className={tableStyles.cellStrong}>
                       {u.first_name} {u.last_name}
                       {u.customer_code && (
-                        <div style={{ fontSize: "0.65rem", color: "var(--text-dim)", fontFamily: "monospace", marginTop: "2px", fontWeight: 400 }}>
+                        <div className={tableStyles.cellCodeMini}>
                           ({u.customer_code})
                         </div>
                       )}

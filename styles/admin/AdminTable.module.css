@@ -370,6 +370,86 @@
   font-size: 0.75rem;
 }
 
+/* ── Wrapping text cells ── */
+.cellWrap {
+  max-width: 160px;
+  white-space: normal;
+}
+
+.cellWrapNarrow {
+  max-width: 140px;
+  white-space: normal;
+}
+
+/* ── Action button cluster inside a table cell ── */
+.cellActionGroup {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Dim text used for empty cell placeholders ── */
+.cellEmpty {
+  color: var(--text-dim);
+}
+
+/* Recipient name cell */
+.cellRecipient {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+/* ── Discounts cell ── */
+.discountCell {
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.discountPromo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+}
+
+.discountPromoCode {
+  font-weight: 700;
+}
+
+.discountAmount {
+  color: var(--success);
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.discountLoyalty {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--warning);
+}
+
+.discountLoyaltyLabel {
+  font-weight: 600;
+}
+
+.discountLoyaltyAmount {
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+/* ── Customer code sub-line inside a name cell ── */
+.cellCodeMini {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  font-family: var(--font-en-stack);
+  margin-top: 2px;
+  font-weight: 400;
+}
+
 .cellMax150 {
   max-width: 150px;
 }

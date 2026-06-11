@@ -75,6 +75,11 @@ export function UsersPageClient({
     handleViewProfile(selectedUser.profile.id);
   };
 
+  const handleProfileUpdated = () => {
+    if (!selectedUser?.profile?.id) return;
+    handleViewProfile(selectedUser.profile.id);
+  };
+
   const loyaltyDiscountPct = selectedUser
     ? calcLoyaltyDiscountPct(selectedUser.approvedVolume, financeConfig)
     : 0;
@@ -125,7 +130,7 @@ export function UsersPageClient({
               loyaltyDiscountPct={loyaltyDiscountPct}
               currentRates={selectedUser.currentRates}
             />
-            <UserKycManager profile={selectedUser.profile} />
+            <UserKycManager profile={selectedUser.profile} onProfileUpdated={handleProfileUpdated} />
             <UserTransactionTimeline
               userId={selectedUser.profile?.id}
               transactions={selectedUser.transactions}

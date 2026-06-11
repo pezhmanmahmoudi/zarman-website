@@ -266,6 +266,12 @@
   font-style: italic; 
 }
 
+.kycDetailRowValueMono {
+  font-family: var(--font-en-stack);
+  font-size: 0.88rem;
+  letter-spacing: 0.03em;
+}
+
 /* ── Desktop Layout (2 Columns) ── */
 @media (min-width: 768px) {
   .kycDetailList {
@@ -344,6 +350,106 @@
 /* ── Panel variant helpers ── */
 .panelSoft { background: var(--bg-soft); box-shadow: none; border-color: var(--border-soft); }
 .panelMt   { margin-top: 1.5rem; }
+.panelMb1  { margin-bottom: 1rem; }
+
+/* ── Section heading (used inside forms for sub-sections) ── */
+.sectionHeading {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 0.25rem;
+}
+
+/* ── Stat label used inline next to a stat value ── */
+.statLabelInline {
+  display: inline-block;
+  margin-left: 0.25rem;
+}
+
+/* ── Panel body stack/list variants ── */
+.panelBodyList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ── Shared inset form container (Add Transaction / Add Recipient) ── */
+.formInset {
+  border: 1px solid var(--border-soft);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: var(--bg-soft);
+}
+
+/* panelBody variant for the add-form area (reduced padding-top, separator below) */
+.panelBodyForm {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* ── Status banner between header and table ── */
+.statusBanner {
+  padding: 0.5rem 1.5rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* ── Panel header right-side controls cluster ── */
+.panelHeaderControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Recipient card (shared with any card-in-list pattern) ── */
+.itemCard {
+  border: 1px solid var(--border-soft);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.itemCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--border-soft);
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.itemCardHeaderInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.itemCardHeaderName {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.itemCardHeaderDate {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-family: var(--font-en-stack);
+}
+
+.itemCardHeaderActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.itemCardBody {
+  padding: 1.25rem;
+}
 
 /* ── Compact Action Buttons (used in tables and inline forms) ── */
 .actionBtn {

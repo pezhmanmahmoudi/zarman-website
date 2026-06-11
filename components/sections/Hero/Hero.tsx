@@ -6,7 +6,7 @@ import Image from "next/image";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
-import { Info } from "lucide-react"; 
+import { Info, Clock } from "lucide-react"; 
 import styles from "./Hero.module.css";
 import { useRates } from "@/context/RateContext";
 import {
@@ -22,8 +22,34 @@ export default function Hero() {
 
   const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_TRANSFER_HELP)}`;
   const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
-
   const [mounted, setMounted] = useState(false);
+
+  // Format lastUpdated as Gregorian date + time, e.g. "11 June 2026 · 10:01"
+  const formattedLastUpdated = (() => {
+    if (!currentRates.lastUpdated) return null;
+    try {
+      const d = new Date(currentRates.lastUpdated);
+      if (isNaN(d.getTime())) return null;
+      
+      // تقویم میلادی
+      const datePart = d.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+      
+      // ساعت دقیق
+      const timePart = d.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      
+      return `${datePart} · ${timePart}`;
+    } catch {
+      return null;
+    }
+  })();
 
   useEffect(() => {
     setMounted(true);
@@ -91,6 +117,7 @@ export default function Hero() {
 
           <div className={styles.visual}>
             <div className={styles.rateWidget} aria-label="نرخ لحظه‌ای ارز">
+              {/* ── Live badge — centred above card ── */}
               <div className={styles.widgetHeader}>
                 <span className={styles.pulseDot}></span>
                 <span className={styles.status}>
@@ -98,6 +125,7 @@ export default function Hero() {
                 </span>
               </div>
 
+              {/* ── Main card ── */}
               <div className={styles.splitCard}>
                 <div className={styles.logoSection}>
                   <Image src="/images/logo-no-text-light.svg" alt="Zarman Exchange" width={100} height={100} className={styles.boardLogo} />
@@ -141,6 +169,15 @@ export default function Hero() {
                   </div>
                 </div>
               </div>
+
+              {/* ── Last-update footer strip ── */}
+              {!isLoading && formattedLastUpdated && (
+                <div className={styles.lastUpdated} aria-live="polite">
+                  <Clock size={13} className={styles.clockIcon} />
+                  <span className={styles.lastUpdatedLabel}>آخرین به‌روزرسانی:</span>
+                  <span className={styles.lastUpdatedTime} dir="ltr">{formattedLastUpdated}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
