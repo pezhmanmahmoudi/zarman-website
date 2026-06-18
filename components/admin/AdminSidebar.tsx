@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   BookOpen,
+  TrendingUp,
 } from "lucide-react";
 import styles from "@/styles/admin/AdminShell.module.css";
 import { supabase } from "@/lib/supabase";
@@ -57,6 +58,7 @@ export function AdminSidebar({
     { href: "/admin/settings", label: "System Settings", icon: <Settings size={18} /> },
     { href: "/admin/audit", label: "Audit Logs", icon: <ClipboardList size={18} /> },
     { href: "/admin/ledger", label: "Ledger", icon: <BookOpen size={18} /> },
+    { href: "/admin/treasury", label: "Treasury", icon: <TrendingUp size={18} /> },
   ];
 
   const handleLogout = async () => {
