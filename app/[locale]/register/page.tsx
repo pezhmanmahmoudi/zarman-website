@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css";
 import { 
-  ArrowLeft, Eye, EyeOff, ShieldCheck, KeyRound, CheckCircle2
+  ArrowLeft, Eye, EyeOff, ShieldCheck, KeyRound, CheckCircle2, AlertTriangle
 } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
@@ -232,7 +232,10 @@ export default function RegisterPage() {
           {step === 1 && (
             <div className={styles.stepContent}>
               {errors.general && <div className={styles.globalErrorBox}>{errors.general}</div>}
-              <div className={styles.formHint}>جهت یکپارچگی و تایید سریع‌تر حساب، لطفاً تمامی اطلاعات فرم را به زبان انگلیسی وارد کنید.</div>
+              <div className={styles.formHint} role="note" aria-label="Registration notice">
+                <AlertTriangle size={16} aria-hidden="true" className={styles.formHintIcon} />
+                <span>Notice: Please enter all form details in English.</span>
+              </div>
 
               <div className={styles.row}>
                 <div className={styles.inputGroup}>
