@@ -463,6 +463,8 @@ export async function addExpense(payload: {
       currency: payload.currency,
       amount: payload.amount,
       exchange_rate: payload.currency === "AUD" ? payload.exchange_rate : null,
+      // Keep both fields during schema transition: some DBs still enforce payer_account NOT NULL.
+      payer_account: payload.payer_account_id,
       payer_account_id: payload.payer_account_id,
       status: payload.status,
       notes: payload.notes?.trim() || null,
