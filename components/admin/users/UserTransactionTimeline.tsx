@@ -13,6 +13,7 @@ import {
   updateAssistedTransactionForUser,
   type getUserFinancialProfile,
 } from "@/app/actions/admin.actions";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 
 type Transactions = Awaited<ReturnType<typeof getUserFinancialProfile>>["transactions"];
 type Recipients = Awaited<ReturnType<typeof getUserFinancialProfile>>["recipients"];
@@ -78,8 +79,13 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
   const setField = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
   const setEditField = (key: string, value: string) => setEditForm((prev) => ({ ...prev, [key]: value }));
 
+  const normalizeRecipient = (value: any) => {
+    if (Array.isArray(value)) return value.find(Boolean) ?? null;
+    return value ?? null;
+  };
+
   const startEditRow = (tx: Transactions[number]) => {
-    const rec = (tx as any).recipients;
+    const rec = normalizeRecipient((tx as any).recipients);
     setStatus(null);
     setEditingId(String(tx.id));
     setEditForm({
@@ -237,19 +243,27 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
             <div className={formStyles.fieldRow}>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Recipient</label>
-                <select className={formStyles.input} value={form.recipientId} onChange={(e) => setField("recipientId", e.target.value)}>
-                  <option value="">Select recipient</option>
-                  {recipientOptions.map((r: RecipientOption) => (
-                    <option key={r.id} value={r.id}>{r.label}</option>
-                  ))}
-                </select>
+              <SelectBox
+                className={formStyles.input}
+                labeledOptions={[
+                  { value: "", label: "Select recipient" },
+                  ...recipientOptions.map((r: RecipientOption) => ({ value: r.id, label: r.label })),
+                ]}
+                value={form.recipientId}
+                onChange={(val) => setField("recipientId", val)}
+              />
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Type</label>
-                <select className={formStyles.input} value={form.type} onChange={(e) => setField("type", e.target.value)}>
-                  <option value="buy_aud">Buy AUD</option>
-                  <option value="sell_aud">Sell AUD</option>
-                </select>
+              <SelectBox
+                className={formStyles.input}
+                labeledOptions={[
+                  { value: "buy_aud", label: "Buy AUD" },
+                  { value: "sell_aud", label: "Sell AUD" },
+                ]}
+                value={form.type}
+                onChange={(val) => setField("type", val)}
+              />
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>AUD Amount</label>
@@ -344,10 +358,15 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                         })}
                       </td>
                       <td>
-                        <select className={`${formStyles.input} ${formStyles.inputCompact}`} value={editForm.type} onChange={(e) => setEditField("type", e.target.value)}>
-                          <option value="buy_aud">Buy AUD</option>
-                          <option value="sell_aud">Sell AUD</option>
-                        </select>
+                        <SelectBox
+                          className={`${formStyles.input} ${formStyles.inputCompact}`}
+                          labeledOptions={[
+                            { value: "buy_aud", label: "Buy AUD" },
+                            { value: "sell_aud", label: "Sell AUD" },
+                          ]}
+                          value={editForm.type}
+                          onChange={(val) => setEditField("type", val)}
+                        />
                       </td>
                       <td>
                         <input type="number" step="0.01" className={`${formStyles.input} ${formStyles.inputCompact}`} value={editForm.amountAud} onChange={(e) => setEditField("amountAud", e.target.value)} />
@@ -356,12 +375,15 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                         <input type="number" step="1" className={`${formStyles.input} ${formStyles.inputCompact}`} value={editForm.equivalentToman} onChange={(e) => setEditField("equivalentToman", e.target.value)} />
                       </td>
                       <td>
-                        <select className={`${formStyles.input} ${formStyles.selectCompact}`} value={editForm.recipientId} onChange={(e) => setEditField("recipientId", e.target.value)}>
-                          <option value="">Select recipient</option>
-                          {recipientOptions.map((r: RecipientOption) => (
-                            <option key={r.id} value={r.id}>{r.label}</option>
-                          ))}
-                        </select>
+                        <SelectBox
+                          className={`${formStyles.input} ${formStyles.selectCompact}`}
+                          labeledOptions={[
+                            { value: "", label: "Select recipient" },
+                            ...recipientOptions.map((r: RecipientOption) => ({ value: r.id, label: r.label })),
+                          ]}
+                          value={editForm.recipientId}
+                          onChange={(val) => setEditField("recipientId", val)}
+                        />
                       </td>
                       <td>
                         <span className={tableStyles.cellEmpty}>—</span>
@@ -373,13 +395,18 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                         <input className={`${formStyles.input} ${formStyles.inputCompactMd}`} value={editForm.reasonForTransfer} onChange={(e) => setEditField("reasonForTransfer", e.target.value)} />
                       </td>
                       <td>
-                        <select className={`${formStyles.input} ${formStyles.selectCompactStatus}`} value={editForm.status} onChange={(e) => setEditField("status", e.target.value)}>
-                          <option value="pending">Pending</option>
-                          <option value="approved">Approved</option>
-                          <option value="rejected">Rejected</option>
-                          <option value="archived">Archived</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
+                        <SelectBox
+                          className={`${formStyles.input} ${formStyles.selectCompactStatus}`}
+                          labeledOptions={[
+                            { value: "pending", label: "Pending" },
+                            { value: "approved", label: "Approved" },
+                            { value: "rejected", label: "Rejected" },
+                            { value: "archived", label: "Archived" },
+                            { value: "cancelled", label: "Cancelled" },
+                          ]}
+                          value={editForm.status}
+                          onChange={(val) => setEditField("status", val)}
+                        />
                       </td>
                       <td>
                         <div className={tableStyles.cellActionGroup}>
@@ -447,10 +474,13 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                   </td>
                   {/* Recipient */}
                   <td className={tableStyles.cellRecipient}>
-                    {(tx as any).recipients
+                    {normalizeRecipient((tx as any).recipients)
                       ? (
                         <span className={tableStyles.cellStrong}>
-                          {(tx as any).recipients.label || (tx as any).recipients.account_name || (tx as any).recipients.full_name || "—"}
+                          {(() => {
+                            const rec = normalizeRecipient((tx as any).recipients);
+                            return rec?.label || rec?.account_name || rec?.full_name || "—";
+                          })()}
                         </span>
                       )
                       : <span className={tableStyles.cellEmpty}>—</span>}

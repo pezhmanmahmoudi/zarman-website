@@ -837,6 +837,7 @@
 }
 
 .formContainer {
+  --field-h: 2.625rem;
   background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
   border: 1px solid var(--border-soft, #eaecf0);
   border-radius: 0.9rem;
@@ -972,7 +973,9 @@
 
 .formInput,
 .formSelect {
-  padding: 0.68rem 0.85rem;
+  height: var(--field-h, 2.625rem);
+  box-sizing: border-box;
+  padding: 0 0.85rem;
   border: 1px solid var(--border-med, #d0d5dd);
   border-radius: 0.62rem;
   font-size: 0.875rem;
@@ -1646,7 +1649,7 @@
 .settingsDetails {
   border: 1px solid var(--border-soft, #eaecf0);
   border-radius: 1rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .settingsSummary {
@@ -1660,6 +1663,7 @@
   font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   background: var(--bg-soft, #f4f6f8);
   user-select: none;
+  border-radius: calc(1rem - 1px) calc(1rem - 1px) 0 0;
 }
 
 .settingsSummary::-webkit-details-marker { display: none; }

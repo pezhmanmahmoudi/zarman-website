@@ -32,7 +32,7 @@
   margin: 0;
   color: #ffffff; 
   font-family: var(--font-primary);
-  font-size: var(--text-card-title); /* 👈 تغییر به توکن مخصوص کارت‌ها (ظریف‌تر شد) */
+  font-size: var(--text-card-title);
   font-weight: var(--font-weight-bold);
   letter-spacing: -0.5px;
 }
@@ -42,7 +42,7 @@
   color: rgba(255, 255, 255, 0.7); 
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
-   font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-semibold);
 }
 
 .rateInfo {
@@ -117,7 +117,7 @@
   gap: 4px;
   color: #fbbf24; 
   font-family: var(--font-primary);
-  font-size: var(--text-caption); /* 👈 ۱۱ پیکسل خط خورد تا خوانا شود */
+  font-size: var(--text-caption);
   font-weight: var(--font-weight-bold);
   padding-left: var(--space-2);
   animation: fadeIn 0.3s ease-in-out;
@@ -176,38 +176,12 @@
   align-items: center;
 }
 
-.currencySelect {
-  border: none;
-  background: transparent;
-  direction: rtl;
-  padding: 0 0 0 24px; 
-  font-family: var(--font-primary);
-  font-size: 16px !important; 
-  line-height: normal !important; 
-  font-weight: var(--font-weight-bold);
-  color: rgba(255, 255, 255, 0.8);
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
+.currencySelectBox {
+  min-width: 140px; 
 }
 
-.currencySelect option {
-  background-color: #090e17;
-  color: #ffffff;
-  font-weight: var(--font-weight-medium);
-}
-
-.selectChevron {
-  position: absolute;
-  left: 0;
-  color: #94a3b8;
-  pointer-events: none; 
-}
-
-.locked .currencySelect { 
+.locked .currencySelectBox { 
   cursor: default; 
-  padding-left: 0;
 }
 
 .exchangeIconWrapper {
@@ -246,7 +220,7 @@
   gap: 10px;
   color: rgba(255, 255, 255, 0.6);
   font-family: var(--font-primary);
-  font-size: var(--text-caption); /* 👈 ۱۱ پیکسل خط خورد تا یکپارچه شود */
+  font-size: var(--text-caption);
   line-height: 1.5;
 }
 
@@ -269,10 +243,8 @@
 
 @media (max-width: 768px) {
   .card { padding: var(--space-6); }
-  .faInput { font-size: 19px !important; } /* 🛡️ گارد محافظتی زوم iOS حفظ شد */
-  .currencySelect { font-size: 19px !important; } /* 🛡️ گارد محافظتی زوم iOS حفظ شد */
+  .faInput { font-size: 19px !important; } 
   
-  /* 👈 Increase font size for the CTA button on mobile */
   .cta > * {
     font-size: var(--text-body-md) !important;
   }

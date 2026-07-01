@@ -6,6 +6,7 @@ import cardStyles from "@/styles/admin/AdminCards.module.css";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 import formStyles from "@/styles/admin/AdminForms.module.css";
 import { createAssistedRecipientForUser, updateAssistedRecipientForUser } from "@/app/actions/admin.actions";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 
 interface Recipient {
   id: string;
@@ -284,10 +285,15 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
             <div className={formStyles.fieldRow}>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Recipient in</label>
-                <select className={formStyles.input} value={form.direction} onChange={(e) => setField("direction", e.target.value)}>
-                  <option value="aud">Australia</option>
-                  <option value="irt">Iran</option>
-                </select>
+                <SelectBox
+                  className={formStyles.input}
+                  labeledOptions={[
+                    { value: "aud", label: "Australia" },
+                    { value: "irt", label: "Iran" },
+                  ]}
+                  value={form.direction}
+                  onChange={(val) => setField("direction", val)}
+                />
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Recipient Label</label>
@@ -295,7 +301,11 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Full Name</label>
-                <input className={formStyles.input} value={form.account_name} onChange={(e) => setField("account_name", e.target.value)} />
+                <input
+                  className={formStyles.input}
+                  value={isAud ? form.account_name : form.full_name}
+                  onChange={(e) => setField(isAud ? "account_name" : "full_name", e.target.value)}
+                />
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Bank Name</label>
@@ -433,10 +443,15 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                   <div className={formStyles.fieldRow}>
                     <div className={formStyles.fieldGroup}>
                       <label className={formStyles.label}>Recipient In</label>
-                      <select className={formStyles.input} value={editForm.direction} onChange={(e) => setEditField("direction", e.target.value)}>
-                        <option value="aud">Australia</option>
-                        <option value="irt">Iran</option>
-                      </select>
+                      <SelectBox
+                        className={formStyles.input}
+                        labeledOptions={[
+                          { value: "aud", label: "Australia" },
+                          { value: "irt", label: "Iran" },
+                        ]}
+                        value={editForm.direction}
+                        onChange={(val) => setEditField("direction", val)}
+                      />
                     </div>
                     <div className={formStyles.fieldGroup}>
                       <label className={formStyles.label}>Recipient Label</label>

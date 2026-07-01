@@ -12,8 +12,10 @@
 
 .input {
   width: 100%;
-  padding: 0.625rem 0.75rem;
+  height: var(--field-h, 2.875rem);
+  padding: 0 0.75rem;
   padding-right: 2.5rem;
+  box-sizing: border-box;
   font-size: 0.875rem;
   border: 1px solid var(--border-med);
   border-radius: 0.5rem;
@@ -58,6 +60,17 @@
   width: 290px;
   animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   direction: ltr;
+}
+
+.popoverUp {
+  top: auto;
+  bottom: calc(100% + 0.5rem);
+  animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideDown {

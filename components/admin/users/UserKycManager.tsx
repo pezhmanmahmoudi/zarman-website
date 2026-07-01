@@ -8,6 +8,8 @@ import { StatusBadge } from "@/components/admin/ui/StatusBadge";
 import { KycActionButtons } from "@/components/admin/KycActionButtons";
 import { EditableCustomerCode } from "@/components/admin/EditableCustomerCode";
 import { updateUserIdentityKycProfile } from "@/app/actions/admin.actions";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import type { getUserFinancialProfile } from "@/app/actions/admin.actions";
 
 type Profile = Awaited<ReturnType<typeof getUserFinancialProfile>>["profile"];
@@ -160,7 +162,10 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Date of Birth</label>
-                <input type="date" className={formStyles.input} value={form.dob} onChange={(e) => setField("dob", e.target.value)} />
+                <CustomDatePicker
+                  value={form.dob}
+                  onChange={(val) => setField("dob", val)}
+                />
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Street Address</label>
@@ -184,12 +189,17 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Document Type</label>
-                <select className={formStyles.input} value={form.document_type} onChange={(e) => setField("document_type", e.target.value)}>
-                  <option value="">None</option>
-                  <option value="driver_license">Driver Licence</option>
-                  <option value="passport">Passport</option>
-                  <option value="none">None</option>
-                </select>
+                <SelectBox
+                  className={formStyles.input}
+                  labeledOptions={[
+                    { value: "", label: "None" },
+                    { value: "driver_license", label: "Driver Licence" },
+                    { value: "passport", label: "Passport" },
+                    { value: "none", label: "None" },
+                  ]}
+                  value={form.document_type}
+                  onChange={(val) => setField("document_type", val)}
+                />
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>State of Issue</label>
@@ -209,17 +219,25 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Expiry Date</label>
-                <input type="date" className={formStyles.input} value={form.expiry_date} onChange={(e) => setField("expiry_date", e.target.value)} />
+                <CustomDatePicker
+                  value={form.expiry_date}
+                  onChange={(val) => setField("expiry_date", val)}
+                />
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>KYC Status</label>
-                <select className={formStyles.input} value={form.kyc_status} onChange={(e) => setField("kyc_status", e.target.value)}>
-                  <option value="pending">Pending</option>
-                  <option value="under_review">Under Review</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                  <option value="archived">Archived</option>
-                </select>
+                <SelectBox
+                  className={formStyles.input}
+                  labeledOptions={[
+                    { value: "pending", label: "Pending" },
+                    { value: "under_review", label: "Under Review" },
+                    { value: "approved", label: "Approved" },
+                    { value: "rejected", label: "Rejected" },
+                    { value: "archived", label: "Archived" },
+                  ]}
+                  value={form.kyc_status}
+                  onChange={(val) => setField("kyc_status", val)}
+                />
               </div>
             </div>
 

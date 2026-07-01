@@ -10,6 +10,7 @@
 }
 
 .fieldRow {
+  --field-h: 42px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--space-4);
@@ -31,7 +32,7 @@
   font-size: 0.875rem;
   font-family: var(--font-en-stack);
   padding: 0.625rem var(--space-3);
-  height: 42px;
+  height: var(--field-h, 42px);
   width: 100%;
   outline: none;
   transition: all 0.2s ease;

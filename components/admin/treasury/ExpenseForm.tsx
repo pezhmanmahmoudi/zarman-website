@@ -6,6 +6,7 @@ import { addExpense, deleteExpense } from "@/app/actions/treasury.actions";
 import { fmtIRT, fmtAUD } from "@/lib/accounting-engine";
 import s from "@/styles/admin/Treasury.module.css";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 
 type ExpenseRow = {
@@ -144,16 +145,26 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
           <div className={s.formRow}>
             <div className={s.formGroup}>
               <label className={s.formLabel}>دسته‌بندی</label>
-              <select className={s.formSelect} value={form.category} onChange={e => field("category", e.target.value)} disabled={isPending}>
-                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
+              <SelectBox
+                dir="rtl"
+                value={form.category}
+                onChange={(val) => field("category", val)}
+                labeledOptions={CATEGORIES}
+                disabled={isPending}
+              />
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>ارز پرداختی</label>
-              <select className={s.formSelect} value={form.currency} onChange={e => field("currency", e.target.value as "AUD"|"IRT")} disabled={isPending}>
-                <option value="IRT">تومان (IRT)</option>
-                <option value="AUD">دلار (AUD)</option>
-              </select>
+              <SelectBox
+                dir="rtl"
+                value={form.currency}
+                onChange={(val) => field("currency", val as "AUD" | "IRT")}
+                labeledOptions={[
+                  { value: "IRT", label: "تومان (IRT)" },
+                  { value: "AUD", label: "دلار (AUD)" },
+                ]}
+                disabled={isPending}
+              />
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>مبلغ</label>
@@ -166,21 +177,29 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
               <label className={s.formLabel}>
                 <Tooltip text="صندوقی که این هزینه دقیقاً از موجودی آن کسر شده است">کشوی پرداخت‌کننده (مبدأ)</Tooltip>
               </label>
-              <select className={s.formSelect} value={form.payer_account_id} onChange={e => field("payer_account_id", e.target.value)} disabled={isPending}>
-                <option value="">-- انتخاب حساب --</option>
-                {filteredAccounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.account_name} ({acc.currency})</option>
-                ))}
-              </select>
+              <SelectBox
+                dir="rtl"
+                value={form.payer_account_id}
+                onChange={(val) => field("payer_account_id", val)}
+                placeholder="-- انتخاب حساب --"
+                labeledOptions={filteredAccounts.map(acc => ({ value: acc.id, label: `${acc.account_name} (${acc.currency})` }))}
+                disabled={isPending}
+              />
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>
                 <Tooltip text="پرداخت شده: از کشو کسر می‌شود. در انتظار: به عنوان بدهی دفتری ثبت می‌شود">وضعیت پرداخت</Tooltip>
               </label>
-              <select className={s.formSelect} value={form.status} onChange={e => field("status", e.target.value as "paid"|"pending")} disabled={isPending}>
-                <option value="paid">پرداخت شده</option>
-                <option value="pending">در انتظار پرداخت (بدهی)</option>
-              </select>
+              <SelectBox
+                dir="rtl"
+                value={form.status}
+                onChange={(val) => field("status", val as "paid" | "pending")}
+                labeledOptions={[
+                  { value: "paid", label: "پرداخت شده" },
+                  { value: "pending", label: "در انتظار پرداخت (بدهی)" },
+                ]}
+                disabled={isPending}
+              />
             </div>
           </div>
 

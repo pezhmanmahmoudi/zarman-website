@@ -15,6 +15,8 @@ import type { PromoCode } from "@/app/[locale]/dashboard/dashboard.types";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminToast } from "@/components/admin/ui/AdminToast";
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
+import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 
 // ΓöÇΓöÇΓöÇ Empty creation form state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
@@ -155,16 +157,16 @@ export function PromoCodeManager({
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>Type *</label>
-                  <select
-                    className={formStyles.input}
+                  <SelectBox
                     value={form.discount_type}
-                    onChange={(e) =>
-                      setForm({ ...form, discount_type: e.target.value as "percentage" | "fixed" })
+                    onChange={(val) =>
+                      setForm({ ...form, discount_type: val as "percentage" | "fixed" })
                     }
-                  >
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="fixed">Fixed (AUD)</option>
-                  </select>
+                    labeledOptions={[
+                      { value: "percentage", label: "Percentage (%)" },
+                      { value: "fixed", label: "Fixed (AUD)" },
+                    ]}
+                  />
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>
@@ -194,11 +196,9 @@ export function PromoCodeManager({
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>Expires At</label>
-                  <input
-                    type="date"
-                    className={formStyles.input}
+                  <CustomDatePicker
                     value={form.expires_at}
-                    onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
+                    onChange={(val) => setForm({ ...form, expires_at: val })}
                   />
                 </div>
                 <div className={formStyles.fieldGroup}>

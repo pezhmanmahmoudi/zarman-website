@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Calculator, AlertTriangle, Lock, MessageSquare, ServerCrash, PauseCircle, Tag } from "lucide-react";
+import { Calculator, AlertTriangle, Lock, MessageSquare, ServerCrash, PauseCircle, Tag, Banknote } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/[locale]/dashboard/dashboard.types";
@@ -210,6 +210,7 @@ export function DashboardRequestHub({
 
   const activeRate = promoEffectiveRate ?? tailoredRate;
   const resultNumber = (rawAmount === 0 || isRateOffline) ? 0 : Math.round(effectiveAud * activeRate!);
+  const transactionValidityNotice = "توجه: این نرخ و درخواست، دارای اعتبار زمانی ۲ ساعته است و باید در این بازه زمانی نهایی شود.";
 
   // مسدودسازی تایپ حروف الفبا برای فیلد دلار به صورت هوشمند
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -362,6 +363,8 @@ export function DashboardRequestHub({
         "--------------------------\n" +
         "* معادل نهایی: " + fmtResult + " تومان *\n" +
         "--------------------------\n" +
+        transactionValidityNotice + "\n" +
+        "--------------------------\n" +
         "- منبع وجه: " + sourceOfFunds + "\n" +
         "- دلیل انتقال: " + reasonForTransfer + "\n" +
         (recipientSection ? "\n" + recipientSection : "") +
@@ -426,7 +429,9 @@ export function DashboardRequestHub({
       
       <div className={styles.formRow}>
         <div className={styles.inputBox}>
-          <label className={styles.label}>نوع تراکنش ارزی از جانب مشتری</label>
+          <div className={styles.labelRow}>
+            <label className={styles.label}>نوع تراکنش ارزی از جانب مشتری <span className={styles.requiredMark}>*</span></label>
+          </div>
             <SelectBox
               value={txType}
               onChange={(val) => setTxType(val as "buy_aud" | "sell_aud")}
@@ -558,6 +563,7 @@ export function DashboardRequestHub({
       <div className={styles.formRow}>
         <div className={styles.inputBox}>
           <label className={styles.label}>
+            <Banknote size={14} style={{ display: "inline", verticalAlign: "middle", marginLeft: "4px" }} />
             {txType === "buy_aud" ? "مبلغ قابل پرداخت به تومان (IRT)" : "مبلغ دریافتی شما به تومان (IRT)"}
           </label>
           <div className={`${styles.hubFieldGroup} ${styles.hubLocked}`}>
@@ -627,6 +633,17 @@ export function DashboardRequestHub({
             <><MessageSquare size={20} /> تایید و ارسال به واتس‌اپ</>
           )}
         </button>
+      </div>
+      
+      <div className={styles.noticeBannerContainer}>
+        <div className={styles.noticeBanner}>
+          <div className={styles.noticeIcon}>
+            <AlertTriangle size={18} />
+          </div>
+          <div className={styles.noticeContent}>
+            <p className={styles.noticeText}>{transactionValidityNotice}</p>
+          </div>
+        </div>
       </div>
 
       {showRecipientModal && (

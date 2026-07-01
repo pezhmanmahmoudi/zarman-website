@@ -154,7 +154,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-soft);
   border-radius: 1rem;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--shadow-card);
 }
 
@@ -408,7 +408,7 @@
 .itemCard {
   border: 1px solid var(--border-soft);
   border-radius: 0.75rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .itemCardHeader {

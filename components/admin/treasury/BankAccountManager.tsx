@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { PlusCircle, Building2, UserCircle, RefreshCw } from "lucide-react";
 import { addBankAccount } from "@/app/actions/treasury.actions";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import s from "@/styles/admin/Treasury.module.css";
 
 type BankAccount = {
@@ -93,15 +94,16 @@ export default function BankAccountManager({ bankAccounts }: Props) {
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>ارز اصلی</label>
-              <select
-                className={s.formSelect}
+              <SelectBox
+                dir="rtl"
                 value={form.currency}
-                onChange={e => handleCurrencyChange(e.target.value as "AUD" | "IRT")}
+                onChange={(val) => handleCurrencyChange(val as "AUD" | "IRT")}
+                labeledOptions={[
+                  { value: "IRT", label: "تومان (IRT)" },
+                  { value: "AUD", label: "دلار (AUD)" },
+                ]}
                 disabled={isPending}
-              >
-                <option value="IRT">تومان (IRT)</option>
-                <option value="AUD">دلار (AUD)</option>
-              </select>
+              />
             </div>
           </div>
           <div className={s.formRow}>
@@ -109,28 +111,30 @@ export default function BankAccountManager({ bankAccounts }: Props) {
               <label className={s.formLabel}>
                 <Tooltip text="بانک: حساب فیزیکی | مجازی: حساب دفتری مشتری | در راه: وجوه تسویه‌نشده">نوع کشو (Account Type)</Tooltip>
               </label>
-              <select
-                className={s.formSelect}
+              <SelectBox
+                dir="rtl"
                 value={form.account_type}
-                onChange={e => field("account_type", e.target.value)}
+                onChange={(val) => field("account_type", val)}
+                labeledOptions={[
+                  { value: "bank", label: "حساب بانکی واقعی (نقدینگی فیزیکی)" },
+                  { value: "virtual", label: "حساب مجازی/تعهدی (پایاپای مشتریان)" },
+                  { value: "transit", label: "وجوه در راه (ساتنا / انتقال بین‌بانکی جاری)" },
+                ]}
                 disabled={isPending}
-              >
-                <option value="bank">حساب بانکی واقعی (نقدینگی فیزیکی)</option>
-                <option value="virtual">حساب مجازی/تعهدی (پایاپای مشتریان)</option>
-                <option value="transit">وجوه در راه (ساتنا / انتقال بین‌بانکی جاری)</option>
-              </select>
+              />
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>کشور مستقر</label>
-              <select
-                className={s.formSelect}
+              <SelectBox
+                dir="rtl"
                 value={form.country}
-                onChange={e => field("country", e.target.value)}
+                onChange={(val) => field("country", val)}
+                labeledOptions={[
+                  { value: "Iran", label: "ایران" },
+                  { value: "Australia", label: "استرالیا" },
+                ]}
                 disabled={isPending}
-              >
-                <option value="Iran">ایران</option>
-                <option value="Australia">استرالیا</option>
-              </select>
+              />
             </div>
           </div>
 

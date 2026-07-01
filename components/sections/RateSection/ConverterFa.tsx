@@ -3,10 +3,12 @@
 import React, { useMemo, useState } from "react";
 import styles from "./ConverterFa.module.css";
 import Button from "@/components/ui/Button/Button";
-import { ArrowLeft, ArrowDownCircle, Info, UserCircle, AlertTriangle, ChevronDown } from "lucide-react";
+import { ArrowLeft, ArrowDownCircle, Info, UserCircle, AlertTriangle } from "lucide-react";
 import { useRates } from "@/context/RateContext";
 import { useFinanceConfig } from "@/context/FinanceConfigContext";
 import { buildWhatsAppUrl } from "@/lib/constants/contact";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+
 
 type Currency = "AUD" | "IRT";
 
@@ -31,6 +33,11 @@ function formatNumberFa(num: number, isToman: boolean = false) {
   const en = Number(num || 0).toLocaleString("en-US", options);
   return toFaDigits(en).replace(/,/g, "،");
 }
+
+const CURRENCY_OPTIONS = [
+  { value: "AUD", label: "دلار استرالیا" },
+  { value: "IRT", label: "تومان ایران" },
+];
 
 export default function ConverterFa() {
   const [amountText, setAmountText] = useState<string>("۳،۰۰۰");
@@ -138,11 +145,14 @@ export default function ConverterFa() {
             />
             <div className={styles.divider}></div>
             <div className={styles.selectWrapper}>
-              <select className={styles.currencySelect} value={from} onChange={(e) => setFrom(e.target.value as Currency)}>
-                <option value="AUD">دلار استرالیا</option>
-                <option value="IRT">تومان ایران</option>
-              </select>
-              <ChevronDown className={styles.selectChevron} size={16} strokeWidth={2.5} />
+              <SelectBox
+                value={from}
+                onChange={(val) => setFrom(val as Currency)}
+                labeledOptions={CURRENCY_OPTIONS}
+                dir="rtl"
+                variant="ghost"
+                className={styles.currencySelectBox}
+              />
             </div>
           </div>
         </div>
@@ -175,10 +185,15 @@ export default function ConverterFa() {
             />
             <div className={styles.divider}></div>
             <div className={styles.selectWrapper}>
-              <select className={styles.currencySelect} value={to} disabled>
-                <option value="IRT">تومان ایران</option>
-                <option value="AUD">دلار استرالیا</option>
-              </select>
+              <SelectBox
+                value={to}
+                onChange={() => {}}
+                labeledOptions={CURRENCY_OPTIONS}
+                dir="rtl"
+                variant="ghost"
+                disabled
+                className={styles.currencySelectBox}
+              />
             </div>
           </div>
         </div>

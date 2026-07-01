@@ -18,6 +18,9 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
     return r.label || r.full_name || r.account_name || null;
   };
 
+  // Customer history should show transaction type from the customer's perspective.
+  const customerSideType = (type: string) => (type === "buy_aud" ? "sell_aud" : "buy_aud");
+
   return (
     <article className={cardStyles.panelCard}>
       <div className={`${cardStyles.panelHeader} ${styles.headerWrap}`}>
@@ -47,7 +50,10 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
                 <td colSpan={9} className={styles.emptyTable}>هیچ سابقه تراکنشی یافت نشد.</td>
               </tr>
             )}
-            {paginated.map((tx: any) => (
+            {paginated.map((tx: any) => {
+              const displayType = customerSideType(tx.type);
+
+              return (
               <tr key={tx.id}>
                 <td dir="ltr" className={styles.tableRef}>
                   {tx.reference_code ?? <span className={styles.noAction}>—</span>}
@@ -61,8 +67,8 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
                 </td>
                 
                 <td>
-                  <span className={tx.type === "buy_aud" ? styles.txTypeBuy : styles.txTypeSell}>
-                    {tx.type === "buy_aud" ? "خرید دلار" : "فروش دلار"}
+                  <span className={displayType === "buy_aud" ? styles.txTypeBuy : styles.txTypeSell}>
+                    {displayType === "buy_aud" ? "خرید دلار" : "فروش دلار"}
                   </span>
                 </td>
                 
@@ -124,7 +130,8 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

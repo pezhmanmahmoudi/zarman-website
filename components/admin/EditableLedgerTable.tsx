@@ -6,6 +6,8 @@ import { Pencil, Check, X, Plus, Trash2, ArrowRight } from "lucide-react";
 import { updateLedgerEntry, addManualLedgerEntry, deleteLedgerEntry } from "@/app/actions/admin.actions";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 import s from "@/styles/admin/LedgerTable.module.css";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 
 // -- Persian strings ----------------
 const T = {
@@ -284,15 +286,20 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
                   <ErrLine msg={add.err} />
                 </td>
                 <td className={s.tdDateCenter}>
-                  <input type="date" className={s.inputDate} value={add.date} onChange={e => aSet("date", e.target.value)} onKeyDown={kbA} />
+                  <CustomDatePicker value={add.date} onChange={(val) => aSet("date", val)} />
                   <p className={s.jalaliLive}>{gregToJalali(add.date)}</p>
                 </td>
                 <td className={s.tdCenter}>
-                  <select className={s.selectType} value={add.type} onChange={e => aSet("type", e.target.value as any)}>
-                    <option value="buy_aud">{T.buy}</option>
-                    <option value="sell_aud">{T.sell}</option>
-                    <option value="transfer">{T.transfer}</option>
-                  </select>
+                  <SelectBox
+                    className={s.selectType}
+                    labeledOptions={[
+                      { value: "buy_aud", label: T.buy },
+                      { value: "sell_aud", label: T.sell },
+                      { value: "transfer", label: T.transfer },
+                    ]}
+                    value={add.type}
+                    onChange={(val) => aSet("type", val as any)}
+                  />
                 </td>
                 <td className={s.tdCenter}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -302,14 +309,24 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
                 </td>
                 <td className={s.tdCenter}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <select className={s.selectType} value={add.payer_account_id} onChange={e => aSet("payer_account_id", e.target.value)} style={{ fontSize: "0.75rem", padding: "2px" }}>
-                      <option value="">حساب پرداخت کننده...</option>
-                      {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.account_name}</option>)}
-                    </select>
-                    <select className={s.selectType} value={add.receiver_account_id} onChange={e => aSet("receiver_account_id", e.target.value)} style={{ fontSize: "0.75rem", padding: "2px" }}>
-                      <option value="">حساب دریافت کننده...</option>
-                      {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.account_name}</option>)}
-                    </select>
+                    <SelectBox
+                      className={s.selectType}
+                      labeledOptions={[
+                        { value: "", label: "حساب پرداخت کننده..." },
+                        ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                      ]}
+                      value={add.payer_account_id}
+                      onChange={(val) => aSet("payer_account_id", val)}
+                    />
+                    <SelectBox
+                      className={s.selectType}
+                      labeledOptions={[
+                        { value: "", label: "حساب دریافت کننده..." },
+                        ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                      ]}
+                      value={add.receiver_account_id}
+                      onChange={(val) => aSet("receiver_account_id", val)}
+                    />
                   </div>
                 </td>
                 <td className={s.tdNum}><input type="text" inputMode="decimal" className={s.inputNum} value={add.rate} onChange={e => aSet("rate", e.target.value)} placeholder="0" onKeyDown={kbA} /></td>
@@ -349,7 +366,7 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
 
                   <td className={s.tdDateCenter}>
                     {isE && edit ? (
-                      <><input type="date" className={s.inputDate} value={edit.date} onChange={e => eSet("date", e.target.value)} onKeyDown={kbE} />
+                      <><CustomDatePicker value={edit.date} onChange={(val) => eSet("date", val)} />
                       <p className={s.jalaliLive}>{gregToJalali(edit.date)}</p></>
                     ) : (
                       <><p className={s.dateMain}>{storedToJalali(row.date_jalali)}</p><p className={s.dateSub}>{fmtGreg(row.date_gregorian)}</p></>
@@ -358,11 +375,16 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
 
                   <td className={s.tdCenter}>
                     {isE && edit ? (
-                      <select className={s.selectType} value={edit.type} onChange={e => eSet("type", e.target.value as any)}>
-                        <option value="buy_aud">{T.buy}</option>
-                        <option value="sell_aud">{T.sell}</option>
-                        <option value="transfer">{T.transfer}</option>
-                      </select>
+                      <SelectBox
+                        className={s.selectType}
+                        labeledOptions={[
+                          { value: "buy_aud", label: T.buy },
+                          { value: "sell_aud", label: T.sell },
+                          { value: "transfer", label: T.transfer },
+                        ]}
+                        value={edit.type}
+                        onChange={(val) => eSet("type", val as any)}
+                      />
                     ) : (
                       <span className={`${tableStyles.badge} ${row.type === "buy_aud" ? tableStyles.txBuy : tableStyles.txSell}`} style={{ fontFamily: "var(--font-fa-content)", fontSize: "0.7rem" }}>
                         {row.type === "buy_aud" ? T.buy : row.entry_type === "transfer" ? T.transfer : T.sell}
@@ -388,14 +410,24 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
                   <td className={s.tdCenter}>
                     {isE && edit ? (
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                         <select className={s.selectType} value={edit.payer_account_id} onChange={e => eSet("payer_account_id", e.target.value)} style={{ fontSize: "0.75rem", padding: "2px" }}>
-                           <option value="">حساب پرداخت کننده...</option>
-                           {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.account_name}</option>)}
-                         </select>
-                         <select className={s.selectType} value={edit.receiver_account_id} onChange={e => eSet("receiver_account_id", e.target.value)} style={{ fontSize: "0.75rem", padding: "2px" }}>
-                           <option value="">حساب دریافت کننده...</option>
-                           {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.account_name}</option>)}
-                         </select>
+                         <SelectBox
+                           className={s.selectType}
+                           labeledOptions={[
+                             { value: "", label: "حساب پرداخت کننده..." },
+                             ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                           ]}
+                           value={edit.payer_account_id}
+                           onChange={(val) => eSet("payer_account_id", val)}
+                         />
+                         <SelectBox
+                           className={s.selectType}
+                           labeledOptions={[
+                             { value: "", label: "حساب دریافت کننده..." },
+                             ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                           ]}
+                           value={edit.receiver_account_id}
+                           onChange={(val) => eSet("receiver_account_id", val)}
+                         />
                        </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-soft)' }}>

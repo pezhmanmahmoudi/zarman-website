@@ -11,6 +11,7 @@ type CustomDatePickerProps = {
   onChange: (date: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  className?: string;
 };
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -24,8 +25,9 @@ const YEARS = Array.from({ length: MAX_YEAR - MIN_YEAR + 1 }, (_, i) => MIN_YEAR
 const monthOptions = MONTHS.map((m, idx) => ({ label: m, value: idx.toString() }));
 const yearOptions = YEARS.map(y => y.toString());
 
-export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm/yyyy", disabled = false }: CustomDatePickerProps) {
+export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm/yyyy", disabled = false, className }: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   
   const [viewDate, setViewDate] = useState(() => {
     return value ? new Date(value) : new Date();
@@ -111,7 +113,18 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
 
   return (
     <div className={s.container} ref={containerRef}>
-      <div className={s.inputWrapper} onClick={() => !disabled && setIsOpen(!isOpen)}>
+      <div className={`${s.inputWrapper}${className ? " " + className : ""}`} onClick={() => {
+        if (disabled) return;
+        if (!isOpen) {
+          // measure space below before opening
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (rect) {
+            const spaceBelow = window.innerHeight - rect.bottom;
+            setOpenUpward(spaceBelow < 340);
+          }
+        }
+        setIsOpen((o) => !o);
+      }}>
         <input
           type="text"
           readOnly
@@ -124,7 +137,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
       </div>
 
       {isOpen && (
-        <div className={s.popover}>
+        <div className={`${s.popover} ${openUpward ? s.popoverUp : ""}`}>
           <div className={s.header}>
             <button type="button" onClick={handlePrevMonth} className={s.navBtn} title="Previous Month">
               <ChevronLeft size={18} />

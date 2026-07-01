@@ -221,6 +221,9 @@ function isUuidLocal(value: string) {
 }
 
 export async function submitKycData(payload: {
+  first_name?: string;
+  last_name?: string;
+  mobile_number?: string;
   dob: string;
   country: string;
   address: string;
@@ -296,6 +299,9 @@ export async function submitKycData(payload: {
   const { error: updateError } = await supabaseAdmin
     .from("profiles")
     .update({
+      first_name: payload.first_name?.trim() || null,
+      last_name: payload.last_name?.trim() || null,
+      mobile_number: payload.mobile_number?.trim() || null,
       dob: payload.dob,
       country: payload.country,
       address: payload.address,
@@ -362,6 +368,9 @@ export async function submitKycData(payload: {
 // admin panel and alerts work identically to the standard submitKycData flow.
 // ---------------------------------------------------------------------------
 export async function savePersonalData(payload: {
+  first_name?: string;
+  last_name?: string;
+  mobile_number?: string;
   dob: string;
   country: string;
   address: string;
@@ -398,6 +407,9 @@ export async function savePersonalData(payload: {
   const { error: updateError } = await supabaseAdmin
     .from("profiles")
     .update({
+      first_name: payload.first_name?.trim() || null,
+      last_name: payload.last_name?.trim() || null,
+      mobile_number: payload.mobile_number?.trim() || null,
       dob: payload.dob,
       country: payload.country,
       address: payload.address,
@@ -422,6 +434,46 @@ export async function savePersonalData(payload: {
     });
   } catch (err) {
     console.error("[savePersonalData] Telegram notification failed:", err);
+  }
+
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// updatePersonalIdentityData — saves editable profile identity fields used in
+// dashboard KYC personal section (first name, last name, mobile).
+// ---------------------------------------------------------------------------
+export async function updatePersonalIdentityData(payload: {
+  first_name: string;
+  last_name: string;
+  mobile_number: string;
+}) {
+  const supabaseServer = await createSupabaseServerActionClient();
+  const { data: authData, error: authError } = await supabaseServer.auth.getUser();
+  if (authError || !authData.user) {
+    return { error: "Unauthorized: no active session." };
+  }
+
+  const userId = authData.user.id;
+  if (!isUuidLocal(userId)) {
+    return { error: "Invalid session identifier." };
+  }
+
+  if (!payload.first_name?.trim() || !payload.last_name?.trim() || !payload.mobile_number?.trim()) {
+    return { error: "First name, last name, and mobile number are required." };
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from("profiles")
+    .update({
+      first_name: payload.first_name.trim(),
+      last_name: payload.last_name.trim(),
+      mobile_number: payload.mobile_number.trim(),
+    })
+    .eq("id", userId);
+
+  if (updateError) {
+    return { error: `Failed to save personal info: ${updateError.message}` };
   }
 
   return { success: true };

@@ -5,6 +5,8 @@ import { UserPlus } from "lucide-react";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import formStyles from "@/styles/admin/AdminForms.module.css";
 import { createAssistedCustomerOnboarding } from "@/app/actions/admin.actions";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 
 type Props = {
   onCreated?: (userId: string) => void;
@@ -216,7 +218,11 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>Date of Birth</label>
-                  <input type="date" className={formStyles.input} value={form.dob} onChange={(e) => setField("dob", e.target.value)} />
+                  <CustomDatePicker
+                    value={form.dob}
+                    onChange={(val) => setField("dob", val)}
+                    disabled={isPending}
+                  />
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>Customer Code</label>
@@ -224,13 +230,19 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>KYC Status</label>
-                  <select className={formStyles.input} value={form.kyc_status} onChange={(e) => setField("kyc_status", e.target.value)}>
-                    <option value="pending">Pending</option>
-                    <option value="under_review">Under Review</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="archived">Archived</option>
-                  </select>
+                  <SelectBox
+                    className={formStyles.input}
+                    labeledOptions={[
+                      { value: "pending", label: "Pending" },
+                      { value: "under_review", label: "Under Review" },
+                      { value: "approved", label: "Approved" },
+                      { value: "rejected", label: "Rejected" },
+                      { value: "archived", label: "Archived" },
+                    ]}
+                    value={form.kyc_status}
+                    onChange={(val) => setField("kyc_status", val)}
+                    disabled={isPending}
+                  />
                 </div>
               </div>
 
@@ -268,12 +280,18 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
               <div className={formStyles.fieldRow}>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>Document Type</label>
-                  <select className={formStyles.input} value={form.doc_type} onChange={(e) => setField("doc_type", e.target.value)}>
-                    <option value="">— Select —</option>
-                    <option value="driver_license">Australian Driver Licence</option>
-                    <option value="passport">Passport</option>
-                    <option value="none">None / Submit via WhatsApp</option>
-                  </select>
+                  <SelectBox
+                    className={formStyles.input}
+                    labeledOptions={[
+                      { value: "", label: "— Select —" },
+                      { value: "driver_license", label: "Australian Driver Licence" },
+                      { value: "passport", label: "Passport" },
+                      { value: "none", label: "None / Submit via WhatsApp" },
+                    ]}
+                    value={form.doc_type}
+                    onChange={(val) => setField("doc_type", val)}
+                    disabled={isPending}
+                  />
                 </div>
 
                 {isDriverLicense && (
@@ -288,16 +306,31 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                     </div>
                     <div className={formStyles.fieldGroup}>
                       <label className={formStyles.label}>State of Issue</label>
-                      <select className={formStyles.input} value={form.state_of_issue} onChange={(e) => setField("state_of_issue", e.target.value)}>
-                        <option value="">— Select state —</option>
-                        <option>NSW</option><option>VIC</option><option>QLD</option>
-                        <option>WA</option><option>SA</option><option>TAS</option>
-                        <option>ACT</option><option>NT</option>
-                      </select>
+                      <SelectBox
+                      className={formStyles.input}
+                      labeledOptions={[
+                        { value: "", label: "— Select state —" },
+                        { value: "NSW", label: "NSW" },
+                        { value: "VIC", label: "VIC" },
+                        { value: "QLD", label: "QLD" },
+                        { value: "WA", label: "WA" },
+                        { value: "SA", label: "SA" },
+                        { value: "TAS", label: "TAS" },
+                        { value: "ACT", label: "ACT" },
+                        { value: "NT", label: "NT" },
+                      ]}
+                      value={form.state_of_issue}
+                      onChange={(val) => setField("state_of_issue", val)}
+                      disabled={isPending}
+                    />
                     </div>
                     <div className={formStyles.fieldGroup}>
                       <label className={formStyles.label}>Expiry Date</label>
-                      <input type="date" className={formStyles.input} value={form.expiry_date} onChange={(e) => setField("expiry_date", e.target.value)} />
+                      <CustomDatePicker
+                        value={form.expiry_date}
+                        onChange={(val) => setField("expiry_date", val)}
+                        disabled={isPending}
+                      />
                     </div>
                   </>
                 )}
@@ -310,7 +343,11 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                     </div>
                     <div className={formStyles.fieldGroup}>
                       <label className={formStyles.label}>Expiry Date</label>
-                      <input type="date" className={formStyles.input} value={form.expiry_date} onChange={(e) => setField("expiry_date", e.target.value)} />
+                      <CustomDatePicker
+                        value={form.expiry_date}
+                        onChange={(val) => setField("expiry_date", val)}
+                        disabled={isPending}
+                      />
                     </div>
                   </>
                 )}
@@ -323,10 +360,16 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
               <div className={formStyles.fieldRow}>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>Recipient In</label>
-                  <select className={formStyles.input} value={form.recipient_direction} onChange={(e) => setField("recipient_direction", e.target.value)}>
-                    <option value="aud">Australia</option>
-                    <option value="irt">Iran</option>
-                  </select>
+                  <SelectBox
+                    className={formStyles.input}
+                    labeledOptions={[
+                      { value: "aud", label: "Australia" },
+                      { value: "irt", label: "Iran" },
+                    ]}
+                    value={form.recipient_direction}
+                    onChange={(val) => setField("recipient_direction", val)}
+                    disabled={isPending}
+                  />
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>Recipient Label</label>
@@ -413,16 +456,28 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                 <div className={formStyles.fieldRow}>
                   <div className={formStyles.fieldGroup}>
                     <label className={formStyles.label}>Recipient</label>
-                    <select className={formStyles.input} value={form.tx_recipient} onChange={(e) => setField("tx_recipient", e.target.value)}>
-                      <option value="section4">{recipientAutoLabel}</option>
-                    </select>
+                    <SelectBox
+                      className={formStyles.input}
+                      labeledOptions={[
+                        { value: "section4", label: recipientAutoLabel },
+                      ]}
+                      value={form.tx_recipient}
+                      onChange={(val) => setField("tx_recipient", val)}
+                      disabled={isPending}
+                    />
                   </div>
                   <div className={formStyles.fieldGroup}>
                     <label className={formStyles.label}>Transaction Type</label>
-                    <select className={formStyles.input} value={form.tx_type} onChange={(e) => setField("tx_type", e.target.value)}>
-                      <option value="buy_aud">Buy AUD</option>
-                      <option value="sell_aud">Sell AUD</option>
-                    </select>
+                    <SelectBox
+                      className={formStyles.input}
+                      labeledOptions={[
+                        { value: "buy_aud", label: "Buy AUD" },
+                        { value: "sell_aud", label: "Sell AUD" },
+                      ]}
+                      value={form.tx_type}
+                      onChange={(val) => setField("tx_type", val)}
+                      disabled={isPending}
+                    />
                   </div>
                   <div className={formStyles.fieldGroup}>
                     <label className={formStyles.label}>AUD Amount</label>

@@ -8,6 +8,7 @@ import { approveTransaction, rejectTransaction, archiveTransaction } from "@/app
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminToast } from "@/components/admin/ui/AdminToast";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 
 export function TransactionApproveButton({
   transactionId,
@@ -98,20 +99,30 @@ export function TransactionApproveButton({
                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#4b5563', marginBottom: '0.4rem' }}>
                  مشتری پول را به کدام حساب واریز کرد؟ (دریافتی ما)
                </label>
-               <select value={receiverId} onChange={e => setReceiverId(e.target.value)} disabled={isApproving} style={{ width: '100%', padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid #d0d5dd', fontSize: '0.9rem', fontFamily: 'inherit' }}>
-                  <option value="">-- در صورت واریز، کشوی مقصد را انتخاب کنید --</option>
-                  {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.account_name} ({b.currency})</option>)}
-               </select>
+               <SelectBox
+                  labeledOptions={[
+                    { value: "", label: "-- در صورت واریز، کشوی مقصد را انتخاب کنید --" },
+                    ...bankAccounts.map(b => ({ value: b.id, label: `${b.account_name} (${b.currency})` })),
+                  ]}
+                  value={receiverId}
+                  onChange={(val) => setReceiverId(val)}
+                  disabled={isApproving}
+               />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#4b5563', marginBottom: '0.4rem' }}>
                  ارز از کدام حساب/انبار به مشتری داده شد؟ (پرداختی ما)
                </label>
-               <select value={payerId} onChange={e => setPayerId(e.target.value)} disabled={isApproving} style={{ width: '100%', padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid #d0d5dd', fontSize: '0.9rem', fontFamily: 'inherit' }}>
-                  <option value="">-- در صورت انتقال، کشوی مبدأ را انتخاب کنید --</option>
-                  {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.account_name} ({b.currency})</option>)}
-               </select>
+               <SelectBox
+                  labeledOptions={[
+                    { value: "", label: "-- در صورت انتقال، کشوی مبدأ را انتخاب کنید --" },
+                    ...bankAccounts.map(b => ({ value: b.id, label: `${b.account_name} (${b.currency})` })),
+                  ]}
+                  value={payerId}
+                  onChange={(val) => setPayerId(val)}
+                  disabled={isApproving}
+               />
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>

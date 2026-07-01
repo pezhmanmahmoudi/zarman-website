@@ -647,7 +647,9 @@ export async function updateSystemSettings(payload: any) {
   // ثبت تاریخ امروز برای رکورد جدید
   patch.date = new Date().toISOString().slice(0, 10);
 
-  const { error } = await db.from("rates_history").insert([patch]);
+  const { error } = await db
+    .from("rates_history")
+    .upsert(patch, { onConflict: "date" });
   if (error) return { error: error.message };
 
   // ثبت در لاگ حسابرسی (Audit Log)
@@ -696,19 +698,51 @@ export async function searchUsers(query: string) {
 }
 
 export async function getUserFinancialProfile(userId: string) {
-  const db = await getAuthorizedServerClient();
+  await requireAdmin(); // auth + role check only
   if (!userId) return null as any;
+
+  // Use service-role client so RLS on recipients/transactions doesn't block cross-user reads
+  const db = makeServiceRoleClient();
 
   const [profileRes, transactionsRes, recipientsRes, testimonialsRes] = await Promise.all([
     db.from("profiles").select("*").eq("id", userId).maybeSingle(),
-    db.from("transactions").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    db
+      .from("transactions")
+      .select("*, recipient_id, recipients(id, label, full_name, account_name)")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
     db.from("recipients").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     db.from("testimonials").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
   ]);
 
   const profile = profileRes.data ?? null;
   const transactions = transactionsRes.data ?? [];
-  const recipients = recipientsRes.data ?? [];
+  const ownedRecipients = recipientsRes.data ?? [];
+
+  // Also collect any transaction-linked recipients not owned by the user
+  const linkedRecipientIds = Array.from(
+    new Set(
+      transactions
+        .map((tx: any) => tx?.recipient_id)
+        .filter((id: unknown) => id !== null && id !== undefined && String(id).trim().length > 0)
+        .map((id: unknown) => String(id))
+    )
+  ) as string[];
+
+  let linkedRecipients: any[] = [];
+  if (linkedRecipientIds.length > 0) {
+    const { data } = await db
+      .from("recipients")
+      .select("*")
+      .in("id", linkedRecipientIds);
+    linkedRecipients = data ?? [];
+  }
+
+  const recipientsById = new Map<string, any>();
+  for (const r of [...ownedRecipients, ...linkedRecipients]) {
+    if (r?.id) recipientsById.set(String(r.id), r);
+  }
+  const recipients = Array.from(recipientsById.values());
   const testimonials = testimonialsRes.data ?? [];
 
   const approvedTx = transactions.filter((t: any) => t.status === "approved");
@@ -777,6 +811,8 @@ export async function createAssistedTransactionForUser(payload: any) {
   if (!payload.userId) return { error: "Missing user ID." };
   if (!payload.type || !["buy_aud", "sell_aud"].includes(payload.type)) return { error: "Invalid type." };
 
+  const recipientId = payload.recipient_id ?? payload.recipientId ?? null;
+
   const db = makeServiceRoleClient();
   const { data, error } = await db
     .from("transactions")
@@ -788,7 +824,7 @@ export async function createAssistedTransactionForUser(payload: any) {
       status: payload.status || "pending",
       source_of_funds: payload.source_of_funds?.trim() || null,
       reason_for_transfer: payload.reason_for_transfer?.trim() || null,
-      recipient_id: payload.recipient_id || null,
+      recipient_id: recipientId,
     }])
     .select("id")
     .single();
@@ -812,43 +848,87 @@ export async function createAssistedRecipientForUser(payload: any) {
   if (!payload.userId) return { error: "Missing user ID." };
 
   const db = makeServiceRoleClient();
+  const insertPayload = {
+    user_id: payload.userId,
+    direction: payload.direction || "aud",
+    label: payload.label?.trim() || null,
+    full_name: payload.full_name?.trim() || null,
+    account_name: payload.account_name?.trim() || null,
+    bank_name: payload.bank_name?.trim() || null,
+    bsb: payload.bsb?.trim() || null,
+    account_number: payload.account_number?.trim() || null,
+    residential_address: payload.residential_address?.trim() || null,
+    recipient_email: payload.recipient_email?.trim() || null,
+    recipient_phone: payload.recipient_phone?.trim() || null,
+    bank_type: payload.bank_type?.trim() || null,
+    card_number: payload.card_number?.trim() || null,
+    shaba_number: payload.shaba_number?.trim() || null,
+    irt_account_number: payload.irt_account_number?.trim() || null,
+    irt_address: payload.irt_address?.trim() || null,
+    irt_phone: payload.irt_phone?.trim() || null,
+  };
+
   const { data, error } = await db
     .from("recipients")
-    .insert([{
-      user_id: payload.userId,
-      direction: payload.direction || "aud",
-      full_name: payload.full_name?.trim() || null,
-      account_name: payload.account_name?.trim() || null,
-      bank_name: payload.bank_name?.trim() || null,
-      bsb: payload.bsb?.trim() || null,
-      account_number: payload.account_number?.trim() || null,
-      bank_type: payload.bank_type?.trim() || null,
-      card_number: payload.card_number?.trim() || null,
-      shaba_number: payload.shaba_number?.trim() || null,
-    }])
+    .insert([insertPayload])
     .select("id")
     .single();
 
   if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "ASSISTED_RECIPIENT_CREATED",
+    targetType: "recipient",
+    targetId: data?.id ? String(data.id) : null,
+    newValue: { userId: payload.userId, direction: insertPayload.direction, label: insertPayload.label },
+  }).catch(() => {});
+
   return { success: true, recipientId: data?.id };
 }
 
 export async function updateAssistedRecipientForUser(payload: any) {
   const admin = await requireAdmin();
-  if (!payload.id) return { error: "Missing recipient ID." };
+  const recipientId = payload.id || payload.recipientId;
+  if (!recipientId) return { error: "Missing recipient ID." };
 
   const db = makeServiceRoleClient();
+  const { data: before } = await db.from("recipients").select("*").eq("id", recipientId).maybeSingle();
+
   const patch: Record<string, unknown> = {};
+  if (payload.direction !== undefined) patch.direction = payload.direction;
+  if (payload.label !== undefined) patch.label = payload.label?.trim() || null;
   if (payload.full_name !== undefined) patch.full_name = payload.full_name?.trim() || null;
   if (payload.account_name !== undefined) patch.account_name = payload.account_name?.trim() || null;
   if (payload.bank_name !== undefined) patch.bank_name = payload.bank_name?.trim() || null;
   if (payload.bsb !== undefined) patch.bsb = payload.bsb?.trim() || null;
   if (payload.account_number !== undefined) patch.account_number = payload.account_number?.trim() || null;
+  if (payload.residential_address !== undefined) patch.residential_address = payload.residential_address?.trim() || null;
+  if (payload.recipient_email !== undefined) patch.recipient_email = payload.recipient_email?.trim() || null;
+  if (payload.recipient_phone !== undefined) patch.recipient_phone = payload.recipient_phone?.trim() || null;
+  if (payload.bank_type !== undefined) patch.bank_type = payload.bank_type?.trim() || null;
   if (payload.card_number !== undefined) patch.card_number = payload.card_number?.trim() || null;
   if (payload.shaba_number !== undefined) patch.shaba_number = payload.shaba_number?.trim() || null;
+  if (payload.irt_account_number !== undefined) patch.irt_account_number = payload.irt_account_number?.trim() || null;
+  if (payload.irt_address !== undefined) patch.irt_address = payload.irt_address?.trim() || null;
+  if (payload.irt_phone !== undefined) patch.irt_phone = payload.irt_phone?.trim() || null;
 
-  const { error } = await db.from("recipients").update(patch).eq("id", payload.id);
+  if (Object.keys(patch).length === 0) return { success: true };
+
+  const { error } = await db.from("recipients").update(patch).eq("id", recipientId);
   if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "ASSISTED_RECIPIENT_UPDATED",
+    targetType: "recipient",
+    targetId: String(recipientId),
+    oldValue: before ?? null,
+    newValue: patch,
+  }).catch(() => {});
+
   return { success: true };
 }
 
@@ -906,7 +986,8 @@ export async function updateTransactionAmount(transactionId: string | number, fi
 
 export async function updateAssistedTransactionForUser(payload: any) {
   await requireAdmin();
-  if (!payload.id) return { error: "Missing transaction ID." };
+  const transactionId = payload.id || payload.transactionId;
+  if (!transactionId) return { error: "Missing transaction ID." };
 
   const db = makeServiceRoleClient();
   const patch: Record<string, unknown> = {};
@@ -916,23 +997,26 @@ export async function updateAssistedTransactionForUser(payload: any) {
   if (payload.reference_code !== undefined) patch.reference_code = payload.reference_code?.trim() || null;
   if (payload.source_of_funds !== undefined) patch.source_of_funds = payload.source_of_funds?.trim() || null;
   if (payload.reason_for_transfer !== undefined) patch.reason_for_transfer = payload.reason_for_transfer?.trim() || null;
-  if (payload.recipient_id !== undefined) patch.recipient_id = payload.recipient_id || null;
+  if (payload.recipient_id !== undefined || payload.recipientId !== undefined) {
+    patch.recipient_id = (payload.recipient_id ?? payload.recipientId) || null;
+  }
 
   if (Object.keys(patch).length === 0) return { success: true };
 
-  const { error } = await db.from("transactions").update(patch).eq("id", payload.id);
+  const { error } = await db.from("transactions").update(patch).eq("id", transactionId);
   if (error) return { error: error.message };
   return { success: true };
 }
 
 export async function deleteAssistedTransactionForUser(payload: any) {
   const admin = await requireAdmin();
-  if (!payload.id) return { error: "Missing transaction ID." };
+  const transactionId = payload.id || payload.transactionId;
+  if (!transactionId) return { error: "Missing transaction ID." };
 
   const db = makeServiceRoleClient();
-  const { data: before } = await db.from("transactions").select("user_id, type, amount_aud").eq("id", payload.id).maybeSingle();
+  const { data: before } = await db.from("transactions").select("user_id, type, amount_aud").eq("id", transactionId).maybeSingle();
 
-  const { error } = await db.from("transactions").delete().eq("id", payload.id);
+  const { error } = await db.from("transactions").delete().eq("id", transactionId);
   if (error) return { error: error.message };
 
   await writeAuditLog({
@@ -940,7 +1024,7 @@ export async function deleteAssistedTransactionForUser(payload: any) {
     actorEmail: admin.email ?? "",
     action: "ASSISTED_TRANSACTION_DELETED",
     targetType: "transaction",
-    targetId: String(payload.id),
+    targetId: String(transactionId),
     oldValue: before,
   }).catch(() => {});
 
@@ -1010,45 +1094,125 @@ export async function deletePromoCode(id: string) {
 }
 
 export async function getPendingTransactionsWithDetails() {
-  const db = await getAuthorizedServerClient();
+  await requireAdmin(); // auth + role check only
+  const db = makeServiceRoleClient(); // service role bypasses RLS on recipients
   const { data, error } = await db
     .from("transactions")
     .select(`
-      id, user_id, type, amount_aud, equivalent_toman, status, created_at,
+      id, user_id, recipient_id, type, amount_aud, equivalent_toman, status, created_at,
       reference_code, payment_link, reason_for_transfer, receipt_sent,
       profiles(first_name, last_name, email, customer_code),
-      recipients(full_name, account_name, bank_name, bsb, account_number,
+      recipients(label, full_name, account_name, bank_name, bsb, account_number,
                  card_number, shaba_number, bank_type, direction)
     `)
     .eq("status", "pending")
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  const rows = data ?? [];
+  const missingRecipientIds = Array.from(
+    new Set(
+      rows
+        .filter((tx: any) => !tx.recipients && tx.recipient_id)
+        .map((tx: any) => String(tx.recipient_id))
+    )
+  );
+
+  if (missingRecipientIds.length === 0) return rows;
+
+  const { data: fallbackRecipients } = await db
+    .from("recipients")
+    .select("id, label, full_name, account_name, bank_name, bsb, account_number, card_number, shaba_number, bank_type, direction")
+    .in("id", missingRecipientIds);
+
+  const recipientById = new Map((fallbackRecipients ?? []).map((r: any) => [String(r.id), r]));
+  return rows.map((tx: any) => {
+    if (tx.recipients || !tx.recipient_id) return tx;
+    return { ...tx, recipients: recipientById.get(String(tx.recipient_id)) ?? null };
+  });
 }
 
-export async function getTransactionHistoryWithDetails(page = 1, pageSize = 10) {
-  const db = await getAuthorizedServerClient();
+export async function getTransactionHistoryWithDetails(page = 1, pageSize = 10, status: "all" | "approved" | "rejected" | "archived" = "all") {
+  await requireAdmin(); // auth + role check only
+  const db = makeServiceRoleClient(); // service role bypasses RLS on recipients
   const safePage = clampInt(page, 1, MAX_AUDIT_PAGE, 1);
   const safePageSize = clampInt(pageSize, 1, 50, 10);
   const offset = (safePage - 1) * safePageSize;
 
+  const specificStatus = status !== "all" ? status : null;
+
+  const countBaseQuery = db.from("transactions").select("id", { count: "exact", head: true });
+  const dataBaseQuery = db
+    .from("transactions")
+    .select(`
+      id, user_id, recipient_id, type, amount_aud, equivalent_toman, status, created_at,
+      reference_code, payment_link, reason_for_transfer, receipt_sent,
+      profiles(first_name, last_name, email, customer_code),
+      recipients(label, full_name, account_name, bank_name, bsb, account_number,
+                 card_number, shaba_number, bank_type, direction)
+    `);
+
+  const countQuery = specificStatus
+    ? countBaseQuery.eq("status", specificStatus)
+    : countBaseQuery.neq("status", "pending");
+
+  const dataQuery = specificStatus
+    ? dataBaseQuery.eq("status", specificStatus)
+    : dataBaseQuery.neq("status", "pending");
+
   const [countRes, dataRes] = await Promise.all([
-    db.from("transactions").select("id", { count: "exact", head: true }).neq("status", "pending"),
-    db
-      .from("transactions")
-      .select(`
-        id, user_id, type, amount_aud, equivalent_toman, status, created_at,
-        reference_code, payment_link, reason_for_transfer, receipt_sent,
-        profiles(first_name, last_name, email, customer_code),
-        recipients(full_name, account_name, bank_name, bsb, account_number,
-                   card_number, shaba_number, bank_type, direction)
-      `)
-      .neq("status", "pending")
-      .order("created_at", { ascending: false })
-      .range(offset, offset + safePageSize - 1),
+    countQuery,
+    dataQuery.order("created_at", { ascending: false }).range(offset, offset + safePageSize - 1),
   ]);
   if (dataRes.error) throw new Error(dataRes.error.message);
-  return { data: dataRes.data ?? [], total: countRes.count ?? 0 };
+
+  const rows = dataRes.data ?? [];
+  const missingRecipientIds = Array.from(
+    new Set(
+      rows
+        .filter((tx: any) => !tx.recipients && tx.recipient_id)
+        .map((tx: any) => String(tx.recipient_id))
+    )
+  );
+
+  if (missingRecipientIds.length === 0) {
+    return { data: rows, total: countRes.count ?? 0 };
+  }
+
+  const { data: fallbackRecipients } = await db
+    .from("recipients")
+    .select("id, label, full_name, account_name, bank_name, bsb, account_number, card_number, shaba_number, bank_type, direction")
+    .in("id", missingRecipientIds);
+
+  const recipientById = new Map((fallbackRecipients ?? []).map((r: any) => [String(r.id), r]));
+  const enrichedRows = rows.map((tx: any) => {
+    if (tx.recipients || !tx.recipient_id) return tx;
+    return { ...tx, recipients: recipientById.get(String(tx.recipient_id)) ?? null };
+  });
+
+  return { data: enrichedRows, total: countRes.count ?? 0 };
+}
+
+export async function getTransactionHistoryStatusCounts() {
+  await requireAdmin();
+  const db = makeServiceRoleClient();
+
+  const [approvedRes, rejectedRes, archivedRes] = await Promise.all([
+    db.from("transactions").select("id", { count: "exact", head: true }).eq("status", "approved"),
+    db.from("transactions").select("id", { count: "exact", head: true }).eq("status", "rejected"),
+    db.from("transactions").select("id", { count: "exact", head: true }).eq("status", "archived"),
+  ]);
+
+  const approved = approvedRes.count ?? 0;
+  const rejected = rejectedRes.count ?? 0;
+  const archived = archivedRes.count ?? 0;
+
+  return {
+    all: approved + rejected + archived,
+    approved,
+    rejected,
+    archived,
+  };
 }
 
 // ===========================================================================

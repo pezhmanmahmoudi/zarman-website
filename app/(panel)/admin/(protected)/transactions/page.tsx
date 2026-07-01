@@ -4,6 +4,7 @@ import { ArrowLeftRight, Clock, DollarSign, Archive, LinkIcon } from "lucide-rea
 import {
   getPendingTransactionsWithDetails,
   getTransactionHistoryWithDetails,
+  getTransactionHistoryStatusCounts,
 } from "@/app/actions/admin.actions";
 import { TransactionApproveButton } from "@/components/admin/TransactionApproveButton";
 import { createClient } from "@supabase/supabase-js";
@@ -19,6 +20,7 @@ import tableStyles from "@/styles/admin/AdminTable.module.css";
 export const metadata = { title: "Transactions | Zarman Admin" };
 
 const PAGE_SIZE = 10;
+type HistoryStatusFilter = "all" | "approved" | "rejected" | "archived";
 
 function StatusBadge({ status }: { status: string | null }) {
   const s = (status ?? "").toLowerCase();
@@ -50,8 +52,12 @@ function RecipientCell({
   paymentLink?: string | null;
   reasonForTransfer?: string | null;
 }) {
+  const normalizedRecipient = Array.isArray(recipient)
+    ? (recipient.find(Boolean) ?? null)
+    : (recipient ?? null);
+
   const link = getPaymentLink(paymentLink, reasonForTransfer);
-  if (!recipient && link) {
+  if (!normalizedRecipient && link) {
     return (
       <div style={{ fontSize: "0.68rem", lineHeight: 1.7 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "4px", fontWeight: 700, color: "var(--accent, #2563eb)" }}>
@@ -62,21 +68,22 @@ function RecipientCell({
           href={link}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: "var(--text-dim)", fontSize: "0.63rem", wordBreak: "break-all", textDecoration: "underline" }}
+          style={{ color: "var(--text-dim)", fontSize: "0.63rem", textDecoration: "underline", fontWeight: 600 }}
         >
-          {link}
+          Open payment link
         </a>
       </div>
     );
   }
 
-  if (!recipient) return <span style={{ color: "var(--text-dim)" }}>—</span>;
+  if (!normalizedRecipient) return <span style={{ color: "var(--text-dim)" }}>—</span>;
 
-  const r = recipient as any;
+  const r = normalizedRecipient as any;
+  const recipientTitle = r.account_name ?? r.full_name ?? r.label ?? "—";
   if (r.direction === "aud") {
     return (
       <div style={{ fontSize: "0.68rem", lineHeight: 1.7 }}>
-        <div style={{ fontWeight: 700 }}>{r.account_name ?? "—"}</div>
+        <div style={{ fontWeight: 700 }}>{recipientTitle}</div>
         {r.bank_name && <div>{r.bank_name}</div>}
         {r.bsb && <div style={{ color: "var(--text-dim)" }}>BSB {r.bsb}</div>}
         {r.account_number && <div style={{ color: "var(--text-dim)" }}>Acc {r.account_number}</div>}
@@ -87,7 +94,7 @@ function RecipientCell({
   const isMelli = r.bank_type === "bank_melli";
   return (
     <div style={{ fontSize: "0.68rem", lineHeight: 1.7 }}>
-      <div style={{ fontWeight: 700 }}>{r.full_name ?? "—"}</div>
+      <div style={{ fontWeight: 700 }}>{recipientTitle}</div>
       <div>{isMelli ? "Bank Melli" : (r.bank_name ?? "Iranian Bank")}</div>
       {isMelli
         ? r.card_number && <div style={{ color: "var(--text-dim)" }}>Card {r.card_number}</div>
@@ -240,20 +247,43 @@ function TxTable({
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; status?: string }>;
 }) {
   const params = await searchParams;
   const currentPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const normalizedStatus = (params.status ?? "all").toLowerCase();
+  const historyStatus: HistoryStatusFilter =
+    normalizedStatus === "approved" ||
+    normalizedStatus === "rejected" ||
+    normalizedStatus === "archived"
+      ? (normalizedStatus as HistoryStatusFilter)
+      : "all";
 
   // تعریف کلاینت دیتابیس برای خواندن حساب‌های بانکی
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
   // اجرای موازی و سریع ۳ کوئری دیتابیس
-  const [pending, { data: history, total }, { data: bankAccounts }] = await Promise.all([
+  const [pending, { data: history, total }, statusCounts, { data: bankAccounts }] = await Promise.all([
     getPendingTransactionsWithDetails(),
-    getTransactionHistoryWithDetails(currentPage, PAGE_SIZE),
+    getTransactionHistoryWithDetails(currentPage, PAGE_SIZE, historyStatus),
+    getTransactionHistoryStatusCounts(),
     db.from("bank_accounts").select("*").eq("is_active", true)
   ]);
+
+  const statusTabs: Array<{ key: HistoryStatusFilter; label: string; count: number }> = [
+    { key: "all", label: "All", count: statusCounts.all },
+    { key: "approved", label: "Approved", count: statusCounts.approved },
+    { key: "rejected", label: "Rejected", count: statusCounts.rejected },
+    { key: "archived", label: "Archived", count: statusCounts.archived },
+  ];
+
+  const historyHeadingLabel = historyStatus === "all"
+    ? "Transaction History"
+    : historyStatus === "approved"
+      ? "Approved Transactions"
+      : historyStatus === "rejected"
+        ? "Rejected Transactions"
+        : "Archived Transactions";
 
   return (
     <>
@@ -305,8 +335,24 @@ export default async function TransactionsPage({
           <div className={cardStyles.panelHeader}>
             <h2 className={cardStyles.panelTitle}>
               <Archive size={18} color="var(--text-dim)" />
-              Transaction History ({total} total)
+              {historyHeadingLabel} ({total} total)
             </h2>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+              {statusTabs.map((tab) => {
+                const isActive = historyStatus === tab.key;
+                const href = tab.key === "all" ? "/admin/transactions?page=1" : `/admin/transactions?page=1&status=${tab.key}`;
+                return (
+                  <Link
+                    key={tab.key}
+                    href={href}
+                    className={`${tableStyles.badge} ${isActive ? tableStyles.badgeApproved : tableStyles.badgeArchived}`}
+                    style={{ textDecoration: "none", fontWeight: 700 }}
+                  >
+                    {tab.label} ({tab.count})
+                  </Link>
+                );
+              })}
+            </div>
           </div>
 
           {history.length === 0 ? (

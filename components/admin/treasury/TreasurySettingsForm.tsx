@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateTreasurySettings, type TreasurySettingsRow } from "@/app/actions/treasury.actions";
 import s from "@/styles/admin/Treasury.module.css";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 
 type Props = {
   settings: TreasurySettingsRow;
@@ -118,11 +119,17 @@ export default function TreasurySettingsForm({ settings }: Props) {
         </div>
         <div className={s.formGroup}>
           <label className={s.formLabel}>حساسیت توصیه</label>
-          <select className={s.formSelect} value={form.sensitivity} onChange={(e) => setField("sensitivity", e.target.value)} disabled={isPending}>
-            <option value="low">کم</option>
-            <option value="medium">متوسط</option>
-            <option value="high">زیاد</option>
-          </select>
+          <SelectBox
+            className={s.formSelect}
+            labeledOptions={[
+              { value: "low", label: "کم" },
+              { value: "medium", label: "متوسط" },
+              { value: "high", label: "زیاد" },
+            ]}
+            value={form.sensitivity}
+            onChange={(val) => setField("sensitivity", val)}
+            disabled={isPending}
+          />
         </div>
       </div>
 

@@ -1,17 +1,30 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { UserCircle2, ShieldCheck, AlertCircle, MessageCircle, Star } from "lucide-react";
-import { submitKycData, savePersonalData } from "@/app/actions/kyc.actions";
+import { UserCircle2, ShieldCheck, AlertCircle, MessageCircle, Pencil, Check, X } from "lucide-react";
+import { submitKycData, savePersonalData, updatePersonalIdentityData } from "@/app/actions/kyc.actions";
 import styles from "@/styles/dashboard/DashboardProfile.module.css";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
-import { formatToman } from "@/app/[locale]/dashboard/dashboard.utils";
+import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 
 export function DashboardProfile({ profile }: { profile: any }) {
   const hasSubmittedData = Boolean(profile?.document_type && profile?.document_type !== "later" && profile?.document_type !== "");
-  const isKycSubmitted = hasSubmittedData && ["pending", "under_review", "approved"].includes(profile?.kyc_status);
   const isApproved = profile?.kyc_status === "approved";
+
+  const [personalData, setPersonalData] = useState({
+    firstName: "",
+    lastName: "",
+    mobileNumber: "",
+  });
+  const [personalDraft, setPersonalDraft] = useState({
+    firstName: "",
+    lastName: "",
+    mobileNumber: "",
+  });
+  const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [isSavingPersonal, setIsSavingPersonal] = useState(false);
+  const [personalStatus, setPersonalStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const [formData, setFormData] = useState({
     dob: "", country: "Australia", address: "", city: "", state: "", postalCode: "",
@@ -26,6 +39,17 @@ export function DashboardProfile({ profile }: { profile: any }) {
 
   useEffect(() => {
     if (profile) {
+      setPersonalData({
+        firstName: profile.first_name || "",
+        lastName: profile.last_name || "",
+        mobileNumber: profile.mobile_number || profile.phone_number || "",
+      });
+      setPersonalDraft({
+        firstName: profile.first_name || "",
+        lastName: profile.last_name || "",
+        mobileNumber: profile.mobile_number || profile.phone_number || "",
+      });
+
       setFormData({
         dob: profile.dob || profile.date_of_birth || "",
         country: profile.country || "Australia",
@@ -55,8 +79,75 @@ export function DashboardProfile({ profile }: { profile: any }) {
     }
   };
 
+  const handlePersonalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPersonalDraft((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const validatePersonalFields = (values: { firstName: string; lastName: string; mobileNumber: string }) => {
+    const newErrors: Record<string, string> = {};
+
+    if (!values.firstName.trim()) newErrors.firstName = "First Name is required.";
+    if (!values.lastName.trim()) newErrors.lastName = "Last Name is required.";
+    if (!values.mobileNumber.trim()) newErrors.mobileNumber = "Mobile Number is required.";
+
+    setErrors((prev) => ({
+      ...prev,
+      firstName: newErrors.firstName || "",
+      lastName: newErrors.lastName || "",
+      mobileNumber: newErrors.mobileNumber || "",
+    }));
+
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const startPersonalEdit = () => {
+    setPersonalStatus(null);
+    setPersonalDraft(personalData);
+    setIsEditingPersonal(true);
+  };
+
+  const cancelPersonalEdit = () => {
+    setPersonalStatus(null);
+    setPersonalDraft(personalData);
+    setErrors((prev) => ({ ...prev, firstName: "", lastName: "", mobileNumber: "" }));
+    setIsEditingPersonal(false);
+  };
+
+  const savePersonalEdit = async () => {
+    if (!validatePersonalFields(personalDraft)) return;
+
+    setIsSavingPersonal(true);
+    setPersonalStatus(null);
+
+    const res = await updatePersonalIdentityData({
+      first_name: personalDraft.firstName,
+      last_name: personalDraft.lastName,
+      mobile_number: personalDraft.mobileNumber,
+    });
+
+    if (res.error) {
+      setPersonalStatus({ type: "error", msg: res.error });
+      setIsSavingPersonal(false);
+      return;
+    }
+
+    setPersonalData(personalDraft);
+    setIsEditingPersonal(false);
+    setPersonalStatus({ type: "success", msg: "اطلاعات شخصی شما ذخیره شد." });
+    setIsSavingPersonal(false);
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    const identitySource = isEditingPersonal ? personalDraft : personalData;
+    if (!identitySource.firstName.trim()) newErrors.firstName = "First Name is required.";
+    if (!identitySource.lastName.trim()) newErrors.lastName = "Last Name is required.";
+    if (!identitySource.mobileNumber.trim()) newErrors.mobileNumber = "Mobile Number is required.";
+
     if (!formData.dob) newErrors.dob = "Date of Birth is required.";
     if (!formData.address) newErrors.address = "Residential Address is required.";
     if (!formData.city) newErrors.city = "City is required.";
@@ -90,6 +181,11 @@ export function DashboardProfile({ profile }: { profile: any }) {
   };
 
   const handleSubmit = async () => {
+    if (isEditingPersonal) {
+      setSubmitStatus({ type: "error", msg: "ابتدا تغییرات اطلاعات شخصی را ذخیره یا لغو کنید." });
+      return;
+    }
+
     if (!validateForm()) return;
 
     setIsSubmitting(true);
@@ -97,6 +193,9 @@ export function DashboardProfile({ profile }: { profile: any }) {
 
     const isNonAustralian = formData.country !== "Australia";
     const result = await submitKycData({
+      first_name: personalData.firstName,
+      last_name: personalData.lastName,
+      mobile_number: personalData.mobileNumber,
       dob: formData.dob,
       country: formData.country,
       address: formData.address,
@@ -116,8 +215,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
     if (result.error) {
       setSubmitStatus({ type: "error", msg: result.error });
     } else {
-      setSubmitStatus({ type: "success", msg: "اطلاعات هویتی شما با موفقیت ثبت شد." });
-      setTimeout(() => window.location.reload(), 1500);
+      setSubmitStatus({ type: "success", msg: "اطلاعات شما با موفقیت ثبت شد. بررسی معمولاً کمتر از ۱۰ دقیقه زمان می برد. لطفاً چند دقیقه دیگر صفحه را تازه سازی کنید." });
     }
 
     setIsSubmitting(false);
@@ -133,6 +231,9 @@ export function DashboardProfile({ profile }: { profile: any }) {
     setSubmitStatus({ type: "", msg: "" });
 
     const result = await savePersonalData({
+      first_name: personalData.firstName,
+      last_name: personalData.lastName,
+      mobile_number: personalData.mobileNumber,
       dob: formData.dob,
       country: formData.country,
       address: formData.address,
@@ -147,14 +248,18 @@ export function DashboardProfile({ profile }: { profile: any }) {
     } else {
       if (win) win.location.href = whatsappLink;
       setSubmitStatus({ type: "success", msg: "اطلاعات ذخیره شد. در حال انتقال به واتس‌اپ..." });
-      setTimeout(() => window.location.reload(), 2500);
     }
 
     setIsSubmitting(false);
   };
 
   const whatsappLink = `https://wa.me/61497851631?text=${encodeURIComponent("سلام. من گواهینامه و پاسپورت استرالیا ندارم، برای احراز هویت به من کمک کنید.")}`;
-  const displayFirstName = profile?.middle_name ? `${profile.first_name} (${profile.middle_name})` : (profile?.first_name || "—");
+  const showSubmitSuccessOnly = submitStatus.type === "success";
+  const kycStatus = String(profile?.kyc_status ?? "").toLowerCase();
+  const isPendingReview = hasSubmittedData && ["pending", "under_review"].includes(kycStatus);
+  const isWaitingStage = !isApproved && (showSubmitSuccessOnly || isPendingReview);
+  const isVerifiedStage = isApproved;
+  const isEntryStage = !isWaitingStage && !isVerifiedStage;
 
   return (
     <article className={cardStyles.panelCard}>
@@ -168,14 +273,68 @@ export function DashboardProfile({ profile }: { profile: any }) {
       
       <div className={styles.mainContentWrapper}>
         <div className={styles.formCompact}>
+          <div className={styles.personalEditBar}>
+            
+            <div className={styles.personalEditActions}>
+              {!isEditingPersonal ? (
+                <button
+                  type="button"
+                  className={styles.editBtn}
+                  onClick={startPersonalEdit}
+                  disabled={isSubmitting || isSavingPersonal}
+                >
+                  <Pencil size={14} />
+                  Edit
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className={styles.saveBtn}
+                    onClick={savePersonalEdit}
+                    disabled={isSavingPersonal || isSubmitting}
+                  >
+                    <Check size={14} />
+                    {isSavingPersonal ? "Saving..." : "Save"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={cancelPersonalEdit}
+                    disabled={isSavingPersonal || isSubmitting}
+                  >
+                    <X size={14} />
+                    Cancel
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
           <div className={styles.row}>
             <div className={styles.inputGroup}>
               <label>First Name {profile?.middle_name && "(Middle Name)"}</label>
-              <input type="text" value={displayFirstName} readOnly className={styles.readOnlyInput} />
+              <input
+                type="text"
+                name="firstName"
+                value={isEditingPersonal ? personalDraft.firstName : personalData.firstName}
+                onChange={handlePersonalChange}
+                readOnly={!isEditingPersonal}
+                className={`${!isEditingPersonal ? styles.readOnlyInput : ""} ${errors.firstName ? styles.errorBorder : ""}`}
+              />
+              {errors.firstName && <span className={styles.errorText}>{errors.firstName}</span>}
             </div>
             <div className={styles.inputGroup}>
               <label>Last Name</label>
-              <input type="text" value={profile?.last_name || "—"} readOnly className={styles.readOnlyInput} />
+              <input
+                type="text"
+                name="lastName"
+                value={isEditingPersonal ? personalDraft.lastName : personalData.lastName}
+                onChange={handlePersonalChange}
+                readOnly={!isEditingPersonal}
+                className={`${!isEditingPersonal ? styles.readOnlyInput : ""} ${errors.lastName ? styles.errorBorder : ""}`}
+              />
+              {errors.lastName && <span className={styles.errorText}>{errors.lastName}</span>}
             </div>
           </div>
 
@@ -186,35 +345,72 @@ export function DashboardProfile({ profile }: { profile: any }) {
             </div>
             <div className={styles.inputGroup}>
               <label>Mobile Number</label>
-              <input type="text" value={profile?.mobile_number || profile?.phone_number || "—"} readOnly className={styles.readOnlyInput} />
+              <input
+                type="text"
+                name="mobileNumber"
+                value={isEditingPersonal ? personalDraft.mobileNumber : personalData.mobileNumber}
+                onChange={handlePersonalChange}
+                readOnly={!isEditingPersonal}
+                className={`${!isEditingPersonal ? styles.readOnlyInput : ""} ${errors.mobileNumber ? styles.errorBorder : ""}`}
+              />
+              {errors.mobileNumber && <span className={styles.errorText}>{errors.mobileNumber}</span>}
             </div>
           </div>
+
+          {personalStatus && (
+            <div className={personalStatus.type === "success" ? styles.successMessage : styles.errorTextFa}>
+              <p style={{ textAlign: "center", width: "100%", margin: 0 }}>{personalStatus.msg}</p>
+            </div>
+          )}
         </div>
 
         <div className={styles.divider}></div>
 
         <div className={styles.kycSection}>
-          <h3 className={styles.persianSectionTitle}>تکمیل اطلاعات</h3>
-          <p className={styles.persianSectionSubtitle}> لطفاً فقط اطلاعات خواسته شده را با دقت وارد نمایید.</p>
+          {isEntryStage && <h3 className={styles.persianSectionTitle}>تکمیل اطلاعات</h3>}
 
-          {isKycSubmitted && submitStatus.type !== "success" ? (
-            <div className={styles.successMessage}>
-              <ShieldCheck size={20} />
-              <p>وضعیت حساب شما: <strong style={{color: isApproved ? "#10b981" : "#f59e0b", textTransform: 'capitalize'}}>{profile?.kyc_status}</strong></p>
+          {isEntryStage && (
+            <div className={`${styles.stageBanner} ${styles.stageBannerEntry}`}>
+              <AlertCircle size={18} aria-hidden="true" />
+              <div>
+                <p>
+                  اطلاعات را کاملاً دقیق ثبت کنید. <strong>تمام فیلدها باید فقط با حروف انگلیسی (English) تکمیل شوند.</strong>
+                </p>
+                <p className={styles.stageBannerSubtext}>
+                  پس از ثبت اطلاعات، بررسی هویت معمولاً کمتر از ۱۰ دقیقه زمان می‌برد و پس از تأیید، پنل درخواست‌ها فعال می‌شود.
+                </p>
+              </div>
             </div>
-          ) : (
+          )}
+
+          {isWaitingStage && (
+            <div className={`${styles.stageBanner} ${styles.stageBannerWaiting}`}>
+              <ShieldCheck size={18} aria-hidden="true" />
+              <p>درخواست احراز هویت شما ثبت شد. بررسی معمولاً کمتر از ۱۰ دقیقه زمان می‌برد. لطفاً چند دقیقه دیگر صفحه را تازه‌سازی کنید.</p>
+            </div>
+          )}
+
+          {isVerifiedStage && (
+            <div className={`${styles.stageBanner} ${styles.stageBannerVerified}`}>
+              <ShieldCheck size={18} aria-hidden="true" />
+              <p>احراز هویت شما با موفقیت تأیید شد. اکنون می‌توانید از پنل درخواست‌ها استفاده کنید.</p>
+            </div>
+          )}
+
+          {isEntryStage && (
             <div className={styles.formCompact}>
               
               <div className={styles.row}>
                 <div className={styles.inputGroup}>
                   <label>Date of Birth <span className={styles.req}>*</span></label>
-                  <input 
-                    type="date" 
-                    name="dob" 
-                    value={formData.dob} 
-                    onChange={handleChange} 
-                    data-placeholder="dd/mm/yyyy"
-                    className={`${!formData.dob ? styles.emptyDate : ""} ${errors.dob ? styles.errorBorder : ""}`} 
+                  <CustomDatePicker
+                    value={formData.dob}
+                    onChange={(val: string) => {
+                      if (errors.dob) setErrors((prev) => ({ ...prev, dob: "" }));
+                    }}
+                    placeholder="dd/mm/yyyy"
+                    disabled={isSubmitting}
+                    className={errors.dob ? styles.errorBorder : ""}
                   />
                   {errors.dob && <span className={styles.errorText}>{errors.dob}</span>}
                 </div>
@@ -260,24 +456,24 @@ export function DashboardProfile({ profile }: { profile: any }) {
 
               <div className={styles.inputGroup}>
                 <label>Residential Address (Street) <span className={styles.req}>*</span></label>
-                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="آدرس دقیق محل سکونت (خیابان، واحد)" className={errors.address ? styles.errorBorder : ""} />
+                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Street address, unit" className={errors.address ? styles.errorBorder : ""} />
                 {errors.address && <span className={styles.errorText}>{errors.address}</span>}
               </div>
 
               <div className={styles.row3}>
                 <div className={styles.inputGroup}>
                   <label>City / Suburb <span className={styles.req}>*</span></label>
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="شهر" className={errors.city ? styles.errorBorder : ""} />
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City / Suburb" className={errors.city ? styles.errorBorder : ""} />
                   {errors.city && <span className={styles.errorText}>{errors.city}</span>}
                 </div>
                 <div className={styles.inputGroup}>
                   <label>State <span className={styles.req}>*</span></label>
-                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="ایالت" className={errors.state ? styles.errorBorder : ""} />
+                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State" className={errors.state ? styles.errorBorder : ""} />
                   {errors.state && <span className={styles.errorText}>{errors.state}</span>}
                 </div>
                 <div className={styles.inputGroup}>
                   <label>Postal Code <span className={styles.req}>*</span></label>
-                  <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="کد پستی" className={errors.postalCode ? styles.errorBorder : ""} />
+                  <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="Postal code" className={errors.postalCode ? styles.errorBorder : ""} />
                   {errors.postalCode && <span className={styles.errorText}>{errors.postalCode}</span>}
                 </div>
               </div>
@@ -341,13 +537,15 @@ export function DashboardProfile({ profile }: { profile: any }) {
                         </div>
                         <div className={styles.inputGroup}>
                           <label>Expiry Date <span className={styles.req}>*</span></label>
-                          <input 
-                            type="date" 
-                            name="expiryDate" 
-                            value={formData.expiryDate} 
-                            onChange={handleChange} 
-                            data-placeholder="dd/mm/yyyy"
-                            className={`${!formData.expiryDate ? styles.emptyDate : ""} ${errors.expiryDate ? styles.errorBorder : ""}`} 
+                          <CustomDatePicker
+                            value={formData.expiryDate}
+                            onChange={(val: string) => {
+                              setFormData((prev) => ({ ...prev, expiryDate: val }));
+                              if (errors.expiryDate) setErrors((prev) => ({ ...prev, expiryDate: "" }));
+                            }}
+                            placeholder="dd/mm/yyyy"
+                            disabled={isSubmitting}
+                            className={errors.expiryDate ? styles.errorBorder : ""}
                           />
                           {errors.expiryDate && <span className={styles.errorText}>{errors.expiryDate}</span>}
                         </div>
@@ -359,18 +557,20 @@ export function DashboardProfile({ profile }: { profile: any }) {
                     <div className={styles.row}>
                       <div className={styles.inputGroup}>
                         <label>Document Number <span className={styles.req}>*</span></label>
-                        <input type="text" name="passportNumber" value={formData.passportNumber} onChange={handleChange} placeholder="شماره پاسپورت" className={errors.passportNumber ? styles.errorBorder : ""} />
+                        <input type="text" name="passportNumber" value={formData.passportNumber} onChange={handleChange} placeholder="Passport Number" className={errors.passportNumber ? styles.errorBorder : ""} />
                         {errors.passportNumber && <span className={styles.errorText}>{errors.passportNumber}</span>}
                       </div>
                       <div className={styles.inputGroup}>
                         <label>Expiry Date <span className={styles.req}>*</span></label>
-                        <input 
-                          type="date" 
-                          name="expiryDate" 
-                          value={formData.expiryDate} 
-                          onChange={handleChange} 
-                          data-placeholder="dd/mm/yyyy"
-                          className={`${!formData.expiryDate ? styles.emptyDate : ""} ${errors.expiryDate ? styles.errorBorder : ""}`} 
+                        <CustomDatePicker
+                          value={formData.expiryDate}
+                          onChange={(val: string) => {
+                            setFormData((prev) => ({ ...prev, expiryDate: val }));
+                            if (errors.expiryDate) setErrors((prev) => ({ ...prev, expiryDate: "" }));
+                          }}
+                          placeholder="dd/mm/yyyy"
+                          disabled={isSubmitting}
+                          className={errors.expiryDate ? styles.errorBorder : ""}
                         />
                         {errors.expiryDate && <span className={styles.errorText}>{errors.expiryDate}</span>}
                       </div>
@@ -430,8 +630,8 @@ export function DashboardProfile({ profile }: { profile: any }) {
                 </div>
               )}
 
-              {submitStatus.msg && (
-                <div className={submitStatus.type === "success" ? styles.successMessage : styles.errorTextFa} style={{ marginTop: submitStatus.type === "error" ? 12 : -12, padding: '0 24px' }}>
+              {submitStatus.type === "error" && submitStatus.msg && (
+                <div className={styles.errorTextFa} style={{ marginTop: 12, padding: '0 24px' }}>
                   <p style={{textAlign: 'center', width: '100%', margin: 0}}>{submitStatus.msg}</p>
                 </div>
               )}

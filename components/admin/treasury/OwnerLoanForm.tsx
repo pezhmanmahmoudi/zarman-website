@@ -6,6 +6,7 @@ import { addOwnerLoan, deleteOwnerLoan } from "@/app/actions/treasury.actions";
 import { fmtIRT, fmtAUD } from "@/lib/accounting-engine";
 import s from "@/styles/admin/Treasury.module.css";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 
 type OwnerLoanRow = {
@@ -114,10 +115,16 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>ارز</label>
-              <select className={s.formSelect} value={form.currency} onChange={e => field("currency", e.target.value as "AUD"|"IRT")} disabled={isPending}>
-                <option value="IRT">تومان (IRT)</option>
-                <option value="AUD">دلار (AUD)</option>
-              </select>
+              <SelectBox
+                dir="rtl"
+                value={form.currency}
+                onChange={(val) => field("currency", val as "AUD" | "IRT")}
+                labeledOptions={[
+                  { value: "IRT", label: "تومان (IRT)" },
+                  { value: "AUD", label: "دلار (AUD)" },
+                ]}
+                disabled={isPending}
+              />
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>مبلغ</label>
@@ -130,21 +137,29 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
               <label className={s.formLabel}>
                 <Tooltip text="صندوقی که موجودی آن تحت تاثیر این تراکنش قرار می‌گیرد">کشوی واریز/برداشت</Tooltip>
               </label>
-              <select className={s.formSelect} value={form.account_id} onChange={e => field("account_id", e.target.value)} disabled={isPending}>
-                <option value="">-- انتخاب حساب --</option>
-                {filteredAccounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.account_name} ({acc.currency})</option>
-                ))}
-              </select>
+              <SelectBox
+                dir="rtl"
+                value={form.account_id}
+                onChange={(val) => field("account_id", val)}
+                placeholder="-- انتخاب حساب --"
+                labeledOptions={filteredAccounts.map(acc => ({ value: acc.id, label: `${acc.account_name} (${acc.currency})` }))}
+                disabled={isPending}
+              />
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>
                 <Tooltip text="تزریق: ورود پول از بیرون به صرافی. برداشت: خروج پول به نفع مالک">نوع عملیات</Tooltip>
               </label>
-              <select className={s.formSelect} value={form.loan_type} onChange={e => field("loan_type", e.target.value)} disabled={isPending}>
-                <option value="injection">تزریق سرمایه (ورود)</option>
-                <option value="repayment">برداشت شخصی (خروج)</option>
-              </select>
+              <SelectBox
+                dir="rtl"
+                value={form.loan_type}
+                onChange={(val) => field("loan_type", val)}
+                labeledOptions={[
+                  { value: "injection", label: "تزریق سرمایه (ورود)" },
+                  { value: "repayment", label: "برداشت شخصی (خروج)" },
+                ]}
+                disabled={isPending}
+              />
             </div>
           </div>
 
