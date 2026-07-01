@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import { supabase } from "@/lib/supabase";
 
 const countryCodes = [
@@ -265,9 +266,25 @@ export default function RegisterPage() {
               <div className={styles.inputGroup}>
                 <label>Mobile Number <span className={styles.req}>*</span></label>
                 <div className={styles.mobileInputWrapper}>
-                  <select name="phoneCode" value={formData.phoneCode} onChange={handleChange} className={styles.countryCode}>
-                    {countryCodes.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
-                  </select>
+                  <div
+                    className={styles.countryCodeWrapper}
+                    style={{
+                      "--bg-card":     "rgba(255,255,255,0.7)",
+                      "--bg-dropdown": "#ffffff",
+                      "--border-med":  "rgba(203,213,225,0.8)",
+                      "--accent":      "#3848f5",
+                      "--text-main":   "#0f172a",
+                      "--text-dim":    "#94a3b8",
+                      "--bg-soft":     "rgba(56,72,245,0.08)",
+                    } as React.CSSProperties}
+                  >
+                    <SelectBox
+                      value={formData.phoneCode}
+                      onChange={(val) => setFormData((prev) => ({ ...prev, phoneCode: val }))}
+                      labeledOptions={countryCodes.map((c) => ({ value: c.code, label: c.label }))}
+                      dir="ltr"
+                    />
+                  </div>
                   <input type="text" inputMode="numeric" name="mobile" value={formData.mobile} onChange={handleChange} placeholder="شماره موبایل" className={errors.mobile ? styles.errorBorder : ""} />
                 </div>
                 {errors.mobile && <span className={styles.errorText}>{errors.mobile}</span>}

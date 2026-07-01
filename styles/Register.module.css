@@ -180,9 +180,11 @@
 }
 
 .enInput { font-family: var(--font-en-stack) !important; direction: ltr !important; text-align: left !important; letter-spacing: 0.5px; }
-.mobileInputWrapper { display: flex; gap: 8px; }
-.inputGroup .countryCode { width: 140px !important; flex-shrink: 0 !important; cursor: pointer; color: #0f172a !important; font-family: var(--font-en-stack) !important; }
-.mobileInputWrapper input { flex: 1; }
+.mobileInputWrapper { display: flex; gap: 8px; align-items: stretch; }
+.countryCodeWrapper { width: 140px; flex-shrink: 0; display: flex; }
+.countryCodeWrapper > div { width: 100%; }
+.countryCodeWrapper [role="combobox"] { height: 100% !important; border-radius: 10px !important; box-shadow: inset 0 1px 2px rgba(0,0,0,0.01) !important; }
+.mobileInputWrapper input { flex: 1; min-width: 0; }
 
 .passwordWrapper { position: relative; display: flex; align-items: center; }
 .passwordWrapper input { width: 100%; padding-right: 40px; }
