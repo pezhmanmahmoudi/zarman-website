@@ -2,11 +2,13 @@ import React from "react";
 import { DollarSign, Activity, Scale } from "lucide-react";
 import { fmtAUD, fmtIRT, fmtRate } from "@/lib/accounting-engine";
 import { FA, inventoryBorderCls, trendBadgeCls, trendFA, pct, fmtDays } from "@/lib/treasury-utils";
+import type { TreasurySnapshot } from "@/lib/treasury-engine";
+import type { StrategyOutput } from "@/lib/strategy-engine";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import s from "@/styles/admin/Treasury.module.css";
 
-export default function MarketInventory({ treasury: t, strategy }: { treasury: any, strategy: any }) {
+export default function MarketInventory({ treasury: t, strategy }: { treasury: TreasurySnapshot; strategy: StrategyOutput }) {
   const { trendAnalysis: trend } = strategy;
   const invColor = t.audInventory < 0 ? s.valNegative : t.audInventory < t.settings.min_aud_inventory ? s.valNegative : t.audInventory > t.settings.max_aud_inventory ? s.valAmber : s.valPositive;
   const gapColor = t.inventoryGap >= 0 ? s.valPositive : s.valNegative;
@@ -74,7 +76,7 @@ export default function MarketInventory({ treasury: t, strategy }: { treasury: a
             </span>
             <span className={cardStyles.statLabel}>
               {t.wac > 0 && t.currentBuyRate > 0 ? (
-                <Tooltip text={`میانگین موزون بهای تمام‌شده (WAC). این عدد نشان‌دهنده میانگین قیمتِ خریدهای انجام شده برای دلارهای موجود در انبار است. (حاشیه سود فعلی: ${fmtRate(t.currentBuyRate - t.wac)})`}>{FA.wac}</Tooltip>
+                <Tooltip text={`میانگین موزون بهای تمام‌شده (WAC). این عدد نشان‌دهنده میانگین قیمتِ خریدهای انجام شده برای دلارهای موجود در انبار است. (حاشیه سود فعلی: ${fmtRate(t.currentBuyRate - t.wac)} تومان)`}>{FA.wac}</Tooltip>
               ) : (
                 FA.wac
               )}

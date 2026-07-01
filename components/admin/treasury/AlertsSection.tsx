@@ -4,7 +4,14 @@ import { FA } from "@/lib/treasury-utils";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import s from "@/styles/admin/Treasury.module.css";
 
-export default function AlertsSection({ alerts = [], accountingWarnings = [] }: { alerts: any[], accountingWarnings: string[] }) {
+type AlertItem = {
+  id?: string;
+  severity: "critical" | "warning" | "info";
+  titleFA: string;
+  messageFA: string;
+};
+
+export default function AlertsSection({ alerts = [], accountingWarnings = [] }: { alerts: AlertItem[]; accountingWarnings: string[] }) {
   return (
     <>
       {accountingWarnings.length > 0 && (
@@ -33,7 +40,7 @@ export default function AlertsSection({ alerts = [], accountingWarnings = [] }: 
 
       {alerts && alerts.length > 0 && (
         <div className={s.alertBanner}>
-          {alerts.map((alert: any, idx: number) => (
+          {alerts.map((alert, idx: number) => (
             <div key={idx} className={`${s.alertItem} ${alert.severity === 'critical' ? s.alertItemCritical : alert.severity === 'warning' ? s.alertItemWarning : s.alertItemInfo}`}>
               {alert.severity === 'critical' ? <AlertTriangle size={20} /> : alert.severity === 'warning' ? <AlertCircle size={20} /> : <Info size={20} />}
               <div className={s.alertContent}>

@@ -160,7 +160,7 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
 
       setStatus({
         type: "success",
-        text: res.transactionId
+        text: ("transactionId" in res && res.transactionId)
           ? "Customer, recipient, and pending transaction created successfully."
           : "Customer and recipient created successfully.",
       });

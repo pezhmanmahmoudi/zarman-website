@@ -1,17 +1,25 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Trash2, PlusCircle } from "lucide-react";
 import { addExpense, deleteExpense } from "@/app/actions/treasury.actions";
 import { fmtIRT, fmtAUD } from "@/lib/accounting-engine";
-import { FA } from "@/lib/treasury-utils";
 import s from "@/styles/admin/Treasury.module.css";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 
+type ExpenseRow = {
+  id: string;
+  date: string;
+  title: string;
+  category: string;
+  currency: "AUD" | "IRT";
+  amount: number;
+  status: "paid" | "pending";
+};
+
 type Props = { 
-  expenses: any[];
+  expenses: ExpenseRow[];
   bankAccounts: { id: string; account_name: string; currency: string }[];
 };
 
@@ -43,7 +51,6 @@ const EMPTY = {
 };
 
 export default function ExpenseForm({ expenses, bankAccounts }: Props) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY });

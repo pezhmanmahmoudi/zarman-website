@@ -77,7 +77,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
   const { pageLedgerRows, total } = await getLedgerData(currentPage, PAGE_SIZE);
   
   // فراخوانی موتور خزانه‌داری
-  const { accounting, bankAccounts } = await getTreasuryFullData();
+  const { accounting, treasury, bankAccounts } = await getTreasuryFullData();
   const a = accounting;
 
   return (
@@ -110,7 +110,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
             
           <MetricCard icon={<Landmark size={20} />}
             titleFa={FA.cardIrtBalTitle} descFa={FA.cardIrtBalDesc}
-            value={`${fmtIRT(a.totalIranLiquidityIRT)} IRT`} valueColor={valColor(a.totalIranLiquidityIRT)} bg={iconBg(a.totalIranLiquidityIRT)} />
+            value={`${fmtIRT(treasury.totalIranLiquidityIRT)} IRT`} valueColor={valColor(treasury.totalIranLiquidityIRT)} bg={iconBg(treasury.totalIranLiquidityIRT)} />
             
           <MetricCard icon={<Activity size={20} />}
             titleFa={FA.cardRateTitle} descFa={FA.cardRateDesc}

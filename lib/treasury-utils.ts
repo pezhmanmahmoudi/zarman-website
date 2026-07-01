@@ -72,7 +72,7 @@ export const FA = {
   forecastDesc:   "بر اساس سرعت معاملات فعلی",
   v7Label:        "سرعت ۷ روزه",
   v30Label:       "سرعت ۳۰ روزه",
-  vBuyLabel:      "سرعت خرید ۳۰د",
+  vBuyLabel:      "سرعت خرید ۳۰ روزه",
   vNetLabel:      "سرعت خالص",
   covLabel:       "پوشش روزانه",
   depletionLabel: "تاریخ تخمین",

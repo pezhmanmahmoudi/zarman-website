@@ -2,11 +2,13 @@ import React from "react";
 import { TrendingUp, Coins, Scale, BarChart2 } from "lucide-react";
 import { fmtIRT } from "@/lib/accounting-engine";
 import { FA, trendBadgeCls, trendFA } from "@/lib/treasury-utils";
+import type { AccountingSnapshot } from "@/lib/accounting-engine";
+import type { StrategyOutput } from "@/lib/strategy-engine";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import s from "@/styles/admin/Treasury.module.css";
 
-export default function ProfitabilitySection({ accounting: a, strategy }: { accounting: any, strategy: any }) {
+export default function ProfitabilitySection({ accounting: a, strategy }: { accounting: AccountingSnapshot, strategy: StrategyOutput }) {
   const { trendAnalysis: trend } = strategy;
 
   return (

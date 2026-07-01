@@ -3,12 +3,20 @@
 import { useState, useTransition } from "react";
 import { PlusCircle, Building2, UserCircle, RefreshCw } from "lucide-react";
 import { addBankAccount } from "@/app/actions/treasury.actions";
-import { FA } from "@/lib/treasury-utils";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import s from "@/styles/admin/Treasury.module.css";
 
+type BankAccount = {
+  id: string;
+  account_name: string;
+  currency: "AUD" | "IRT";
+  account_type: "bank" | "virtual" | "transit";
+  country: "Iran" | "Australia";
+  is_active: boolean;
+};
+
 type Props = {
-  bankAccounts: any[];
+  bankAccounts: BankAccount[];
 };
 
 const EMPTY = {

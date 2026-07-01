@@ -23,7 +23,7 @@ export const metadata = { title: "Treasury | Zarman Admin" };
 export const revalidate = 60;
 
 export default async function TreasuryPage() {
-  const { accounting, treasury, strategy, ownerLoans, expenses, bankAccounts } = await getTreasuryFullData();
+  const { accounting, treasury, strategy, ownerLoans, expenses, bankAccounts, settings } = await getTreasuryFullData();
 
   const {
     alerts = [],
@@ -85,7 +85,7 @@ export default async function TreasuryPage() {
           />
           <hr className={s.sectionDivider} />
 
-          <TreasurySettings />
+          <TreasurySettings settings={settings} />
 
         </div>
       </div>

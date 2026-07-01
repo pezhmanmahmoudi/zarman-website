@@ -1,10 +1,12 @@
 import React from "react";
 import { Settings } from "lucide-react";
 import { FA } from "@/lib/treasury-utils";
+import type { TreasurySettingsRow } from "@/app/actions/treasury.actions";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
+import TreasurySettingsForm from "@/components/admin/treasury/TreasurySettingsForm";
 import s from "@/styles/admin/Treasury.module.css";
 
-export default function TreasurySettings() {
+export default function TreasurySettings({ settings }: { settings: TreasurySettingsRow }) {
   return (
     <section>
       <details className={s.settingsDetails}>
@@ -17,7 +19,7 @@ export default function TreasurySettings() {
         </summary>
         <div className={s.settingsBody}>
           <p className={s.settingsBodyPrimary}>{FA.settingsBody1}</p>
-          <p className={s.settingsBodySecondary}>{FA.settingsBody2}</p>
+          <TreasurySettingsForm settings={settings} />
         </div>
       </details>
     </section>

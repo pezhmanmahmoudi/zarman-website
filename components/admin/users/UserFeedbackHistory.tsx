@@ -61,7 +61,7 @@ export function UserFeedbackHistory({ testimonials }: UserFeedbackHistoryProps) 
                 </td>
               </tr>
             ) : (
-              testimonials.map((feedback) => (
+              testimonials.map((feedback: Testimonials[number]) => (
                 <tr
                   key={feedback.id}
                   className={

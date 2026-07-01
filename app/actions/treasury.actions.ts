@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import {
   calcAccountingSnapshot,
+  type AccountingSnapshot,
   type LedgerRowInput,
   type ExpenseRowInput,
   type OwnerLoanRowInput,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/accounting-engine";
 import {
   calcTreasurySnapshot,
+  type TreasurySnapshot,
   type TreasurySettingsInput,
   type AccountBalancesInput,
 } from "@/lib/treasury-engine";
@@ -65,7 +67,7 @@ const DEFAULT_SETTINGS = {
   recommendation_sensitivity: "medium" as const,
 };
 
-type TreasurySettingsRow = {
+export type TreasurySettingsRow = {
   min_aud_inventory: number;
   target_aud_inventory: number;
   max_aud_inventory: number;
@@ -81,13 +83,92 @@ type TreasurySettingsRow = {
 };
 
 export type TreasuryPageData = {
-  accounting: any;
-  treasury: any;
-  strategy: any;
-  ownerLoans: any[];
-  expenses: any[];
-  bankAccounts: any[];
+  accounting: AccountingSnapshot;
+  treasury: TreasurySnapshot;
+  strategy: StrategyOutput;
+  ownerLoans: OwnerLoanRow[];
+  expenses: ExpenseRow[];
+  bankAccounts: BankAccountRow[];
   settings: TreasurySettingsRow;
+};
+
+type LedgerDbRow = {
+  id: string | number;
+  type: string;
+  entry_type: string | null;
+  amount_aud: number | string | null;
+  amount_toman: number | string | null;
+  exchange_rate: number | string | null;
+  fee_aud: number | string | null;
+  date_gregorian: string;
+  payer_account_id: string | null;
+  receiver_account_id: string | null;
+  created_at: string;
+};
+
+type ExpenseDbRow = {
+  id: string | number;
+  title: string;
+  currency: "AUD" | "IRT";
+  amount: number | string;
+  exchange_rate: number | string | null;
+  status: "paid" | "pending";
+  date: string;
+  category: string;
+  payer_account_id: string | null;
+  notes: string | null;
+};
+
+export type ExpenseRow = {
+  id: string;
+  date: string;
+  title: string;
+  category: string;
+  currency: "AUD" | "IRT";
+  amount: number;
+  exchange_rate: number | null;
+  payer_account_id: string | null;
+  status: "paid" | "pending";
+  notes?: string | null;
+};
+
+type OwnerLoanDbRow = {
+  id: string | number;
+  currency: "AUD" | "IRT";
+  amount: number | string;
+  exchange_rate: number | string | null;
+  loan_type: "injection" | "repayment";
+  repayment_status: "open" | "partially_repaid" | "repaid";
+  account_id: string | null;
+  date: string;
+  notes: string | null;
+};
+
+export type OwnerLoanRow = {
+  id: string;
+  date: string;
+  currency: "AUD" | "IRT";
+  amount: number;
+  exchange_rate: number | null;
+  account_id: string | null;
+  loan_type: "injection" | "repayment";
+  repayment_status: "open" | "partially_repaid" | "repaid";
+  notes?: string | null;
+};
+
+export type BankAccountRow = {
+  id: string;
+  account_name: string;
+  currency: "AUD" | "IRT";
+  account_type: "bank" | "virtual" | "transit";
+  country: "Iran" | "Australia";
+  is_active: boolean;
+};
+
+type DrawerBalanceLike = {
+  currency: "AUD" | "IRT";
+  type: "bank" | "virtual" | "transit";
+  balance: number;
 };
 
 // ── Server Actions ─────────────────────────────────────────────────────────
@@ -114,7 +195,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
   ]);
 
   // ۱. مپ کردن ساختار کشوها برای پردازش در موتور حسابداری
-  const accountsMeta: AccountMeta[] = (accountsRes.data ?? []).map((a: any) => ({
+  const accountsMeta: AccountMeta[] = ((accountsRes.data ?? []) as BankAccountRow[]).map((a) => ({
     id: String(a.id),
     name: String(a.account_name),
     currency: a.currency as "AUD" | "IRT",
@@ -122,7 +203,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
   }));
 
   // ۲. آماده‌سازی سطرهای لجر با فیلدهای مبدأ و مقصد
-  const ledgerRows: LedgerRowInput[] = (ledgerRes.data ?? []).map((r: any) => ({
+  const ledgerRows: LedgerRowInput[] = ((ledgerRes.data ?? []) as LedgerDbRow[]).map((r) => ({
     id: String(r.id),
     type: r.type as string,
     entry_type: r.entry_type as string | null,
@@ -136,7 +217,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     created_at: r.created_at as string,
   }));
 
-  const expenseInputs: ExpenseRowInput[] = (expenseRes.data ?? []).map((r: any) => ({
+  const expenseInputs: ExpenseRowInput[] = ((expenseRes.data ?? []) as ExpenseDbRow[]).map((r) => ({
     id: String(r.id),
     currency: r.currency as "AUD" | "IRT",
     amount: Number(r.amount),
@@ -147,7 +228,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     payer_account_id: r.payer_account_id as string | null,
   }));
 
-  const loanInputs: OwnerLoanRowInput[] = (loanRes.data ?? []).map((r: any) => ({
+  const loanInputs: OwnerLoanRowInput[] = ((loanRes.data ?? []) as OwnerLoanDbRow[]).map((r) => ({
     id: String(r.id),
     currency: r.currency as "AUD" | "IRT",
     amount: Number(r.amount),
@@ -186,9 +267,10 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
 
   // ۴. محاسبه نقدینگی داینامیک کل ایران بر مبنای برآیند کشوها (حذف کامل هاردکد کادوس/پژمان)
   let totalIranLiquidityIRT = 0;
-  Object.values(accounting.drawerBalances).forEach((drawer: any) => {
-    if (drawer.currency === "IRT" && drawer.type === "bank") {
-      totalIranLiquidityIRT += drawer.balance;
+  Object.values(accounting.drawerBalances).forEach((drawer) => {
+    const d = drawer as DrawerBalanceLike;
+    if (d.currency === "IRT" && d.type === "bank") {
+      totalIranLiquidityIRT += d.balance;
     }
   });
 
@@ -206,12 +288,37 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
 
   const strategy = generateStrategyOutput(treasury, accounting);
 
+  const expenses: ExpenseRow[] = ((expenseRes.data ?? []) as ExpenseDbRow[]).map((r) => ({
+    id: String(r.id),
+    date: r.date,
+    title: r.title,
+    category: r.category,
+    currency: r.currency,
+    amount: Number(r.amount),
+    exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
+    payer_account_id: r.payer_account_id,
+    status: r.status,
+    notes: r.notes,
+  }));
+
+  const ownerLoans: OwnerLoanRow[] = ((loanRes.data ?? []) as OwnerLoanDbRow[]).map((r) => ({
+    id: String(r.id),
+    date: r.date,
+    currency: r.currency,
+    amount: Number(r.amount),
+    exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
+    account_id: r.account_id,
+    loan_type: r.loan_type,
+    repayment_status: r.repayment_status,
+    notes: r.notes,
+  }));
+
   return {
     accounting,
     treasury,
     strategy,
-    ownerLoans: loanRes.data ?? [],
-    expenses: expenseRes.data ?? [],
+    ownerLoans,
+    expenses,
     bankAccounts: accountsRes.data ?? [],
     settings,
   };
@@ -225,17 +332,42 @@ export async function updateTreasurySettings(
 ): Promise<{ success: true } | { error: string }> {
   const admin = await requireAdmin();
 
+  const minAud = Number(payload.min_aud_inventory);
+  const targetAud = Number(payload.target_aud_inventory);
+  const maxAud = Number(payload.max_aud_inventory);
+  const minIrtLiquidity = Number(payload.min_irt_liquidity);
+  const maxExposure = Number(payload.max_aud_exposure);
+  const targetExposure = Number(payload.target_exposure_ratio);
+  const coverageDays = Number(payload.inventory_coverage_target_days);
+  const runwayMonths = Number(payload.cash_runway_target_months);
+
+  if (![minAud, targetAud, maxAud, minIrtLiquidity, maxExposure, targetExposure, coverageDays, runwayMonths].every(Number.isFinite)) {
+    return { error: "همه فیلدهای تنظیمات باید عدد معتبر باشند." };
+  }
+  if (minAud < 0 || targetAud < 0 || maxAud < 0 || minIrtLiquidity < 0) {
+    return { error: "مقادیر موجودی و نقدینگی نمی‌توانند منفی باشند." };
+  }
+  if (!(minAud <= targetAud && targetAud <= maxAud)) {
+    return { error: "بازه موجودی دلار نامعتبر است (حداقل ≤ هدف ≤ حداکثر)." };
+  }
+  if (!(targetExposure > 0 && maxExposure > 0 && targetExposure < maxExposure && maxExposure <= 1)) {
+    return { error: "تنظیمات مواجهه نامعتبر است (هدف < حداکثر و هر دو بین ۰ تا ۱)." };
+  }
+  if (coverageDays <= 0 || runwayMonths <= 0) {
+    return { error: "اهداف پوشش روزانه و Runway باید بزرگ‌تر از صفر باشند." };
+  }
+
   const db = makeServiceRoleClient();
   const { error } = await db.from("treasury_settings").upsert({
     id: 1,
-    min_aud_inventory: payload.min_aud_inventory,
-    target_aud_inventory: payload.target_aud_inventory,
-    max_aud_inventory: payload.max_aud_inventory,
-    min_irt_liquidity: payload.min_irt_liquidity,
-    max_aud_exposure: payload.max_aud_exposure,
-    target_exposure_ratio: payload.target_exposure_ratio,
-    inventory_coverage_target_days: payload.inventory_coverage_target_days,
-    cash_runway_target_months: payload.cash_runway_target_months,
+    min_aud_inventory: minAud,
+    target_aud_inventory: targetAud,
+    max_aud_inventory: maxAud,
+    min_irt_liquidity: minIrtLiquidity,
+    max_aud_exposure: maxExposure,
+    target_exposure_ratio: targetExposure,
+    inventory_coverage_target_days: coverageDays,
+    cash_runway_target_months: runwayMonths,
     recommendation_sensitivity: payload.recommendation_sensitivity,
     updated_at: new Date().toISOString(),
   });

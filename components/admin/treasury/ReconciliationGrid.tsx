@@ -1,11 +1,12 @@
 import React from "react";
 import { Wallet, Building2, UserCircle, RefreshCw } from "lucide-react";
 import { fmtAUD, fmtIRT } from "@/lib/accounting-engine";
+import type { AccountingSnapshot } from "@/lib/accounting-engine";
 import { FA } from "@/lib/treasury-utils";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import s from "@/styles/admin/Treasury.module.css";
 
-export default function ReconciliationGrid({ accounting: a }: { accounting: any }) {
+export default function ReconciliationGrid({ accounting: a }: { accounting: AccountingSnapshot }) {
   const drawers = Object.values(a.drawerBalances) as Array<{
     accountId: string;
     accountName: string;
@@ -16,10 +17,10 @@ export default function ReconciliationGrid({ accounting: a }: { accounting: any 
 
   return (
     <section className={s.reconSectionCard}>
-      <summary className={s.reconSummary}>
+      <div className={s.reconSummary}>
         <span className={s.reconSummaryTitle}>{FA.secRecon}</span>
         <span className={s.reconSummaryDesc}>{FA.secReconDesc}</span>
-      </summary>
+      </div>
       
       <div className={`${s.reconBody} ${s.reconBodyAuto}`}>
         <div className={`${s.reconAccount} ${s.reconAccountPrimary}`}>

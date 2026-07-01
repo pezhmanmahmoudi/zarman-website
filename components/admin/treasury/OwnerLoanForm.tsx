@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Trash2, PlusCircle } from "lucide-react";
 import { addOwnerLoan, deleteOwnerLoan } from "@/app/actions/treasury.actions";
 import { fmtIRT, fmtAUD } from "@/lib/accounting-engine";
@@ -9,8 +8,16 @@ import s from "@/styles/admin/Treasury.module.css";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 
+type OwnerLoanRow = {
+  id: string;
+  date: string;
+  currency: "AUD" | "IRT";
+  amount: number;
+  loan_type: "injection" | "repayment";
+};
+
 type Props = { 
-  loans: any[];
+  loans: OwnerLoanRow[];
   bankAccounts: { id: string; account_name: string; currency: string }[];
 };
 
@@ -26,7 +33,6 @@ const EMPTY = {
 };
 
 export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY });

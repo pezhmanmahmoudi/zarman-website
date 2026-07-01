@@ -1,12 +1,13 @@
 import React from "react";
 import { Percent, Scale } from "lucide-react";
 import { FA, exposureCardCls, pct, trendBadgeCls, trendFA } from "@/lib/treasury-utils";
+import type { TreasurySnapshot } from "@/lib/treasury-engine";
+import type { StrategyOutput } from "@/lib/strategy-engine";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import s from "@/styles/admin/Treasury.module.css";
 
-
-export default function ExposureSection({ treasury: t, strategy }: { treasury: any, strategy: any }) {
+export default function ExposureSection({ treasury: t, strategy }: { treasury: TreasurySnapshot; strategy: StrategyOutput }) {
   const { trendAnalysis: trend } = strategy;
 
   return (

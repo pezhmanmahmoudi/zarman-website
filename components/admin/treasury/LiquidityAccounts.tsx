@@ -2,11 +2,13 @@ import React from "react";
 import { Coins, Calendar } from "lucide-react";
 import { fmtIRT } from "@/lib/accounting-engine";
 import { FA, trendBadgeCls, trendFA, fmtMonths } from "@/lib/treasury-utils";
+import type { TreasurySnapshot } from "@/lib/treasury-engine";
+import type { StrategyOutput } from "@/lib/strategy-engine";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import s from "@/styles/admin/Treasury.module.css";
 
-export default function LiquidityAccounts({ treasury: t, strategy }: { treasury: any, strategy: any }) {
+export default function LiquidityAccounts({ treasury: t, strategy }: { treasury: TreasurySnapshot; strategy: StrategyOutput }) {
   const { trendAnalysis: trend } = strategy;
 
   return (

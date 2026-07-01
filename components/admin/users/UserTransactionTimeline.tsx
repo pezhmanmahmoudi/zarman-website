@@ -16,6 +16,7 @@ import {
 
 type Transactions = Awaited<ReturnType<typeof getUserFinancialProfile>>["transactions"];
 type Recipients = Awaited<ReturnType<typeof getUserFinancialProfile>>["recipients"];
+type RecipientOption = { id: string; label: string };
 
 interface UserTransactionTimelineProps {
   userId?: string;
@@ -42,7 +43,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
     status: "pending",
   });
 
-  const recipientOptions = useMemo(() => {
+  const recipientOptions = useMemo<RecipientOption[]>(() => {
     return (recipients ?? []).map((r: any) => {
       const recipientLabel = typeof r.label === "string" ? r.label.trim() : "";
       if (recipientLabel) {
@@ -238,7 +239,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                 <label className={formStyles.label}>Recipient</label>
                 <select className={formStyles.input} value={form.recipientId} onChange={(e) => setField("recipientId", e.target.value)}>
                   <option value="">Select recipient</option>
-                  {recipientOptions.map((r) => (
+                  {recipientOptions.map((r: RecipientOption) => (
                     <option key={r.id} value={r.id}>{r.label}</option>
                   ))}
                 </select>
@@ -314,7 +315,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                 </td>
               </tr>
             ) : (
-              transactions.map((tx) => (
+              transactions.map((tx: Transactions[number]) => (
                 <tr
                   key={tx.id}
                   className={
@@ -357,7 +358,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                       <td>
                         <select className={`${formStyles.input} ${formStyles.selectCompact}`} value={editForm.recipientId} onChange={(e) => setEditField("recipientId", e.target.value)}>
                           <option value="">Select recipient</option>
-                          {recipientOptions.map((r) => (
+                          {recipientOptions.map((r: RecipientOption) => (
                             <option key={r.id} value={r.id}>{r.label}</option>
                           ))}
                         </select>

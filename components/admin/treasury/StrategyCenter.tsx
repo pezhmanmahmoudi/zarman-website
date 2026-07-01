@@ -1,6 +1,8 @@
 import React from "react";
-import { ArrowDownCircle, ArrowUpCircle, Minus, AlertTriangle, ArrowRight, Calendar, Info } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Minus, AlertTriangle, ArrowRight, Calendar } from "lucide-react";
 import { fmtAUD } from "@/lib/accounting-engine";
+import type { TreasurySnapshot } from "@/lib/treasury-engine";
+import type { StrategyOutput } from "@/lib/strategy-engine";
 import { 
   FA, recCardCls, recBadgeCls, riskCls, riskFA, trendBadgeCls, trendFA, pct, 
   scoreCircleCls, scoreNumCls, catBadgeCls, catFA, scoreBarColor, fmtDays 
@@ -9,7 +11,7 @@ import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import s from "@/styles/admin/Treasury.module.css";
 
-export default function StrategyCenter({ strategy, treasury }: { strategy: any, treasury: any }) {
+export default function StrategyCenter({ strategy, treasury }: { strategy: StrategyOutput, treasury: TreasurySnapshot }) {
   const { recommendation: rec, healthScore: hs, rateAdjustmentSuggestion: rateAdj, trendAnalysis: trend } = strategy;
   const t = treasury;
 

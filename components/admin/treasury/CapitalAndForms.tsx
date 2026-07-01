@@ -9,16 +9,48 @@ import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import s from "@/styles/admin/Treasury.module.css";
 
+type CapitalAccounting = {
+  ownerLoanBalanceIRT: number;
+  netBusinessValueIRT: number;
+};
+
+type BankAccount = {
+  id: string;
+  account_name: string;
+  currency: "AUD" | "IRT";
+  account_type: "bank" | "virtual" | "transit";
+  country: "Iran" | "Australia";
+  is_active: boolean;
+};
+
+type ExpenseRow = {
+  id: string;
+  date: string;
+  title: string;
+  category: string;
+  currency: "AUD" | "IRT";
+  amount: number;
+  status: "paid" | "pending";
+};
+
+type OwnerLoanRow = {
+  id: string;
+  date: string;
+  currency: "AUD" | "IRT";
+  amount: number;
+  loan_type: "injection" | "repayment";
+};
+
 export default function CapitalAndForms({ 
   accounting: a, 
   bankAccounts, 
   expenses, 
   ownerLoans 
 }: { 
-  accounting: any, 
-  bankAccounts: any[], 
-  expenses: any[], 
-  ownerLoans: any[] 
+  accounting: CapitalAccounting,
+  bankAccounts: BankAccount[],
+  expenses: ExpenseRow[],
+  ownerLoans: OwnerLoanRow[]
 }) {
   return (
     <section>
