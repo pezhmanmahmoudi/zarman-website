@@ -406,6 +406,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
                   <CustomDatePicker
                     value={formData.dob}
                     onChange={(val: string) => {
+                      setFormData((prev) => ({ ...prev, dob: val }));
                       if (errors.dob) setErrors((prev) => ({ ...prev, dob: "" }));
                     }}
                     placeholder="dd/mm/yyyy"
