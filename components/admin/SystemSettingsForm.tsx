@@ -11,14 +11,15 @@ import { updateSystemSettings } from "@/app/actions/admin.actions";
 import { PromoCodeManager } from "@/components/admin/PromoCodeManager";
 import type { PromoCode } from "@/app/[locale]/dashboard/dashboard.types";
 
+// 🌟 اصلاح Type برای هماهنگی ۱۰۰ درصدی با ستون‌های دیتابیس
 type SystemSettings = {
-  buy_rate: number | null;
-  sell_rate: number | null;
+  buy_aud: number | null; 
+  sell_aud: number | null;
   market_active: boolean;
   pause_message: string | null;
   rate_source?: string | null;
   rate_note?: string | null;
-  rate_date?: string | null;
+  date?: string | null;
   discount_step_volume: number;
   discount_percent_per_step: number;
   max_discount_percent: number;
@@ -33,10 +34,10 @@ export function SystemSettingsForm({
   initialSettings: SystemSettings;
   initialCodes: PromoCode[];
 }) {
-  // Rates & Market States
-  const [buyRate, setBuyRate] = useState(initialSettings.buy_rate ? String(initialSettings.buy_rate) : "");
-  const [sellRate, setSellRate] = useState(initialSettings.sell_rate ? String(initialSettings.sell_rate) : "");
-  const [marketActive, setMarketActive] = useState(initialSettings.market_active);
+  // Rates & Market States (بارگذاری صحیح از مقادیر buy_aud)
+  const [buyRate, setBuyRate] = useState(initialSettings.buy_aud ? String(initialSettings.buy_aud) : "");
+  const [sellRate, setSellRate] = useState(initialSettings.sell_aud ? String(initialSettings.sell_aud) : "");
+  const [marketActive, setMarketActive] = useState(initialSettings.market_active ?? true);
   const [pauseMessage, setPauseMessage] = useState(initialSettings.pause_message ?? "");
   const [note, setNote] = useState(initialSettings.rate_note ?? "");
 
@@ -75,20 +76,20 @@ export function SystemSettingsForm({
 
     setSaveStatus("idle");
     startTransition(async () => {
+      // 🌟 ارسال داده‌ها با فرمت خطی و هماهنگ با بک‌اند
       const result = await updateSystemSettings({
-        buyRate: parsedBuy,
-        sellRate: parsedSell,
-        marketActive,
-        pauseMessage,
-        note,
-        financeConfig: {
-          discount_step_volume: parsedDiscountStep,
-          discount_percent_per_step: parsedDiscountPercent,
-          max_discount_percent: parsedMaxDiscount,
-          fee_threshold: parsedFeeThreshold,
-          applied_fee: parsedAppliedFee
-        }
+        buy_aud: parsedBuy,
+        sell_aud: parsedSell,
+        market_active: marketActive,
+        pause_message: pauseMessage,
+        rate_note: note,
+        discount_step_volume: parsedDiscountStep,
+        discount_percent_per_step: parsedDiscountPercent,
+        max_discount_percent: parsedMaxDiscount,
+        fee_threshold: parsedFeeThreshold,
+        applied_fee: parsedAppliedFee
       });
+
       if (result.error) {
         setSaveError(result.error);
         setSaveStatus("error");
@@ -115,10 +116,10 @@ export function SystemSettingsForm({
                   Rates & Market Status
                 </h3>
               </div>
-              {initialSettings.rate_date && (
+              {initialSettings.date && (
                 <div className={formStyles.infoPill} style={{ marginTop: '0.5rem' }}>
                   <CalendarClock size={12} />
-                  Last update: <span className={formStyles.infoPillValue}>{initialSettings.rate_date}</span>
+                  Last update: <span className={formStyles.infoPillValue}>{initialSettings.date}</span>
                 </div>
               )}
             </div>

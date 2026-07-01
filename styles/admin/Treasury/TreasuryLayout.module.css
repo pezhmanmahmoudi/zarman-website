@@ -1,0 +1,80 @@
+/* styles/admin/Treasury/TreasuryLayout.module.css */
+
+.pageWrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #fbfcfd;
+  direction: ltr;
+}
+
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid #eaecf0;
+  padding: 0 2rem;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pageTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827; /* Cosmic Navy Tone */
+  font-family: var(--font-fa-content);
+}
+
+.pageDesc {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-left: 1rem;
+  padding: 0.2rem 0.5rem;
+  background: #f4f6f8;
+  border-radius: 6px;
+}
+
+.mainContent {
+  padding: 2rem;
+  padding-bottom: 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sectionDivider {
+  border: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #eaecf0, transparent);
+  margin: 1rem 0;
+}
+
+/* ── Banners ── */
+.warnBanner {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-radius: 12px;
+  padding: 1rem;
+  direction: rtl;
+}
+.warnBannerSummary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #b45309;
+  cursor: pointer;
+  list-style: none;
+}
+.warnBannerItem {
+  font-size: 0.85rem;
+  color: #92400e;
+  margin-top: 0.5rem;
+}

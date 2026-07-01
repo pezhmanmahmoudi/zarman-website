@@ -1,0 +1,61 @@
+/* styles/admin/Treasury/TreasuryStrategy.module.css */
+
+.strategyPanel {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 1.5rem;
+}
+@media (max-width: 1024px) {
+  .strategyPanel { grid-template-columns: 1fr; }
+}
+
+.recCard {
+  background: linear-gradient(145deg, #ffffff, #fbfcfd);
+  border: 1px solid #eaecf0;
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+/* نوار رنگی طلایی/سرمه‌ای بر اساس اکشن */
+.recCard::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; width: 4px;
+  background: #d4af37; /* Fintech Gold */
+}
+
+.healthCard {
+  background: #ffffff;
+  border: 1px solid #eaecf0;
+  border-radius: 20px;
+  padding: 1.5rem;
+}
+
+.healthScoreCircle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid #eaecf0;
+}
+.scoreExcellent { border-color: #10b981; color: #10b981; }
+.scoreCritical { border-color: #ef4444; color: #ef4444; }
+
+.forecastCard {
+  margin-top: 1.5rem;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 1rem;
+}
+.velocityRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+}

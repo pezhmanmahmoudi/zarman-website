@@ -8,24 +8,20 @@ export type OptionGroup = { label: string; options: string[] };
 export type LabeledOption = { label: string; value: string };
 
 export type SelectBoxProps = {
-  /** Flat list of options — value === label (use either this or `labeledOptions` or `groups`) */
   options?: string[];
-  /** Options with separate display label and internal value */
   labeledOptions?: LabeledOption[];
-  /** Grouped options with section headers */
   groups?: OptionGroup[];
   value: string;
   onChange: (val: string) => void;
   placeholder?: string;
   disabled?: boolean;
-  /** Extra class applied to the wrapper for per-instance overrides */
   className?: string;
-  /** Text direction for the trigger label — use "rtl" for Persian labels */
   dir?: "ltr" | "rtl";
+  variant?: "default" | "ghost"; // <-- استایل جدید اضافه شد
 };
 
-const DROPDOWN_MAX_HEIGHT = 272; // px — matches CSS max-height + padding
-const DROPDOWN_GAP = 6;          // gap between trigger and panel
+const DROPDOWN_MAX_HEIGHT = 272;
+const DROPDOWN_GAP = 6;
 
 export function SelectBox({
   options = [],
@@ -37,6 +33,7 @@ export function SelectBox({
   disabled = false,
   className,
   dir,
+  variant = "default",
 }: SelectBoxProps) {
   const [open, setOpen] = useState(false);
   const [openUpward, setOpenUpward] = useState(false);
@@ -45,7 +42,6 @@ export function SelectBox({
   const listRef = useRef<HTMLUListElement>(null);
   const id = useId();
 
-  // Detect iOS — must run after mount to avoid SSR mismatch
   useEffect(() => {
     setIsIOS(
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -53,7 +49,6 @@ export function SelectBox({
     );
   }, []);
 
-  // Decide open direction before paint
   useLayoutEffect(() => {
     if (!open || !wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
@@ -61,7 +56,6 @@ export function SelectBox({
     setOpenUpward(spaceBelow < DROPDOWN_MAX_HEIGHT + DROPDOWN_GAP);
   }, [open]);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -73,7 +67,6 @@ export function SelectBox({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Scroll selected item into view when opening
   useEffect(() => {
     if (open && listRef.current && value) {
       const selected = listRef.current.querySelector("[data-selected='true']") as HTMLElement | null;
@@ -81,19 +74,16 @@ export function SelectBox({
     }
   }, [open, value]);
 
-  // Flatten all options for keyboard nav
   const allOptions = groups
     ? groups.flatMap((g) => g.options)
     : labeledOptions
     ? labeledOptions.map((o) => o.value)
     : options;
 
-  // Display label for the trigger
   const displayLabel = labeledOptions
     ? (labeledOptions.find((o) => o.value === value)?.label ?? "")
     : value;
 
-  // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return;
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); }
@@ -104,14 +94,18 @@ export function SelectBox({
     if (e.key === "ArrowUp")   { e.preventDefault(); onChange(allOptions[Math.max(idx - 1, 0)]); }
   };
 
+  const triggerVariantClass = variant === "ghost" ? styles.triggerGhost : styles.triggerDefault;
+
   const triggerClass = [
     styles.trigger,
+    triggerVariantClass,
     open ? styles.triggerOpen : "",
     disabled ? styles.triggerDisabled : "",
   ].join(" ");
 
   const dropdownClass = [
     styles.dropdown,
+    variant === "ghost" ? styles.dropdownGhost : "",
     openUpward ? styles.dropdownUp : styles.dropdownDown,
   ].join(" ");
 
@@ -161,12 +155,9 @@ export function SelectBox({
       );
     });
 
-  // ── iOS: styled trigger + transparent native <select> overlay ──────
   if (isIOS) {
     const nativeOpts = labeledOptions
-      ? labeledOptions.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))
+      ? labeledOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)
       : groups
       ? groups.map((g) => (
           <optgroup key={g.label} label={g.label}>
@@ -176,20 +167,13 @@ export function SelectBox({
       : options.map((o) => <option key={o} value={o}>{o}</option>);
 
     return (
-      <div
-        className={`${styles.wrapper}${className ? " " + className : ""}`}
-        {...(dir ? { "data-dir": dir } : {})}
-      >
-        {/* Visual trigger — purely decorative on iOS */}
-        <div className={`${styles.trigger} ${disabled ? styles.triggerDisabled : ""}`}>
-          <span
-            className={`${styles.triggerValue} ${!value ? styles.triggerPlaceholder : ""}`}
-          >
+      <div className={`${styles.wrapper}${className ? " " + className : ""}`} {...(dir ? { "data-dir": dir } : {})}>
+        <div className={`${styles.trigger} ${triggerVariantClass} ${disabled ? styles.triggerDisabled : ""}`}>
+          <span className={`${styles.triggerValue} ${!value ? styles.triggerPlaceholder : ""}`}>
             {displayLabel || placeholder}
           </span>
           <ChevronDown size={16} strokeWidth={2.5} className={styles.chevron} />
         </div>
-        {/* Invisible native select — captures tap and opens iOS picker */}
         <select
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
@@ -205,11 +189,7 @@ export function SelectBox({
   }
 
   return (
-    <div
-      ref={wrapperRef}
-      className={`${styles.wrapper}${className ? " " + className : ""}`}
-      {...(dir ? { "data-dir": dir } : {})}
-    >
+    <div ref={wrapperRef} className={`${styles.wrapper}${className ? " " + className : ""}`} {...(dir ? { "data-dir": dir } : {})}>
       <div
         role="combobox"
         aria-haspopup="listbox"
@@ -220,9 +200,7 @@ export function SelectBox({
         onClick={() => !disabled && setOpen((o) => !o)}
         onKeyDown={handleKeyDown}
       >
-        <span
-          className={`${styles.triggerValue} ${!value ? styles.triggerPlaceholder : ""}`}
-        >
+        <span className={`${styles.triggerValue} ${!value ? styles.triggerPlaceholder : ""}`}>
           {displayLabel || placeholder}
         </span>
         <ChevronDown size={16} strokeWidth={2.5} className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`} />
@@ -230,8 +208,7 @@ export function SelectBox({
 
       {open && (
         <div className={dropdownClass}>
-          <ul id={id} ref={listRef} role="listbox" className={styles.list}
-          >
+          <ul id={id} ref={listRef} role="listbox" className={styles.list}>
             {groups
               ? groups.map((group) => (
                   <React.Fragment key={group.label}>
@@ -248,4 +225,3 @@ export function SelectBox({
     </div>
   );
 }
-

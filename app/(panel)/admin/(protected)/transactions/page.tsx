@@ -6,6 +6,7 @@ import {
   getTransactionHistoryWithDetails,
 } from "@/app/actions/admin.actions";
 import { TransactionApproveButton } from "@/components/admin/TransactionApproveButton";
+import { createClient } from "@supabase/supabase-js";
 import { SendReceiptButton } from "@/components/admin/SendReceiptButton";
 import { RejectApprovedButton } from "@/components/admin/RejectApprovedButton";
 import { EditableReferenceCode } from "@/components/admin/EditableReferenceCode";
@@ -99,9 +100,11 @@ function RecipientCell({
 function TxTable({
   rows,
   isPending,
+  bankAccounts = [], // 🌟 دریافت کشوها از پراپ
 }: {
   rows: TxRow[];
   isPending: boolean;
+  bankAccounts?: any[];
 }) {
   return (
     <div className={`${tableStyles.tableWrap} ${tableStyles.tableWrapTopBorder} ${tableStyles.tableWrapTopFlat}`}>
@@ -210,7 +213,8 @@ function TxTable({
                 {/* Actions */}
                 <td>
                   {isPending ? (
-                    <TransactionApproveButton transactionId={tx.id} />
+                    // 🌟 ارسال کشوها به دکمه تایید تراکنش
+                    <TransactionApproveButton transactionId={tx.id} bankAccounts={bankAccounts} />
                   ) : (
                     tx.status === "approved" && (
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
@@ -241,9 +245,14 @@ export default async function TransactionsPage({
   const params = await searchParams;
   const currentPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
 
-  const [pending, { data: history, total }] = await Promise.all([
+  // تعریف کلاینت دیتابیس برای خواندن حساب‌های بانکی
+  const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+  // اجرای موازی و سریع ۳ کوئری دیتابیس
+  const [pending, { data: history, total }, { data: bankAccounts }] = await Promise.all([
     getPendingTransactionsWithDetails(),
     getTransactionHistoryWithDetails(currentPage, PAGE_SIZE),
+    db.from("bank_accounts").select("*").eq("is_active", true)
   ]);
 
   return (
@@ -287,7 +296,7 @@ export default async function TransactionsPage({
               <div className={cardStyles.emptyStateText}>Queue is clear — no pending transactions.</div>
             </div>
           ) : (
-            <TxTable rows={pending} isPending={true} />
+            <TxTable rows={pending} isPending={true} bankAccounts={bankAccounts || []} />
           )}
         </div>
 
@@ -306,6 +315,7 @@ export default async function TransactionsPage({
             </div>
           ) : (
             <>
+              {/* جدول تاریخچه نیازی به لیست کشوها ندارد چون دکمه تایید در آن نیست */}
               <TxTable rows={history} isPending={false} />
               <AdminPagination
                 currentPage={currentPage}

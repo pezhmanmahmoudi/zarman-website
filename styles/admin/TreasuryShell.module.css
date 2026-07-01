@@ -1,0 +1,53 @@
+/**
+ * TreasuryShell.module.css
+ * Treasury-specific top-bar and page-level overrides.
+ * Kept separate so AdminShell.module.css stays unchanged.
+ */
+
+/* ── RTL top-bar title block (used only in Treasury) ── */
+.topBarText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+  direction: rtl;
+  text-align: right;
+  font-family: "IRANSansX", "Peyda", "Tahoma", sans-serif;
+}
+
+.topBarText h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main, #111827);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.topBarText p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-soft, #4b5563);
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .topBarText {
+    gap: 0.05rem;
+  }
+
+  .topBarText h1 {
+    font-size: 0.95rem;
+    line-height: 1.2;
+  }
+
+  .topBarText p {
+    font-size: 0.68rem;
+    line-height: 1.25;
+  }
+}

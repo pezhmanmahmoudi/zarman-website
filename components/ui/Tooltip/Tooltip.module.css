@@ -1,0 +1,67 @@
+.wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer; /* تغییر موس از حالت زشت help به حالت زیبای pointer */
+  vertical-align: middle;
+  font-family: 'IRANSansX', system-ui, sans-serif; /* اعمال قطعی فونت ایران‌سنس */
+}
+
+.icon {
+  color: var(--text-dim);
+  transition: color 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  opacity: 0.7;
+}
+
+.wrapper:hover .icon {
+  color: var(--accent);
+  opacity: 1;
+  transform: scale(1.15); /* یک افکت پاپ و جذاب هنگام هاور کردن موس */
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background-color: #1f2937; /* رنگ تیره و لوکس برای خوانایی بالا */
+  color: #f9fafb;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  
+  /* 🌟 حل مشکل بیرون زدن از صفحه 🌟 */
+  white-space: normal; /* اجازه شکستن خطوط را می‌دهد */
+  width: max-content; /* به اندازه محتوا باز می‌شود... */
+  max-width: 250px; /* ...اما نهایتا تا ۲۵۰ پیکسل، بعد از آن خط را می‌شکند */
+  text-align: center;
+  line-height: 1.6; /* ارتفاع خطوط برای خوانایی بهتر متن‌های چندخطی */
+  
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 9999;
+  pointer-events: none;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1); /* سایه نرم و اپل‌گونه */
+  font-family: 'IRANSansX', system-ui, sans-serif;
+}
+
+.wrapper:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* فلش پایین Tooltip */
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #1f2937 transparent transparent transparent;
+}

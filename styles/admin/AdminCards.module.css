@@ -21,7 +21,7 @@
   box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
   position: relative;
-  overflow: hidden;
+  /* overflow: hidden; از اینجا حذف شد تا Tooltipها به درستی نمایش داده شوند */
 }
 
 .statCardCompact:hover {
@@ -67,7 +67,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible; /* تغییر یافته برای نمایش Tooltip */
   text-overflow: ellipsis;
   margin-top: 2px;
 }
@@ -97,13 +97,12 @@
   box-shadow: var(--shadow-sm);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: hidden;
+  /* overflow: hidden; از اینجا حذف شد */
 }
 
 .statCard:hover {
   border-color: var(--border-med);
   box-shadow: 0 12px 20px -5px rgba(0,0,0,0.05);
-  
 }
 
 .statIcon {
@@ -140,6 +139,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  overflow: visible;
 }
 
 /* ── Colors ── */
@@ -236,8 +236,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  padding: 0.875rem 0; /* ایجاد فضای تنفس در بالا و پایین خط‌چین */
-  border-bottom: 1px dashed var(--border-soft); /* خط‌چین‌های محبوب شما */
+  padding: 0.875rem 0;
+  border-bottom: 1px dashed var(--border-soft);
 }
 
 .kycDetailRow:first-child { padding-top: 0; }
@@ -278,14 +278,13 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     column-gap: 4rem;
-    row-gap: 0; /* فاصله صفر تا خط‌چین‌ها منظم بمانند */
+    row-gap: 0;
   }
   
   .kycDetailRow {
     justify-content: flex-start;
   }
 
-  /* حذف خط‌چین برای دو آیتم آخر تا پایین لیست در حالت دو ستونه تمیز بماند */
   .kycDetailRow:nth-last-child(-n+2) {
     border-bottom: none;
   }

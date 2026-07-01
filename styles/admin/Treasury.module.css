@@ -1,3 +1,302 @@
+/* New styles for treasury page and alerts */
+
+.treasuryPage {
+  direction: rtl;
+  text-align: right;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.criticalAlertBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: 100px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.recDrivingWrap {
+  margin-top: 0.625rem;
+}
+
+.recBlockLabelTight {
+  margin-bottom: 0.375rem;
+}
+
+.confidenceBarSpaced {
+  margin-top: 0.875rem;
+}
+
+.confidenceValue {
+  font-size: 0.75rem;
+  color: var(--text-dim, #6b7280);
+  min-width: 80px;
+  direction: ltr;
+}
+
+.recUpdatedAt {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-soft, #eaecf0);
+  direction: rtl;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+}
+
+.recUpdatedAtLabel {
+  font-size: 0.675rem;
+  color: var(--text-dim, #6b7280);
+}
+
+.recUpdatedAtValue {
+  font-family: var(--font-en-stack, "Inter", sans-serif);
+  font-size: 0.675rem;
+}
+.healthBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.healthExplanationSpaced {
+  margin-top: 0.5rem;
+}
+
+.healthBreakdownTitle {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-dim, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.625rem;
+  direction: rtl;
+}
+.forecastHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  direction: rtl;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+}
+
+.forecastIcon {
+  color: var(--text-dim, #6b7280);
+}
+
+.forecastTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main, #111827);
+}
+
+.forecastDesc {
+  font-size: 0.75rem;
+  color: var(--text-dim, #6b7280);
+}
+.warnBannerSpaced {
+  margin-bottom: 1.5rem;
+}
+
+.warnBannerIcon {
+  color: #b45309;
+}
+
+.warnBannerBullet {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.rateAdjIcon {
+  color: var(--text-dim, #6b7280);
+}
+
+.inventoryHeroCritical {
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.inventoryHeroWarning {
+  border-color: rgba(217, 119, 6, 0.35);
+}
+
+.inventoryHeroOk {
+  border-color: rgba(5, 150, 105, 0.3);
+}
+
+.statIconNoShrink {
+  flex-shrink: 0;
+}
+
+.inventoryHeroTopRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.detailsBlockSpaced {
+  margin-top: 1rem;
+}
+
+.liquidityIconWrap {
+  padding: 0.5rem;
+  border-radius: 50%;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.liquidityIconCritical {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.liquidityIconOk {
+  background: rgba(5, 150, 105, 0.1);
+}
+
+.liquidityHeroValueRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.settingsIcon {
+  color: var(--text-soft, #4b5563);
+}
+
+.settingsSummaryHint {
+  font-size: 0.7rem;
+  color: var(--text-dim, #6b7280);
+}
+
+.settingsBodyPrimary {
+  font-size: 0.8125rem;
+  color: var(--text-dim, #6b7280);
+  direction: rtl;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  margin-bottom: 1rem;
+}
+
+.settingsBodySecondary {
+  font-size: 0.75rem;
+  color: var(--text-dim, #6b7280);
+  direction: rtl;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-style: italic;
+}
+.reconSectionCard {
+  margin-bottom: 1.5rem;
+}
+
+.reconSummaryDesc {
+  font-size: 0.7rem;
+  color: var(--text-dim, #6b7280);
+}
+
+.reconBodyAuto {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.reconAccountPrimary {
+  border: 1px solid var(--accent, #4338ca);
+  background: rgba(67, 56, 202, 0.03);
+}
+
+.reconAccountDrawer {
+  border: 1px solid var(--border-soft, #eaecf0);
+  background: var(--bg-card, #fff);
+}
+
+.reconAccountTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.reconTitleMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.reconTitleMetaAccent {
+  color: var(--accent, #4338ca);
+}
+
+.reconCurrencyBadge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.reconCurrencyBadgeAccent {
+  background: rgba(67, 56, 202, 0.1);
+  color: var(--accent, #4338ca);
+}
+
+.reconCurrencyBadgeMuted {
+  background: rgba(107, 114, 128, 0.1);
+  color: var(--text-dim, #6b7280);
+}
+
+.reconBalance {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: var(--font-en-stack, "Inter", sans-serif);
+  text-align: right;
+  direction: ltr;
+}
+
+.reconBalanceAccent {
+  color: var(--accent, #4338ca);
+}
+
+.reconMetaRow {
+  font-size: 0.75rem;
+  color: var(--text-dim, #6b7280);
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.reconMono {
+  font-family: var(--font-en-stack, "Inter", sans-serif);
+}
+
+.reconDesc {
+  font-size: 0.75rem;
+  color: var(--text-dim, #6b7280);
+  margin-top: 0.5rem;
+  text-align: right;
+}
+
+.statValueWithTrend {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.statsGridTopSm {
+  margin-top: 0.875rem;
+}
+
+.statsGridTopMd {
+  margin-top: 1rem;
+}
+
+.statsGridBottomMd {
+  margin-bottom: 1.25rem;
+}
+
+.statCardStrongBorder {
+  border: 2px solid var(--border-soft, #eaecf0);
+}
 /**
  * Treasury.module.css
  * Zarman Treasury Dashboard — Component Styles
@@ -23,7 +322,7 @@
   border-radius: 0.75rem;
   border: 1px solid transparent;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 .alertItemCritical {
@@ -66,6 +365,7 @@
   font-size: 0.8125rem;
   color: var(--text-soft, #4b5563);
   line-height: 1.5;
+  margin: 0.25rem 0 0;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -89,7 +389,7 @@
   border-radius: 1rem;
   padding: 1.5rem;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   box-shadow: var(--shadow-card);
   position: relative;
   overflow: hidden;
@@ -233,7 +533,7 @@
   align-items: center;
   gap: 1.25rem;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 .healthScoreCircle {
@@ -283,7 +583,7 @@
   font-size: 0.8125rem;
   font-weight: 700;
   margin-bottom: 0.375rem;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 .catExcellent { background: rgba(16, 185, 129, 0.12); color: #059669; }
@@ -297,7 +597,7 @@
   line-height: 1.5;
   direction: rtl;
   text-align: right;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 .healthBreakdown {
@@ -311,7 +611,7 @@
   align-items: center;
   gap: 0.75rem;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 .breakdownLabel {
@@ -356,7 +656,7 @@
   padding: 1.25rem 1.5rem;
   box-shadow: var(--shadow-sm);
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 .forecastLabel {
@@ -439,7 +739,7 @@
   border-collapse: collapse;
   font-size: 0.8125rem;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 .inlineTable th {
@@ -480,6 +780,159 @@
 .typePending   { background: rgba(245, 158, 11, 0.1); color: #d97706; }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   TREASURY FORM WRAPPERS (Owner Loan / Expense / Bank Account)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.formWrapper {
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-soft, #eaecf0);
+  border-radius: 1rem;
+  padding: 1.1rem 1.25rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.formHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.formTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-main, #111827);
+  direction: rtl;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+}
+
+.btnAddNew {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px dashed rgba(67, 56, 202, 0.35);
+  background: rgba(67, 56, 202, 0.07);
+  color: var(--accent, #4338ca);
+  border-radius: 0.625rem;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  direction: rtl;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btnAddNew:hover:not(:disabled) {
+  background: rgba(67, 56, 202, 0.12);
+  border-color: rgba(67, 56, 202, 0.55);
+}
+
+.btnAddNew:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.formContainer {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  border: 1px solid var(--border-soft, #eaecf0);
+  border-radius: 0.9rem;
+  padding: 1rem 1rem 1.05rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.listContainer {
+  margin-top: 1rem;
+  border: 1px solid var(--border-soft, #eaecf0);
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: var(--bg-card, #fff);
+}
+
+.listTable {
+  width: 100%;
+  border-collapse: collapse;
+  direction: rtl;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+}
+
+.listTable th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-dim, #6b7280);
+  text-align: right;
+  padding: 0.72rem 0.8rem;
+  background: var(--bg-soft, #f4f6f8);
+  border-bottom: 1px solid var(--border-soft, #eaecf0);
+}
+
+.listTable td {
+  font-size: 0.82rem;
+  color: var(--text-main, #111827);
+  padding: 0.72rem 0.8rem;
+  border-bottom: 1px solid var(--border-soft, #eaecf0);
+  vertical-align: middle;
+}
+
+.listTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.listTable tbody tr:hover td {
+  background: rgba(67, 56, 202, 0.03);
+}
+
+.badgeSuccess,
+.badgeWarning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.18rem 0.52rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.badgeSuccess {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.badgeWarning {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.btnIconDanger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btnIconDanger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.btnIconDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    COMPACT FORM (inline add rows)
    ══════════════════════════════════════════════════════════════════════════ */
 
@@ -491,51 +944,57 @@
   background: var(--bg-soft, #f4f6f8);
   border-radius: 0.75rem;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 .formRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.95rem;
   align-items: flex-end;
 }
 
 .formGroup {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.4rem;
   flex: 1;
-  min-width: 140px;
+  min-width: 170px;
 }
 
 .formLabel {
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: var(--text-soft, #4b5563);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: #374151;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
 }
 
 .formInput,
 .formSelect {
-  padding: 0.5rem 0.75rem;
+  padding: 0.68rem 0.85rem;
   border: 1px solid var(--border-med, #d0d5dd);
-  border-radius: 0.5rem;
-  font-size: 0.8125rem;
+  border-radius: 0.62rem;
+  font-size: 0.875rem;
   background: var(--bg-card, #fff);
-  color: var(--text-main, #111827);
+  color: #111827;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   width: 100%;
-  transition: border-color 0.15s;
+  line-height: 1.45;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.formInput::placeholder {
+  color: #9ca3af;
 }
 
 .formInput:focus,
 .formSelect:focus {
   outline: none;
   border-color: var(--accent, #4338ca);
-  box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.08);
+  box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.12);
+  background: #fff;
 }
 
 .formInputNum {
@@ -546,40 +1005,42 @@
 
 .formActionsRow {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.65rem;
   justify-content: flex-start;
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
 }
 
 .btnSubmit {
-  padding: 0.5rem 1.25rem;
+  padding: 0.62rem 1.28rem;
   background: var(--accent, #4338ca);
   color: #fff;
   border: none;
-  border-radius: 0.5rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
+  border-radius: 0.62rem;
+  font-size: 0.86rem;
+  font-weight: 700;
   cursor: pointer;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
-  transition: background 0.15s;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  transition: background 0.15s, transform 0.1s;
 }
 
 .btnSubmit:hover:not(:disabled) { background: #3730a3; }
+.btnSubmit:active:not(:disabled) { transform: translateY(1px); }
 .btnSubmit:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .btnCancel {
-  padding: 0.5rem 1rem;
+  padding: 0.62rem 1rem;
   background: transparent;
   color: var(--text-soft, #4b5563);
   border: 1px solid var(--border-med, #d0d5dd);
-  border-radius: 0.5rem;
-  font-size: 0.8125rem;
+  border-radius: 0.62rem;
+  font-size: 0.84rem;
+  font-weight: 600;
   cursor: pointer;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
-  transition: background 0.15s;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.btnCancel:hover { background: var(--bg-soft, #f4f6f8); }
+.btnCancel:hover { background: var(--bg-soft, #f4f6f8); border-color: #c7ced8; }
 
 .btnDelete {
   padding: 0.3rem 0.625rem;
@@ -613,7 +1074,7 @@
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   transition: background 0.15s;
 }
 
@@ -621,11 +1082,15 @@
 .btnAddRow:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .formError {
-  font-size: 0.775rem;
+  font-size: 0.8rem;
   color: #ef4444;
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  border-radius: 0.55rem;
+  padding: 0.5rem 0.65rem;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -639,7 +1104,7 @@
   padding: 1rem 1.25rem;
   margin-bottom: 1rem;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 .balanceUpdateTitle {
@@ -662,7 +1127,7 @@
   color: var(--text-dim, #6b7280);
   font-size: 0.8125rem;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -672,7 +1137,7 @@
 .sectionHeaderFA {
   direction: rtl;
   text-align: right;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   margin-bottom: 1.25rem;
 }
 
@@ -725,7 +1190,7 @@
   cursor: pointer;
   list-style: none;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   user-select: none;
 }
 
@@ -767,7 +1232,7 @@
   font-size: 0.8rem;
   color: #92400e;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   line-height: 1.5;
   display: flex;
   align-items: flex-start;
@@ -841,7 +1306,7 @@
   padding: 1.25rem 1.5rem;
   box-shadow: var(--shadow-sm);
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   margin-bottom: 1.25rem;
 }
 
@@ -930,7 +1395,7 @@
   gap: 0.625rem;
   grid-column: span 2;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 @media (max-width: 640px) {
@@ -1008,7 +1473,7 @@
   padding: 0.375rem 0.625rem;
   border-radius: 0.375rem;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   user-select: none;
   transition: background 0.15s;
 }
@@ -1026,20 +1491,39 @@
 
 .detailsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.875rem;
+  align-items: stretch;
+}
+
+.detailsGridFour {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.detailsGridTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .detailsGridFour { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
-  .detailsGrid { grid-template-columns: 1fr 1fr; }
+  .detailsGrid,
+  .detailsGridFour,
+  .detailsGridTwo {
+    grid-template-columns: 1fr;
+  }
 }
 
 .detailCard {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  align-items: flex-start;
+  text-align: right;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 .detailCardLabel {
@@ -1055,14 +1539,18 @@
   font-weight: 700;
   color: var(--text-main, #111827);
   font-family: var(--font-en-stack, "Inter", sans-serif);
+  width: 100%;
   direction: ltr;
-  text-align: left;
+  text-align: right;
+  unicode-bidi: plaintext;
 }
 
 .detailCardHint {
   font-size: 0.675rem;
   color: var(--text-dim, #6b7280);
   line-height: 1.4;
+  width: 100%;
+  text-align: right;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1079,7 +1567,7 @@
   align-items: center;
   gap: 1.25rem;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   flex-wrap: wrap;
 }
 
@@ -1149,7 +1637,7 @@
 .exposureCardOk      { border-color: rgba(5, 150, 105, 0.3) !important; }
 .exposureCardWarn    { border-color: rgba(245, 158, 11, 0.35) !important; }
 .exposureCardDanger  { border-color: rgba(239, 68, 68, 0.35) !important; }
-.exposureCardNeutral {}
+.exposureCardNeutral { border-color: var(--border-soft, #eaecf0) !important; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    SETTINGS SECTION (collapsible)
@@ -1169,7 +1657,7 @@
   cursor: pointer;
   list-style: none;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   background: var(--bg-soft, #f4f6f8);
   user-select: none;
 }
@@ -1207,7 +1695,7 @@
   cursor: pointer;
   list-style: none;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   user-select: none;
 }
 
@@ -1240,7 +1728,7 @@
   flex-direction: column;
   gap: 0.5rem;
   direction: rtl;
-  font-family: var(--font-fa-content, "Vazirmatn", "Tahoma", sans-serif);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }
 
 .reconAccountTitle {
@@ -1311,4 +1799,14 @@
   .inlineTable td { padding: 0.5rem 0.625rem; }
 
   .sectionDivider { margin: 1.5rem 0 1rem; }
+}
+
+
+.splitLayout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
+  gap: 1.5rem;
+  align-items: start;
+  margin-top: 1.5rem;
+  width: 100%;
 }

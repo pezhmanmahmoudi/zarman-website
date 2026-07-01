@@ -1,0 +1,78 @@
+/* styles/admin/Treasury/TreasuryCards.module.css */
+
+.sectionHeader {
+  margin-bottom: 1.5rem;
+  direction: rtl;
+}
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+}
+.sectionDesc {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.statCard {
+  background: #ffffff;
+  border: 1px solid #eaecf0;
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+}
+.statCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08);
+  border-color: #d1d5db;
+}
+
+.iconWrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #f4f6f8;
+}
+.iconSuccess { background: rgba(5,150,105,0.1); color: #059669; }
+.iconDanger { background: rgba(239,68,68,0.1); color: #ef4444; }
+.iconWarning { background: rgba(217,119,6,0.1); color: #d97706; }
+.iconInfo { background: rgba(67,56,202,0.1); color: #4338ca; /* Cosmic Navy */ }
+
+.statInfo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.statValue {
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-family: monospace;
+  direction: ltr;
+}
+.statLabel {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 2px;
+  direction: rtl;
+}
+
+/* Colors */
+.valPositive { color: #059669; }
+.valNegative { color: #ef4444; }
+.valNeutral { color: #111827; }
+.valAmber { color: #d97706; }

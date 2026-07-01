@@ -2,44 +2,37 @@
 
 import React, { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Check, X, Plus, Trash2 } from "lucide-react";
+import { Pencil, Check, X, Plus, Trash2, ArrowRight } from "lucide-react";
 import { updateLedgerEntry, addManualLedgerEntry, deleteLedgerEntry } from "@/app/actions/admin.actions";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 import s from "@/styles/admin/LedgerTable.module.css";
 
-// -- Persian strings (unicode-escaped for PowerShell safety) ----------------
+// -- Persian strings ----------------
 const T = {
-  buy:        "\u062e\u0631\u06cc\u062f",
-  sell:       "\u0641\u0631\u0648\u0634",
-  kadoos:     "\u06a9\u0627\u062f\u0648\u0633",
-  zarman:     "\u0632\u0631\u0645\u0627\u0646",
-  addRow:     "\u0627\u0641\u0632\u0648\u062f\u0646 \u0633\u0637\u0631",
-  save:       "\u0630\u062e\u06cc\u0631\u0647",
-  cancel:     "\u0644\u063a\u0648",
-  edit:       "\u0648\u06cc\u0631\u0627\u06cc\u0634",
-  del:        "\u062d\u0630\u0641",
-  delConfirm: "\u062d\u0630\u0641 \u0634\u0648\u062f\u061f",
-  colDate:    "\u062a\u0627\u0631\u06cc\u062e",
-  colType:    "\u0646\u0648\u0639",
-  colPayer:   "\u067e\u0631\u062f\u0627\u062e\u062a \u06a9\u0646\u0646\u062f\u0647",
-  colRate:    "\u0646\u0631\u062e",
+  buy:        "خرید",
+  sell:       "فروش",
+  transfer:   "انتقال",
+  addRow:     "افزودن سطر",
+  save:       "ذخیره",
+  cancel:     "لغو",
+  edit:       "ویرایش",
+  del:        "حذف",
+  delConfirm: "حذف شود؟",
+  colDate:    "تاریخ",
+  colType:    "نوع",
+  colPockets: "مسیر داخلی (مبدأ ⬅ مقصد)",
+  colCustomers: "طرف حساب (فرستنده ⬅ گیرنده)",
+  colRate:    "نرخ",
   colAud:     "AUD ($)",
   colToman:   "Toman (IRT)",
-  colSender:  "\u0641\u0631\u0633\u062a\u0646\u062f\u0647",
-  colRecip:   "\u06af\u06cc\u0631\u0646\u062f\u0647",
-  colFee:     "\u06a9\u0627\u0631\u0645\u0632\u062f",
-  colActions: "\u0639\u0645\u0644\u06cc\u0627\u062a",
-  colDel:     "\u062d\u0630\u0641",
-  errAud:     "\u0645\u0628\u0644\u063a \u062f\u0644\u0627\u0631 \u0646\u0627\u0645\u0639\u062a\u0628\u0631",
-  errToman:   "\u0645\u0628\u0644\u063a \u062a\u0648\u0645\u0627\u0646 \u0646\u0627\u0645\u0639\u062a\u0628\u0631",
-  errFee:     "\u06a9\u0627\u0631\u0645\u0632\u062f \u0646\u0627\u0645\u0639\u062a\u0628\u0631",
-  phSender:   "\u0641\u0631\u0633\u062a\u0646\u062f\u0647",
-  phRecip:    "\u06af\u06cc\u0631\u0646\u062f\u0647",
+  colFee:     "کارمزد",
+  colActions: "عملیات",
+  colDel:     "حذف",
+  errAmount:  "حداقل یکی از مبالغ دلار یا تومان باید بیشتر از صفر باشد.",
+  errFee:     "کارمزد نامعتبر",
   months: [
-    "\u0641\u0631\u0648\u0631\u062f\u06cc\u0646", "\u0627\u0631\u062f\u06cc\u0628\u0647\u0634\u062a", "\u062e\u0631\u062f\u0627\u062f",
-    "\u062a\u06cc\u0631", "\u0645\u0631\u062f\u0627\u062f", "\u0634\u0647\u0631\u06cc\u0648\u0631",
-    "\u0645\u0647\u0631", "\u0622\u0628\u0627\u0646", "\u0622\u0630\u0631",
-    "\u062f\u06cc", "\u0628\u0647\u0645\u0646", "\u0627\u0633\u0641\u0646\u062f",
+    "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+    "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
   ],
 };
 
@@ -61,11 +54,11 @@ function toJalali(gy: number, gm: number, gd: number): [number, number, number] 
   return [jy, jm + 1, j_d_no + 1];
 }
 function gregToJalali(yyyymmdd: string): string {
-  if (!yyyymmdd) return "\u2014";
+  if (!yyyymmdd) return "—";
   const parts = yyyymmdd.split("-").map(Number);
-  if (parts.length !== 3 || parts.some(isNaN)) return "\u2014";
+  if (parts.length !== 3 || parts.some(isNaN)) return "—";
   const [jy, jm, jd] = toJalali(parts[0], parts[1], parts[2]);
-  if (jm < 1 || jm > 12) return "\u2014";
+  if (jm < 1 || jm > 12) return "—";
   return `${jd} ${T.months[jm - 1]} ${jy}`;
 }
 function storedToJalali(stored: string): string {
@@ -93,47 +86,48 @@ export type LedgerRow = {
   date_gregorian: string;
   date_jalali: string;
   type: string;
+  entry_type?: string;
   exchange_rate: number | string;
   amount_aud: number | string;
   amount_toman: number | string;
-  sender: string;
-  recipient: string;
+  payer_account_id: string | null;
+  receiver_account_id: string | null;
+  sender: string | null;
+  recipient: string | null;
   fee_aud: number | string;
   notes: string | null;
 };
-interface Props { rows: LedgerRow[] }
+interface Props { 
+  rows: LedgerRow[];
+  bankAccounts: any[];
+}
 
 type EditState = {
-  id: string; date: string; type: "buy_aud" | "sell_aud";
+  id: string; date: string; type: "buy_aud" | "sell_aud" | "transfer";
   rate: string; aud: string; toman: string;
-  sender: string; recipient: string; fee: string; err: string | null;
+  payer_account_id: string; receiver_account_id: string; 
+  sender: string; recipient: string;
+  fee: string; err: string | null;
 };
 type AddState = {
-  date: string; type: "buy_aud" | "sell_aud";
+  date: string; type: "buy_aud" | "sell_aud" | "transfer";
   rate: string; aud: string; toman: string;
-  sender: string; recipient: string; fee: string; err: string | null;
+  payer_account_id: string; receiver_account_id: string; 
+  sender: string; recipient: string;
+  fee: string; err: string | null;
 };
 
 const emptyAdd = (): AddState => ({
   date: today(), type: "buy_aud",
-  rate: "", aud: "", toman: "", sender: "", recipient: "", fee: "", err: null,
+  rate: "", aud: "", toman: "", payer_account_id: "", receiver_account_id: "", 
+  sender: "", recipient: "", fee: "", err: null,
 });
 
-// -- Shared header cell styles ----------------------------------------------
 const TH_FA: React.CSSProperties = { textAlign: "center", fontFamily: "var(--font-fa-content)", direction: "rtl", padding: "0.8rem 0.6rem", whiteSpace: "nowrap" };
 const TH_EN: React.CSSProperties = { textAlign: "right",  fontFamily: "var(--font-en-stack)",   direction: "ltr", padding: "0.8rem 0.8rem", whiteSpace: "nowrap" };
 
-// -- Add button (exported so the page can render it in the panel header) ----
-export function LedgerAddButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
-  return (
-    <button className={s.addBtn} onClick={onClick} disabled={disabled}>
-      <Plus size={14} />{T.addRow}
-    </button>
-  );
-}
-
 // -- Component --------------------------------------------------------------
-export function EditableLedgerTable({ rows }: Props) {
+export function EditableLedgerTable({ rows, bankAccounts }: Props) {
   const router = useRouter();
   const [isPending, start] = useTransition();
   const [edit,    setEdit]    = useState<EditState | null>(null);
@@ -144,34 +138,54 @@ export function EditableLedgerTable({ rows }: Props) {
   const aSet = (f: keyof AddState,  v: string) => setAdd(a  => a ? { ...a, [f]: v } : null);
 
   const startEdit = (row: LedgerRow) => {
-    const aud = Number(row.amount_aud), tom = Number(row.amount_toman);
-    setEdit({
-      id: row.id, date: isoToDateInput(row.date_gregorian),
-      type: row.type === "sell_aud" ? "sell_aud" : "buy_aud",
-      rate: Number(row.exchange_rate) > 0
-        ? String(Math.round(Number(row.exchange_rate)))
-        : aud > 0 ? String(Math.round(tom / aud)) : "",
-      aud: String(aud), toman: String(tom),
-      sender: row.sender ?? "", recipient: row.recipient ?? "",
-      fee: Number(row.fee_aud) > 0 ? String(Number(row.fee_aud)) : "", err: null,
-    });
-    setAdd(null); setDelId(null);
-  };
+      const aud = Number(row.amount_aud), tom = Number(row.amount_toman);
+      setEdit({
+        id: row.id, date: isoToDateInput(row.date_gregorian),
+        // 🌟 این خط تغییر کرده است:
+        type: row.entry_type === "transfer" ? "transfer" : (row.type as any) || "buy_aud",
+        
+        rate: Number(row.exchange_rate) > 0 ? String(Math.round(Number(row.exchange_rate))) : aud > 0 ? String(Math.round(tom / aud)) : "",
+        aud: aud > 0 ? String(aud) : "", 
+        toman: tom > 0 ? String(tom) : "",
+        payer_account_id: row.payer_account_id || "", 
+        receiver_account_id: row.receiver_account_id || "",
+        sender: row.sender || "",
+        recipient: row.recipient || "",
+        fee: Number(row.fee_aud) > 0 ? String(Number(row.fee_aud)) : "", err: null,
+      });
+      setAdd(null); setDelId(null);
+    };
 
   const parseF = (s: string) => parseFloat(s.replace(/,/g, ""));
 
   const saveEdit = () => {
     if (!edit) return;
-    const aud = parseF(edit.aud), tom = parseF(edit.toman), rate = parseF(edit.rate), fee = edit.fee.trim() ? parseF(edit.fee) : 0;
-    if (!Number.isFinite(aud)  || aud  <= 0) { setEdit({ ...edit, err: T.errAud });   return; }
-    if (!Number.isFinite(tom)  || tom  <= 0) { setEdit({ ...edit, err: T.errToman }); return; }
-    if (!Number.isFinite(fee)  || fee  <  0) { setEdit({ ...edit, err: T.errFee });   return; }
+    const aud = parseF(edit.aud) || 0;
+    const tom = parseF(edit.toman) || 0;
+    const rate = parseF(edit.rate) || 0;
+    const fee = edit.fee.trim() ? parseF(edit.fee) : 0;
+    
+    // محافظت جدید: فقط کافی است یکی از مبالغ دلار یا تومان پر شده باشد
+    if (aud <= 0 && tom <= 0) { 
+      setEdit({ ...edit, err: T.errAmount }); 
+      return; 
+    }
+    if (!Number.isFinite(fee) || fee < 0) { 
+      setEdit({ ...edit, err: T.errFee }); 
+      return; 
+    }
+    
     setEdit({ ...edit, err: null });
     start(async () => {
       const res = await updateLedgerEntry(edit.id, {
-        date_gregorian: edit.date || undefined, type: edit.type,
-        exchange_rate: Number.isFinite(rate) && rate > 0 ? rate : undefined,
-        amount_aud: aud, amount_toman: tom, sender: edit.sender, recipient: edit.recipient, fee_aud: fee,
+        date_gregorian: edit.date || undefined, type: edit.type as any,
+        exchange_rate: rate > 0 ? rate : undefined,
+        amount_aud: aud, amount_toman: tom, 
+        payer_account_id: edit.payer_account_id || null, 
+        receiver_account_id: edit.receiver_account_id || null, 
+        sender: edit.sender,
+        recipient: edit.recipient,
+        fee_aud: fee,
       });
       if ("error" in res) setEdit(e => e ? { ...e, err: res.error } : null);
       else { setEdit(null); router.refresh(); }
@@ -180,16 +194,31 @@ export function EditableLedgerTable({ rows }: Props) {
 
   const saveAdd = () => {
     if (!add) return;
-    const aud = parseF(add.aud), tom = parseF(add.toman), rate = parseF(add.rate), fee = add.fee.trim() ? parseF(add.fee) : 0;
-    if (!Number.isFinite(aud)  || aud  <= 0) { setAdd({ ...add, err: T.errAud });   return; }
-    if (!Number.isFinite(tom)  || tom  <= 0) { setAdd({ ...add, err: T.errToman }); return; }
-    if (!Number.isFinite(fee)  || fee  <  0) { setAdd({ ...add, err: T.errFee });   return; }
+    const aud = parseF(add.aud) || 0;
+    const tom = parseF(add.toman) || 0;
+    const rate = parseF(add.rate) || 0;
+    const fee = add.fee.trim() ? parseF(add.fee) : 0;
+    
+    // محافظت جدید: فقط کافی است یکی از مبالغ دلار یا تومان پر شده باشد
+    if (aud <= 0 && tom <= 0) { 
+      setAdd({ ...add, err: T.errAmount }); 
+      return; 
+    }
+    if (!Number.isFinite(fee) || fee < 0) { 
+      setAdd({ ...add, err: T.errFee }); 
+      return; 
+    }
+    
     setAdd({ ...add, err: null });
     start(async () => {
       const res = await addManualLedgerEntry({
-        type: add.type, amountAud: aud, amountToman: tom,
-        exchangeRate: Number.isFinite(rate) && rate > 0 ? rate : undefined,
-        sender: add.sender || undefined, recipient: add.recipient || undefined,
+        type: add.type as any, amountAud: aud, amountToman: tom,
+        exchangeRate: rate > 0 ? rate : undefined,
+        payer_account_id: add.payer_account_id || null, 
+        receiver_account_id: add.receiver_account_id || null,
+        sender: add.sender,
+        recipient: add.recipient,
+        entry_type: add.type === "transfer" ? "transfer" : "trade",
         feeAud: fee || undefined, dateGregorian: add.date || undefined,
       });
       if ("error" in res) setAdd(a => a ? { ...a, err: res.error } : null);
@@ -204,18 +233,22 @@ export function EditableLedgerTable({ rows }: Props) {
     });
   };
 
+  const getAccountName = (id: string | null) => {
+    if (!id) return "—";
+    const acc = bankAccounts.find(b => String(b.id) === String(id));
+    return acc ? `${acc.account_name}` : "—";
+  };
+
   const openAdd = () => { setAdd(emptyAdd()); setEdit(null); setDelId(null); };
 
   const kbE = (e: React.KeyboardEvent) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEdit(null); };
   const kbA = (e: React.KeyboardEvent) => { if (e.key === "Enter") saveAdd();  if (e.key === "Escape") setAdd(null); };
   const busy = isPending || !!edit || !!add || !!delId;
 
-  const ErrLine = ({ msg }: { msg: string | null }) =>
-    msg ? <p className={s.errLine}>{msg}</p> : null;
+  const ErrLine = ({ msg }: { msg: string | null }) => msg ? <p className={s.errLine}>{msg}</p> : null;
 
   return (
     <div>
-      {/* Toolbar: Add button sits at the left (LTR end) of the panel header area */}
       <div className={s.toolbar}>
         <button className={s.addBtn} onClick={openAdd} disabled={!!add || isPending}>
           <Plus size={14} />{T.addRow}
@@ -223,22 +256,18 @@ export function EditableLedgerTable({ rows }: Props) {
       </div>
 
       <div className={tableStyles.tableWrap}>
-        <table className={tableStyles.table} dir="rtl">
+        <table className={tableStyles.table} dir="rtl" style={{ minWidth: "1000px" }}>
           <thead>
             <tr>
-              {/* Actions (edit only) */}
-              <th style={{ ...TH_FA, width: 100 }}>{T.colActions}</th>
-              {/* Date — centered */}
+              <th style={{ ...TH_FA, width: 80 }}>{T.colActions}</th>
               <th style={{ ...TH_FA, textAlign: "center" }}>{T.colDate}</th>
               <th style={{ ...TH_FA, width: 80 }}>{T.colType}</th>
-              <th style={TH_FA}>{T.colPayer}</th>
+              <th style={{ ...TH_FA }}>{T.colCustomers}</th>
+              <th style={{ ...TH_FA }}>{T.colPockets}</th>
               <th style={TH_EN}>{T.colRate}</th>
               <th style={TH_EN}>{T.colAud}</th>
               <th style={TH_EN}>{T.colToman}</th>
-              <th style={TH_FA}>{T.colSender}</th>
-              <th style={TH_FA}>{T.colRecip}</th>
               <th style={TH_EN}>{T.colFee}</th>
-              {/* Delete — last column */}
               <th style={{ ...TH_FA, width: 56 }}>{T.colDel}</th>
             </tr>
           </thead>
@@ -247,221 +276,154 @@ export function EditableLedgerTable({ rows }: Props) {
             {/* ── Add row ── */}
             {add && (
               <tr className={s.rowAdd}>
-                {/* Actions: save/cancel */}
                 <td className={s.tdActions}>
                   <div className={s.btnRow}>
-                    <button className={s.btnSave} onClick={saveAdd} disabled={isPending}>
-                      <Check size={12} />{T.save}
-                    </button>
-                    <button className={s.btnCancel} onClick={() => setAdd(null)}>
-                      <X size={13} />
-                    </button>
+                    <button className={s.btnSave} onClick={saveAdd} disabled={isPending}><Check size={12} />{T.save}</button>
+                    <button className={s.btnCancel} onClick={() => setAdd(null)}><X size={13} /></button>
                   </div>
                   <ErrLine msg={add.err} />
                 </td>
-                {/* Date — centered */}
                 <td className={s.tdDateCenter}>
-                  <input type="date" className={s.inputDate} value={add.date}
-                    onChange={e => aSet("date", e.target.value)} onKeyDown={kbA} />
+                  <input type="date" className={s.inputDate} value={add.date} onChange={e => aSet("date", e.target.value)} onKeyDown={kbA} />
                   <p className={s.jalaliLive}>{gregToJalali(add.date)}</p>
                 </td>
                 <td className={s.tdCenter}>
-                  <select className={s.selectType} value={add.type}
-                    onChange={e => aSet("type", e.target.value as "buy_aud" | "sell_aud")}>
+                  <select className={s.selectType} value={add.type} onChange={e => aSet("type", e.target.value as any)}>
                     <option value="buy_aud">{T.buy}</option>
                     <option value="sell_aud">{T.sell}</option>
+                    <option value="transfer">{T.transfer}</option>
                   </select>
                 </td>
                 <td className={s.tdCenter}>
-                  <span className={s.payerName}>{add.type === "buy_aud" ? T.kadoos : T.zarman}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <input type="text" className={s.inputTxt} value={add.sender} onChange={e => aSet("sender", e.target.value)} placeholder="فرستنده..." onKeyDown={kbA} style={{ fontSize: "0.75rem", padding: "4px" }} />
+                    <input type="text" className={s.inputTxt} value={add.recipient} onChange={e => aSet("recipient", e.target.value)} placeholder="گیرنده..." onKeyDown={kbA} style={{ fontSize: "0.75rem", padding: "4px" }} />
+                  </div>
                 </td>
-                <td className={s.tdNum}>
-                  <input type="text" inputMode="decimal" className={s.inputNum}
-                    value={add.rate} onChange={e => aSet("rate", e.target.value)} placeholder="0" onKeyDown={kbA} />
+                <td className={s.tdCenter}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <select className={s.selectType} value={add.payer_account_id} onChange={e => aSet("payer_account_id", e.target.value)} style={{ fontSize: "0.75rem", padding: "2px" }}>
+                      <option value="">حساب پرداخت کننده...</option>
+                      {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.account_name}</option>)}
+                    </select>
+                    <select className={s.selectType} value={add.receiver_account_id} onChange={e => aSet("receiver_account_id", e.target.value)} style={{ fontSize: "0.75rem", padding: "2px" }}>
+                      <option value="">حساب دریافت کننده...</option>
+                      {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.account_name}</option>)}
+                    </select>
+                  </div>
                 </td>
-                <td className={s.tdNum}>
-                  <input type="text" inputMode="decimal" className={s.inputNum}
-                    value={add.aud} onChange={e => aSet("aud", e.target.value)} placeholder="0.00" autoFocus onKeyDown={kbA} />
-                </td>
-                <td className={s.tdNum}>
-                  <input type="text" inputMode="decimal" className={s.inputNum}
-                    value={add.toman} onChange={e => aSet("toman", e.target.value)} placeholder="0" onKeyDown={kbA} />
-                </td>
-                <td className={s.tdPerson}>
-                  <input type="text" className={s.inputTxt}
-                    value={add.sender} onChange={e => aSet("sender", e.target.value)} placeholder={T.phSender} onKeyDown={kbA} />
-                </td>
-                <td className={s.tdPerson}>
-                  <input type="text" className={s.inputTxt}
-                    value={add.recipient} onChange={e => aSet("recipient", e.target.value)} placeholder={T.phRecip} onKeyDown={kbA} />
-                </td>
-                <td className={s.tdNum}>
-                  <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.inputSm}`}
-                    value={add.fee} onChange={e => aSet("fee", e.target.value)} placeholder="0" onKeyDown={kbA} />
-                </td>
-                {/* Delete col — empty for add row */}
+                <td className={s.tdNum}><input type="text" inputMode="decimal" className={s.inputNum} value={add.rate} onChange={e => aSet("rate", e.target.value)} placeholder="0" onKeyDown={kbA} /></td>
+                <td className={s.tdNum}><input type="text" inputMode="decimal" className={s.inputNum} value={add.aud} onChange={e => aSet("aud", e.target.value)} placeholder="0.00" onKeyDown={kbA} /></td>
+                <td className={s.tdNum}><input type="text" inputMode="decimal" className={s.inputNum} value={add.toman} onChange={e => aSet("toman", e.target.value)} placeholder="0" onKeyDown={kbA} /></td>
+                <td className={s.tdNum}><input type="text" inputMode="decimal" className={`${s.inputNum} ${s.inputSm}`} value={add.fee} onChange={e => aSet("fee", e.target.value)} placeholder="0" onKeyDown={kbA} /></td>
                 <td className={s.tdDelCol} />
               </tr>
             )}
 
             {/* ── Existing rows ── */}
             {rows.map(row => {
-              const aud  = Number(row.amount_aud);
-              const tom  = Number(row.amount_toman);
+              const aud  = Number(row.amount_aud) || 0;
+              const tom  = Number(row.amount_toman) || 0;
               const rate = Number(row.exchange_rate) || (aud > 0 ? tom / aud : 0);
-              const fee  = Number(row.fee_aud);
-              const isBuy = row.type === "buy_aud";
-              const isE   = edit?.id === row.id;
+              const fee  = Number(row.fee_aud) || 0;
+              const isE  = edit?.id === row.id;
               const isDel = delId === row.id;
 
-              const rowCls = isDel ? s.rowDelete : isE ? s.rowEdit : "";
-
               return (
-                <tr key={row.id} className={rowCls}>
-
-                  {/* Actions — edit / save+cancel only */}
+                <tr key={row.id} className={isDel ? s.rowDelete : isE ? s.rowEdit : ""}>
                   <td className={s.tdActions}>
                     {isE && edit ? (
                       <>
                         <div className={s.btnRow}>
-                          <button className={s.btnSave} onClick={saveEdit} disabled={isPending}>
-                            <Check size={12} />{T.save}
-                          </button>
-                          <button className={s.btnCancel} onClick={() => setEdit(null)}>
-                            <X size={13} />
-                          </button>
+                          <button className={s.btnSave} onClick={saveEdit} disabled={isPending}><Check size={12} />{T.save}</button>
+                          <button className={s.btnCancel} onClick={() => setEdit(null)}><X size={13} /></button>
                         </div>
                         <ErrLine msg={edit.err} />
                       </>
                     ) : (
                       <div className={s.btnRow}>
-                        <button className={s.btnEdit} onClick={() => startEdit(row)} disabled={busy}>
-                          <Pencil size={11} />{T.edit}
-                        </button>
+                        <button className={s.btnEdit} onClick={() => startEdit(row)} disabled={busy}><Pencil size={11} />{T.edit}</button>
                       </div>
                     )}
                   </td>
 
-                  {/* Date — centered, Jalali + Gregorian sub */}
                   <td className={s.tdDateCenter}>
                     {isE && edit ? (
-                      <>
-                        <input type="date" className={s.inputDate}
-                          value={edit.date} onChange={e => eSet("date", e.target.value)} onKeyDown={kbE} />
-                        <p className={s.jalaliLive}>{gregToJalali(edit.date)}</p>
-                      </>
+                      <><input type="date" className={s.inputDate} value={edit.date} onChange={e => eSet("date", e.target.value)} onKeyDown={kbE} />
+                      <p className={s.jalaliLive}>{gregToJalali(edit.date)}</p></>
                     ) : (
-                      <>
-                        <p className={s.dateMain}>{storedToJalali(row.date_jalali)}</p>
-                        <p className={s.dateSub}>{fmtGreg(row.date_gregorian)}</p>
-                      </>
+                      <><p className={s.dateMain}>{storedToJalali(row.date_jalali)}</p><p className={s.dateSub}>{fmtGreg(row.date_gregorian)}</p></>
                     )}
                   </td>
 
-                  {/* Type */}
                   <td className={s.tdCenter}>
                     {isE && edit ? (
-                      <select className={s.selectType} value={edit.type}
-                        onChange={e => eSet("type", e.target.value as "buy_aud" | "sell_aud")}>
+                      <select className={s.selectType} value={edit.type} onChange={e => eSet("type", e.target.value as any)}>
                         <option value="buy_aud">{T.buy}</option>
                         <option value="sell_aud">{T.sell}</option>
+                        <option value="transfer">{T.transfer}</option>
                       </select>
                     ) : (
-                      <span className={`${tableStyles.badge} ${isBuy ? tableStyles.txBuy : tableStyles.txSell}`}
-                        style={{ fontFamily: "var(--font-fa-content)", fontSize: "0.7rem" }}>
-                        {isBuy ? T.buy : T.sell}
+                      <span className={`${tableStyles.badge} ${row.type === "buy_aud" ? tableStyles.txBuy : tableStyles.txSell}`} style={{ fontFamily: "var(--font-fa-content)", fontSize: "0.7rem" }}>
+                        {row.type === "buy_aud" ? T.buy : row.entry_type === "transfer" ? T.transfer : T.sell}
                       </span>
                     )}
                   </td>
 
-                  {/* Payer */}
                   <td className={s.tdCenter}>
-                    <span className={s.payerName}>
-                      {isE && edit ? (edit.type === "buy_aud" ? T.kadoos : T.zarman) : (isBuy ? T.kadoos : T.zarman)}
-                    </span>
+                    {isE && edit ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <input type="text" className={s.inputTxt} value={edit.sender} onChange={e => eSet("sender", e.target.value)} placeholder="فرستنده..." onKeyDown={kbE} style={{ fontSize: "0.75rem", padding: "4px" }} />
+                        <input type="text" className={s.inputTxt} value={edit.recipient} onChange={e => eSet("recipient", e.target.value)} placeholder="گیرنده..." onKeyDown={kbE} style={{ fontSize: "0.75rem", padding: "4px" }} />
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-main)' }}>
+                         <span style={{ fontWeight: 600 }}>{row.sender || "—"}</span>
+                         <ArrowRight size={10} color="var(--border-med)" style={{ transform: "rotate(90deg)" }} />
+                         <span style={{ fontWeight: 600 }}>{row.recipient || "—"}</span>
+                      </div>
+                    )}
                   </td>
 
-                  {/* Rate */}
-                  <td className={s.tdNum}>
-                    {isE && edit
-                      ? <input type="text" inputMode="decimal" className={s.inputNum}
-                          value={edit.rate} onChange={e => eSet("rate", e.target.value)} onKeyDown={kbE} />
-                      : <span className={s.numRate}>{fmtRate(rate)}</span>
-                    }
+                  <td className={s.tdCenter}>
+                    {isE && edit ? (
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                         <select className={s.selectType} value={edit.payer_account_id} onChange={e => eSet("payer_account_id", e.target.value)} style={{ fontSize: "0.75rem", padding: "2px" }}>
+                           <option value="">حساب پرداخت کننده...</option>
+                           {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.account_name}</option>)}
+                         </select>
+                         <select className={s.selectType} value={edit.receiver_account_id} onChange={e => eSet("receiver_account_id", e.target.value)} style={{ fontSize: "0.75rem", padding: "2px" }}>
+                           <option value="">حساب دریافت کننده...</option>
+                           {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.account_name}</option>)}
+                         </select>
+                       </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-soft)' }}>
+                         <span style={{ fontWeight: 600, color: "var(--accent)" }}>{getAccountName(row.payer_account_id)}</span>
+                         <ArrowRight size={10} color="var(--border-med)" style={{ transform: "rotate(90deg)" }} />
+                         <span style={{ fontWeight: 600, color: "var(--accent)" }}>{getAccountName(row.receiver_account_id)}</span>
+                      </div>
+                    )}
                   </td>
 
-                  {/* AUD */}
-                  <td className={s.tdNum}>
-                    {isE && edit
-                      ? <input type="text" inputMode="decimal" className={s.inputNum}
-                          value={edit.aud} onChange={e => eSet("aud", e.target.value)} onKeyDown={kbE} />
-                      : <span className={s.numAud}>{fmtAUD(aud)}</span>
-                    }
-                  </td>
-
-                  {/* Toman */}
-                  <td className={s.tdNum}>
-                    {isE && edit
-                      ? <input type="text" inputMode="decimal" className={s.inputNum}
-                          value={edit.toman} onChange={e => eSet("toman", e.target.value)} onKeyDown={kbE} />
-                      : <span className={s.numToman}>{fmtIRT(tom)}</span>
-                    }
-                  </td>
-
-                  {/* Sender */}
-                  <td className={s.tdPerson}>
-                    {isE && edit
-                      ? <input type="text" className={s.inputTxt}
-                          value={edit.sender} onChange={e => eSet("sender", e.target.value)} placeholder={T.phSender} onKeyDown={kbE} />
-                      : <span className={s.personName}>{row.sender || "\u2014"}</span>
-                    }
-                  </td>
-
-                  {/* Recipient */}
-                  <td className={s.tdPerson}>
-                    {isE && edit
-                      ? <input type="text" className={s.inputTxt}
-                          value={edit.recipient} onChange={e => eSet("recipient", e.target.value)} placeholder={T.phRecip} onKeyDown={kbE} />
-                      : <span className={s.personName}>{row.recipient || "\u2014"}</span>
-                    }
-                  </td>
-
-                  {/* Fee */}
-                  <td className={s.tdNum}>
-                    {isE && edit
-                      ? <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.inputSm}`}
-                          value={edit.fee} onChange={e => eSet("fee", e.target.value)} placeholder="0" onKeyDown={kbE} />
-                      : fee > 0
-                        ? <span className={s.numFee}>{fee} AUD</span>
-                        : <span className={s.dim}>&mdash;</span>
-                    }
-                  </td>
-
-                  {/* Delete — last column */}
+                  <td className={s.tdNum}>{isE && edit ? <input type="text" inputMode="decimal" className={s.inputNum} value={edit.rate} onChange={e => eSet("rate", e.target.value)} onKeyDown={kbE} /> : <span className={s.numRate}>{rate > 0 ? fmtRate(rate) : "—"}</span>}</td>
+                  <td className={s.tdNum}>{isE && edit ? <input type="text" inputMode="decimal" className={s.inputNum} value={edit.aud} onChange={e => eSet("aud", e.target.value)} onKeyDown={kbE} /> : <span className={s.numAud}>{aud > 0 ? fmtAUD(aud) : "—"}</span>}</td>
+                  <td className={s.tdNum}>{isE && edit ? <input type="text" inputMode="decimal" className={s.inputNum} value={edit.toman} onChange={e => eSet("toman", e.target.value)} onKeyDown={kbE} /> : <span className={s.numToman}>{tom > 0 ? fmtIRT(tom) : "—"}</span>}</td>
+                  <td className={s.tdNum}>{isE && edit ? <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.inputSm}`} value={edit.fee} onChange={e => eSet("fee", e.target.value)} onKeyDown={kbE} /> : fee > 0 ? <span className={s.numFee}>{fee} AUD</span> : <span className={s.dim}>&mdash;</span>}</td>
+                  
                   <td className={s.tdDelCol}>
                     {isDel ? (
                       <div className={s.delInline}>
                         <p className={s.delConfirmLabel}>{T.delConfirm}</p>
                         <div className={s.btnRow}>
-                          <button className={s.btnConfirmDel} onClick={() => doDelete(row.id)} disabled={isPending}>
-                            <Check size={11} />
-                          </button>
-                          <button className={s.btnCancel} onClick={() => setDelId(null)}>
-                            <X size={12} />
-                          </button>
+                          <button className={s.btnConfirmDel} onClick={() => doDelete(row.id)} disabled={isPending}><Check size={11} /></button>
+                          <button className={s.btnCancel} onClick={() => setDelId(null)}><X size={12} /></button>
                         </div>
                       </div>
                     ) : (
-                      <button
-                        className={s.btnDel}
-                        onClick={() => { setDelId(row.id); setEdit(null); setAdd(null); }}
-                        disabled={busy}
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      <button className={s.btnDel} onClick={() => { setDelId(row.id); setEdit(null); setAdd(null); }} disabled={busy}><Trash2 size={13} /></button>
                     )}
                   </td>
-
                 </tr>
               );
             })}

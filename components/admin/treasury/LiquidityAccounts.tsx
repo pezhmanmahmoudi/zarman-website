@@ -1,0 +1,91 @@
+import React from "react";
+import { Coins, Calendar } from "lucide-react";
+import { fmtIRT } from "@/lib/accounting-engine";
+import { FA, trendBadgeCls, trendFA, fmtMonths } from "@/lib/treasury-utils";
+import Tooltip from "@/components/ui/Tooltip/Tooltip";
+import cardStyles from "@/styles/admin/AdminCards.module.css";
+import s from "@/styles/admin/Treasury.module.css";
+
+export default function LiquidityAccounts({ treasury: t, strategy }: { treasury: any, strategy: any }) {
+  const { trendAnalysis: trend } = strategy;
+
+  return (
+    <section>
+      <div className={`${cardStyles.sectionHeader} ${cardStyles.sectionHeaderMd}`}>
+        <div>
+          <h2 className={cardStyles.sectionTitle}>{FA.sec3}</h2>
+          <p className={cardStyles.sectionDesc}>{FA.sec3Desc}</p>
+        </div>
+      </div>
+
+      <div className={`${s.liquidityHeroCard} ${t.liquidityRatio < 1 ? s.liquidityHeroCritical : s.liquidityHeroOk}`}>
+        <div className={s.liquidityHeroLeft}>
+          <div className={`${s.liquidityIconWrap} ${t.liquidityRatio < 1 ? s.liquidityIconCritical : s.liquidityIconOk} ${t.liquidityRatio < 1 ? cardStyles.statIconDanger : cardStyles.statIconSuccess}`}>
+            <Coins size={22} color={t.liquidityRatio < 1 ? "#ef4444" : "#059669"} />
+          </div>
+          <div className={s.liquidityHeroInfo}>
+            <div className={s.liquidityHeroValueRow}>
+              <span className={`${s.liquidityHeroValue} ${t.liquidityRatio < 1 ? s.valNegative : s.valPositive}`} dir="ltr">
+                {fmtIRT(t.totalIranLiquidityIRT)}
+              </span>
+              <span className={`${s.trendBadge} ${trendBadgeCls(trend.liquidityTrend)}`}>
+                {trendFA(trend.liquidityTrend)}
+              </span>
+            </div>
+            <div className={s.liquidityHeroTitle}>
+              <Tooltip text="کل پول نقدِ ریالی در حساب‌های فیزیکی بانکی (بدون در نظر گرفتن حساب‌های مجازی و تعهدی مشتریان).">{FA.totalLiquidity}</Tooltip>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={`${cardStyles.statsGrid} ${s.statsGridTopMd}`}>
+        <div className={cardStyles.statCardCompact}>
+          <div className={`${cardStyles.statIconCompact} ${
+            t.liquidRunwayMonths === null ? cardStyles.statIconInfo
+            : t.liquidRunwayMonths < t.settings.cash_runway_target_months ? cardStyles.statIconWarning
+            : cardStyles.statIconSuccess
+          }`}>
+            <Calendar size={20} />
+          </div>
+          <div className={cardStyles.statInfo}>
+            <span className={`${cardStyles.statValue} ${
+              t.liquidRunwayMonths === null ? s.valNeutral
+              : t.liquidRunwayMonths < t.settings.cash_runway_target_months ? s.valAmber
+              : s.valPositive
+            }`}>
+              {fmtMonths(t.liquidRunwayMonths)}
+            </span>
+            <span className={cardStyles.statLabel}>
+              <Tooltip text="تعداد ماه‌هایی که صرافی می‌تواند فقط با اتکا به نقدینگی ریالیِ فعلی، تمامی هزینه‌های جاری خود را پرداخت کند.">
+                {FA.cashRunwayLiquid}
+              </Tooltip>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <details className={`${s.detailsBlock} ${s.detailsBlockSpaced}`}>
+        <summary className={s.detailsSummary}>{FA.runwayDetailTitle}</summary>
+        <div className={s.detailsContent}>
+          <div className={`${s.detailsGrid} ${s.detailsGridTwo}`}>
+            <div className={s.detailCard}>
+              <span className={s.detailCardLabel}>
+                <Tooltip text="پوشش هزینه‌ها فقط بر اساس موجودی نقد ریالی">{FA.cashRunwayLiquid}</Tooltip>
+              </span>
+              <span className={`${s.detailCardValue} ${
+                t.liquidRunwayMonths !== null && t.liquidRunwayMonths < t.settings.cash_runway_target_months ? s.valAmber : s.valNeutral
+              }`}>{fmtMonths(t.liquidRunwayMonths)}</span>
+            </div>
+            <div className={s.detailCard}>
+              <span className={s.detailCardLabel}>
+                <Tooltip text="تعداد ماه‌های دوام صرافی در صورتِ نقد شدنِ کل دلارهای انبار (نقدینگی ریالی + فروش کل موجودی).">{FA.cashRunwayTotal}</Tooltip>
+              </span>
+              <span className={`${s.detailCardValue} ${s.valPositive}`}>{fmtMonths(t.totalRunwayMonths)}</span>
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
+  );
+}

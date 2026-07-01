@@ -5,8 +5,8 @@
  * Desktop: centred modal. Mobile (≤640px): bottom-sheet slide-up.
  */
 
-/* ── CSS variable fallbacks (portal renders outside .adminShell scope) ──── */
-:root {
+/* ── Backdrop ─────────────────────────────────────────────────────────────── */
+.overlay {
   --dialog-bg:          #ffffff;
   --dialog-border:      #eaecf0;
   --dialog-text-main:   #111827;
@@ -18,10 +18,6 @@
   --dialog-warning:     #f59e0b;
   --dialog-accent:      #4338ca;
   --dialog-accent-hov:  #3730a3;
-}
-
-/* ── Backdrop ─────────────────────────────────────────────────────────────── */
-.overlay {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
