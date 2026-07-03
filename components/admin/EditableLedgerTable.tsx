@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Check, X, Plus, Trash2, ArrowRight } from "lucide-react";
 import { updateLedgerEntry, addManualLedgerEntry, deleteLedgerEntry } from "@/app/actions/admin.actions";
@@ -80,6 +80,11 @@ function fmtAUD(v: number)  { return v.toLocaleString("en-AU", { minimumFraction
 function fmtIRT(v: number)  { return Math.round(v).toLocaleString("en-AU"); }
 function fmtRate(v: number) { return Math.round(v).toLocaleString("en-AU"); }
 function today()            { return new Date().toISOString().slice(0, 10); }
+function typeLabel(type: string) {
+  if (type === "transfer") return T.transfer;
+  if (type === "sell_aud") return T.sell;
+  return T.buy;
+}
 
 // -- Types ------------------------------------------------------------------
 export type LedgerRow = {
@@ -102,6 +107,7 @@ export type LedgerRow = {
 interface Props { 
   rows: LedgerRow[];
   bankAccounts: any[];
+  titleSlot?: React.ReactNode;
 }
 
 type EditState = {
@@ -127,14 +133,62 @@ const emptyAdd = (): AddState => ({
 
 const TH_FA: React.CSSProperties = { textAlign: "center", fontFamily: "var(--font-fa-content)", direction: "rtl", padding: "0.8rem 0.6rem", whiteSpace: "nowrap" };
 const TH_EN: React.CSSProperties = { textAlign: "right",  fontFamily: "var(--font-en-stack)",   direction: "ltr", padding: "0.8rem 0.8rem", whiteSpace: "nowrap" };
-
 // -- Component --------------------------------------------------------------
-export function EditableLedgerTable({ rows, bankAccounts }: Props) {
+export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
   const router = useRouter();
   const [isPending, start] = useTransition();
   const [edit,    setEdit]    = useState<EditState | null>(null);
   const [add,     setAdd]     = useState<AddState  | null>(null);
   const [delId,   setDelId]   = useState<string    | null>(null);
+  const [hasHorizontalOverflow, setHasHorizontalOverflow] = useState(false);
+  const topScrollRef = useRef<HTMLDivElement | null>(null);
+  const mainScrollRef = useRef<HTMLDivElement | null>(null);
+  const topScrollSpacerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const top = topScrollRef.current;
+    const main = mainScrollRef.current;
+    const spacer = topScrollSpacerRef.current;
+    if (!top || !main || !spacer) return;
+
+    let isSyncing = false;
+
+    const syncMetrics = () => {
+      // Spacer = full table content width; rail = visible wrapper width (set by CSS).
+      // Since rail < spacer when overflowing, browser renders a real scrollbar.
+      spacer.style.width = `${main.scrollWidth}px`;
+      setHasHorizontalOverflow(main.scrollWidth > main.clientWidth + 1);
+    };
+
+    const onTopScroll = () => {
+      if (isSyncing) return;
+      isSyncing = true;
+      main.scrollLeft = top.scrollLeft;
+      isSyncing = false;
+    };
+
+    const onMainScroll = () => {
+      if (isSyncing) return;
+      isSyncing = true;
+      top.scrollLeft = main.scrollLeft;
+      isSyncing = false;
+    };
+
+    syncMetrics();
+    top.addEventListener("scroll", onTopScroll, { passive: true });
+    main.addEventListener("scroll", onMainScroll, { passive: true });
+    window.addEventListener("resize", syncMetrics);
+
+    const ro = new ResizeObserver(syncMetrics);
+    ro.observe(main);
+
+    return () => {
+      top.removeEventListener("scroll", onTopScroll);
+      main.removeEventListener("scroll", onMainScroll);
+      window.removeEventListener("resize", syncMetrics);
+      ro.disconnect();
+    };
+  }, [rows.length, bankAccounts.length, !!add, !!edit]);
 
   const eSet = (f: keyof EditState, v: string) => setEdit(e => e ? { ...e, [f]: v } : null);
   const aSet = (f: keyof AddState,  v: string) => setAdd(a  => a ? { ...a, [f]: v } : null);
@@ -252,29 +306,60 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
   return (
     <div>
       <div className={s.toolbar}>
+        {titleSlot && <div className={s.toolbarTitle}>{titleSlot}</div>}
         <button className={s.addBtn} onClick={openAdd} disabled={!!add || isPending}>
           <Plus size={14} />{T.addRow}
         </button>
       </div>
 
-      <div className={tableStyles.tableWrap}>
-        <table className={tableStyles.table} dir="rtl" style={{ minWidth: "1000px" }}>
+      <div className={s.tableShell}>
+        {/* ── Horizontal scroll rail — lives OUTSIDE the table so it has its
+             own natural width (= wrapper clientWidth). The spacer is set to
+             scrollWidth, so the rail overflows and shows a real scrollbar. ── */}
+        <div
+          className={`${s.scrollRailOuter} ${hasHorizontalOverflow ? "" : s.scrollRailHidden}`}
+          aria-hidden="true"
+        >
+          <div
+            ref={topScrollRef}
+            className={s.topScrollBar}
+          >
+            <div ref={topScrollSpacerRef} className={s.topScrollSpacer} />
+          </div>
+        </div>
+
+        <div
+          ref={mainScrollRef}
+          className={`${tableStyles.tableWrap} ${s.desktopOnly}`}
+        >
+          <table className={`${tableStyles.table} ${s.ledgerTable}`} dir="rtl" style={{ minWidth: "1320px" }}>
+          <colgroup>
+            <col style={{ width: "116px" }} />
+            <col style={{ width: "176px" }} />
+            <col style={{ width: "108px" }} />
+            <col />
+            <col />
+            <col style={{ width: "108px" }} />
+            <col style={{ width: "108px" }} />
+            <col style={{ width: "120px" }} />
+            <col style={{ width: "92px" }} />
+            <col style={{ width: "52px" }} />
+          </colgroup>
           <thead>
             <tr>
-              <th style={{ ...TH_FA, width: 80 }}>{T.colActions}</th>
-              <th style={{ ...TH_FA, textAlign: "center" }}>{T.colDate}</th>
-              <th style={{ ...TH_FA, width: 80 }}>{T.colType}</th>
+              <th style={{ ...TH_FA, width: 116, minWidth: 116 }}>{T.colActions}</th>
+              <th style={{ ...TH_FA, textAlign: "center", width: 176, minWidth: 176 }}>{T.colDate}</th>
+              <th style={{ ...TH_FA, width: 108, minWidth: 108 }}>{T.colType}</th>
               <th style={{ ...TH_FA }}>{T.colCustomers}</th>
               <th style={{ ...TH_FA }}>{T.colPockets}</th>
               <th style={TH_EN}>{T.colRate}</th>
               <th style={TH_EN}>{T.colAud}</th>
               <th style={TH_EN}>{T.colToman}</th>
               <th style={TH_EN}>{T.colFee}</th>
-              <th style={{ ...TH_FA, width: 56 }}>{T.colDel}</th>
+              <th style={{ ...TH_FA, width: 52, minWidth: 52 }}>{T.colDel}</th>
             </tr>
           </thead>
           <tbody>
-
             {/* ── Add row ── */}
             {add && (
               <tr className={s.rowAdd}>
@@ -477,7 +562,200 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
               );
             })}
           </tbody>
-        </table>
+          </table>
+        </div>
+
+        <div className={s.mobileOnly}>
+          {add && (
+            <section className={`${s.mobileCard} ${s.mobileCardAdd}`}>
+              <header className={s.mobileCardHeader}>
+                <h3 className={s.mobileCardTitle}>{T.addRow}</h3>
+                <div className={s.btnRow}>
+                  <button className={s.btnSave} onClick={saveAdd} disabled={isPending}><Check size={12} />{T.save}</button>
+                  <button className={s.btnCancel} onClick={() => setAdd(null)}><X size={13} /></button>
+                </div>
+              </header>
+
+              <div className={s.mobileFieldGrid}>
+                <label className={s.mobileFieldLabel}>{T.colDate}</label>
+                <div>
+                  <CustomDatePicker value={add.date} onChange={(val) => aSet("date", val)} />
+                  <p className={s.jalaliLive}>{gregToJalali(add.date)}</p>
+                </div>
+
+                <label className={s.mobileFieldLabel}>{T.colType}</label>
+                <SelectBox
+                  className={s.selectType}
+                  labeledOptions={[
+                    { value: "buy_aud", label: T.buy },
+                    { value: "sell_aud", label: T.sell },
+                    { value: "transfer", label: T.transfer },
+                  ]}
+                  value={add.type}
+                  onChange={(val) => aSet("type", val as any)}
+                />
+
+                <label className={s.mobileFieldLabel}>{T.colCustomers}</label>
+                <div className={s.fieldStack}>
+                  <input type="text" className={s.inputTxt} value={add.sender} onChange={e => aSet("sender", e.target.value)} placeholder="فرستنده..." onKeyDown={kbA} />
+                  <input type="text" className={s.inputTxt} value={add.recipient} onChange={e => aSet("recipient", e.target.value)} placeholder="گیرنده..." onKeyDown={kbA} />
+                </div>
+
+                <label className={s.mobileFieldLabel}>{T.colPockets}</label>
+                <div className={s.fieldStack}>
+                  <SelectBox
+                    className={s.selectType}
+                    labeledOptions={[
+                      { value: "", label: "حساب پرداخت کننده..." },
+                      ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                    ]}
+                    value={add.payer_account_id}
+                    onChange={(val) => aSet("payer_account_id", val)}
+                  />
+                  <SelectBox
+                    className={s.selectType}
+                    labeledOptions={[
+                      { value: "", label: "حساب دریافت کننده..." },
+                      ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                    ]}
+                    value={add.receiver_account_id}
+                    onChange={(val) => aSet("receiver_account_id", val)}
+                  />
+                </div>
+
+                <label className={s.mobileFieldLabel}>{T.colRate}</label>
+                <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.mobileInputWide}`} value={add.rate} onChange={e => aSet("rate", e.target.value)} placeholder="0" onKeyDown={kbA} />
+
+                <label className={s.mobileFieldLabel}>{T.colAud}</label>
+                <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.mobileInputWide}`} value={add.aud} onChange={e => aSet("aud", e.target.value)} placeholder="0.00" onKeyDown={kbA} />
+
+                <label className={s.mobileFieldLabel}>{T.colToman}</label>
+                <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.mobileInputWide}`} value={add.toman} onChange={e => aSet("toman", e.target.value)} placeholder="0" onKeyDown={kbA} />
+
+                <label className={s.mobileFieldLabel}>{T.colFee}</label>
+                <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.mobileInputWide}`} value={add.fee} onChange={e => aSet("fee", e.target.value)} placeholder="0" onKeyDown={kbA} />
+              </div>
+              <ErrLine msg={add.err} />
+            </section>
+          )}
+
+          {rows.map(row => {
+            const aud = Number(row.amount_aud) || 0;
+            const tom = Number(row.amount_toman) || 0;
+            const rate = Number(row.exchange_rate) || (aud > 0 ? tom / aud : 0);
+            const fee = Number(row.fee_aud) || 0;
+            const isE = edit?.id === row.id;
+            const isDel = delId === row.id;
+
+            return (
+              <section key={`mobile-${row.id}`} className={`${s.mobileCard} ${isE ? s.mobileCardEdit : ""} ${isDel ? s.mobileCardDelete : ""}`}>
+                <header className={s.mobileCardHeader}>
+                  <div>
+                    <h3 className={s.mobileCardTitle}>{typeLabel(row.entry_type === "transfer" ? "transfer" : row.type)}</h3>
+                    <p className={s.mobileCardDate}>{storedToJalali(row.date_jalali)} | {fmtGreg(row.date_gregorian)}</p>
+                  </div>
+
+                  {isE ? (
+                    <div className={s.btnRow}>
+                      <button className={s.btnSave} onClick={saveEdit} disabled={isPending}><Check size={12} />{T.save}</button>
+                      <button className={s.btnCancel} onClick={() => setEdit(null)}><X size={13} /></button>
+                    </div>
+                  ) : isDel ? (
+                    <div className={s.btnRow}>
+                      <button className={s.btnConfirmDel} onClick={() => doDelete(row.id)} disabled={isPending}><Check size={11} /></button>
+                      <button className={s.btnCancel} onClick={() => setDelId(null)}><X size={12} /></button>
+                    </div>
+                  ) : (
+                    <div className={s.btnRow}>
+                      <button className={s.btnEdit} onClick={() => startEdit(row)} disabled={busy}><Pencil size={11} />{T.edit}</button>
+                      <button className={s.btnDel} onClick={() => { setDelId(row.id); setEdit(null); setAdd(null); }} disabled={busy}><Trash2 size={13} /></button>
+                    </div>
+                  )}
+                </header>
+
+                {isE && edit ? (
+                  <div className={s.mobileFieldGrid}>
+                    <label className={s.mobileFieldLabel}>{T.colDate}</label>
+                    <div>
+                      <CustomDatePicker value={edit.date} onChange={(val) => eSet("date", val)} />
+                      <p className={s.jalaliLive}>{gregToJalali(edit.date)}</p>
+                    </div>
+
+                    <label className={s.mobileFieldLabel}>{T.colType}</label>
+                    <SelectBox
+                      className={s.selectType}
+                      labeledOptions={[
+                        { value: "buy_aud", label: T.buy },
+                        { value: "sell_aud", label: T.sell },
+                        { value: "transfer", label: T.transfer },
+                      ]}
+                      value={edit.type}
+                      onChange={(val) => eSet("type", val as any)}
+                    />
+
+                    <label className={s.mobileFieldLabel}>{T.colCustomers}</label>
+                    <div className={s.fieldStack}>
+                      <input type="text" className={s.inputTxt} value={edit.sender} onChange={e => eSet("sender", e.target.value)} placeholder="فرستنده..." onKeyDown={kbE} />
+                      <input type="text" className={s.inputTxt} value={edit.recipient} onChange={e => eSet("recipient", e.target.value)} placeholder="گیرنده..." onKeyDown={kbE} />
+                    </div>
+
+                    <label className={s.mobileFieldLabel}>{T.colPockets}</label>
+                    <div className={s.fieldStack}>
+                      <SelectBox
+                        className={s.selectType}
+                        labeledOptions={[
+                          { value: "", label: "حساب پرداخت کننده..." },
+                          ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                        ]}
+                        value={edit.payer_account_id}
+                        onChange={(val) => eSet("payer_account_id", val)}
+                      />
+                      <SelectBox
+                        className={s.selectType}
+                        labeledOptions={[
+                          { value: "", label: "حساب دریافت کننده..." },
+                          ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                        ]}
+                        value={edit.receiver_account_id}
+                        onChange={(val) => eSet("receiver_account_id", val)}
+                      />
+                    </div>
+
+                    <label className={s.mobileFieldLabel}>{T.colRate}</label>
+                    <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.mobileInputWide}`} value={edit.rate} onChange={e => eSet("rate", e.target.value)} onKeyDown={kbE} />
+
+                    <label className={s.mobileFieldLabel}>{T.colAud}</label>
+                    <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.mobileInputWide}`} value={edit.aud} onChange={e => eSet("aud", e.target.value)} onKeyDown={kbE} />
+
+                    <label className={s.mobileFieldLabel}>{T.colToman}</label>
+                    <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.mobileInputWide}`} value={edit.toman} onChange={e => eSet("toman", e.target.value)} onKeyDown={kbE} />
+
+                    <label className={s.mobileFieldLabel}>{T.colFee}</label>
+                    <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.mobileInputWide}`} value={edit.fee} onChange={e => eSet("fee", e.target.value)} onKeyDown={kbE} />
+                  </div>
+                ) : (
+                  <dl className={s.mobileSummaryGrid}>
+                    <dt>{T.colCustomers}</dt>
+                    <dd>{row.sender || "-"} | {row.recipient || "-"}</dd>
+                    <dt>{T.colPockets}</dt>
+                    <dd>{getAccountName(row.payer_account_id)} | {getAccountName(row.receiver_account_id)}</dd>
+                    <dt>{T.colRate}</dt>
+                    <dd>{rate > 0 ? fmtRate(rate) : "-"}</dd>
+                    <dt>{T.colAud}</dt>
+                    <dd>{aud > 0 ? fmtAUD(aud) : "-"}</dd>
+                    <dt>{T.colToman}</dt>
+                    <dd>{tom > 0 ? fmtIRT(tom) : "-"}</dd>
+                    <dt>{T.colFee}</dt>
+                    <dd>{fee > 0 ? `${fee} AUD` : "-"}</dd>
+                  </dl>
+                )}
+
+                {isE && <ErrLine msg={edit?.err || null} />}
+                {isDel && <p className={s.delConfirmLabel}>{T.delConfirm}</p>}
+              </section>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

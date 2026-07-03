@@ -212,7 +212,7 @@ export default function PriceChart() {
         {chartData.length === 0 ? (
           <div className={styles.emptyState}>داده‌ای برای این بازه یافت نشد.</div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={380}>
             <AreaChart
               data={chartData}
               margin={{ top: 20, right: 0, left: 15, bottom: 5 }}

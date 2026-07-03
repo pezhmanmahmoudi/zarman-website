@@ -1,0 +1,330 @@
+/* ============================================================
+   MessageStrip — Zarman Premium
+   Engineered to the standard of Stripe / Linear / Vercel.
+   Every pixel is intentional. Nothing is decorative noise.
+   ============================================================ */
+
+/* ── Animated border angle — enables smooth conic interpolation */
+@property --beam-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* ── Wrapper ───────────────────────────────────────────────── */
+.wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 14px 24px 26px; /* bottom room for dots */
+  position: relative;
+  z-index: 10;
+}
+
+/* ── Pill container — beam's reference frame, no overflow clip ── */
+.pill {
+  position: relative;
+  width: 100%;
+  max-width: 860px;
+  border-radius: 9999px;
+}
+
+/* ── Strip ─────────────────────────────────────────────────── */
+.strip {
+  position: relative;
+  width: 100%;
+  border-radius: 9999px;
+
+  /*
+   * Background inspired by the Hero section:
+   * deep navy base + a soft indigo radial bloom from the top
+   * so the pill feels like it belongs on the same canvas.
+   */
+  background:
+    radial-gradient(ellipse 120% 100% at 50% -10%,
+      rgba(79, 70, 229, 0.09) 0%,
+      transparent 65%),
+    rgba(10, 14, 26, 0.88);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+
+  /* Depth */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    0 8px 32px -4px rgba(0, 0, 0, 0.52);
+
+  overflow: hidden;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+
+
+.strip:focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.45);
+  outline-offset: 3px;
+}
+
+/* ── Border beam — About-section style, outside overflow:hidden ─
+   inset: -1.5px lets the ring straddle the pill edge cleanly.
+   No clipping by overflow:hidden since .pill has none.
+   Indigo → violet arc orbits the border — trustworthy, premium.
+   ──────────────────────────────────────────────────────────── */
+.borderBeam {
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 3.2px;
+  pointer-events: none;
+  z-index: 0;
+  --beam-angle: 0deg;
+
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent                    0%,
+    transparent                   73%,
+    rgba(99,  102, 241, 0.75)     87%,   /* indigo */
+    rgba(139,  92, 246, 0.90)     93%,   /* violet */
+    transparent                  100%
+  );
+
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+
+  animation: beamOrbit 8s linear infinite;
+}
+
+@keyframes beamOrbit {
+  to { --beam-angle: 360deg; }
+}
+
+/* ── Inner layout ──────────────────────────────────────────── */
+.inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px 6px;
+  min-height: 44px;
+}
+
+/* ── Navigation buttons ────────────────────────────────────── */
+/*    Invisible at rest. Appear on hover. Feel like controls,  */
+/*    not decoration.                                          */
+.navBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+
+  /* Hidden by default — revealed on strip hover */
+  color: transparent;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.strip:hover .navBtn {
+  color: rgba(255, 255, 255, 0.28);
+}
+
+.navBtn:hover {
+  color: rgba(255, 255, 255, 0.78) !important;
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.navBtn:focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.4);
+  outline-offset: 1px;
+}
+
+/* ── Message track ─────────────────────────────────────────── */
+.track {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ── Message ───────────────────────────────────────────────── */
+.message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  /* Apple-grade entrance: blur collapses as element rises into place */
+  animation: messageIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0);
+  }
+}
+
+/* ── Icon ──────────────────────────────────────────────────── */
+.iconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.65;
+  transition: opacity 0.2s ease;
+}
+
+.strip:hover .iconWrap {
+  opacity: 0.85;
+}
+
+/* Purposeful tints — color communicates meaning, not style */
+.icon_shield  { color: #86efac; }
+.icon_zap     { color: #fde68a; }
+.icon_star    { color: #93c5fd; }
+.icon_percent { color: #fde68a; }
+.icon_lock    { color: #86efac; }
+.icon_users   { color: #c4b5fd; }
+.icon_check   { color: #86efac; }
+
+/* ── Typography ────────────────────────────────────────────── */
+.text {
+  font-family: var(--font-primary, -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgba(224, 232, 248, 0.86);
+  letter-spacing: 0.005em;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* ── Progress indicators ───────────────────────────────────── */
+/*    Thin dashes. The active one fills like a progress bar.   */
+.dots {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding-bottom: 9px;
+}
+
+.dot {
+  width: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.13);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.25s ease;
+}
+
+.dot:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.dot:focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.4);
+  outline-offset: 2px;
+}
+
+.dotActive {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Fill animation — scaleX from origin to full width */
+.dotFill {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.86);
+  transform-origin: left;
+  transform: scaleX(0);
+  animation: dotFillProgress 5.5s linear forwards;
+}
+
+/* RTL: fill reads right-to-left */
+[dir="rtl"] .dotFill {
+  transform-origin: right;
+}
+
+@keyframes dotFillProgress {
+  to { transform: scaleX(1); }
+}
+
+/* ── Mobile ────────────────────────────────────────────────── */
+/*    Edge-to-edge. No pill. Simpler but still refined.        */
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 0;
+  }
+
+  .pill {
+    border-radius: 0;
+    max-width: 100%;
+  }
+
+  /* Beam looks off on a flat edge-to-edge rectangle — hide it */
+  .borderBeam {
+    display: none;
+  }
+
+  .strip {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  /* Swipe handles navigation — no buttons needed */
+  .navBtn {
+    display: none;
+  }
+
+  .inner {
+    padding: 11px 20px 6px;
+    min-height: 40px;
+  }
+
+  .text {
+    font-size: 13px;
+  }
+
+  .dots {
+    padding-bottom: 8px;
+    gap: 4px;
+  }
+
+  .dot {
+    width: 16px;
+  }
+}
+

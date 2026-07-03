@@ -143,9 +143,10 @@ export default function MobHeader({
               alt="Zarman Logo" 
               width={110} 
               height={32} 
+              style={{ height: '45px', width: 'auto' }}
               className={styles.logoImg} 
               priority 
-              unoptimized // 👈 این خط باید اضافه شود
+              unoptimized
             />
           </Link>
 

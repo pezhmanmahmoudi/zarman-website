@@ -11,7 +11,8 @@
   min-height: clamp(680px, 90dvh, 880px);
   background-color: var(--color-bg-base);
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   direction: rtl; 
 }
 
@@ -33,14 +34,18 @@
 .container {
   position: relative;
   z-index: 3;
+  flex: 1;
+  display: flex;
+  align-items: center;
   width: 100%;
   max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: clamp(80px, 10vh, 100px) var(--container-padding) var(--space-16);
+  padding: clamp(80px, 10vh, 100px) var(--container-padding) var(--space-8);
 }
 
 .layout {
   display: grid;
+  width: 100%;
   grid-template-columns: 1fr minmax(380px, 440px);
   align-items: center;
   gap: var(--space-16);

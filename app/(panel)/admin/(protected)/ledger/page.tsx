@@ -152,27 +152,39 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
 
         {/* ── Ledger Table ── */}
         <div className={cardStyles.panel}>
-          <div className={cardStyles.panelHeader} style={{ direction: "rtl", justifyContent: "flex-start" }}>
-            <h2 className={cardStyles.panelTitle}>
-              <BookOpen size={18} color="var(--text-dim)" />
-              <span style={{ fontFamily: "var(--font-fa-content)" }}>{FA.tableTitle}</span>
-              <span style={{ color: "var(--text-dim)", fontWeight: 400, fontSize: "0.85rem" }}>
-                &nbsp;({total} total)
-              </span>
-            </h2>
-          </div>
-
           {total === 0 ? (
-            <div className={`${cardStyles.emptyState} ${cardStyles.emptyStateLoose}`}>
-              <div className={cardStyles.emptyStateIcon}><BookOpen size={24} /></div>
-              <div className={cardStyles.emptyStateText} style={{ fontFamily: "var(--font-fa-content)" }}>
-                {FA.noRows}
+            <>
+              <div className={cardStyles.panelHeader} style={{ direction: "rtl", justifyContent: "flex-start" }}>
+                <h2 className={cardStyles.panelTitle}>
+                  <BookOpen size={18} color="var(--text-dim)" />
+                  <span style={{ fontFamily: "var(--font-fa-content)" }}>{FA.tableTitle}</span>
+                  <span style={{ color: "var(--text-dim)", fontWeight: 400, fontSize: "0.85rem" }}>
+                    &nbsp;({total} total)
+                  </span>
+                </h2>
               </div>
-            </div>
+              <div className={`${cardStyles.emptyState} ${cardStyles.emptyStateLoose}`}>
+                <div className={cardStyles.emptyStateIcon}><BookOpen size={24} /></div>
+                <div className={cardStyles.emptyStateText} style={{ fontFamily: "var(--font-fa-content)" }}>
+                  {FA.noRows}
+                </div>
+              </div>
+            </>
           ) : (
             <>
-              {/* ارسال کشوها به جدول برای فرم ویرایش */}
-              <EditableLedgerTable rows={pageLedgerRows as LedgerRow[]} bankAccounts={bankAccounts || []} />
+              <EditableLedgerTable
+                rows={pageLedgerRows as LedgerRow[]}
+                bankAccounts={bankAccounts || []}
+                titleSlot={
+                  <h2 className={cardStyles.panelTitle}>
+                    <BookOpen size={18} color="var(--text-dim)" />
+                    <span style={{ fontFamily: "var(--font-fa-content)" }}>{FA.tableTitle}</span>
+                    <span style={{ color: "var(--text-dim)", fontWeight: 400, fontSize: "0.85rem" }}>
+                      &nbsp;({total} total)
+                    </span>
+                  </h2>
+                }
+              />
               <AdminPagination currentPage={currentPage} totalCount={total} pageSize={PAGE_SIZE} />
             </>
           )}

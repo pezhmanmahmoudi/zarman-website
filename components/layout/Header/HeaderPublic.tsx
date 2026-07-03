@@ -29,10 +29,11 @@ export default function HeaderPublic({
               src="/images/logo-no-text-light.svg"
               alt="Zarman Exchange"
               className="h-logo-img"
-              width={200}  
-              height={60}  
+              width={200}
+              height={60}
+              style={{ height: '60px', width: 'auto' }}
               priority
-              unoptimized // 👈 این خط باید اضافه شود
+              unoptimized
             />
         </div>
 

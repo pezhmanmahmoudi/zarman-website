@@ -4,9 +4,16 @@
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  padding: 0.75rem 1.5rem;
+  justify-content: space-between;
+  direction: rtl;
+  padding: 0.8rem 1.5rem;
   border-bottom: 1px solid var(--border-soft);
+  gap: 1rem;
+}
+
+.toolbarTitle {
+  flex: 1;
+  min-width: 0;
 }
 
 .addBtn {
@@ -33,6 +40,120 @@
   opacity: 0.45;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* ── Horizontal scrolling UX ────────────────────────────────────────────── */
+.tableShell {
+  position: relative;
+}
+
+.topScrollWrap {
+  display: none; /* superseded by .scrollRailOuter */
+}
+
+/* no .scrollRailRow or .scrollRailCell — rail is outside the table now */
+
+/* ── Horizontal scroll rail (outside the table, above the header) ───────── */
+.scrollRailOuter {
+  display: flex;
+  align-items: center;
+  padding: 8px 0 7px;
+  background: var(--bg-card, #fff);
+}
+
+.scrollRailHidden {
+  display: none;
+}
+
+.topScrollBar {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 5px;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-med, #e2e8f0) transparent;
+}
+
+.topScrollBar::-webkit-scrollbar {
+  height: 5px;
+}
+
+.topScrollBar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.topScrollBar::-webkit-scrollbar-thumb {
+  background: var(--border-med, #e2e8f0);
+  border-radius: 99px;
+}
+
+.topScrollSpacer {
+  height: 1px;
+}
+
+.desktopOnly {
+  display: block;
+}
+
+.mobileOnly {
+  display: none;
+}
+
+.ledgerTable {
+  position: relative;
+}
+
+.stickyStartCol1,
+.stickyStartCol2,
+.stickyEndCol1,
+.stickyEndCol2 {
+  position: static;
+  z-index: auto;
+  background: transparent;
+}
+
+.stickyStartCol1 {
+  inset-inline-start: auto;
+  box-shadow: none;
+  min-width: 0;
+}
+
+.stickyStartCol2 {
+  inset-inline-start: auto;
+  min-width: 0;
+}
+
+.stickyEndCol1 {
+  inset-inline-end: auto;
+  min-width: 0;
+}
+
+.stickyEndCol2 {
+  inset-inline-end: auto;
+  min-width: 0;
+  box-shadow: none;
+}
+
+.rowAdd .stickyStartCol1,
+.rowAdd .stickyStartCol2,
+.rowAdd .stickyEndCol1,
+.rowAdd .stickyEndCol2 {
+  background: rgba(5,150,105,0.04);
+}
+
+.rowEdit .stickyStartCol1,
+.rowEdit .stickyStartCol2,
+.rowEdit .stickyEndCol1,
+.rowEdit .stickyEndCol2 {
+  background: rgba(37,99,235,0.04);
+}
+
+.rowDelete .stickyStartCol1,
+.rowDelete .stickyStartCol2,
+.rowDelete .stickyEndCol1,
+.rowDelete .stickyEndCol2 {
+  background: rgba(239,68,68,0.05);
 }
 
 /* ── Row states ─────────────────────────────────────────────────────────── */
@@ -65,6 +186,8 @@
   white-space: nowrap;
 }
 .tdDateCenter {
+  width: 176px;
+  min-width: 176px;
   vertical-align: middle;
   text-align: center;
   direction: rtl;
@@ -430,4 +553,117 @@
   --field-h: 36px;
   width: 176px;
   margin-inline: auto;
+}
+
+/* ── Tiny-screen card edit mode ─────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .desktopOnly {
+    display: none;
+  }
+
+  .topScrollWrap {
+    display: none;
+  }
+
+  .mobileOnly {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .mobileCard {
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    background: var(--bg-card, #fff);
+    padding: 0.8rem;
+  }
+
+  .mobileCardAdd {
+    border-color: rgba(5,150,105,0.35);
+    background: rgba(5,150,105,0.04);
+  }
+
+  .mobileCardEdit {
+    border-color: rgba(37,99,235,0.35);
+    background: rgba(37,99,235,0.04);
+  }
+
+  .mobileCardDelete {
+    border-color: rgba(239,68,68,0.35);
+    background: rgba(239,68,68,0.05);
+  }
+
+  .mobileCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .mobileCardTitle {
+    margin: 0;
+    font-family: var(--font-fa-content);
+    font-size: 0.9rem;
+    color: var(--text-main);
+  }
+
+  .mobileCardDate {
+    margin: 0.2rem 0 0;
+    color: var(--text-soft);
+    font-size: 0.72rem;
+    font-family: var(--font-fa-content);
+  }
+
+  .mobileFieldGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .mobileFieldLabel {
+    font-family: var(--font-fa-content);
+    font-size: 0.72rem;
+    color: var(--text-soft);
+    text-align: right;
+  }
+
+  .mobileInputWide,
+  .mobileOnly .inputTxt,
+  .mobileOnly .selectType,
+  .mobileOnly .inputNum {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .mobileSummaryGrid {
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(90px, auto) 1fr;
+    row-gap: 0.35rem;
+    column-gap: 0.6rem;
+    align-items: baseline;
+  }
+
+  .mobileSummaryGrid dt {
+    margin: 0;
+    font-family: var(--font-fa-content);
+    font-size: 0.72rem;
+    color: var(--text-soft);
+  }
+
+  .mobileSummaryGrid dd {
+    margin: 0;
+    font-family: var(--font-fa-content);
+    font-size: 0.8rem;
+    color: var(--text-main);
+    text-align: right;
+    word-break: break-word;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollHintPill {
+    transition: none;
+  }
 }
