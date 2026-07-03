@@ -30,7 +30,7 @@ export default async function AdminDashboardPage() {
       icon: <ShieldCheck size={22} strokeWidth={1.5} />,
       colorClass: cardStyles.statIconWarning,
       href: "/admin/kyc",
-    },
+    }, 
     {
       label: "Pending Transactions",
       value: stats.pendingTxCount,

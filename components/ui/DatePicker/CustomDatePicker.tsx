@@ -14,7 +14,7 @@ type CustomDatePickerProps = {
   className?: string;
 };
 
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
 const MIN_YEAR = 1900;

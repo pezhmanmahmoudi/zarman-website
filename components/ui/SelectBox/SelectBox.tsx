@@ -167,7 +167,17 @@ export function SelectBox({
           aria-label={placeholder}
         >
           <option value="" disabled hidden>{placeholder}</option>
-          {labeledOptions
+          {groups
+            ? groups.map((group) => (
+                <optgroup key={group.label} label={normalizeGroupLabel(group.label)}>
+                  {group.options.map((opt) => (
+                    <option key={`${group.label}-${opt}`} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </optgroup>
+              ))
+            : labeledOptions
             ? labeledOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)
             : options.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
