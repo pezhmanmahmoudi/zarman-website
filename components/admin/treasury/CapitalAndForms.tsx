@@ -5,52 +5,23 @@ import { FA } from "@/lib/treasury-utils";
 import BankAccountManager from "@/components/admin/treasury/BankAccountManager";
 import ExpenseForm from "@/components/admin/treasury/ExpenseForm";
 import OwnerLoanForm from "@/components/admin/treasury/OwnerLoanForm";
+import RecurringExpenseForm from "@/components/admin/treasury/RecurringExpenseForm";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import s from "@/styles/admin/Treasury.module.css";
-
-type CapitalAccounting = {
-  ownerLoanBalanceIRT: number;
-  netBusinessValueIRT: number;
-};
-
-type BankAccount = {
-  id: string;
-  account_name: string;
-  currency: "AUD" | "IRT";
-  account_type: "bank" | "virtual" | "transit";
-  country: "Iran" | "Australia";
-  is_active: boolean;
-};
-
-type ExpenseRow = {
-  id: string;
-  date: string;
-  title: string;
-  category: string;
-  currency: "AUD" | "IRT";
-  amount: number;
-  status: "paid" | "pending";
-};
-
-type OwnerLoanRow = {
-  id: string;
-  date: string;
-  currency: "AUD" | "IRT";
-  amount: number;
-  loan_type: "injection" | "repayment";
-};
 
 export default function CapitalAndForms({ 
   accounting: a, 
   bankAccounts, 
   expenses, 
+  recurringExpenses,
   ownerLoans 
 }: { 
-  accounting: CapitalAccounting,
-  bankAccounts: BankAccount[],
-  expenses: ExpenseRow[],
-  ownerLoans: OwnerLoanRow[]
+  accounting: any, 
+  bankAccounts: any[], 
+  expenses: any[], 
+  recurringExpenses: any[],
+  ownerLoans: any[] 
 }) {
   return (
     <section>
@@ -96,6 +67,13 @@ export default function CapitalAndForms({
       <div className={s.splitLayout}>
         <ExpenseForm expenses={expenses} bankAccounts={bankAccounts} />
         <OwnerLoanForm loans={ownerLoans} bankAccounts={bankAccounts} />
+      </div>
+
+      <div style={{ marginTop: "1.5rem" }}>
+        <RecurringExpenseForm
+          recurringExpenses={recurringExpenses}
+          bankAccounts={bankAccounts}
+        />
       </div>
     </section>
   );

@@ -837,7 +837,6 @@
 }
 
 .formContainer {
-  --field-h: 2.625rem;
   background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
   border: 1px solid var(--border-soft, #eaecf0);
   border-radius: 0.9rem;
@@ -973,9 +972,7 @@
 
 .formInput,
 .formSelect {
-  height: var(--field-h, 2.625rem);
-  box-sizing: border-box;
-  padding: 0 0.85rem;
+  padding: 0.68rem 0.85rem;
   border: 1px solid var(--border-med, #d0d5dd);
   border-radius: 0.62rem;
   font-size: 0.875rem;
@@ -1663,7 +1660,8 @@
   font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
   background: var(--bg-soft, #f4f6f8);
   user-select: none;
-  border-radius: calc(1rem - 1px) calc(1rem - 1px) 0 0;
+  position: relative;
+  z-index: 2;
 }
 
 .settingsSummary::-webkit-details-marker { display: none; }
@@ -1678,6 +1676,8 @@
 
 .settingsBody {
   padding: 1.25rem 1.375rem;
+  position: relative;
+  z-index: 1;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1813,4 +1813,149 @@
   align-items: start;
   margin-top: 1.5rem;
   width: 100%;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RECURRING EXPENSES
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.badgeDue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.18rem 0.52rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.badgeUpcoming {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.18rem 0.52rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.badgeFuture {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.18rem 0.52rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(107, 114, 128, 0.1);
+  color: #4b5563;
+}
+
+.badgePaused {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.18rem 0.52rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(107, 114, 128, 0.08);
+  color: #6b7280;
+  font-style: italic;
+}
+
+.btnPost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.btnPost:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.btnPost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  background: transparent;
+  color: var(--text-dim, #6b7280);
+  border: 1px solid var(--border-soft, #eaecf0);
+  border-radius: 0.5rem;
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.btnToggle:hover:not(:disabled) {
+  background: var(--bg-soft, #f4f6f8);
+  color: var(--text-main, #111827);
+}
+
+.btnToggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.postPanel {
+  background: rgba(16, 185, 129, 0.04);
+  border-top: 1px solid rgba(16, 185, 129, 0.15);
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  direction: rtl;
+}
+
+.postPanelLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-soft, #4b5563);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  margin-bottom: 0.25rem;
+}
+
+.postPanelGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 140px;
+}
+
+.recurringFreqBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(67, 56, 202, 0.08);
+  color: var(--accent, #4338ca);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
 }

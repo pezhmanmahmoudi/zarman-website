@@ -2,6 +2,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Exclude nested leftover folder from compilation
+  webpack(config) {
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: ["**/node_modules/**", "**/zarman-website/**"],
+    };
+    return config;
+  },
+  transpilePackages: [],
   async headers() {
     return [
       {

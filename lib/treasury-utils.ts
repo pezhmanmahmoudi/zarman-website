@@ -72,7 +72,7 @@ export const FA = {
   forecastDesc:   "بر اساس سرعت معاملات فعلی",
   v7Label:        "سرعت ۷ روزه",
   v30Label:       "سرعت ۳۰ روزه",
-  vBuyLabel:      "سرعت خرید ۳۰ روزه",
+  vBuyLabel:      "سرعت خرید ۳۰د",
   vNetLabel:      "سرعت خالص",
   covLabel:       "پوشش روزانه",
   depletionLabel: "تاریخ تخمین",
@@ -134,6 +134,25 @@ export const FA = {
   hintVNet: "تفاضل خرید و فروش. منفی یعنی انبار در حال کاهش است.",
   hintCov: "تعداد روزهایی که با سرعت فروش فعلی، انبار دلار دوام می‌آورد.",
   hintDepletion: "تاریخ تخمینی صفر شدن کامل انبار دلار.",
+
+  // ── Recurring Expenses ──────────────────────────────────────────────────
+  secRecurring:        "هزینه‌های دوره‌ای",
+  secRecurringDesc:    "قالب‌های هزینه‌های منظم — ماهانه، هر دو هفته یا فصلی",
+  recurringAddBtn:     "تعریف هزینه دوره‌ای",
+  recurringPostBtn:    "ثبت دوره",
+  recurringNoItems:    "هیچ هزینه دوره‌ای تعریف نشده است.",
+  recurringFreqLabel:  "دوره‌بندی",
+  recurringStartLabel: "تاریخ شروع",
+  recurringNextLabel:  "سررسید بعدی",
+  recurringActive:     "فعال",
+  recurringPaused:     "متوقف",
+  freqWeekly:          "هفتگی",
+  freqFortnightly:     "هر دو هفته",
+  freqMonthly:         "ماهانه",
+  freqQuarterly:       "فصلی",
+  hintRecurringPayer:  "صندوقی که این هزینه به‌طور دوره‌ای از آن کسر می‌شود",
+  hintRecurringRate:   "نرخ تبدیل پیش‌فرض — هنگام ثبت دوره می‌توانید تغییر دهید",
+  hintPostDate:        "تاریخ واقعی پرداخت این دوره",
 };
 
 // ── CSS class helpers ──────────────────────────────────────────────────────
