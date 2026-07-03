@@ -262,7 +262,7 @@ export function DashboardProfile({ profile }: { profile: any }) {
   const isEntryStage = !isWaitingStage && !isVerifiedStage;
 
   return (
-    <article className={cardStyles.panelCard}>
+    <article className={`${cardStyles.panelCard} ${styles.allowOverflow}`}>
       <div className={styles.profileHeader}>
         <h2 className={`${cardStyles.panelTitle} ${styles.persianTitle}`}>
           <UserCircle2 size={24} /> اطلاعات هویتی و امنیتی
