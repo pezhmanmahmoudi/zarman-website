@@ -51,6 +51,53 @@ function clampInt(value: number, min: number, max: number, fallback: number) {
 }
 
 // ---------------------------------------------------------------------------
+// Auto-generate unique ZE reference codes for admin-created transactions
+// ---------------------------------------------------------------------------
+async function generateAdminReferenceCode(db: ReturnType<typeof makeServiceRoleClient>): Promise<string> {
+  for (let i = 0; i < 10; i++) {
+    const code = "ZE" + Math.floor(Math.random() * 100000).toString().padStart(5, "0");
+    const { data } = await db
+      .from("transactions")
+      .select("id")
+      .eq("reference_code", code)
+      .maybeSingle();
+    if (!data) return code;
+  }
+  return "ZE" + Date.now().toString().slice(-5);
+}
+
+// ---------------------------------------------------------------------------
+// Auto-generate unique ZM customer codes
+// ---------------------------------------------------------------------------
+async function generateCustomerCode(db: ReturnType<typeof makeServiceRoleClient>): Promise<string> {
+  for (let i = 0; i < 15; i++) {
+    const code = "ZM" + Math.floor(Math.random() * 100000).toString().padStart(5, "0");
+    const { data } = await db
+      .from("profiles")
+      .select("id")
+      .eq("customer_code", code)
+      .maybeSingle();
+    if (!data) return code;
+  }
+  return "ZM" + Date.now().toString().slice(-5);
+}
+
+function toDbTimestamp(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  // Date-only payloads from the date picker use a stable default time.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return `${trimmed}T12:00:00.000Z`;
+  }
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
+// ---------------------------------------------------------------------------
 // Jalali (Shamsi) date helper — returns "YYYY/MM/DD" with zero-padded parts
 // ---------------------------------------------------------------------------
 function toJalaliStr(date: Date): string {
@@ -687,7 +734,7 @@ export async function searchUsers(query: string) {
 
   const { data, error } = await db
     .from("profiles")
-    .select("id, first_name, last_name, email, mobile_number, customer_code")
+    .select("id, first_name, last_name, email, mobile_number, customer_code, kyc_status, created_at")
     .or(
       `first_name.ilike.%${sanitized}%,last_name.ilike.%${sanitized}%,email.ilike.%${sanitized}%,mobile_number.ilike.%${sanitized}%,customer_code.ilike.%${sanitized}%`
     )
@@ -764,8 +811,8 @@ export async function createAssistedCustomerOnboarding(payload: any) {
 
   const db = makeServiceRoleClient();
 
-  // Create auth user with a temporary password
-  const tempPassword = Math.random().toString(36).slice(-12);
+  // ── 1. Create auth user ────────────────────────────────────────────────
+  const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-4).toUpperCase();
   const { data: authData, error: authError } = await db.auth.admin.createUser({
     email: payload.email.trim(),
     password: tempPassword,
@@ -776,23 +823,141 @@ export async function createAssistedCustomerOnboarding(payload: any) {
 
   const userId = authData.user.id;
 
+  // ── 2. Build complete profile patch ────────────────────────────────────
+  const customerCode = payload.customer_code?.trim() || await generateCustomerCode(db);
+
   const patch: Record<string, unknown> = {
-    email: payload.email.trim(),
-    first_name: payload.first_name?.trim() || null,
-    last_name: payload.last_name?.trim() || null,
-    mobile_number: payload.mobile_number?.trim() || null,
-    dob: payload.dob?.trim() || null,
-    address: payload.address?.trim() || null,
-    city: payload.city?.trim() || null,
-    state: payload.state?.trim() || null,
-    postcode: payload.postcode?.trim() || null,
-    country: payload.country?.trim() || "Australia",
-    kyc_status: payload.kyc_status || "approved",
-    document_type: payload.document_type?.trim() || null,
+    email:           payload.email.trim(),
+    first_name:      payload.first_name?.trim()      || null,
+    last_name:       payload.last_name?.trim()        || null,
+    mobile_number:   payload.mobile_number?.trim()   || null,
+    dob:             payload.dob?.trim()              || null,
+    address:         payload.address?.trim()          || null,
+    city:            payload.city?.trim()             || null,
+    state:           payload.state?.trim()            || null,
+    postcode:        payload.postcode?.trim()         || null,
+    country:         payload.country?.trim()          || "Australia",
+    kyc_status:      payload.kyc_status               || "pending",
+    document_type:   payload.document_type?.trim()   || null,
+    customer_code:   customerCode,
+    // Identity document fields
+    license_number:  payload.license_number?.trim()  || null,
+    card_number:     payload.card_number?.trim()      || null,
+    state_of_issue:  payload.state_of_issue?.trim()  || null,
+    passport_number: payload.passport_number?.trim() || null,
+    expiry_date:     payload.expiry_date?.trim()      || null,
   };
+  if (payload.kyc_status === "approved") {
+    patch.kyc_verified_at = new Date().toISOString();
+  }
 
   const { error: profileError } = await db.from("profiles").update(patch).eq("id", userId);
   if (profileError) return { error: profileError.message };
+
+  // ── 3. Create recipient account if provided ────────────────────────────
+  let recipientId: string | null = null;
+  if (payload.recipient) {
+    const r = payload.recipient;
+    const { data: recipientData, error: recipientError } = await db
+      .from("recipients")
+      .insert([{
+        user_id:              userId,
+        direction:            r.direction            || "aud",
+        label:                r.label?.trim()        || null,
+        full_name:            r.full_name?.trim()    || null,
+        account_name:         r.account_name?.trim() || null,
+        bank_name:            r.bank_name?.trim()    || null,
+        bsb:                  r.bsb?.trim()          || null,
+        account_number:       r.account_number?.trim()       || null,
+        residential_address:  r.residential_address?.trim()  || null,
+        recipient_email:      r.recipient_email?.trim()      || null,
+        recipient_phone:      r.recipient_phone?.trim()      || null,
+        bank_type:            r.bank_type?.trim()   || "other",
+        card_number:          r.card_number?.trim() || null,
+        shaba_number:         r.shaba_number?.trim()         || null,
+        irt_account_number:   r.irt_account_number?.trim()   || null,
+        irt_address:          r.irt_address?.trim()          || null,
+        irt_phone:            r.irt_phone?.trim()            || null,
+      }])
+      .select("id")
+      .single();
+    if (recipientError) return { error: `Recipient creation failed: ${recipientError.message}` };
+    recipientId = recipientData?.id ?? null;
+  }
+
+  // ── 4. Create initial transaction if requested ─────────────────────────
+  let transactionId: string | number | null = null;
+  if (payload.transaction?.create && (Number(payload.transaction.amount_aud) > 0 || Number(payload.transaction.equivalent_toman) > 0)) {
+    const tx = payload.transaction;
+    const referenceCode = await generateAdminReferenceCode(db);
+    const txStatus = tx.status || "pending";
+
+    const txInsert: Record<string, unknown> = {
+      user_id:              userId,
+      type:                 tx.type || "buy_aud",
+      amount_aud:           Number(tx.amount_aud) || 0,
+      equivalent_toman:     Number(tx.equivalent_toman) || 0,
+      applied_rate:         tx.applied_rate ? Number(tx.applied_rate) : null,
+      status:               txStatus,
+      source_of_funds:      tx.source_of_funds?.trim()      || null,
+      reason_for_transfer:  tx.reason_for_transfer?.trim()  || null,
+      payment_link:         tx.payment_link?.trim()         || null,
+      recipient_id:         recipientId,
+      reference_code:       referenceCode,
+    };
+    if (tx.created_at) {
+      const ts = toDbTimestamp(tx.created_at);
+      if (ts) txInsert.created_at = ts;
+    }
+
+    const { data: txData, error: txError } = await db
+      .from("transactions")
+      .insert([txInsert])
+      .select("id")
+      .single();
+    if (txError) return { error: `Transaction creation failed: ${txError.message}` };
+    transactionId = txData?.id ?? null;
+
+    // ── If status is approved immediately, insert into ledger ──────────
+    if (txStatus === "approved" && transactionId) {
+      try {
+        const rateRes = await db
+          .from("rates_history")
+          .select("buy_aud, applied_fee, fee_threshold")
+          .order("date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const audAmt   = Number(tx.amount_aud ?? 0);
+        const tomanAmt = Number(tx.equivalent_toman ?? 0);
+        const rate     = audAmt > 0 ? tomanAmt / audAmt : 0;
+        const feeThreshold = Number(rateRes.data?.fee_threshold ?? 1000);
+        const appliedFee   = Number(rateRes.data?.applied_fee   ?? 30);
+        const feeAud = audAmt > 0 && audAmt < feeThreshold ? appliedFee : 0;
+        const txDate = new Date();
+        const dateGregorian = txDate.toISOString().slice(0, 10);
+        const dateJalali    = toJalaliStr(txDate);
+        const senderName = `${payload.first_name?.trim() ?? ""} ${payload.last_name?.trim() ?? ""}`.trim() || payload.email.trim();
+
+        await db.from("ledger").insert([{
+          transaction_id:  String(transactionId),
+          date_gregorian:  dateGregorian,
+          date_jalali:     dateJalali,
+          type:            tx.type || "buy_aud",
+          entry_type:      "trade",
+          exchange_rate:   rate,
+          amount_aud:      audAmt,
+          amount_toman:    tomanAmt,
+          sender:          senderName,
+          recipient:       "",
+          fee_aud:         feeAud,
+          payer_account_id:    null,
+          receiver_account_id: null,
+          created_by:          admin.id,
+        }]);
+      } catch (_e) { /* ledger insert failure is non-fatal */ }
+    }
+  }
 
   await writeAuditLog({
     actorId: admin.id,
@@ -800,10 +965,10 @@ export async function createAssistedCustomerOnboarding(payload: any) {
     action: "ASSISTED_CUSTOMER_CREATED",
     targetType: "profile",
     targetId: userId,
-    newValue: { email: payload.email },
+    newValue: { email: payload.email, customer_code: customerCode, recipientId, transactionId },
   }).catch(() => {});
 
-  return { success: true, userId };
+  return { success: true, userId, recipientId, transactionId };
 }
 
 export async function createAssistedTransactionForUser(payload: any) {
@@ -811,36 +976,103 @@ export async function createAssistedTransactionForUser(payload: any) {
   if (!payload.userId) return { error: "Missing user ID." };
   if (!payload.type || !["buy_aud", "sell_aud"].includes(payload.type)) return { error: "Invalid type." };
 
-  const recipientId = payload.recipient_id ?? payload.recipientId ?? null;
+  const recipientId = payload.recipient_id || payload.recipientId || null;
+  const txStatus = payload.status || "pending";
 
   const db = makeServiceRoleClient();
+
+  // Always generate a unique reference code for admin-created transactions
+  const referenceCode = await generateAdminReferenceCode(db);
+
+  const insertRow: Record<string, unknown> = {
+    user_id:             payload.userId,
+    type:                payload.type,
+    amount_aud:          Number(payload.amount_aud) || 0,
+    equivalent_toman:    Number(payload.equivalent_toman) || 0,
+    applied_rate:        payload.applied_rate ? Number(payload.applied_rate) : null,
+    status:              txStatus,
+    source_of_funds:     payload.source_of_funds?.trim()     || null,
+    reason_for_transfer: payload.reason_for_transfer?.trim() || null,
+    recipient_id:        recipientId,
+    payment_link:        payload.payment_link?.trim()        || null,
+    reference_code:      referenceCode,
+  };
+
+  if (payload.created_at) {
+    const createdAt = toDbTimestamp(payload.created_at);
+    if (createdAt) insertRow.created_at = createdAt;
+  }
+
   const { data, error } = await db
     .from("transactions")
-    .insert([{
-      user_id: payload.userId,
-      type: payload.type,
-      amount_aud: Number(payload.amount_aud) || 0,
-      equivalent_toman: Number(payload.equivalent_toman) || 0,
-      status: payload.status || "pending",
-      source_of_funds: payload.source_of_funds?.trim() || null,
-      reason_for_transfer: payload.reason_for_transfer?.trim() || null,
-      recipient_id: recipientId,
-    }])
+    .insert([insertRow])
     .select("id")
     .single();
 
   if (error) return { error: error.message };
+
+  const transactionId = data?.id;
+
+  // ── If created directly as approved, insert a ledger entry ─────────────
+  if (txStatus === "approved" && transactionId) {
+    try {
+      const rateRes = await db
+        .from("rates_history")
+        .select("buy_aud, applied_fee, fee_threshold")
+        .order("date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const audAmt   = Number(payload.amount_aud ?? 0);
+      const tomanAmt = Number(payload.equivalent_toman ?? 0);
+      const rate     = audAmt > 0 ? tomanAmt / audAmt : 0;
+      const feeThreshold = Number(rateRes.data?.fee_threshold ?? 1000);
+      const appliedFee   = Number(rateRes.data?.applied_fee   ?? 30);
+      const feeAud = audAmt > 0 && audAmt < feeThreshold ? appliedFee : 0;
+
+      const txDate = insertRow.created_at ? new Date(insertRow.created_at as string) : new Date();
+      const dateGregorian = txDate.toISOString().slice(0, 10);
+      const dateJalali    = toJalaliStr(txDate);
+
+      // Fetch sender name from profile
+      const { data: profileRow } = await db
+        .from("profiles")
+        .select("first_name, last_name, email")
+        .eq("id", payload.userId)
+        .maybeSingle();
+      const senderName = profileRow
+        ? (`${profileRow.first_name ?? ""} ${profileRow.last_name ?? ""}`).trim() || String(profileRow.email ?? "")
+        : "";
+
+      await db.from("ledger").insert([{
+        transaction_id:      String(transactionId),
+        date_gregorian:      dateGregorian,
+        date_jalali:         dateJalali,
+        type:                payload.type,
+        entry_type:          "trade",
+        exchange_rate:       rate,
+        amount_aud:          audAmt,
+        amount_toman:        tomanAmt,
+        sender:              senderName,
+        recipient:           "",
+        fee_aud:             feeAud,
+        payer_account_id:    null,
+        receiver_account_id: null,
+        created_by:          admin.id,
+      }]);
+    } catch (_e) { /* ledger insert failure is non-fatal */ }
+  }
 
   await writeAuditLog({
     actorId: admin.id,
     actorEmail: admin.email ?? "",
     action: "ASSISTED_TRANSACTION_CREATED",
     targetType: "transaction",
-    targetId: data?.id ? String(data.id) : null,
-    newValue: { userId: payload.userId, type: payload.type },
+    targetId: transactionId ? String(transactionId) : null,
+    newValue: { userId: payload.userId, type: payload.type, reference_code: referenceCode, status: txStatus },
   }).catch(() => {});
 
-  return { success: true, transactionId: data?.id };
+  return { success: true, transactionId };
 }
 
 export async function createAssistedRecipientForUser(payload: any) {
@@ -985,26 +1217,107 @@ export async function updateTransactionAmount(transactionId: string | number, fi
 }
 
 export async function updateAssistedTransactionForUser(payload: any) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const transactionId = payload.id || payload.transactionId;
   if (!transactionId) return { error: "Missing transaction ID." };
 
   const db = makeServiceRoleClient();
+
+  // Fetch current state before update to detect status change to approved
+  const { data: before } = await db
+    .from("transactions")
+    .select("status, type, amount_aud, equivalent_toman, created_at, user_id")
+    .eq("id", transactionId)
+    .maybeSingle();
+
   const patch: Record<string, unknown> = {};
+  if (payload.type !== undefined && ["buy_aud", "sell_aud"].includes(payload.type)) {
+    patch.type = payload.type;
+  }
   if (payload.amount_aud !== undefined) patch.amount_aud = Number(payload.amount_aud);
   if (payload.equivalent_toman !== undefined) patch.equivalent_toman = Number(payload.equivalent_toman);
   if (payload.status !== undefined) patch.status = payload.status;
   if (payload.reference_code !== undefined) patch.reference_code = payload.reference_code?.trim() || null;
   if (payload.source_of_funds !== undefined) patch.source_of_funds = payload.source_of_funds?.trim() || null;
   if (payload.reason_for_transfer !== undefined) patch.reason_for_transfer = payload.reason_for_transfer?.trim() || null;
+  if (payload.payment_link !== undefined) patch.payment_link = payload.payment_link?.trim() || null;
   if (payload.recipient_id !== undefined || payload.recipientId !== undefined) {
     patch.recipient_id = (payload.recipient_id ?? payload.recipientId) || null;
+  }
+  if (payload.created_at !== undefined) {
+    const createdAt = toDbTimestamp(payload.created_at);
+    if (createdAt) patch.created_at = createdAt;
   }
 
   if (Object.keys(patch).length === 0) return { success: true };
 
   const { error } = await db.from("transactions").update(patch).eq("id", transactionId);
   if (error) return { error: error.message };
+
+  // ── If status is being changed to approved and wasn't before, insert ledger ──
+  const wasNotApproved = before?.status !== "approved";
+  const isNowApproved  = payload.status === "approved";
+
+  if (wasNotApproved && isNowApproved) {
+    try {
+      // Guard: don't double-insert if a ledger row already references this tx
+      const { data: existingLedger } = await db
+        .from("ledger")
+        .select("id")
+        .eq("transaction_id", String(transactionId))
+        .maybeSingle();
+
+      if (!existingLedger) {
+        const rateRes = await db
+          .from("rates_history")
+          .select("buy_aud, applied_fee, fee_threshold")
+          .order("date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const audAmt   = Number(patch.amount_aud   ?? before?.amount_aud   ?? 0);
+        const tomanAmt = Number(patch.equivalent_toman ?? before?.equivalent_toman ?? 0);
+        const txType   = String(patch.type   ?? before?.type   ?? "buy_aud");
+        const userId   = String(before?.user_id ?? "");
+        const rate     = audAmt > 0 ? tomanAmt / audAmt : 0;
+        const feeThreshold = Number(rateRes.data?.fee_threshold ?? 1000);
+        const appliedFee   = Number(rateRes.data?.applied_fee   ?? 30);
+        const feeAud = audAmt > 0 && audAmt < feeThreshold ? appliedFee : 0;
+
+        const rawDate   = patch.created_at ?? before?.created_at;
+        const txDate    = rawDate ? new Date(rawDate as string) : new Date();
+        const dateGreg  = txDate.toISOString().slice(0, 10);
+        const dateJalali = toJalaliStr(txDate);
+
+        const { data: profileRow } = await db
+          .from("profiles")
+          .select("first_name, last_name, email")
+          .eq("id", userId)
+          .maybeSingle();
+        const senderName = profileRow
+          ? (`${profileRow.first_name ?? ""} ${profileRow.last_name ?? ""}`).trim() || String(profileRow.email ?? "")
+          : "";
+
+        await db.from("ledger").insert([{
+          transaction_id:      String(transactionId),
+          date_gregorian:      dateGreg,
+          date_jalali:         dateJalali,
+          type:                txType,
+          entry_type:          "trade",
+          exchange_rate:       rate,
+          amount_aud:          audAmt,
+          amount_toman:        tomanAmt,
+          sender:              senderName,
+          recipient:           "",
+          fee_aud:             feeAud,
+          payer_account_id:    null,
+          receiver_account_id: null,
+          created_by:          admin.id,
+        }]);
+      }
+    } catch (_e) { /* non-fatal */ }
+  }
+
   return { success: true };
 }
 
@@ -1130,6 +1443,20 @@ export async function getPendingTransactionsWithDetails() {
     if (tx.recipients || !tx.recipient_id) return tx;
     return { ...tx, recipients: recipientById.get(String(tx.recipient_id)) ?? null };
   });
+}
+
+export async function getActiveBankAccountsForAdmin() {
+  await requireAdmin();
+  const db = makeServiceRoleClient();
+
+  const { data, error } = await db
+    .from("bank_accounts")
+    .select("id, account_name, currency, is_active")
+    .eq("is_active", true)
+    .order("account_name", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 export async function getTransactionHistoryWithDetails(page = 1, pageSize = 10, status: "all" | "approved" | "rejected" | "archived" = "all") {
@@ -1300,7 +1627,7 @@ export async function updateLedgerEntry(
     if (!["buy_aud", "sell_aud", "transfer"].includes(updates.type)) return { error: "Invalid type." };
     // برای جلوگیری از خطای دیتابیس، نوع ترانسفر را به صورت ساختاری تطبیق می‌دهیم
     patch.type = updates.type === "transfer" ? "buy_aud" : updates.type;
-    if (updates.type === "transfer") patch.entry_type = "transfer";
+    patch.entry_type = updates.type === "transfer" ? "transfer" : "trade";
   }
   
   if (updates.entry_type !== undefined) patch.entry_type = updates.entry_type;

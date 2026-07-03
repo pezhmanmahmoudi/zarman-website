@@ -2,8 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-// تغییر مسیر در صورت نیاز به دایرکتوری اصلی (ممکن است بخواهید SelectBox را ایمپورت کنید)
-import { SelectBox } from "../SelectBox/SelectBox";
+import { SelectBox } from "../SelectBox/SelectBox"; // در صورت نیاز مسیر را اصلاح کنید
 import s from "./DatePicker.module.css";
 
 type CustomDatePickerProps = {
@@ -21,7 +20,6 @@ const MIN_YEAR = 1900;
 const MAX_YEAR = new Date().getFullYear() + 20; 
 const YEARS = Array.from({ length: MAX_YEAR - MIN_YEAR + 1 }, (_, i) => MIN_YEAR + i);
 
-// آماده‌سازی آرایه‌ها برای SelectBox
 const monthOptions = MONTHS.map((m, idx) => ({ label: m, value: idx.toString() }));
 const yearOptions = YEARS.map(y => y.toString());
 
@@ -37,10 +35,15 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      
+      // رفع باگ: بررسی اینکه آیا عنصر کلیک شده هنوز در دام (DOM) وجود دارد یا خیر.
+      // اگر عنصر حذف شده باشد (مثل کلیک روی گزینه‌های سلکت‌باکس)، تقویم نباید بسته شود.
+      if (document.contains(target) && containerRef.current && !containerRef.current.contains(target)) {
         setIsOpen(false);
       }
     }
+    
     if (isOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
@@ -55,7 +58,6 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
   const handlePrevMonth = () => setViewDate(new Date(currentYear, currentMonth - 1, 1));
   const handleNextMonth = () => setViewDate(new Date(currentYear, currentMonth + 1, 1));
 
-  // آپدیت هندلرها برای SelectBox که استرینگ برمی‌گرداند
   const handleMonthChange = (val: string) => {
     setViewDate(new Date(currentYear, parseInt(val), 1));
   };
@@ -68,7 +70,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
     const selected = new Date(currentYear, currentMonth, day);
     const formattedDate = `${selected.getFullYear()}-${String(selected.getMonth() + 1).padStart(2, "0")}-${String(selected.getDate()).padStart(2, "0")}`;
     onChange(formattedDate);
-    setIsOpen(false);
+    // با انتخاب تاریخ دیگر تقویم بسته نمی‌شود تا کاربر روی دکمه OK کلیک کند
   };
 
   const setToday = () => {
@@ -76,11 +78,13 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
     const formattedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     setViewDate(today);
     onChange(formattedDate);
-    setIsOpen(false);
   };
 
   const clearDate = () => {
     onChange("");
+  };
+
+  const handleOk = () => {
     setIsOpen(false);
   };
 
@@ -116,7 +120,6 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
       <div className={`${s.inputWrapper}${className ? " " + className : ""}`} onClick={() => {
         if (disabled) return;
         if (!isOpen) {
-          // measure space below before opening
           const rect = containerRef.current?.getBoundingClientRect();
           if (rect) {
             const spaceBelow = window.innerHeight - rect.bottom;
@@ -143,21 +146,18 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
               <ChevronLeft size={18} />
             </button>
 
-            {/* در اینجا SelectBox فوق‌حرفه‌ای جایگزین شد */}
             <div className={s.selectors}>
               <SelectBox 
                 variant="ghost"
                 labeledOptions={monthOptions}
                 value={currentMonth.toString()}
                 onChange={handleMonthChange}
-                className={s.monthSelectBox}
               />
               <SelectBox 
                 variant="ghost"
                 options={yearOptions}
                 value={currentYear.toString()}
                 onChange={handleYearChange}
-                className={s.yearSelectBox}
               />
             </div>
 
@@ -172,8 +172,11 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
           </div>
 
           <div className={s.footer}>
-            <button type="button" onClick={clearDate} className={s.footerBtn}>Clear</button>
-            <button type="button" onClick={setToday} className={s.footerBtn}>Today</button>
+            <div className={s.footerLeft}>
+              <button type="button" onClick={clearDate} className={s.footerBtn}>Clear</button>
+              <button type="button" onClick={setToday} className={s.footerBtn}>Today</button>
+            </div>
+            <button type="button" onClick={handleOk} className={`${s.footerBtn} ${s.okBtn}`}>OK</button>
           </div>
         </div>
       )}

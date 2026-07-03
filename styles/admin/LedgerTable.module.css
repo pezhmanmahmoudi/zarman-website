@@ -89,6 +89,46 @@
   vertical-align: middle;
   padding: 0.7rem 0.6rem !important;
 }
+
+.fieldStack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.dateEditStack {
+  position: relative;
+  width: 176px;
+  margin-inline: auto;
+}
+
+.jalaliLiveOverlay {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(100% + 3px);
+  white-space: nowrap;
+}
+
+.displayStack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.displayTextStrong {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.displayTextAccent {
+  font-weight: 600;
+  color: var(--accent);
+}
 .tdNum {
   text-align: right;
   vertical-align: middle;
@@ -290,15 +330,19 @@
 
 /* ── Inputs ─────────────────────────────────────────────────────────────── */
 .inputNum {
+  --ledger-field-h: 36px;
   font-family: var(--font-en-stack);
   font-size: 0.79rem;
-  padding: 5px 8px;
+  padding: 0 8px;
   border: 1.5px solid var(--border-med, #e2e8f0);
   border-radius: 6px;
   background: var(--bg-card, #fff);
   color: var(--text-main);
   outline: none;
   width: 88px;
+  height: var(--ledger-field-h);
+  min-height: var(--ledger-field-h);
+  box-sizing: border-box;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .inputNum:focus {
@@ -307,16 +351,21 @@
 }
 
 .inputTxt {
+  --ledger-field-h: 36px;
   font-family: var(--font-fa-content);
   font-size: 0.79rem;
   direction: rtl;
-  padding: 5px 8px;
+  padding: 0 8px;
   border: 1.5px solid var(--border-med, #e2e8f0);
   border-radius: 6px;
   background: var(--bg-card, #fff);
   color: var(--text-main);
+  text-align: center;
   outline: none;
-  width: 96px;
+  width: 172px;
+  height: var(--ledger-field-h);
+  min-height: var(--ledger-field-h);
+  box-sizing: border-box;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .inputTxt:focus {
@@ -346,15 +395,21 @@
 }
 
 .selectType {
+  --field-h: 36px;
+  --select-font-size: 0.79rem;
   font-family: var(--font-fa-content);
-  font-size: 0.82rem;
-  padding: 5px 8px;
+  font-size: 0.79rem;
+  padding: 0 8px;
   border: 1.5px solid var(--border-med, #e2e8f0);
   border-radius: 6px;
   background: var(--bg-card, #fff);
   color: var(--text-main);
   outline: none;
   cursor: pointer;
+  min-height: var(--field-h);
+  width: 100%;
+  max-width: 180px;
+  box-sizing: border-box;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .selectType:focus {
@@ -369,4 +424,10 @@
   color: var(--text-soft);
   margin-top: 4px;
   text-align: center;
+}
+
+.datePickerWrap {
+  --field-h: 36px;
+  width: 176px;
+  margin-inline: auto;
 }

@@ -286,8 +286,12 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
                   <ErrLine msg={add.err} />
                 </td>
                 <td className={s.tdDateCenter}>
-                  <CustomDatePicker value={add.date} onChange={(val) => aSet("date", val)} />
-                  <p className={s.jalaliLive}>{gregToJalali(add.date)}</p>
+                  <div className={s.dateEditStack}>
+                    <div className={s.datePickerWrap}>
+                      <CustomDatePicker value={add.date} onChange={(val) => aSet("date", val)} />
+                    </div>
+                    <p className={`${s.jalaliLive} ${s.jalaliLiveOverlay}`}>{gregToJalali(add.date)}</p>
+                  </div>
                 </td>
                 <td className={s.tdCenter}>
                   <SelectBox
@@ -302,13 +306,13 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
                   />
                 </td>
                 <td className={s.tdCenter}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <input type="text" className={s.inputTxt} value={add.sender} onChange={e => aSet("sender", e.target.value)} placeholder="فرستنده..." onKeyDown={kbA} style={{ fontSize: "0.75rem", padding: "4px" }} />
-                    <input type="text" className={s.inputTxt} value={add.recipient} onChange={e => aSet("recipient", e.target.value)} placeholder="گیرنده..." onKeyDown={kbA} style={{ fontSize: "0.75rem", padding: "4px" }} />
+                  <div className={s.fieldStack}>
+                    <input type="text" className={s.inputTxt} value={add.sender} onChange={e => aSet("sender", e.target.value)} placeholder="فرستنده..." onKeyDown={kbA} />
+                    <input type="text" className={s.inputTxt} value={add.recipient} onChange={e => aSet("recipient", e.target.value)} placeholder="گیرنده..." onKeyDown={kbA} />
                   </div>
                 </td>
                 <td className={s.tdCenter}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div className={s.fieldStack}>
                     <SelectBox
                       className={s.selectType}
                       labeledOptions={[
@@ -366,8 +370,12 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
 
                   <td className={s.tdDateCenter}>
                     {isE && edit ? (
-                      <><CustomDatePicker value={edit.date} onChange={(val) => eSet("date", val)} />
-                      <p className={s.jalaliLive}>{gregToJalali(edit.date)}</p></>
+                      <div className={s.dateEditStack}>
+                        <div className={s.datePickerWrap}>
+                          <CustomDatePicker value={edit.date} onChange={(val) => eSet("date", val)} />
+                        </div>
+                        <p className={`${s.jalaliLive} ${s.jalaliLiveOverlay}`}>{gregToJalali(edit.date)}</p>
+                      </div>
                     ) : (
                       <><p className={s.dateMain}>{storedToJalali(row.date_jalali)}</p><p className={s.dateSub}>{fmtGreg(row.date_gregorian)}</p></>
                     )}
@@ -386,30 +394,39 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
                         onChange={(val) => eSet("type", val as any)}
                       />
                     ) : (
-                      <span className={`${tableStyles.badge} ${row.type === "buy_aud" ? tableStyles.txBuy : tableStyles.txSell}`} style={{ fontFamily: "var(--font-fa-content)", fontSize: "0.7rem" }}>
-                        {row.type === "buy_aud" ? T.buy : row.entry_type === "transfer" ? T.transfer : T.sell}
+                      <span
+                        className={`${tableStyles.badge} ${
+                          row.entry_type === "transfer"
+                            ? tableStyles.badgeArchived
+                            : row.type === "buy_aud"
+                              ? tableStyles.txBuy
+                              : tableStyles.txSell
+                        }`}
+                        style={{ fontFamily: "var(--font-fa-content)", fontSize: "0.7rem" }}
+                      >
+                        {row.entry_type === "transfer" ? T.transfer : row.type === "buy_aud" ? T.buy : T.sell}
                       </span>
                     )}
                   </td>
 
                   <td className={s.tdCenter}>
                     {isE && edit ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <input type="text" className={s.inputTxt} value={edit.sender} onChange={e => eSet("sender", e.target.value)} placeholder="فرستنده..." onKeyDown={kbE} style={{ fontSize: "0.75rem", padding: "4px" }} />
-                        <input type="text" className={s.inputTxt} value={edit.recipient} onChange={e => eSet("recipient", e.target.value)} placeholder="گیرنده..." onKeyDown={kbE} style={{ fontSize: "0.75rem", padding: "4px" }} />
+                      <div className={s.fieldStack}>
+                        <input type="text" className={s.inputTxt} value={edit.sender} onChange={e => eSet("sender", e.target.value)} placeholder="فرستنده..." onKeyDown={kbE} />
+                        <input type="text" className={s.inputTxt} value={edit.recipient} onChange={e => eSet("recipient", e.target.value)} placeholder="گیرنده..." onKeyDown={kbE} />
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-main)' }}>
-                         <span style={{ fontWeight: 600 }}>{row.sender || "—"}</span>
+                      <div className={s.displayStack}>
+                         <span className={s.displayTextStrong}>{row.sender || "—"}</span>
                          <ArrowRight size={10} color="var(--border-med)" style={{ transform: "rotate(90deg)" }} />
-                         <span style={{ fontWeight: 600 }}>{row.recipient || "—"}</span>
+                         <span className={s.displayTextStrong}>{row.recipient || "—"}</span>
                       </div>
                     )}
                   </td>
 
                   <td className={s.tdCenter}>
                     {isE && edit ? (
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                       <div className={s.fieldStack}>
                          <SelectBox
                            className={s.selectType}
                            labeledOptions={[
@@ -430,10 +447,10 @@ export function EditableLedgerTable({ rows, bankAccounts }: Props) {
                          />
                        </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-soft)' }}>
-                         <span style={{ fontWeight: 600, color: "var(--accent)" }}>{getAccountName(row.payer_account_id)}</span>
+                      <div className={s.displayStack}>
+                         <span className={s.displayTextAccent}>{getAccountName(row.payer_account_id)}</span>
                          <ArrowRight size={10} color="var(--border-med)" style={{ transform: "rotate(90deg)" }} />
-                         <span style={{ fontWeight: 600, color: "var(--accent)" }}>{getAccountName(row.receiver_account_id)}</span>
+                         <span className={s.displayTextAccent}>{getAccountName(row.receiver_account_id)}</span>
                       </div>
                     )}
                   </td>

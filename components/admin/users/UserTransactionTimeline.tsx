@@ -14,6 +14,7 @@ import {
   type getUserFinancialProfile,
 } from "@/app/actions/admin.actions";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 
 type Transactions = Awaited<ReturnType<typeof getUserFinancialProfile>>["transactions"];
 type Recipients = Awaited<ReturnType<typeof getUserFinancialProfile>>["recipients"];
@@ -23,10 +24,11 @@ interface UserTransactionTimelineProps {
   userId?: string;
   transactions: Transactions;
   recipients: Recipients;
+  bankAccounts?: any[];
   onTransactionCreated?: () => void;
 }
 
-export function UserTransactionTimeline({ userId, transactions, recipients, onTransactionCreated }: UserTransactionTimelineProps) {
+export function UserTransactionTimeline({ userId, transactions, recipients, bankAccounts = [], onTransactionCreated }: UserTransactionTimelineProps) {
   const [openAdd, setOpenAdd] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -42,6 +44,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
     paymentLink: "",
     referenceCode: "",
     status: "pending",
+    createdAt: "",
   });
 
   const recipientOptions = useMemo<RecipientOption[]>(() => {
@@ -74,6 +77,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
     sourceOfFunds: "",
     reasonForTransfer: "",
     paymentLink: "",
+    createdAt: "",
   });
 
   const setField = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -84,12 +88,24 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
     return value ?? null;
   };
 
+  const resolveRecipientLabel = (tx: Transactions[number]) => {
+    const rec = normalizeRecipient((tx as any).recipients);
+    if (rec) return rec.label || rec.account_name || rec.full_name || "—";
+    if ((tx as any).payment_link) return "Payment Link";
+    return "—";
+  };
+
   const startEditRow = (tx: Transactions[number]) => {
     const rec = normalizeRecipient((tx as any).recipients);
     setStatus(null);
     setEditingId(String(tx.id));
+    // Extract date-only (YYYY-MM-DD) from created_at for the date picker
+    const createdAtDate = tx.created_at ? new Date(tx.created_at) : new Date();
+    const dateOnly = createdAtDate.toISOString().slice(0, 10);
     setEditForm({
-      recipientId: String((tx as any).recipient_id ?? rec?.id ?? ""),
+      recipientId: (tx as any).payment_link
+        ? "__payment_link__"
+        : String((tx as any).recipient_id ?? rec?.id ?? ""),
       type: String(tx.type || "buy_aud"),
       amountAud: String(tx.amount_aud ?? ""),
       equivalentToman: String(tx.equivalent_toman ?? ""),
@@ -98,6 +114,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
       paymentLink: String((tx as any).payment_link ?? ""),
       referenceCode: String((tx as any).reference_code ?? ""),
       status: String(tx.status || "pending"),
+      createdAt: dateOnly,
     });
   };
 
@@ -110,21 +127,32 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
       setStatus({ type: "error", text: "Missing customer context." });
       return;
     }
+    if (!editForm.createdAt) {
+      setStatus({ type: "error", text: "Date is required." });
+      return;
+    }
 
     setStatus(null);
     startTransition(async () => {
+      const isSpecialRecipient =
+        editForm.recipientId === "__intl_payment__" || editForm.recipientId === "__payment_link__";
+      const resolvedRecipientId = isSpecialRecipient ? "" : editForm.recipientId;
+      const resolvedPaymentLink = editForm.recipientId === "__payment_link__"
+        ? (editForm.paymentLink || "https://payment.link")
+        : (editForm.recipientId === "__intl_payment__" ? "" : editForm.paymentLink);
       const res = await updateAssistedTransactionForUser({
         transactionId: editingId,
         userId,
-        recipientId: editForm.recipientId,
+        recipientId: resolvedRecipientId,
         type: editForm.type as "buy_aud" | "sell_aud",
         amount_aud: Number(editForm.amountAud || 0),
         equivalent_toman: Number(editForm.equivalentToman || 0),
         source_of_funds: editForm.sourceOfFunds || undefined,
         reason_for_transfer: editForm.reasonForTransfer || undefined,
-        payment_link: editForm.paymentLink || undefined,
+        payment_link: resolvedPaymentLink || undefined,
         reference_code: editForm.referenceCode,
         status: editForm.status as "pending" | "approved" | "rejected" | "archived" | "cancelled",
+        created_at: editForm.createdAt || undefined,
       });
 
       if ("error" in res && res.error) {
@@ -167,18 +195,28 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
       setStatus({ type: "error", text: "Missing customer context." });
       return;
     }
+    if (!form.createdAt) {
+      setStatus({ type: "error", text: "Date is required." });
+      return;
+    }
     setStatus(null);
     startTransition(async () => {
+      const isSpecialRecipient =
+        form.recipientId === "__intl_payment__" || form.recipientId === "__payment_link__";
       const res = await createAssistedTransactionForUser({
         userId,
-        recipientId: form.recipientId,
+        recipientId: isSpecialRecipient ? "" : form.recipientId,
         type: form.type as "buy_aud" | "sell_aud",
         amount_aud: Number(form.amountAud || 0),
         equivalent_toman: Number(form.equivalentToman || 0),
         applied_rate: form.appliedRate ? Number(form.appliedRate) : undefined,
         source_of_funds: form.sourceOfFunds || undefined,
         reason_for_transfer: form.reasonForTransfer || undefined,
-        payment_link: form.paymentLink || undefined,
+        payment_link:
+          form.recipientId === "__payment_link__"
+            ? (form.paymentLink || "https://payment.link")
+            : (form.paymentLink || undefined),
+        created_at: form.createdAt || undefined,
       });
 
       if ("error" in res && res.error) {
@@ -196,6 +234,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
         sourceOfFunds: "",
         reasonForTransfer: "",
         paymentLink: "",
+        createdAt: "",
       });
       setOpenAdd(false);
       onTransactionCreated?.();
@@ -242,16 +281,12 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
           <div className={cardStyles.formInset}>
             <div className={formStyles.fieldRow}>
               <div className={formStyles.fieldGroup}>
-                <label className={formStyles.label}>Recipient</label>
-              <SelectBox
-                className={formStyles.input}
-                labeledOptions={[
-                  { value: "", label: "Select recipient" },
-                  ...recipientOptions.map((r: RecipientOption) => ({ value: r.id, label: r.label })),
-                ]}
-                value={form.recipientId}
-                onChange={(val) => setField("recipientId", val)}
-              />
+                <label className={formStyles.label}>Date</label>
+                <CustomDatePicker
+                  value={form.createdAt}
+                  onChange={(val) => setField("createdAt", val)}
+                  placeholder="dd/mm/yyyy"
+                />
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Type</label>
@@ -263,6 +298,20 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                 ]}
                 value={form.type}
                 onChange={(val) => setField("type", val)}
+              />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Recipient</label>
+              <SelectBox
+                className={formStyles.input}
+                labeledOptions={[
+                  { value: "", label: "Select recipient" },
+                  { value: "__intl_payment__", label: "International Payment" },
+                  { value: "__payment_link__", label: "Payment Link" },
+                  ...recipientOptions.map((r: RecipientOption) => ({ value: r.id, label: r.label })),
+                ]}
+                value={form.recipientId}
+                onChange={(val) => setField("recipientId", val)}
               />
               </div>
               <div className={formStyles.fieldGroup}>
@@ -292,7 +341,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
             </div>
 
             <div className={formStyles.formActions}>
-              <button type="button" className={formStyles.btnPrimary} onClick={submitAdd} disabled={isPending || !form.recipientId}>
+              <button type="button" className={formStyles.btnPrimary} onClick={submitAdd} disabled={isPending}>
                 {isPending ? "Saving..." : "Save Transaction"}
               </button>
             </div>
@@ -349,13 +398,12 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                         />
                       </td>
                       <td className={`${tableStyles.cellMono} ${tableStyles.cellSmall} ${tableStyles.cellDim}`}>
-                        {new Date(tx.created_at).toLocaleString("en-AU", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        <div className={formStyles.datePickerCompact}>
+                          <CustomDatePicker
+                            value={editForm.createdAt}
+                            onChange={(val) => setEditField("createdAt", val)}
+                          />
+                        </div>
                       </td>
                       <td>
                         <SelectBox
@@ -379,6 +427,8 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                           className={`${formStyles.input} ${formStyles.selectCompact}`}
                           labeledOptions={[
                             { value: "", label: "Select recipient" },
+                            { value: "__intl_payment__", label: "International Payment" },
+                            { value: "__payment_link__", label: "Payment Link" },
                             ...recipientOptions.map((r: RecipientOption) => ({ value: r.id, label: r.label })),
                           ]}
                           value={editForm.recipientId}
@@ -416,7 +466,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                             title="Save"
                             aria-label="Save"
                             onClick={saveEditedRow}
-                            disabled={isPending || !editForm.recipientId}
+                            disabled={isPending}
                           >
                             <Save size={14} />
                           </button>
@@ -474,16 +524,9 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                   </td>
                   {/* Recipient */}
                   <td className={tableStyles.cellRecipient}>
-                    {normalizeRecipient((tx as any).recipients)
-                      ? (
-                        <span className={tableStyles.cellStrong}>
-                          {(() => {
-                            const rec = normalizeRecipient((tx as any).recipients);
-                            return rec?.label || rec?.account_name || rec?.full_name || "—";
-                          })()}
-                        </span>
-                      )
-                      : <span className={tableStyles.cellEmpty}>—</span>}
+                    {resolveRecipientLabel(tx) === "—"
+                      ? <span className={tableStyles.cellEmpty}>—</span>
+                      : <span className={tableStyles.cellStrong}>{resolveRecipientLabel(tx)}</span>}
                   </td>
                   {/* Discounts */}
                   <td>
@@ -546,7 +589,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, onTr
                         <Trash2 size={14} />
                       </button>
                       {tx.status === "pending" ? (
-                        <TransactionApproveButton transactionId={tx.id} />
+                        <TransactionApproveButton transactionId={tx.id} bankAccounts={bankAccounts} />
                       ) : (
                         <span className={`${tableStyles.cellDim} ${tableStyles.cellProcessed}`}>
                           Processed

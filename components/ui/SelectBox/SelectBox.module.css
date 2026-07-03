@@ -59,7 +59,7 @@
 
 .triggerValue {
   flex: 1;
-  font-size: 0.95rem;
+  font-size: var(--select-font-size, 0.95rem);
   font-weight: 500;
   color: var(--text-main, inherit);
   white-space: nowrap;

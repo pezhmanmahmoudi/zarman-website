@@ -4,7 +4,7 @@ import React, { useState, useTransition, useEffect } from "react";
 import { Users } from "lucide-react";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
-import { searchUsers, getUserFinancialProfile } from "@/app/actions/admin.actions";
+import { searchUsers, getUserFinancialProfile, getActiveBankAccountsForAdmin } from "@/app/actions/admin.actions";
 import { calcLoyaltyDiscountPct, type FinanceConfig } from "@/lib/pricing";
 import { UserSearchPanel, type UserRow } from "@/components/admin/users/UserSearchPanel";
 import { UserFinancialStats } from "@/components/admin/users/UserFinancialStats";
@@ -26,6 +26,7 @@ export function UsersPageClient({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserRow[]>([]);
   const [selectedUser, setSelectedUser] = useState<FinancialProfile | null>(null);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [searched, setSearched] = useState(false);
 
   const [isSearching, startSearch] = useTransition();
@@ -40,6 +41,14 @@ export function UsersPageClient({
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialUserId]);
+
+  useEffect(() => {
+    startLoad(async () => {
+      const accounts = await getActiveBankAccountsForAdmin();
+      setBankAccounts(accounts as any[]);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSearch = () => {
     if (!query.trim()) return;
@@ -78,6 +87,16 @@ export function UsersPageClient({
   const handleProfileUpdated = () => {
     if (!selectedUser?.profile?.id) return;
     handleViewProfile(selectedUser.profile.id);
+    // Refresh search results so KYC badge updates inline
+    refreshSearchResults();
+  };
+
+  const refreshSearchResults = () => {
+    if (!query.trim() || !searched) return;
+    startSearch(async () => {
+      const data = await searchUsers(query);
+      setResults(data as UserRow[]);
+    });
   };
 
   const loyaltyDiscountPct = selectedUser
@@ -135,6 +154,7 @@ export function UsersPageClient({
               userId={selectedUser.profile?.id}
               transactions={selectedUser.transactions}
               recipients={(selectedUser as any).recipients ?? []}
+              bankAccounts={bankAccounts}
               onTransactionCreated={handleTimelineTransactionCreated}
             />
             <UserRecipientsPanel

@@ -5,6 +5,7 @@
 
 .tableWrap {
   overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: var(--border-med, #e2e8f0) transparent;
@@ -121,6 +122,8 @@
 
 /* stand-alone compact button (icon + tiny text) */
 .btnActionCompact {
+  min-height: 32px;
+  height: 32px;
   padding: 4px 8px;
   font-size: 0.6875rem;
   gap: 3px;

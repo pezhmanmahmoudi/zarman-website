@@ -350,6 +350,7 @@
 
 /* ── Compact inputs for table-row inline edit mode ── */
 .inputCompact {
+  --field-h: 36px;
   height: 36px;
   min-width: 120px;
   padding: 0.35rem 0.55rem;
@@ -357,6 +358,7 @@
 }
 
 .inputCompactRef {
+  --field-h: 36px;
   height: 36px;
   min-width: 112px;
   padding: 0.35rem 0.55rem;
@@ -364,6 +366,7 @@
 }
 
 .inputCompactMd {
+  --field-h: 36px;
   height: 36px;
   min-width: 150px;
   padding: 0.35rem 0.55rem;
@@ -371,6 +374,7 @@
 }
 
 .selectCompact {
+  --field-h: 36px;
   height: 36px;
   min-width: 190px;
   padding: 0.35rem 0.55rem;
@@ -378,10 +382,17 @@
 }
 
 .selectCompactStatus {
+  --field-h: 36px;
   height: 36px;
   min-width: 132px;
   padding: 0.35rem 0.55rem;
   font-size: 0.8125rem;
+}
+
+/* ── Compact DatePicker wrapper — overrides --field-h CSS variable ── */
+.datePickerCompact {
+  --field-h: 36px;
+  min-width: 140px;
 }
 
 /* ── Inline status message (floats above edit form) ── */
