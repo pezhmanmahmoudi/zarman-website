@@ -2,6 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
+import { runAutomaticComplianceChecks } from "@/lib/compliance/automatic";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -281,7 +282,7 @@ export async function submitKycData(payload: {
   // 3. Immutability guard — approved profiles cannot be re-submitted.
   const { data: current, error: fetchError } = await supabaseAdmin
     .from("profiles")
-    .select("kyc_status, first_name, last_name")
+    .select("kyc_status, first_name, last_name, email, mobile_number")
     .eq("id", userId)
     .single();
   if (fetchError) {
@@ -320,7 +321,54 @@ export async function submitKycData(payload: {
     return { error: `Failed to save identity data: ${updateError.message}` };
   }
 
-  // 5. Send Telegram admin notification — non-fatal if it fails.
+  // 5. Run automatic compliance checks after the profile is durably saved.
+  const complianceResult = await runAutomaticComplianceChecks({
+    id: userId,
+    first_name: current?.first_name ?? null,
+    last_name: current?.last_name ?? null,
+    email: current?.email ?? authData.user.email ?? null,
+    mobile_number: current?.mobile_number ?? null,
+    dob: payload.dob,
+    country: payload.country,
+    address: payload.address,
+    city: payload.city,
+    state: payload.state,
+    postcode: payload.postcode,
+    document_type: payload.document_type as "driver_license" | "passport" | "none",
+    license_number: payload.license_number ?? null,
+    card_number: payload.card_number ?? null,
+    state_of_issue: payload.state_of_issue ?? null,
+    passport_number: payload.passport_number ?? null,
+    expiry_date: payload.expiry_date ?? null,
+  });
+
+  if (complianceResult.status === "needs_review") {
+    await supabaseAdmin
+      .from("profiles")
+      .update({ kyc_status: "under_review" })
+      .eq("id", userId);
+  }
+
+  try {
+    await supabaseAdmin.from("audit_logs").insert([
+      {
+        actor_id: userId,
+        actor_email: authData.user.email ?? "",
+        action: "AUTOMATIC_COMPLIANCE_SCREENING_COMPLETED",
+        target_type: "profile",
+        target_id: userId,
+        new_value: {
+          status: complianceResult.status,
+          checks: complianceResult.checks,
+          screened_at: new Date().toISOString(),
+        },
+      },
+    ]);
+  } catch {
+    // Compliance status is reflected on the profile; audit log failure is non-fatal.
+  }
+
+  // 6. Send Telegram admin notification — non-fatal if it fails.
   try {
     await sendTelegramKycNotification({
       firstName: current?.first_name ?? null,
@@ -331,7 +379,7 @@ export async function submitKycData(payload: {
     console.error("[submitKycData] Telegram notification failed:", err);
   }
 
-  // 6. Audit-log the DVS consent — non-fatal if it fails.
+  // 7. Audit-log the DVS consent — non-fatal if it fails.
   try {
     await supabaseAdmin.from("audit_logs").insert([
       {
@@ -352,7 +400,7 @@ export async function submitKycData(payload: {
     // Consent is saved on the profile row; audit log failure is non-fatal.
   }
 
-  return { success: true };
+  return { success: true, compliance: complianceResult };
 }
 
 // ---------------------------------------------------------------------------
@@ -385,7 +433,7 @@ export async function savePersonalData(payload: {
 
   const { data: current, error: fetchError } = await supabaseAdmin
     .from("profiles")
-    .select("kyc_status, first_name, last_name")
+    .select("kyc_status, first_name, last_name, email, mobile_number")
     .eq("id", userId)
     .single();
   if (fetchError) {
@@ -413,6 +461,47 @@ export async function savePersonalData(payload: {
     return { error: `Failed to save personal data: ${updateError.message}` };
   }
 
+  const complianceResult = await runAutomaticComplianceChecks({
+    id: userId,
+    first_name: current?.first_name ?? null,
+    last_name: current?.last_name ?? null,
+    email: current?.email ?? authData.user.email ?? null,
+    mobile_number: current?.mobile_number ?? null,
+    dob: payload.dob,
+    country: payload.country,
+    address: payload.address,
+    city: payload.city,
+    state: payload.state,
+    postcode: payload.postcode,
+    document_type: "none",
+  });
+
+  if (complianceResult.status === "needs_review") {
+    await supabaseAdmin
+      .from("profiles")
+      .update({ kyc_status: "under_review" })
+      .eq("id", userId);
+  }
+
+  try {
+    await supabaseAdmin.from("audit_logs").insert([
+      {
+        actor_id: userId,
+        actor_email: authData.user.email ?? "",
+        action: "AUTOMATIC_COMPLIANCE_SCREENING_COMPLETED",
+        target_type: "profile",
+        target_id: userId,
+        new_value: {
+          status: complianceResult.status,
+          checks: complianceResult.checks,
+          screened_at: new Date().toISOString(),
+        },
+      },
+    ]);
+  } catch {
+    // Compliance status is reflected on the profile; audit log failure is non-fatal.
+  }
+
   // Send Telegram admin notification — non-fatal if it fails.
   try {
     await sendTelegramKycNotification({
@@ -424,5 +513,5 @@ export async function savePersonalData(payload: {
     console.error("[savePersonalData] Telegram notification failed:", err);
   }
 
-  return { success: true };
+  return { success: true, compliance: complianceResult };
 }

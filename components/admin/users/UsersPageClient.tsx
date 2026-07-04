@@ -38,7 +38,6 @@ export function UsersPageClient({
       const profile = await getUserFinancialProfile(initialUserId);
       setSelectedUser(profile);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialUserId]);
 
   const handleSearch = () => {
@@ -83,6 +82,7 @@ export function UsersPageClient({
   const loyaltyDiscountPct = selectedUser
     ? calcLoyaltyDiscountPct(selectedUser.approvedVolume, financeConfig)
     : 0;
+  const selectedUserRecord = selectedUser as (FinancialProfile & { recipients?: unknown[] }) | null;
 
   return (
     <>
@@ -130,16 +130,20 @@ export function UsersPageClient({
               loyaltyDiscountPct={loyaltyDiscountPct}
               currentRates={selectedUser.currentRates}
             />
-            <UserKycManager profile={selectedUser.profile} onProfileUpdated={handleProfileUpdated} />
+            <UserKycManager
+              key={`${selectedUser.profile?.id ?? "unknown"}-${(selectedUser.profile as Record<string, unknown> | null)?.updated_at ?? ""}`}
+              profile={selectedUser.profile}
+              onProfileUpdated={handleProfileUpdated}
+            />
             <UserTransactionTimeline
               userId={selectedUser.profile?.id}
               transactions={selectedUser.transactions}
-              recipients={(selectedUser as any).recipients ?? []}
+              recipients={selectedUserRecord?.recipients ?? []}
               onTransactionCreated={handleTimelineTransactionCreated}
             />
             <UserRecipientsPanel
               userId={selectedUser.profile?.id}
-              recipients={(selectedUser as any).recipients ?? []}
+              recipients={selectedUserRecord?.recipients ?? []}
               onRecipientCreated={handleRecipientCreated}
             />
             <UserFeedbackHistory testimonials={selectedUser.testimonials} />
