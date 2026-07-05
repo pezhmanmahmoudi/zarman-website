@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useTransition } from "react";
+import React, { useState, useTransition } from "react";
 import { ShieldCheck, Pencil, Save, X } from "lucide-react";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import formStyles from "@/styles/admin/AdminForms.module.css";
@@ -10,6 +10,7 @@ import { EditableCustomerCode } from "@/components/admin/EditableCustomerCode";
 import { updateUserIdentityKycProfile } from "@/app/actions/admin.actions";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
+import { ComplianceCheckButtons } from "@/components/admin/ComplianceCheckButtons";
 import type { getUserFinancialProfile } from "@/app/actions/admin.actions";
 
 type Profile = Awaited<ReturnType<typeof getUserFinancialProfile>>["profile"];
@@ -37,48 +38,29 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    mobile_number: "",
-    dob: "",
-    address: "",
-    city: "",
-    state: "",
-    postcode: "",
-    country: "",
-    document_type: "",
-    state_of_issue: "",
-    license_number: "",
-    card_number: "",
-    passport_number: "",
-    expiry_date: "",
-    kyc_status: "pending",
-  });
 
-  useEffect(() => {
-    if (!profile) return;
-    setForm({
-      first_name: profile.first_name ?? "",
-      last_name: profile.last_name ?? "",
-      email: profile.email ?? "",
-      mobile_number: profile.mobile_number ?? "",
-      dob: (profile as Record<string, unknown>).dob as string ?? "",
-      address: (profile as Record<string, unknown>).address as string ?? "",
-      city: (profile as Record<string, unknown>).city as string ?? "",
-      state: (profile as Record<string, unknown>).state as string ?? "",
-      postcode: (profile as Record<string, unknown>).postcode as string ?? "",
-      country: (profile as Record<string, unknown>).country as string ?? "",
-      document_type: (profile as Record<string, unknown>).document_type as string ?? "",
-      state_of_issue: (profile as Record<string, unknown>).state_of_issue as string ?? "",
-      license_number: (profile as Record<string, unknown>).license_number as string ?? "",
-      card_number: (profile as Record<string, unknown>).card_number as string ?? "",
-      passport_number: (profile as Record<string, unknown>).passport_number as string ?? "",
-      expiry_date: (profile as Record<string, unknown>).expiry_date as string ?? "",
-      kyc_status: (profile as Record<string, unknown>).kyc_status as string ?? "pending",
-    });
-  }, [profile]);
+  // Lazy initialiser — no useEffect needed. Parent re-mounts this component
+  // with a key prop when the profile changes, so the form is always fresh.
+  const p = profile as Record<string, unknown> | null;
+  const [form, setForm] = useState(() => ({
+    first_name:     profile?.first_name     ?? "",
+    last_name:      profile?.last_name      ?? "",
+    email:          profile?.email          ?? "",
+    mobile_number:  profile?.mobile_number  ?? "",
+    dob:            p?.dob            as string ?? "",
+    address:        p?.address        as string ?? "",
+    city:           p?.city           as string ?? "",
+    state:          p?.state          as string ?? "",
+    postcode:       p?.postcode       as string ?? "",
+    country:        p?.country        as string ?? "",
+    document_type:  p?.document_type  as string ?? "",
+    state_of_issue: p?.state_of_issue as string ?? "",
+    license_number: p?.license_number as string ?? "",
+    card_number:    p?.card_number    as string ?? "",
+    passport_number: p?.passport_number as string ?? "",
+    expiry_date:    p?.expiry_date    as string ?? "",
+    kyc_status:     p?.kyc_status     as string ?? "pending",
+  }));
 
   const setField = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -293,7 +275,14 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
             Current Status
             <StatusBadge status={profile?.kyc_status ?? null} />
           </div>
-          <div>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
+            {profile && (
+              <ComplianceCheckButtons
+                userId={profile.id}
+                country={(profile as Record<string, unknown>).country as string | null}
+                documentType={(profile as Record<string, unknown>).document_type as string | null}
+              />
+            )}
             {profile && <KycActionButtons userId={profile.id} />}
           </div>
         </div>

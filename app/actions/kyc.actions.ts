@@ -284,7 +284,7 @@ export async function submitKycData(payload: {
   // 3. Immutability guard — approved profiles cannot be re-submitted.
   const { data: current, error: fetchError } = await supabaseAdmin
     .from("profiles")
-    .select("kyc_status, first_name, last_name")
+    .select("kyc_status, first_name, last_name, email, mobile_number")
     .eq("id", userId)
     .single();
   if (fetchError) {
@@ -337,7 +337,7 @@ export async function submitKycData(payload: {
     console.error("[submitKycData] Telegram notification failed:", err);
   }
 
-  // 6. Audit-log the DVS consent — non-fatal if it fails.
+  // 7. Audit-log the DVS consent — non-fatal if it fails.
   try {
     await supabaseAdmin.from("audit_logs").insert([
       {
@@ -394,7 +394,7 @@ export async function savePersonalData(payload: {
 
   const { data: current, error: fetchError } = await supabaseAdmin
     .from("profiles")
-    .select("kyc_status, first_name, last_name")
+    .select("kyc_status, first_name, last_name, email, mobile_number")
     .eq("id", userId)
     .single();
   if (fetchError) {

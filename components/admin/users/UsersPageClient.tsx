@@ -102,6 +102,7 @@ export function UsersPageClient({
   const loyaltyDiscountPct = selectedUser
     ? calcLoyaltyDiscountPct(selectedUser.approvedVolume, financeConfig)
     : 0;
+  const selectedUserRecord = selectedUser as (typeof selectedUser & { recipients?: unknown[] }) | null;
 
   return (
     <>
@@ -149,17 +150,21 @@ export function UsersPageClient({
               loyaltyDiscountPct={loyaltyDiscountPct}
               currentRates={selectedUser.currentRates}
             />
-            <UserKycManager profile={selectedUser.profile} onProfileUpdated={handleProfileUpdated} />
+            <UserKycManager
+              key={`${selectedUser.profile?.id ?? "unknown"}-${(selectedUser.profile as Record<string, unknown> | null)?.updated_at ?? ""}`}
+              profile={selectedUser.profile}
+              onProfileUpdated={handleProfileUpdated}
+            />
             <UserTransactionTimeline
               userId={selectedUser.profile?.id}
               transactions={selectedUser.transactions}
-              recipients={(selectedUser as any).recipients ?? []}
+              recipients={selectedUserRecord?.recipients ?? []}
               bankAccounts={bankAccounts}
               onTransactionCreated={handleTimelineTransactionCreated}
             />
             <UserRecipientsPanel
               userId={selectedUser.profile?.id}
-              recipients={(selectedUser as any).recipients ?? []}
+              recipients={selectedUserRecord?.recipients ?? []}
               onRecipientCreated={handleRecipientCreated}
             />
             <UserFeedbackHistory testimonials={selectedUser.testimonials} />

@@ -1,0 +1,143 @@
+/**
+ * ComplianceButtons.module.css
+ * Styles for the admin manual compliance check trigger buttons.
+ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.btnRow {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.checkGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* ── Base button ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.45rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: var(--font-en-stack);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+  min-height: 36px;
+}
+
+.btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Primary — indigo (DVS) */
+.btnPrimary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: var(--accent-hover, #3730c5);
+  box-shadow: 0 3px 8px -2px rgba(var(--accent-rgb), 0.35);
+}
+
+/* Secondary — ghost (AML) */
+.btnSecondary {
+  background: #fff;
+  color: var(--text-main);
+  border-color: var(--border-soft);
+}
+
+.btnSecondary:hover:not(:disabled) {
+  background: var(--bg-soft);
+  border-color: var(--border-med);
+}
+
+/* Success flash */
+.btnSuccess {
+  background: rgba(var(--success-rgb), 0.1);
+  color: var(--success);
+  border-color: rgba(var(--success-rgb), 0.3);
+  cursor: default;
+}
+
+/* ── Spinner animation ── */
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Error message ── */
+.errorMsg {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--danger);
+  max-width: 200px;
+  line-height: 1.4;
+}
+
+.statusOk,
+.statusWarn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: fit-content;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.statusOk {
+  color: var(--success);
+  background: rgba(var(--success-rgb), 0.1);
+  border-color: rgba(var(--success-rgb), 0.32);
+}
+
+.statusWarn {
+  color: #a16207;
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+/* ── Context note ── */
+.note {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin: 0;
+  line-height: 1.5;
+  max-width: 360px;
+}

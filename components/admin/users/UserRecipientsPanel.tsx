@@ -7,6 +7,7 @@ import tableStyles from "@/styles/admin/AdminTable.module.css";
 import formStyles from "@/styles/admin/AdminForms.module.css";
 import { createAssistedRecipientForUser, updateAssistedRecipientForUser } from "@/app/actions/admin.actions";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import { RecipientComplianceButtons } from "@/components/admin/RecipientComplianceButtons";
 
 interface Recipient {
   id: string;
@@ -515,29 +516,37 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                     )}
                   </div>
                 ) : (
-                  <dl className={cardStyles.kycDetailList}>
-                    {isAud ? (
-                      <>
-                        <Field label="Account Holder Name" value={r.account_name} />
-                        <Field label="Bank Name"           value={r.bank_name} />
-                        <Field label="BSB"                 value={r.bsb} mono />
-                        <Field label="Account Number"      value={r.account_number} mono />
-                        <Field label="Phone"               value={r.recipient_phone} />
-                        <Field label="Email"               value={r.recipient_email} />
-                        <Field label="Residential Address" value={r.residential_address} />
-                      </>
-                    ) : (
-                      <>
-                        <Field label="Full Name"           value={r.full_name} />
-                        <Field label="Bank"                value={bankLabel} />
-                        <Field label="Card Number"         value={r.card_number} mono />
-                        <Field label="Account Number"      value={r.irt_account_number} mono />
-                        <Field label="Shaba (IBAN)"        value={r.shaba_number ? `IR${r.shaba_number}` : null} mono />
-                        <Field label="Phone"               value={r.irt_phone} />
-                        <Field label="Address"             value={r.irt_address} />
-                      </>
-                    )}
-                  </dl>
+                  <>
+                    <dl className={cardStyles.kycDetailList}>
+                      {isAud ? (
+                        <>
+                          <Field label="Account Holder Name" value={r.account_name} />
+                          <Field label="Bank Name"           value={r.bank_name} />
+                          <Field label="BSB"                 value={r.bsb} mono />
+                          <Field label="Account Number"      value={r.account_number} mono />
+                          <Field label="Phone"               value={r.recipient_phone} />
+                          <Field label="Email"               value={r.recipient_email} />
+                          <Field label="Residential Address" value={r.residential_address} />
+                        </>
+                      ) : (
+                        <>
+                          <Field label="Full Name"           value={r.full_name} />
+                          <Field label="Bank"                value={bankLabel} />
+                          <Field label="Card Number"         value={r.card_number} mono />
+                          <Field label="Account Number"      value={r.irt_account_number} mono />
+                          <Field label="Shaba (IBAN)"        value={r.shaba_number ? `IR${r.shaba_number}` : null} mono />
+                          <Field label="Phone"               value={r.irt_phone} />
+                          <Field label="Address"             value={r.irt_address} />
+                        </>
+                      )}
+                    </dl>
+                    {/* Compliance check buttons — manual admin trigger only */}
+                    <div style={{ marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px dashed var(--border-soft)" }}>
+                      <RecipientComplianceButtons
+                        recipientId={r.id}
+                      />
+                    </div>
+                  </>
                 )}
               </div>
             </div>
