@@ -306,8 +306,8 @@
   }
 
   .text {
-    --text-caption: 0.875rem; 
-    line-height: 1.4;
+    font-size: 0.675rem; /* 14px */
+    line-height: 1.1;
   }
 
   .dots {
@@ -317,5 +317,6 @@
 
   .dot {
     width: 16px;
+    height: 2px;
   }
 }
