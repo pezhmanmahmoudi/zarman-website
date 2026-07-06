@@ -4,24 +4,17 @@
    Every pixel is intentional. Nothing is decorative noise.
    ============================================================ */
 
-/* ── Animated border angle — enables smooth conic interpolation */
-@property --beam-angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
 /* ── Wrapper ───────────────────────────────────────────────── */
 .wrapper {
   width: 100%;
   display: flex;
   justify-content: center;
-  padding: 14px 24px 26px; /* bottom room for dots */
+  padding: 14px 24px 26px;
   position: relative;
   z-index: 10;
 }
 
-/* ── Pill container — beam's reference frame, no overflow clip ── */
+/* ── Pill container ── */
 .pill {
   position: relative;
   width: 100%;
@@ -38,7 +31,7 @@
   background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(0,0,0,0.3) 100%);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
-  /* Depth */
+  
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.055),
     0 1px 2px rgba(0, 0, 0, 0.25),
@@ -58,25 +51,14 @@
   outline-offset: 3px;
 }
 
-/* ── Border beam — Premium Tech Gradient ────────────────────── */
+/* ── Border beam — Premium Tech Gradient (Optically Smoothed) ──────── */
 .borderBeam {
   position: absolute;
   inset: -1.5px;
   border-radius: inherit;
-  padding: 3.2px;
+  padding: 2px; 
   pointer-events: none;
   z-index: 0;
-  --beam-angle: 0deg;
-
-  /* طیف کهکشانی: از شفاف به مجنتا، بنفش و فیروزه‌ای */
-  background: conic-gradient(
-    from var(--beam-angle),
-    transparent                    0%,
-    transparent                   50%,
-    rgba(236, 72, 153, 0.7)       75%,   /* Magenta */
-    rgba(139, 92, 246, 0.9)       88%,   /* Violet */
-    rgba(56, 189, 248, 1)         100%   /* Cyan */
-  );
 
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
@@ -87,12 +69,33 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 
-  /* زمان انیمیشن کوتاه‌تر شده تا پویاتر به نظر برسد */
-  animation: beamOrbit 5s linear infinite; 
+  overflow: hidden; 
+}
+
+.borderBeam::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2000px; 
+  height: 2000px;
+  
+  background: conic-gradient(
+    transparent                    0%,
+    transparent                   35%,
+    rgba(236, 72, 153, 0.4)       55%,   
+    rgba(139, 92, 246, 0.8)       80%,   
+    rgba(56, 189, 248, 1)         100%   
+  );
+
+  filter: blur(12px);
+  transform-origin: center center;
+  animation: beamOrbit 5.5s linear infinite;
 }
 
 @keyframes beamOrbit {
-  to { --beam-angle: 360deg; }
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 /* ── Inner layout ──────────────────────────────────────────── */
@@ -101,8 +104,12 @@
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 14px 6px;
+  
+  /* فاصله استاندارد بین فلش‌های ناوبری و بخش پیام ایجاد شد */
+  gap: 12px; 
+  
+  /* فضای تنفس از لبه‌های کپسول بیشتر شد */
+  padding: 12px 24px 8px; 
   min-height: 44px;
 }
 
@@ -119,12 +126,8 @@
   border: none;
   padding: 0;
   cursor: pointer;
-
-  /* در دسکتاپ مخفی است و با هاور موس دیده می‌شود */
   color: transparent;
-  transition:
-    color 0.2s ease,
-    background-color 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .strip:hover .navBtn {
@@ -148,6 +151,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  
+  /* یک پدینگ داخلی اضافه شد تا پیام هیچ‌وقت به فلش‌ها نچسبد */
+  padding: 0 12px; 
   overflow: hidden;
 }
 
@@ -155,21 +161,16 @@
 .message {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  
+  /* فاصله دقیق و حساب‌شده بین آیکون و متن */
+  gap: 14px; 
   animation: messageIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes messageIn {
-  from {
-    opacity: 0;
-    filter: blur(6px);
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    filter: blur(0px);
-    transform: translateY(0);
-  }
+  from { opacity: 0; filter: blur(6px); transform: translateY(8px); }
+  to { opacity: 1; filter: blur(0px); transform: translateY(0); }
 }
 
 /* ── Icon ──────────────────────────────────────────────────── */
@@ -178,14 +179,25 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  opacity: 0.65;
-  transition: opacity 0.2s ease;
+  
+  /* ترفند پرمیوم: اضافه کردن یک پس‌زمینه دایره‌ای شیشه‌ای به آیکون */
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  
+  opacity: 0.9;
+  transition: all 0.3s ease;
 }
 
 .strip:hover .iconWrap {
-  opacity: 0.85;
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+  
 }
 
+/* رنگ‌بندی آیکون‌ها */
 .icon_shield  { color: #86efac; }
 .icon_zap     { color: #fde68a; }
 .icon_star    { color: #93c5fd; }
@@ -196,23 +208,32 @@
 
 /* ── Typography ────────────────────────────────────────────── */
 .text {
-  /* اولویت اول با متغیر فونت انگلیسی پروژه، سپس فونت فارسی */
   font-family: "Inter", var(--font-primary), sans-serif;
   font-size: var(--text-body-sm, 1rem);
   font-weight: var(--font-weight-regular, 400);
   color: #1064ff; 
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); 
   letter-spacing: 0.01em;
-  line-height: 1.45;
-  text-align: center;
+  line-height: 1.5;
   
-  /* محدود کردن متن به حداکثر ۲ خط */
+  /* تراز کردن متن به سمت راست (سمت آیکون) برای جلوگیری از لبه‌های نامنظم در پیام‌های دوخطی */
+  text-align: right; 
+  
   display: -webkit-box;
   -webkit-line-clamp: 2;
-  line-clamp: 2; /* 👈 این خط اضافه شد تا ارور برطرف شود */
+  line-clamp: 2; 
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* پشتیبانی از حالت LTR برای زبان انگلیسی */
+[dir="ltr"] .text {
+  text-align: left;
+}
+
+  [dir="rtl"] .navBtn svg {
+    transform: scaleX(-1);
+  }
 
 /* ── Progress indicators ───────────────────────────────────── */
 .dots {
@@ -285,29 +306,37 @@
     -webkit-backdrop-filter: blur(16px);
   }
 
-  /* تنظیمات فلش‌های ناوبری برای موبایل */
   .navBtn {
-    /* دکمه‌ها را در موبایل هم نمایش می‌دهیم */
-    color: rgba(255, 255, 255, 0.25); /* در حالت عادی محو هستند */
+    color: rgba(255, 255, 255, 0.25); 
   }
-  /* وقتی جهت متن راست‌به‌چپ است، آیکون‌های داخل دکمه‌ها را قرینه کن */
-[dir="rtl"] .navBtn svg {
-  transform: scaleX(-1);
-}
-  /* افکت هنگام لمس فلش‌ها در موبایل */
+
+  [dir="rtl"] .navBtn svg {
+    transform: scaleX(-1);
+  }
+  
   .navBtn:active {
-    color: rgba(255, 255, 255, 0.95) !important; /* پررنگ شدن */
-    background-color: rgba(255, 255, 255, 0.15); /* هاله روشن دور دکمه */
+    color: rgba(255, 255, 255, 0.95) !important; 
+    background-color: rgba(255, 255, 255, 0.15); 
   }
 
   .inner {
-    padding: 11px 12px 6px; /* کمی پدینگ کناری کمتر برای جا شدن فلش‌ها */
+    padding: 12px 16px 8px; /* پدینگ موبایل متناسب شد */
+    gap: 8px; /* فاصله فلش‌ها در موبایل */
     height: 64px; 
   }
 
+  .track {
+    padding: 0 4px; /* فضای تنفس موبایل */
+  }
+
+  .iconWrap {
+    width: 30px; /* دایره دور آیکون در موبایل کمی کوچک‌تر می‌شود */
+    height: 30px;
+  }
+
   .text {
-    font-size: 0.775rem; /* 14px */
-    line-height: 1.4;
+    font-size: 0.775rem; 
+    line-height: 1.45;
   }
 
   .dots {

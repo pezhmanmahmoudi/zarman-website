@@ -23,23 +23,23 @@ export default function Hero() {
 
   const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_TRANSFER_HELP)}`;
   const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
+  
+  // متغیر mounted را همچنان برای جلوگیری از Hydration Error نگه می‌داریم، 
+  // اما دیگر آن را به GSAP پاس نمی‌دهیم.
   const [mounted, setMounted] = useState(false);
 
-  // Format lastUpdated as Gregorian date + time, e.g. "11 June 2026 · 10:01"
   const formattedLastUpdated = (() => {
     if (!currentRates.lastUpdated) return null;
     try {
       const d = new Date(currentRates.lastUpdated);
       if (isNaN(d.getTime())) return null;
       
-      // تقویم میلادی
       const datePart = d.toLocaleDateString("en-GB", {
         day: "numeric",
         month: "long",
         year: "numeric"
       });
       
-      // ساعت دقیق
       const timePart = d.toLocaleTimeString("en-GB", {
         hour: "2-digit",
         minute: "2-digit",
@@ -59,17 +59,45 @@ export default function Hero() {
 
   useGSAP(
     () => {
+      // استفاده از autoAlpha به جای opacity برای کنترل هوشمند رندر در مرورگر
+      const tl = gsap.timeline({ defaults: { ease: "power3.out", duration: 0.8 } });
 
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-
-      tl.to(`.${styles.eyebrow}`, { autoAlpha: 1, y: 0, duration: 0.65 })
-        .to(
-          `.${styles.rateWidget}`,
-          { autoAlpha: 1, x: 0, scale: 1, duration: 1.2 },
+      tl.fromTo(`.${styles.eyebrow}`, 
+          { autoAlpha: 0, y: 20 }, 
+          { autoAlpha: 1, y: 0 }
+        )
+        .fromTo(`.${styles.title}`, 
+          { autoAlpha: 0, y: 25 }, 
+          { autoAlpha: 1, y: 0 }, 
+          "-=0.6"
+        )
+        .fromTo(`.${styles.subtitle}`, 
+          { autoAlpha: 0, y: 20 }, 
+          { autoAlpha: 1, y: 0 }, 
+          "-=0.6"
+        )
+        .fromTo(`.${styles.actions} > *`, 
+          { autoAlpha: 0, y: 15 }, 
+          { autoAlpha: 1, y: 0, stagger: 0.15 }, 
+          "-=0.6"
+        )
+        .fromTo(`.${styles.stripContainer}`, 
+          { autoAlpha: 0, y: 15 }, 
+          { autoAlpha: 1, y: 0 }, 
+          "-=0.6"
+        )
+        .fromTo(`.${styles.rateWidget}`, 
+          { autoAlpha: 0, x: -20, scale: 0.96 }, 
+          { autoAlpha: 1, x: 0, scale: 1, duration: 1.2 }, 
           "-=0.5"
+        )
+        .fromTo(`.${styles.meta} > span`, 
+          { autoAlpha: 0, y: 10 }, 
+          { autoAlpha: 1, y: 0, stagger: 0.08 },
+          "-=0.6"
         );
     },
-    { scope: heroRef, dependencies: [mounted] }
+    { scope: heroRef } 
   );
 
   return (
@@ -116,14 +144,12 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* کانتینر نوار پیام به داخل لایوت منتقل شد */}
           <div className={styles.stripContainer}>
             <MessageStrip />
           </div>
 
           <div className={styles.visual}>
             <div className={styles.rateWidget} aria-label="نرخ لحظه‌ای ارز">
-              {/* ── Live badge — centred above card ── */}
               <div className={styles.widgetHeader}>
                 <span className={styles.pulseDot}></span>
                 <span className={styles.status}>
@@ -131,7 +157,6 @@ export default function Hero() {
                 </span>
               </div>
 
-              {/* ── Main card ── */}
               <div className={styles.splitCard}>
                 <div className={styles.logoSection}>
                   <Image src="/images/logo-no-text-light.svg" alt="Zarman Exchange" width={100} height={100} style={{ height: 'auto' }} className={styles.boardLogo} />
@@ -174,7 +199,6 @@ export default function Hero() {
                 </div>
               </div>
 
-              {/* ── Last-update footer strip ── */}
               {!isLoading && formattedLastUpdated && (
                 <div className={styles.lastUpdated} aria-live="polite">
                   <Clock size={13} className={styles.clockIcon} />

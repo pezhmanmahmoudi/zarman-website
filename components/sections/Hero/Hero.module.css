@@ -40,7 +40,7 @@
   width: 100%;
   max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: clamp(80px, 10vh, 100px) var(--container-padding) var(--space-8);
+  padding: clamp(140px, 15vh, 160px) var(--container-padding) var(--space-8);
 }
 
 .layout {
@@ -69,7 +69,6 @@
 }
 
 .eyebrow {
-  opacity: 0;
   margin: 0 0 var(--space-3);
   color: var(--color-accent-secondary); 
   font-family: var(--font-primary);
@@ -237,7 +236,6 @@
 
 .rateWidget {
   display: flex;
-  opacity: 0;
   flex-direction: column;
   gap: var(--space-4);
   width: 100%;
@@ -526,5 +524,31 @@
   
   .stripContainer {
     margin: var(--space-4) 0 var(--space-8) 0;
+  }
+}
+
+
+
+/* ====================================================
+   SEO & ANTI-FLICKER (FOUC) FAILSAFE
+   ==================================================== */
+.eyebrow,
+.title,
+.subtitle,
+.actions > *,
+.meta > span,
+.stripContainer,
+.rateWidget {
+  visibility: hidden;
+  opacity: 0;
+  
+  /* ترفند نجات: اگر JS لود نشد، بعد از ۲.۵ ثانیه به صورت خودکار المان‌ها مرئی می‌شوند */
+  animation: forceReveal 0.1s 2.5s forwards;
+}
+
+@keyframes forceReveal {
+  to {
+    visibility: visible;
+    opacity: 1;
   }
 }
