@@ -111,7 +111,7 @@ export default function MessageStrip() {
             aria-label={isEn ? "Previous message" : "پیام قبلی"}
             tabIndex={-1}
           >
-            <ChevronLeft size={14} strokeWidth={2} />
+            <ChevronLeft size={18} strokeWidth={2} />
           </button>
 
           <div className={styles.track} aria-live="polite" aria-atomic="true">
@@ -120,7 +120,7 @@ export default function MessageStrip() {
                 className={`${styles.iconWrap} ${styles[`icon_${msg.icon}`]}`}
                 aria-hidden="true"
               >
-                <IconComponent size={13} strokeWidth={2} />
+                <IconComponent size={16} strokeWidth={2} />
               </span>
               <span className={styles.text}>{text}</span>
             </div>
@@ -132,7 +132,7 @@ export default function MessageStrip() {
             aria-label={isEn ? "Next message" : "پیام بعدی"}
             tabIndex={-1}
           >
-            <ChevronRight size={14} strokeWidth={2} />
+            <ChevronRight size={18} strokeWidth={2} />
           </button>
         </div>
 

@@ -35,24 +35,16 @@
   width: 100%;
   border-radius: 9999px;
 
-  /*
-   * Background inspired by the Hero section:
-   * deep navy base + a soft indigo radial bloom from the top
-   * so the pill feels like it belongs on the same canvas.
-   */
-  background:
-    radial-gradient(ellipse 120% 100% at 50% -10%,
-      rgba(79, 70, 229, 0.09) 0%,
-      transparent 65%),
-    rgba(10, 14, 26, 0.88);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(0,0,0,0.3) 100%);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
-
   /* Depth */
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.055),
     0 1px 2px rgba(0, 0, 0, 0.25),
     0 8px 32px -4px rgba(0, 0, 0, 0.52);
+
+  border: 1px solid rgba(255, 255, 255, 0.05);
 
   overflow: hidden;
   outline: none;
@@ -61,18 +53,12 @@
   cursor: default;
 }
 
-
-
 .strip:focus-visible {
   outline: 2px solid rgba(96, 165, 250, 0.45);
   outline-offset: 3px;
 }
 
-/* ── Border beam — About-section style, outside overflow:hidden ─
-   inset: -1.5px lets the ring straddle the pill edge cleanly.
-   No clipping by overflow:hidden since .pill has none.
-   Indigo → violet arc orbits the border — trustworthy, premium.
-   ──────────────────────────────────────────────────────────── */
+/* ── Border beam — Premium Tech Gradient ────────────────────── */
 .borderBeam {
   position: absolute;
   inset: -1.5px;
@@ -82,13 +68,14 @@
   z-index: 0;
   --beam-angle: 0deg;
 
+  /* طیف کهکشانی: از شفاف به مجنتا، بنفش و فیروزه‌ای */
   background: conic-gradient(
     from var(--beam-angle),
     transparent                    0%,
-    transparent                   73%,
-    rgba(99,  102, 241, 0.75)     87%,   /* indigo */
-    rgba(139,  92, 246, 0.90)     93%,   /* violet */
-    transparent                  100%
+    transparent                   50%,
+    rgba(236, 72, 153, 0.7)       75%,   /* Magenta */
+    rgba(139, 92, 246, 0.9)       88%,   /* Violet */
+    rgba(56, 189, 248, 1)         100%   /* Cyan */
   );
 
   -webkit-mask:
@@ -100,7 +87,8 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 
-  animation: beamOrbit 8s linear infinite;
+  /* زمان انیمیشن کوتاه‌تر شده تا پویاتر به نظر برسد */
+  animation: beamOrbit 5s linear infinite; 
 }
 
 @keyframes beamOrbit {
@@ -119,8 +107,6 @@
 }
 
 /* ── Navigation buttons ────────────────────────────────────── */
-/*    Invisible at rest. Appear on hover. Feel like controls,  */
-/*    not decoration.                                          */
 .navBtn {
   flex-shrink: 0;
   display: flex;
@@ -134,7 +120,7 @@
   padding: 0;
   cursor: pointer;
 
-  /* Hidden by default — revealed on strip hover */
+  /* در دسکتاپ مخفی است و با هاور موس دیده می‌شود */
   color: transparent;
   transition:
     color 0.2s ease,
@@ -170,8 +156,6 @@
   display: flex;
   align-items: center;
   gap: 10px;
-
-  /* Apple-grade entrance: blur collapses as element rises into place */
   animation: messageIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -202,7 +186,6 @@
   opacity: 0.85;
 }
 
-/* Purposeful tints — color communicates meaning, not style */
 .icon_shield  { color: #86efac; }
 .icon_zap     { color: #fde68a; }
 .icon_star    { color: #93c5fd; }
@@ -213,17 +196,25 @@
 
 /* ── Typography ────────────────────────────────────────────── */
 .text {
-  font-family: var(--font-primary, -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif);
-  font-size: 13.5px;
-  font-weight: 500;
-  color: rgba(224, 232, 248, 0.86);
-  letter-spacing: 0.005em;
+  /* اولویت اول با متغیر فونت انگلیسی پروژه، سپس فونت فارسی */
+  font-family: "Inter", var(--font-primary), sans-serif;
+  font-size: var(--text-body-sm, 1rem);
+  font-weight: var(--font-weight-regular, 400);
+  color: #1064ff; 
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); 
+  letter-spacing: 0.01em;
   line-height: 1.45;
   text-align: center;
+  
+  /* محدود کردن متن به حداکثر ۲ خط */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2; /* 👈 این خط اضافه شد تا ارور برطرف شود */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ── Progress indicators ───────────────────────────────────── */
-/*    Thin dashes. The active one fills like a progress bar.   */
 .dots {
   position: relative;
   z-index: 2;
@@ -260,7 +251,6 @@
   background: rgba(255, 255, 255, 0.16);
 }
 
-/* Fill animation — scaleX from origin to full width */
 .dotFill {
   position: absolute;
   inset: 0;
@@ -270,7 +260,6 @@
   animation: dotFillProgress 5.5s linear forwards;
 }
 
-/* RTL: fill reads right-to-left */
 [dir="rtl"] .dotFill {
   transform-origin: right;
 }
@@ -280,42 +269,45 @@
 }
 
 /* ── Mobile ────────────────────────────────────────────────── */
-/*    Edge-to-edge. No pill. Simpler but still refined.        */
 @media (max-width: 768px) {
   .wrapper {
-    padding: 0;
+    padding: 12px 16px 20px; 
   }
 
   .pill {
-    border-radius: 0;
+    border-radius: 9999px;
     max-width: 100%;
   }
 
-  /* Beam looks off on a flat edge-to-edge rectangle — hide it */
-  .borderBeam {
-    display: none;
-  }
-
   .strip {
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
+    border-radius: 9999px; 
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
 
-  /* Swipe handles navigation — no buttons needed */
+  /* تنظیمات فلش‌های ناوبری برای موبایل */
   .navBtn {
-    display: none;
+    /* دکمه‌ها را در موبایل هم نمایش می‌دهیم */
+    color: rgba(255, 255, 255, 0.25); /* در حالت عادی محو هستند */
+  }
+  /* وقتی جهت متن راست‌به‌چپ است، آیکون‌های داخل دکمه‌ها را قرینه کن */
+[dir="rtl"] .navBtn svg {
+  transform: scaleX(-1);
+}
+  /* افکت هنگام لمس فلش‌ها در موبایل */
+  .navBtn:active {
+    color: rgba(255, 255, 255, 0.95) !important; /* پررنگ شدن */
+    background-color: rgba(255, 255, 255, 0.15); /* هاله روشن دور دکمه */
   }
 
   .inner {
-    padding: 11px 20px 6px;
-    min-height: 40px;
+    padding: 11px 12px 6px; /* کمی پدینگ کناری کمتر برای جا شدن فلش‌ها */
+    height: 64px; 
   }
 
   .text {
-    font-size: 13px;
+    --text-caption: 0.875rem; 
+    line-height: 1.4;
   }
 
   .dots {
@@ -327,4 +319,3 @@
     width: 16px;
   }
 }
-

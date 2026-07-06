@@ -116,6 +116,11 @@ export default function Hero() {
             </div>
           </div>
 
+          {/* کانتینر نوار پیام به داخل لایوت منتقل شد */}
+          <div className={styles.stripContainer}>
+            <MessageStrip />
+          </div>
+
           <div className={styles.visual}>
             <div className={styles.rateWidget} aria-label="نرخ لحظه‌ای ارز">
               {/* ── Live badge — centred above card ── */}
@@ -136,7 +141,6 @@ export default function Hero() {
                   <div className={styles.rateCol}>
                     <span className={styles.label}>فروش دلار استرالیا</span>
                     <strong className={styles.value}>
-                      {/* 👈 در اینجا سایزهای خطی به کلاس‌های توکن تغییر کردند */}
                       {isLoading ? (
                         <span style={{ fontSize: 'var(--text-body-md)' }}>در حال دریافت...</span>
                       ) : currentRates.sellAUD ? (
@@ -155,7 +159,6 @@ export default function Hero() {
                   <div className={styles.rateCol}>
                     <span className={styles.label}>خرید دلار استرالیا</span>
                     <strong className={styles.value}>
-                      {/* 👈 در اینجا سایزهای خطی به کلاس‌های توکن تغییر کردند */}
                       {isLoading ? (
                         <span style={{ fontSize: 'var(--text-body-md)' }}>در حال دریافت...</span>
                       ) : currentRates.buyAUD ? (
@@ -183,7 +186,6 @@ export default function Hero() {
           </div>
         </div>
       </div>
-      <MessageStrip />
     </section>
   );
 }

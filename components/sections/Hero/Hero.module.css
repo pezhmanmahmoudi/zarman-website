@@ -55,6 +55,17 @@
 .content {
   text-align: right;
   max-width: 640px;
+  order: 1; /* تعیین جایگاه اول در دسکتاپ */
+}
+
+/* ====================================================
+   Message Strip Container
+   ==================================================== */
+.stripContainer {
+  grid-column: 1 / -1; /* در دسکتاپ تمام عرض را می‌گیرد */
+  order: 3; /* در دسکتاپ پایین‌تر از همه قرار می‌گیرد */
+  width: 100%;
+  margin-top: var(--space-8);
 }
 
 .eyebrow {
@@ -62,7 +73,7 @@
   margin: 0 0 var(--space-3);
   color: var(--color-accent-secondary); 
   font-family: var(--font-primary);
-  font-size: var(--text-body-md); /* 👈 ۱۶ پیکسل برای خوانایی عالی در فارسی */
+  font-size: var(--text-body-md);
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.9px;
 }
@@ -173,12 +184,12 @@
   margin: 0 0 var(--space-8);
   font-family: var(--font-primary);
   color: var(--color-text-secondary);
-  font-size: var(--text-body-sm); /* 👈 رفع مشکل غول‌پیکر شدن متن */
+  font-size: var(--text-body-sm); 
   line-height: var(--leading-relaxed);
   max-width: 90%;
   position: relative;
   z-index: 10;
-   font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-semibold);
 }
 
 .actions {
@@ -221,6 +232,7 @@
   display: flex;
   justify-content: flex-end;
   width: 100%;
+  order: 2; /* تعیین جایگاه دوم در دسکتاپ (جلوی محتوا) */
 }
 
 .rateWidget {
@@ -244,15 +256,28 @@
   border-radius: var(--radius-pill);
 }
 
+
 .pulseDot {
   width: 8px;
   height: 8px;
-  border-radius: var(--radius-pill);
-  background-color: #10b981; 
-  box-shadow: 0 0 12px #10b981; 
-  animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: #10b981;
+  border-radius: 50%;
+  position: relative;
 }
 
+.pulseDot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background-color: rgba(16, 185, 129, 0.4);
+  animation: pulseAnim 2s infinite;
+}
+
+@keyframes pulseAnim {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
 .status {
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
@@ -331,7 +356,7 @@
 }
 
 .currency {
-  font-size: var(--text-body-sm); /* 👈 کلمه‌ی تومان برای تناسب بهتر روی sm تنظیم شد */
+  font-size: var(--text-body-sm); 
   font-weight: var(--font-weight-regular);
   color: var(--color-text-tertiary);
   margin-right: var(--space-2);
@@ -362,8 +387,7 @@
 }
 
 .clockIcon {
-  /* رنگ خنثی، مینیمال و حرفه‌ای */
-  color: #10b981; 
+  color: #94A3B8; 
   stroke-width: 1.5px;
   flex-shrink: 0;
 }
@@ -372,18 +396,17 @@
   font-family: var(--font-primary);
   font-size: var(--text-caption);
   font-weight: 500;
-  color: #10b981; /* کمرنگ‌تر برای حفظ تمرکز چشم روی نرخ‌های اصلی */
+  color: #94A3B8; 
   white-space: nowrap;
 }
 
 .lastUpdatedTime {
-  /* استفاده از فونت انگلیسی برای اعداد با وزن متعادل و رنگ شارپ */
   font-family: var(--font-en), sans-serif;
   font-size: 13px;
   font-weight: 500;
-  color: #10b981; /* سفید-یخی برای خوانایی بالا و القای حس لوکس */
+  color: #10b981;
   letter-spacing: 0.5px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4); /* سایه بسیار محو برای جداسازی از پس‌زمینه */
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4); 
 }
 
 @keyframes fadeInStrip {
@@ -407,14 +430,20 @@
   .content {
     text-align: center;
     max-width: 100%;
+    order: 1;
   }
-  .subtitle {
-    margin: 0 auto var(--space-8);
+  
+  .stripContainer {
+    order: 2; /* در تبلت و موبایل این کانتینر در ردیف دوم قرار می‌گیرد */
+    margin-top: 0; 
   }
-  .actions, .meta {
-    justify-content: center;
-  }
+
   .visual {
+    justify-content: center;
+    order: 3; /* انتقال بورد قیمت به زیر نوار پیام */
+  }
+
+  .actions, .meta {
     justify-content: center;
   }
 
@@ -434,11 +463,21 @@
 }
 
 @media (max-width: 768px) {
+
+  .layout {
+    gap: var(--space-6); /* این مقدار قبلا از رزولوشن بالاتر --space-12 به ارث می‌رسید */
+  }
+  .actions {
+    margin-bottom: 0; /* در حالت دسکتاپ --space-6 بود، در موبایل صفرش می‌کنیم */
+  }
+  .stripContainer {
+    margin: 0 0 var(--space-4) 0; 
+  }
   .hero {
     min-height: auto;
   }
   .container {
-    padding-top: 130px; 
+   margin: 0 0 var(--space-4) 0; 
   }
   .eyebrow {
     margin-bottom: 24px; 
@@ -476,5 +515,16 @@
   .infoIcon {
     top: -8px !important; 
     left: 4px !important; 
+  }
+
+  /* حذف کلمات متا در موبایل و تنظیم فاصله جایگزین (Message Strip) */
+  .meta {
+    display: none; 
+  }
+
+
+  
+  .stripContainer {
+    margin: var(--space-4) 0 var(--space-8) 0;
   }
 }
