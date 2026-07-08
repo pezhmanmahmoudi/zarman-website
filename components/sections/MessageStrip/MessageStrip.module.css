@@ -211,13 +211,13 @@
   font-family: "Inter", var(--font-primary), sans-serif;
   font-size: var(--text-body-sm, 1rem);
   font-weight: var(--font-weight-regular, 400);
-  color: #1064ff; 
+  color: #b3b4b5; 
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); 
   letter-spacing: 0.01em;
   line-height: 1.5;
   
   /* تراز کردن متن به سمت راست (سمت آیکون) برای جلوگیری از لبه‌های نامنظم در پیام‌های دوخطی */
-  text-align: right; 
+  text-align: center; 
   
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -336,6 +336,7 @@
 
   .text {
     font-size: 0.700rem; 
+    font-weight: 450;
     line-height: 1.45;
   }
 
