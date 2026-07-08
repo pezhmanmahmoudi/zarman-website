@@ -30,7 +30,7 @@ export interface StripMessage {
 export const STRIP_MESSAGES: StripMessage[] = [
   {
     id: 1,
-    fa: "زرمان یک Remittance Dealer ثبت‌شده در AUSTRAC با ABN و ACN معتبر است.",
+    fa: "زرمان یک Remittance Dealer ثبت‌شده در AUSTRAC با ABN معتبر است.",
     en: "Zarman is an AUSTRAC-registered Remittance Dealer with a valid ABN & ACN.",
     icon: "shield",
   },
@@ -48,19 +48,19 @@ export const STRIP_MESSAGES: StripMessage[] = [
   },
   {
     id: 4,
-    fa: "به ازای هر ۵٬۰۰۰ دلار تراکنش، نرخ اختصاصی بهتری از سیستم وفاداری دریافت کنید.",
+    fa: "به ازای هر ۵,۰۰۰ دلار تراکنش، نرخ اختصاصی بهتری از سیستم وفاداری دریافت کنید.",
     en: "Unlock better exchange rates every AUD 5,000 through our Loyalty Program.",
     icon: "star",
   },
   {
     id: 5,
-    fa: "احراز هویت آنلاین تنها چند دقیقه زمان می‌برد و مطابق قوانین AUSTRAC انجام می‌شود.",
+    fa: "احراز هویت تنها چند دقیقه زمان می‌برد و مطابق قوانین AUSTRAC می‌باشد.",
     en: "Fast online identity verification, fully compliant with AUSTRAC regulations.",
     icon: "lock",
   },
   {
     id: 6,
-    fa: "پرداخت هزینه‌های AMC، AHPRA، ADC، OET، NCLEX، دانشگاه‌ها و ویزا بدون دردسر.",
+    fa: "پرداخت هزینه‌های AMC، AHPRA، ADC، OET، NCLEX، دانشگاه‌ها و ویزا.",
     en: "Pay AMC, AHPRA, ADC, OET, NCLEX, tuition and visa fees with ease.",
     icon: "zap",
   },
