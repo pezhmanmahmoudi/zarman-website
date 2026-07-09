@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
   // Empty turbopack config silences the "webpack config but no turbopack config" warning
   // so `next dev` (Turbopack) works alongside the webpack() config used by `next build`.
   turbopack: {},
+  // Ensure serverless functions include local assets used by PDF generation.
+  outputFileTracingIncludes: {
+    "/*": [
+      "./public/fonts/**/*.ttf",
+      "./public/images/logo-no-text-light.svg",
+    ],
+  },
   // Exclude nested leftover folder from compilation
   webpack(config) {
     config.watchOptions = {
