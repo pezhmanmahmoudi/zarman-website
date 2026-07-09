@@ -138,6 +138,7 @@ export const FA = {
   // ── Recurring Expenses ──────────────────────────────────────────────────
   secRecurring:        "هزینه‌های دوره‌ای",
   secRecurringDesc:    "قالب‌های هزینه‌های منظم — ماهانه، هر دو هفته یا فصلی",
+
   recurringAddBtn:     "تعریف هزینه دوره‌ای",
   recurringPostBtn:    "ثبت دوره",
   recurringNoItems:    "هیچ هزینه دوره‌ای تعریف نشده است.",
@@ -221,18 +222,23 @@ export function scoreBarColor(score: number): string {
   return "#ef4444";
 }
 
+function isolateNumber(text: string): string {
+  // Keep minus sign and digits visually ordered in RTL containers.
+  return `\u2066${text}\u2069`;
+}
+
 export function pct(v: number, decimals = 1) {
-  return (v * 100).toFixed(decimals) + "%";
+  return isolateNumber((v * 100).toFixed(decimals) + "%");
 }
 
 export function fmtMonths(m: number | null): string {
   if (m === null) return FA.na;
-  return m.toFixed(1) + " " + FA.monthsUnit;
+  return isolateNumber(m.toFixed(1)) + " " + FA.monthsUnit;
 }
 
 export function fmtDays(d: number | null): string {
   if (d === null) return FA.na;
-  return Math.round(d) + " " + FA.daysUnit;
+  return isolateNumber(Math.round(d).toString()) + " " + FA.daysUnit;
 }
 
 export function trendBadgeCls(t: string) {

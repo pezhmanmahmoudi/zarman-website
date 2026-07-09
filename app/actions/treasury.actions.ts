@@ -166,7 +166,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     amount: Number(r.amount),
     exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
     loan_type: r.loan_type as "injection" | "repayment",
-    account_id: r.account_id as string | null,
+    account_id: (r.account_id ?? r.account) as string | null,
     date: r.date as string,
   }));
 
@@ -294,6 +294,7 @@ export async function addOwnerLoan(payload: {
       currency: payload.currency,
       amount: payload.amount,
       exchange_rate: payload.currency === "AUD" ? payload.exchange_rate : null,
+      account: payload.account_id,
       account_id: payload.account_id,
       loan_type: payload.loan_type,
       repayment_status: payload.repayment_status,
@@ -309,6 +310,68 @@ export async function addOwnerLoan(payload: {
     actorEmail: admin.email ?? "",
     action: "OWNER_LOAN_ADDED",
     targetType: "owner_loans",
+    newValue: payload,
+  }).catch(() => {});
+
+  revalidatePath("/admin/treasury");
+  return { success: true };
+}
+
+/**
+ * ویرایش کامل تراکنش سرمایه مالک
+ */
+export async function updateOwnerLoan(payload: {
+  id: string;
+  date: string;
+  currency: "AUD" | "IRT";
+  amount: number;
+  exchange_rate?: number | null;
+  account_id: string;
+  loan_type: "injection" | "repayment";
+  repayment_status: "open" | "partially_repaid" | "repaid";
+  notes?: string;
+}): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+
+  if (!payload.id) return { error: "شناسه الزامی است." };
+  if (!payload.date) return { error: "تاریخ الزامی است." };
+  if (!payload.account_id) return { error: "انتخاب کشوی حساب الزامی است." };
+  if (payload.amount <= 0) return { error: "مبلغ باید بزرگتر از صفر باشد." };
+  if (payload.currency === "AUD" && (!payload.exchange_rate || payload.exchange_rate <= 0)) {
+    return { error: "نرخ تبدیل برای ارز AUD الزامی است." };
+  }
+
+  const db = makeServiceRoleClient();
+  const { data: before } = await db
+    .from("owner_loans")
+    .select("date, currency, amount, exchange_rate, account_id, account, loan_type, repayment_status, notes")
+    .eq("id", payload.id)
+    .single();
+
+  const { error } = await db
+    .from("owner_loans")
+    .update({
+      date: payload.date,
+      currency: payload.currency,
+      amount: payload.amount,
+      exchange_rate: payload.currency === "AUD" ? payload.exchange_rate : null,
+      account: payload.account_id,
+      account_id: payload.account_id,
+      loan_type: payload.loan_type,
+      repayment_status: payload.repayment_status,
+      notes: payload.notes?.trim() || null,
+    })
+    .eq("id", payload.id);
+
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "OWNER_LOAN_UPDATED",
+    targetType: "owner_loans",
+    targetId: payload.id,
+    oldValue: before,
     newValue: payload,
   }).catch(() => {});
 
@@ -359,6 +422,70 @@ export async function addExpense(payload: {
     actorEmail: admin.email ?? "",
     action: "EXPENSE_ADDED",
     targetType: "expenses",
+    newValue: payload,
+  }).catch(() => {});
+
+  revalidatePath("/admin/treasury");
+  return { success: true };
+}
+
+/**
+ * ویرایش کامل هزینه
+ */
+export async function updateExpense(payload: {
+  id: string;
+  date: string;
+  title: string;
+  category: string;
+  currency: "AUD" | "IRT";
+  amount: number;
+  exchange_rate?: number | null;
+  payer_account_id: string;
+  status: "paid" | "pending";
+  notes?: string;
+}): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+
+  if (!payload.id) return { error: "شناسه هزینه الزامی است." };
+  if (!payload.date) return { error: "تاریخ الزامی است." };
+  if (!payload.title.trim()) return { error: "عنوان هزینه الزامی است." };
+  if (!payload.payer_account_id) return { error: "انتخاب کشوی پرداخت‌کننده الزامی است." };
+  if (payload.amount <= 0) return { error: "مبلغ هزینه باید بیشتر از صفر باشد." };
+  if (payload.currency === "AUD" && (!payload.exchange_rate || payload.exchange_rate <= 0)) {
+    return { error: "نرخ تبدیل برای ارز AUD الزامی است." };
+  }
+
+  const db = makeServiceRoleClient();
+  const { data: before } = await db
+    .from("expenses")
+    .select("date, title, category, currency, amount, exchange_rate, payer_account_id, status, notes")
+    .eq("id", payload.id)
+    .single();
+
+  const { error } = await db
+    .from("expenses")
+    .update({
+      date: payload.date,
+      title: payload.title.trim(),
+      category: payload.category,
+      currency: payload.currency,
+      amount: payload.amount,
+      exchange_rate: payload.currency === "AUD" ? payload.exchange_rate : null,
+      payer_account_id: payload.payer_account_id,
+      status: payload.status,
+      notes: payload.notes?.trim() || null,
+    })
+    .eq("id", payload.id);
+
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "EXPENSE_UPDATED",
+    targetType: "expenses",
+    targetId: payload.id,
+    oldValue: before,
     newValue: payload,
   }).catch(() => {});
 
@@ -629,6 +756,54 @@ export async function addBankAccount(payload: {
     actorEmail: admin.email ?? "",
     action: "BANK_ACCOUNT_CREATED",
     targetType: "bank_accounts",
+    newValue: payload,
+  }).catch(() => {});
+
+  revalidatePath("/admin/treasury");
+  return { success: true };
+}
+
+/**
+ * ویرایش کشو/حساب بانکی
+ */
+export async function updateBankAccount(payload: {
+  id: string;
+  account_name: string;
+  currency: "IRT" | "AUD";
+  account_type: "bank" | "virtual" | "transit";
+  country: "Iran" | "Australia";
+}): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+
+  if (!payload.id) return { error: "شناسه الزامی است." };
+  if (!payload.account_name.trim()) return { error: "نام حساب الزامی است." };
+
+  const db = makeServiceRoleClient();
+  const { data: before } = await db
+    .from("bank_accounts")
+    .select("account_name, currency, account_type, country")
+    .eq("id", payload.id)
+    .single();
+
+  const { error } = await db
+    .from("bank_accounts")
+    .update({
+      account_name: payload.account_name.trim(),
+      currency: payload.currency,
+      account_type: payload.account_type,
+      country: payload.country,
+    })
+    .eq("id", payload.id);
+
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "BANK_ACCOUNT_UPDATED",
+    targetType: "bank_accounts",
+    targetId: payload.id,
+    oldValue: before,
     newValue: payload,
   }).catch(() => {});
 

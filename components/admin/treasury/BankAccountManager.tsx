@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { PlusCircle, Building2, UserCircle, RefreshCw } from "lucide-react";
-import { addBankAccount } from "@/app/actions/treasury.actions";
+import { PlusCircle, Building2, UserCircle, RefreshCw, Pencil, ChevronDown } from "lucide-react";
+import { addBankAccount, updateBankAccount } from "@/app/actions/treasury.actions";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import s from "@/styles/admin/Treasury.module.css";
@@ -30,6 +30,7 @@ const EMPTY = {
 export default function BankAccountManager({ bankAccounts }: Props) {
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...EMPTY });
   const [error, setError] = useState<string | null>(null);
 
@@ -51,11 +52,15 @@ export default function BankAccountManager({ bankAccounts }: Props) {
     setError(null);
 
     startTransition(async () => {
-      const res = await addBankAccount(form);
+      const res = editingId
+        ? await updateBankAccount({ id: editingId, ...form })
+        : await addBankAccount(form);
+
       if ("error" in res) {
         setError(res.error);
       } else {
         setForm({ ...EMPTY });
+        setEditingId(null);
         setShowForm(false);
       }
     });
@@ -63,26 +68,47 @@ export default function BankAccountManager({ bankAccounts }: Props) {
 
   function resetForm() {
     setForm({ ...EMPTY });
+    setEditingId(null);
     setShowForm(false);
     setError(null);
   }
 
+  function startEdit(acc: BankAccount) {
+    setForm({
+      account_name: acc.account_name || "",
+      currency: acc.currency || "IRT",
+      account_type: acc.account_type || "bank",
+      country: acc.country || (acc.currency === "AUD" ? "Australia" : "Iran"),
+    });
+    setEditingId(acc.id);
+    setShowForm(true);
+    setError(null);
+  }
+
+  const isEditMode = Boolean(editingId);
+
   return (
-    <div className={s.formWrapper}>
-      <div className={s.formHeader}>
-        <h2 className={s.formTitle}>مدیریت شبکه‌ حساب‌ها و کشوها</h2>
-        {!showForm && (
-          <button className={s.btnAddNew} onClick={() => setShowForm(true)} disabled={isPending}>
-            <PlusCircle size={16} /> ایجاد کشوی جدید
-          </button>
-        )}
-      </div>
+    <details className={s.formDetails} open>
+      <summary className={s.formSummary}>
+        <ChevronDown size={16} className={s.formSummaryChevron} />
+        <span className={s.formSummaryTitle}>مدیریت حساب‌های بانکی</span>
+        <span className={s.formSummaryHint}>ایجاد، ویرایش و مدیریت حساب‌های بانکی و کیف‌پول‌های مورد استفاده در خزانه‌داری.</span>
+      </summary>
+
+      <div className={s.formWrapper}>
+        <div className={s.formHeader}>
+          {!showForm && (
+            <button className={s.btnAddNew} onClick={() => setShowForm(true)} disabled={isPending}>
+              <PlusCircle size={16} /> ایجاد حساب جدید
+            </button>
+          )}
+        </div>
 
       {showForm && (
         <form className={s.formContainer} onSubmit={handleSubmit}>
           <div className={s.formRow}>
             <div className={s.formGroup} style={{ flex: "2 1 200px" }}>
-              <label className={s.formLabel}>نام حساب یا کشو</label>
+              <label className={s.formLabel}>نام حساب</label>
               <input
                 className={s.formInput}
                 type="text"
@@ -109,7 +135,7 @@ export default function BankAccountManager({ bankAccounts }: Props) {
           <div className={s.formRow}>
             <div className={s.formGroup}>
               <label className={s.formLabel}>
-                <Tooltip text="بانک: حساب فیزیکی | مجازی: حساب دفتری مشتری | در راه: وجوه تسویه‌نشده">نوع کشو (Account Type)</Tooltip>
+                <Tooltip text="بانک: حساب فیزیکی | مجازی: حساب دفتری مشتری | در راه: وجوه تسویه‌نشده">نوع حساب (Account Type)</Tooltip>
               </label>
               <SelectBox
                 dir="rtl"
@@ -141,7 +167,7 @@ export default function BankAccountManager({ bankAccounts }: Props) {
           {error && <p className={s.formError}>{error}</p>}
           <div className={s.formActionsRow}>
             <button className={s.btnSubmit} type="submit" disabled={isPending}>
-              {isPending ? "در حال ایجاد..." : "ایجاد کشو"}
+              {isPending ? "در حال ذخیره..." : isEditMode ? "ذخیره تغییرات" : "ایجاد کشو"}
             </button>
             <button className={s.btnCancel} type="button" onClick={resetForm} disabled={isPending}>
               انصراف
@@ -159,6 +185,7 @@ export default function BankAccountManager({ bankAccounts }: Props) {
                 <th>نوع</th>
                 <th>ارز</th>
                 <th>وضعیت</th>
+                <th>عملیات</th>
               </tr>
             </thead>
             <tbody>
@@ -181,12 +208,25 @@ export default function BankAccountManager({ bankAccounts }: Props) {
                     </span>
                   </td>
                   <td>{acc.is_active ? "فعال" : "غیرفعال"}</td>
+                  <td style={{ textAlign: "left" }}>
+                    <button
+                      className={s.btnIconEdit}
+                      onClick={() => startEdit(acc)}
+                      disabled={isPending}
+                      type="button"
+                      title="ویرایش"
+                      aria-label="ویرایش حساب"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </div>
+      </div>
+    </details>
   );
 }

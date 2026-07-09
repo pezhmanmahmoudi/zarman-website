@@ -48,7 +48,7 @@ export const STRIP_MESSAGES: StripMessage[] = [
   },
   {
     id: 4,
-    fa: "به ازای هر ۵,۰۰۰ دلار تراکنش، نرخ اختصاصی بهتری از سیستم وفاداری دریافت کنید.",
+    fa: "به ازای هر ۵,۰۰۰ دلار، نرخ اختصاصی بهتری از سیستم وفاداری دریافت کنید.",
     en: "Unlock better exchange rates every AUD 5,000 through our Loyalty Program.",
     icon: "star",
   },

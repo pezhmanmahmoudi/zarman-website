@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Trash2, PlusCircle, Play, Pause, CheckCircle2 } from "lucide-react";
+import { Fragment, useState, useTransition } from "react";
+import { Trash2, PlusCircle, Play, Pause, CheckCircle2, ChevronDown } from "lucide-react";
 import {
   addRecurringExpense,
   deleteRecurringExpense,
@@ -13,6 +13,7 @@ import { FA } from "@/lib/treasury-utils";
 import s from "@/styles/admin/Treasury.module.css";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 
 type Props = {
   recurringExpenses: any[];
@@ -20,13 +21,14 @@ type Props = {
 };
 
 const CATEGORIES = [
+  { value: "it_infrastructure", label: "زیرساخت و IT" },
+  { value: "office",        label: "اداری" },
   { value: "rent",          label: "اجاره" },
-  { value: "marketing",     label: "بازاریابی" },
-  { value: "bank_fees",     label: "کارمزد بانکی" },
   { value: "software",      label: "نرم‌افزار" },
+  { value: "bank_fees",     label: "کارمزد بانکی" },
+  { value: "marketing",     label: "بازاریابی" },
   { value: "salary",        label: "حقوق" },
   { value: "tax",           label: "مالیات" },
-  { value: "office",        label: "اداری" },
   { value: "miscellaneous", label: "متفرقه" },
 ];
 
@@ -43,8 +45,8 @@ const FREQ_FA: Record<string, string> = {
 
 const EMPTY = {
   title:            "",
-  category:         "miscellaneous",
-  currency:         "IRT" as "AUD" | "IRT",
+  category:         CATEGORIES[0].value,
+  currency:         "AUD" as "AUD" | "IRT",
   amount:           "",
   exchange_rate:    "",
   payer_account_id: "",
@@ -82,7 +84,16 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
   const [postError, setPostError] = useState<Record<string, string>>({});
 
   function field(key: keyof typeof EMPTY, value: string) {
-    setForm(f => ({ ...f, [key]: value }));
+    setForm((f) => {
+      const next = { ...f, [key]: value };
+      if (key === "currency" && next.payer_account_id) {
+        const selected = bankAccounts.find((acc) => acc.id === next.payer_account_id);
+        if (!selected || selected.currency !== value) {
+          next.payer_account_id = "";
+        }
+      }
+      return next;
+    });
     setError(null);
   }
 
@@ -189,19 +200,25 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
   const filteredAccounts = bankAccounts.filter(acc => acc.currency === form.currency);
 
   return (
-    <div className={s.formWrapper}>
-      <div className={s.formHeader}>
-        <h2 className={s.formTitle}>{FA.secRecurring}</h2>
-        {!showForm && (
-          <button
-            className={s.btnAddNew}
-            onClick={() => setShowForm(true)}
-            disabled={isPending}
-          >
-            <PlusCircle size={16} /> {FA.recurringAddBtn}
-          </button>
-        )}
-      </div>
+    <details className={s.formDetails} open>
+      <summary className={s.formSummary}>
+        <ChevronDown size={16} className={s.formSummaryChevron} />
+        <span className={s.formSummaryTitle}>{FA.secRecurring}</span>
+        <span className={s.formSummaryHint}>تعریف هزینه‌های ثابت و زمان‌بندی‌شده مانند اجاره، اینترنت و اشتراک‌ها.</span>
+      </summary>
+
+      <div className={s.formWrapper}>
+        <div className={s.formHeader}>
+          {!showForm && (
+            <button
+              className={s.btnAddNew}
+              onClick={() => setShowForm(true)}
+              disabled={isPending}
+            >
+              <PlusCircle size={16} /> {FA.recurringAddBtn}
+            </button>
+          )}
+        </div>
 
       <p style={{ fontSize: "0.78rem", color: "var(--text-dim, #6b7280)", marginBottom: "0.75rem", direction: "rtl", fontFamily: "IRANSansX, Peyda, Tahoma, sans-serif" }}>
         {FA.secRecurringDesc}
@@ -225,16 +242,13 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>دسته‌بندی</label>
-              <select
-                className={s.formSelect}
+              <SelectBox
+                dir="rtl"
                 value={form.category}
-                onChange={e => field("category", e.target.value)}
+                onChange={(val) => field("category", val)}
+                labeledOptions={CATEGORIES}
                 disabled={isPending}
-              >
-                {CATEGORIES.map(c => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </select>
+              />
             </div>
           </div>
 
@@ -242,15 +256,16 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
           <div className={s.formRow}>
             <div className={s.formGroup}>
               <label className={s.formLabel}>ارز پرداختی</label>
-              <select
-                className={s.formSelect}
+              <SelectBox
+                dir="rtl"
                 value={form.currency}
-                onChange={e => field("currency", e.target.value as "AUD" | "IRT")}
+                onChange={(val) => field("currency", val as "AUD" | "IRT")}
+                labeledOptions={[
+                  { value: "IRT", label: "تومان (IRT)" },
+                  { value: "AUD", label: "دلار (AUD)" },
+                ]}
                 disabled={isPending}
-              >
-                <option value="IRT">تومان (IRT)</option>
-                <option value="AUD">دلار (AUD)</option>
-              </select>
+              />
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>مبلغ هر دوره</label>
@@ -266,17 +281,18 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>{FA.recurringFreqLabel}</label>
-              <select
-                className={s.formSelect}
+              <SelectBox
+                dir="rtl"
                 value={form.frequency}
-                onChange={e => field("frequency", e.target.value as typeof EMPTY["frequency"])}
+                onChange={(val) => field("frequency", val as typeof EMPTY["frequency"])}
+                labeledOptions={[
+                  { value: "weekly", label: FA.freqWeekly },
+                  { value: "fortnightly", label: FA.freqFortnightly },
+                  { value: "monthly", label: FA.freqMonthly },
+                  { value: "quarterly", label: FA.freqQuarterly },
+                ]}
                 disabled={isPending}
-              >
-                <option value="weekly">{FA.freqWeekly}</option>
-                <option value="fortnightly">{FA.freqFortnightly}</option>
-                <option value="monthly">{FA.freqMonthly}</option>
-                <option value="quarterly">{FA.freqQuarterly}</option>
-              </select>
+              />
             </div>
           </div>
 
@@ -286,19 +302,17 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
               <label className={s.formLabel}>
                 <Tooltip text={FA.hintRecurringPayer}>کشوی پرداخت‌کننده (مبدأ)</Tooltip>
               </label>
-              <select
-                className={s.formSelect}
+              <SelectBox
+                dir="rtl"
                 value={form.payer_account_id}
-                onChange={e => field("payer_account_id", e.target.value)}
+                onChange={(val) => field("payer_account_id", val)}
+                placeholder="-- انتخاب حساب --"
+                labeledOptions={filteredAccounts.map((acc) => ({
+                  value: acc.id,
+                  label: `${acc.account_name} (${acc.currency})`,
+                }))}
                 disabled={isPending}
-              >
-                <option value="">-- انتخاب حساب --</option>
-                {filteredAccounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>
-                    {acc.account_name} ({acc.currency})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>{FA.recurringStartLabel}</label>
@@ -376,8 +390,8 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
             </thead>
             <tbody>
               {recurringExpenses.map(item => (
-                <>
-                  <tr key={item.id}>
+                <Fragment key={item.id}>
+                  <tr>
                     <td>
                       <div style={{ fontWeight: 600 }}>{item.title}</div>
                       {item.notes && (
@@ -435,7 +449,7 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
 
                   {/* Inline post panel */}
                   {postPanels[item.id] && (
-                    <tr key={`${item.id}-post`}>
+                    <tr>
                       <td colSpan={6} style={{ padding: 0 }}>
                         <div className={s.postPanel}>
                           <div className={s.postPanelGroup}>
@@ -510,12 +524,13 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </div>
+      </div>
+    </details>
   );
 }

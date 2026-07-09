@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2, PlusCircle } from "lucide-react";
-import { addExpense, deleteExpense } from "@/app/actions/treasury.actions";
+import { Trash2, PlusCircle, Pencil, ChevronDown } from "lucide-react";
+import { addExpense, deleteExpense, updateExpense } from "@/app/actions/treasury.actions";
 import { fmtIRT, fmtAUD } from "@/lib/accounting-engine";
 import s from "@/styles/admin/Treasury.module.css";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
@@ -16,7 +16,10 @@ type ExpenseRow = {
   category: string;
   currency: "AUD" | "IRT";
   amount: number;
+  exchange_rate?: number | null;
+  payer_account_id?: string | null;
   status: "paid" | "pending";
+  notes?: string | null;
 };
 
 type Props = { 
@@ -25,14 +28,16 @@ type Props = {
 };
 
 const CATEGORIES: { value: string; label: string }[] = [
+  { value: "it_infrastructure", label: "زیرساخت و IT" },
+  { value: "office",        label: "اداری" },
   { value: "rent",          label: "اجاره" },
-  { value: "marketing",     label: "بازاریابی" },
-  { value: "bank_fees",     label: "کارمزد بانکی" },
   { value: "software",      label: "نرم‌افزار" },
+  { value: "bank_fees",     label: "کارمزد بانکی" },
+  { value: "marketing",     label: "بازاریابی" },
   { value: "salary",        label: "حقوق" },
   { value: "tax",           label: "مالیات" },
-  { value: "office",        label: "اداری" },
   { value: "miscellaneous", label: "متفرقه" },
+  
 ];
 
 const CATEGORY_FA: Record<string, string> = Object.fromEntries(
@@ -42,8 +47,8 @@ const CATEGORY_FA: Record<string, string> = Object.fromEntries(
 const EMPTY = {
   date:          "",
   title:         "",
-  category:      "miscellaneous",
-  currency:      "IRT" as "AUD" | "IRT",
+  category: CATEGORIES[0].value,
+  currency: "AUD" as "AUD" | "IRT",
   amount:        "",
   exchange_rate: "",
   payer_account_id: "", 
@@ -54,17 +59,45 @@ const EMPTY = {
 export default function ExpenseForm({ expenses, bankAccounts }: Props) {
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...EMPTY });
   const [error, setError] = useState<string | null>(null);
 
   function field(key: keyof typeof EMPTY, value: string) {
-    setForm(f => ({ ...f, [key]: value }));
+    setForm((f) => {
+      const next = { ...f, [key]: value };
+      if (key === "currency" && next.payer_account_id) {
+        const selected = bankAccounts.find((acc) => acc.id === next.payer_account_id);
+        if (!selected || selected.currency !== value) {
+          next.payer_account_id = "";
+        }
+      }
+      return next;
+    });
     setError(null);
   }
 
   function resetForm() {
     setForm({ ...EMPTY });
+    setEditingId(null);
     setShowForm(false);
+    setError(null);
+  }
+
+  function startEdit(expense: ExpenseRow) {
+    setForm({
+      date: expense.date || "",
+      title: expense.title || "",
+      category: expense.category || CATEGORIES[0].value,
+      currency: expense.currency || "AUD",
+      amount: expense.amount != null ? String(expense.amount) : "",
+      exchange_rate: expense.exchange_rate != null ? String(expense.exchange_rate) : "",
+      payer_account_id: expense.payer_account_id || "",
+      status: expense.status || "paid",
+      notes: expense.notes || "",
+    });
+    setEditingId(expense.id);
+    setShowForm(true);
     setError(null);
   }
 
@@ -85,7 +118,7 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
     }
 
     startTransition(async () => {
-      const res = await addExpense({
+      const payload = {
         date: form.date,
         title: form.title,
         category: form.category,
@@ -95,7 +128,12 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
         payer_account_id: form.payer_account_id,
         status: form.status,
         notes: form.notes,
-      });
+      };
+
+      const res = editingId
+        ? await updateExpense({ id: editingId, ...payload })
+        : await addExpense(payload);
+
       if ("error" in res) {
         setError(res.error);
       } else {
@@ -112,18 +150,25 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
     });
   }
 
-  const filteredAccounts = bankAccounts.filter(acc => acc.currency === form.currency);
+  const filteredAccounts = bankAccounts.filter((acc) => acc.currency === form.currency);
+  const isEditMode = Boolean(editingId);
 
   return (
-    <div className={s.formWrapper}>
-      <div className={s.formHeader}>
-        <h2 className={s.formTitle}>مدیریت هزینه‌ها</h2>
-        {!showForm && (
-          <button className={s.btnAddNew} onClick={() => setShowForm(true)} disabled={isPending}>
-            <PlusCircle size={16} /> ثبت هزینه جدید
-          </button>
-        )}
-      </div>
+    <details className={s.formDetails} open>
+      <summary className={s.formSummary}>
+        <ChevronDown size={16} className={s.formSummaryChevron} />
+        <span className={s.formSummaryTitle}>هزینه‌های عملیاتی</span>
+        <span className={s.formSummaryHint}>ثبت، دسته‌بندی و مدیریت هزینه‌های روزانه کسب‌وکار و تعیین حساب پرداخت‌کننده.</span>
+      </summary>
+
+      <div className={s.formWrapper}>
+        <div className={s.formHeader}>
+          {!showForm && (
+            <button className={s.btnAddNew} onClick={() => setShowForm(true)} disabled={isPending}>
+              <PlusCircle size={16} /> ثبت هزینه جدید
+            </button>
+          )}
+        </div>
 
       {showForm && (
         <form className={s.formContainer} onSubmit={handleSubmit}>
@@ -160,8 +205,8 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
                 value={form.currency}
                 onChange={(val) => field("currency", val as "AUD" | "IRT")}
                 labeledOptions={[
-                  { value: "IRT", label: "تومان (IRT)" },
                   { value: "AUD", label: "دلار (AUD)" },
+                  { value: "IRT", label: "تومان (IRT)" },
                 ]}
                 disabled={isPending}
               />
@@ -223,7 +268,9 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
 
           {error && <p className={s.formError}>{error}</p>}
           <div className={s.formActionsRow}>
-            <button className={s.btnSubmit} type="submit" disabled={isPending}>{isPending ? "در حال ذخیره..." : "ثبت هزینه"}</button>
+            <button className={s.btnSubmit} type="submit" disabled={isPending}>
+              {isPending ? "در حال ذخیره..." : isEditMode ? "ذخیره تغییرات" : "ثبت هزینه"}
+            </button>
             <button className={s.btnCancel} type="button" onClick={resetForm} disabled={isPending}>انصراف</button>
           </div>
         </form>
@@ -239,11 +286,11 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
                 <th>دسته</th>
                 <th>مبلغ</th>
                 <th>وضعیت</th>
-                <th></th>
+                <th>عملیات</th>
               </tr>
             </thead>
             <tbody>
-              {expenses.map(e => (
+              {expenses.map((e) => (
                 <tr key={e.id}>
                   <td>{e.date}</td>
                   <td>{e.title}</td>
@@ -257,7 +304,24 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
                     </span>
                   </td>
                   <td style={{ textAlign: "left" }}>
-                    <button className={s.btnIconDanger} onClick={() => handleDelete(e.id)} disabled={isPending}>
+                    <button
+                      className={s.btnIconEdit}
+                      onClick={() => startEdit(e)}
+                      disabled={isPending}
+                      type="button"
+                      title="ویرایش"
+                      aria-label="ویرایش هزینه"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      className={s.btnIconDanger}
+                      onClick={() => handleDelete(e.id)}
+                      disabled={isPending}
+                      type="button"
+                      title="حذف"
+                      aria-label="حذف هزینه"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </td>
@@ -267,6 +331,7 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
           </table>
         </div>
       )}
-    </div>
+      </div>
+    </details>
   );
 }

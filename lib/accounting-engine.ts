@@ -359,6 +359,11 @@ export function calcAccountingSnapshot(
   };
 }
 
-export function fmtIRT(v: number): string { return Math.round(v).toLocaleString("en-AU"); }
-export function fmtAUD(v: number): string { return v.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-export function fmtRate(v: number): string { return Math.round(v).toLocaleString("en-AU"); }
+function isolateNumber(text: string): string {
+  // Keep minus sign and digits visually ordered in RTL containers.
+  return `\u2066${text}\u2069`;
+}
+
+export function fmtIRT(v: number): string { return isolateNumber(Math.round(v).toLocaleString("en-AU")); }
+export function fmtAUD(v: number): string { return isolateNumber(v.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })); }
+export function fmtRate(v: number): string { return isolateNumber(Math.round(v).toLocaleString("en-AU")); }

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2, PlusCircle } from "lucide-react";
-import { addOwnerLoan, deleteOwnerLoan } from "@/app/actions/treasury.actions";
+import { Trash2, PlusCircle, Pencil, ChevronDown } from "lucide-react";
+import { addOwnerLoan, deleteOwnerLoan, updateOwnerLoan } from "@/app/actions/treasury.actions";
 import { fmtIRT, fmtAUD } from "@/lib/accounting-engine";
 import s from "@/styles/admin/Treasury.module.css";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
@@ -14,7 +14,11 @@ type OwnerLoanRow = {
   date: string;
   currency: "AUD" | "IRT";
   amount: number;
+  exchange_rate?: number | null;
+  account_id?: string | null;
   loan_type: "injection" | "repayment";
+  repayment_status?: "open" | "partially_repaid" | "repaid";
+  notes?: string | null;
 };
 
 type Props = { 
@@ -36,17 +40,44 @@ const EMPTY = {
 export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...EMPTY });
   const [error, setError] = useState<string | null>(null);
 
   function field(key: keyof typeof EMPTY, value: string) {
-    setForm(f => ({ ...f, [key]: value }));
+    setForm((f) => {
+      const next = { ...f, [key]: value };
+      if (key === "currency" && next.account_id) {
+        const selected = bankAccounts.find((acc) => acc.id === next.account_id);
+        if (!selected || selected.currency !== value) {
+          next.account_id = "";
+        }
+      }
+      return next;
+    });
     setError(null);
   }
 
   function resetForm() {
     setForm({ ...EMPTY });
+    setEditingId(null);
     setShowForm(false);
+    setError(null);
+  }
+
+  function startEdit(row: OwnerLoanRow) {
+    setForm({
+      date: row.date || "",
+      currency: row.currency || "IRT",
+      amount: row.amount != null ? String(row.amount) : "",
+      exchange_rate: row.exchange_rate != null ? String(row.exchange_rate) : "",
+      account_id: row.account_id || "",
+      loan_type: row.loan_type || "injection",
+      repayment_status: row.repayment_status || "open",
+      notes: row.notes || "",
+    });
+    setEditingId(row.id);
+    setShowForm(true);
     setError(null);
   }
 
@@ -66,7 +97,7 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
     }
 
     startTransition(async () => {
-      const res = await addOwnerLoan({
+      const payload = {
         date: form.date,
         currency: form.currency,
         amount: amt,
@@ -75,7 +106,12 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
         loan_type: form.loan_type,
         repayment_status: form.repayment_status,
         notes: form.notes,
-      });
+      };
+
+      const res = editingId
+        ? await updateOwnerLoan({ id: editingId, ...payload })
+        : await addOwnerLoan(payload);
+
       if ("error" in res) setError(res.error);
       else resetForm();
     });
@@ -90,17 +126,24 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
   }
 
   const filteredAccounts = bankAccounts.filter(acc => acc.currency === form.currency);
+  const isEditMode = Boolean(editingId);
 
   return (
-    <div className={s.formWrapper}>
-      <div className={s.formHeader}>
-        <h2 className={s.formTitle}>سرمایه در گردش (Owner Loans)</h2>
-        {!showForm && (
-          <button className={s.btnAddNew} onClick={() => setShowForm(true)} disabled={isPending}>
-            <PlusCircle size={16} /> ثبت تراکنش مالک
-          </button>
-        )}
-      </div>
+    <details className={s.formDetails} open>
+      <summary className={s.formSummary}>
+        <ChevronDown size={16} className={s.formSummaryChevron} />
+        <span className={s.formSummaryTitle}>سرمایه مالک (Owner Capital)</span>
+        <span className={s.formSummaryHint}>ثبت سرمایه‌گذاری، برداشت و بازپرداخت سرمایه مالک برای محاسبه دقیق ارزش کسب‌وکار.</span>
+      </summary>
+
+      <div className={s.formWrapper}>
+        <div className={s.formHeader}>
+          {!showForm && (
+            <button className={s.btnAddNew} onClick={() => setShowForm(true)} disabled={isPending}>
+              <PlusCircle size={16} /> ثبت تراکنش مالک
+            </button>
+          )}
+        </div>
 
       {showForm && (
         <form className={s.formContainer} onSubmit={handleSubmit}>
@@ -183,7 +226,9 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
 
           {error && <p className={s.formError}>{error}</p>}
           <div className={s.formActionsRow}>
-            <button className={s.btnSubmit} type="submit" disabled={isPending}>{isPending ? "در حال ذخیره..." : "ثبت تراکنش"}</button>
+            <button className={s.btnSubmit} type="submit" disabled={isPending}>
+              {isPending ? "در حال ذخیره..." : isEditMode ? "ذخیره تغییرات" : "ثبت تراکنش"}
+            </button>
             <button className={s.btnCancel} type="button" onClick={resetForm} disabled={isPending}>انصراف</button>
           </div>
         </form>
@@ -197,7 +242,7 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
                 <th>تاریخ</th>
                 <th>عملیات</th>
                 <th>مبلغ</th>
-                <th></th>
+                <th>عملیات</th>
               </tr>
             </thead>
             <tbody>
@@ -213,7 +258,17 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
                     {L.currency === "IRT" ? fmtIRT(L.amount) + " IRT" : fmtAUD(L.amount) + " AUD"}
                   </td>
                   <td style={{ textAlign: "left" }}>
-                    <button className={s.btnIconDanger} onClick={() => handleDelete(L.id)} disabled={isPending}>
+                    <button
+                      className={s.btnIconEdit}
+                      onClick={() => startEdit(L)}
+                      disabled={isPending}
+                      type="button"
+                      title="ویرایش"
+                      aria-label="ویرایش تراکنش مالک"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button className={s.btnIconDanger} onClick={() => handleDelete(L.id)} disabled={isPending} type="button">
                       <Trash2 size={16} />
                     </button>
                   </td>
@@ -223,6 +278,7 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
           </table>
         </div>
       )}
-    </div>
+      </div>
+    </details>
   );
 }
