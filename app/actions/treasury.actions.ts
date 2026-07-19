@@ -343,7 +343,7 @@ export async function updateOwnerLoan(payload: {
   const db = makeServiceRoleClient();
   const { data: before } = await db
     .from("owner_loans")
-    .select("date, currency, amount, exchange_rate, account_id, account, loan_type, repayment_status, notes")
+    .select("date, currency, amount, exchange_rate, account_id, loan_type, repayment_status, notes")
     .eq("id", payload.id)
     .single();
 
