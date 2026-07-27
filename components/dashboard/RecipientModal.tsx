@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, AlertCircle } from "lucide-react";
 import styles from "@/styles/dashboard/RecipientModal.module.css";
 import { createRecipient } from "@/app/actions/transaction.actions";
 import type { Recipient, RecipientDirection, BankType } from "@/app/[locale]/dashboard/dashboard.types";
@@ -13,6 +13,34 @@ function faToEnDigits(input: string) {
   return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d)));
 }
 
+// ─── Bank List ────────────────────────────────────────────────────────────────
+const iranianBanks = [
+  { value: "Ayandeh Bank", label: "Ayandeh Bank" },
+  { value: "BlueBank", label: "Blue Bank" },
+  { value: "Dey Bank", label: "Dey Bank" },
+  { value: "Eghtesad Novin Bank", label: "Eghtesad Novin Bank" },
+  { value: "Gardeshgari Bank", label: "Gardeshgari Bank" },
+  { value: "Ghavamin Bank", label: "Ghavamin Bank" },
+  { value: "Hekmat Bank", label: "Hekmat Bank" },
+  { value: "Karafarin Bank", label: "Karafarin Bank" },
+  { value: "Keshavarzi Bank", label: "Keshavarzi Bank" },
+  { value: "Maskan Bank", label: "Maskan Bank" },
+  { value: "Parsian Bank", label: "Parsian Bank" },
+  { value: "Pasargad Bank", label: "Pasargad Bank" },
+  { value: "Post Bank of Iran", label: "Post Bank of Iran" },
+  { value: "Refah Bank", label: "Refah Bank" },
+  { value: "Saman Bank", label: "Saman Bank" },
+  { value: "Sanat Va Maadan Bank", label: "Sanat Va Maadan Bank" },
+  { value: "Sarmayeh Bank", label: "Sarmayeh Bank" },
+  { value: "Shahr Bank", label: "Shahr Bank" },
+  { value: "Sina Bank", label: "Sina Bank" },
+  { value: "Tejarat Bank", label: "Tejarat Bank" },
+  { value: "Tosee Credit Institution", label: "Tosee Credit Institution" },
+  { value: "Tosee Saderat Bank", label: "Tosee Saderat Bank" },
+  { value: "Tosee Taavon Bank", label: "Tosee Taavon Bank" },
+  { value: "Bank Iran", label: "Other" }
+];
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 type RecipientModalProps = {
   direction: RecipientDirection;
@@ -22,7 +50,6 @@ type RecipientModalProps = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function RecipientModal({ direction, onClose, onCreated }: RecipientModalProps) {
-  const [bankType, setBankType] = useState<BankType>("other");
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -40,10 +67,6 @@ export function RecipientModal({ direction, onClose, onCreated }: RecipientModal
   const [irtAddress, setIrtAddress] = useState("");
   const [irtPhone, setIrtPhone] = useState("");
 
-  // IRT Bank Melli
-  const [irtAccountNumber, setIrtAccountNumber] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-
   // IRT Other Banks (Shaba + Bank Name)
   const [shabaDisplay, setShabaDisplay] = useState("");
   const [irtBankName, setIrtBankName] = useState("");
@@ -57,7 +80,7 @@ export function RecipientModal({ direction, onClose, onCreated }: RecipientModal
 
   const isAud = direction === "aud";
 
-  // فیلتر و مسدودسازی هوشمند فقط برای اعداد (شبا)
+  // IBAN strict formatting
   const handleShabaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let raw = faToEnDigits(e.target.value).replace(/\D/g, "");
     if (raw.length > 24) raw = raw.slice(0, 24);
@@ -72,15 +95,7 @@ export function RecipientModal({ direction, onClose, onCreated }: RecipientModal
     setShabaDisplay(parts.join("-"));
   };
 
-  // فیلتر و مسدودسازی هوشمند برای کارت بانکی (خط تیره دار)
-  const handleCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let raw = faToEnDigits(e.target.value).replace(/\D/g, "");
-    if (raw.length > 16) raw = raw.slice(0, 16); 
-    const formatted = raw.match(/.{1,4}/g)?.join(" - ") || ""; // خط تیره بین هر 4 رقم
-    setCardNumber(formatted);
-  };
-
-  // فیلتر برای BSB (سه رقم - سه رقم)
+  // BSB formatting (3 digits - 3 digits)
   const handleBsbChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let raw = faToEnDigits(e.target.value).replace(/\D/g, "");
     if (raw.length > 6) raw = raw.slice(0, 6);
@@ -88,13 +103,11 @@ export function RecipientModal({ direction, onClose, onCreated }: RecipientModal
     setBsb(raw);
   };
 
-  // سایر فیلترهای فقط عدد
+  // Numeric fields
   const handleAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => setAccountNumber(faToEnDigits(e.target.value).replace(/\D/g, ""));
-  const handleIrtAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => setIrtAccountNumber(faToEnDigits(e.target.value).replace(/\D/g, ""));
   const handleIrtPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => setIrtPhone(faToEnDigits(e.target.value).replace(/\D/g, ""));
   
   const handleRecipientPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // برای موبایل استرالیا علامت + هم مجاز است
     let raw = faToEnDigits(e.target.value).replace(/[^\d+]/g, "");
     setRecipientPhone(raw);
   };
@@ -113,23 +126,14 @@ export function RecipientModal({ direction, onClose, onCreated }: RecipientModal
         recipient_phone: recipientPhone.trim(),
       };
     }
-    const sharedIrt = {
+    
+    // Setting default to "other" to maintain compatibility with the previous database structure
+    return {
+      ...base,
       full_name: fullName.trim(),
       irt_address: irtAddress.trim(),
       irt_phone: irtPhone.trim(),
-      bank_type: bankType,
-    };
-    if (bankType === "bank_melli") {
-      return {
-        ...base,
-        ...sharedIrt,
-        irt_account_number: irtAccountNumber.trim(),
-        card_number: cardNumber.replace(/\D/g, ""), // ارسال اعداد خالص به دیتابیس
-      };
-    }
-    return {
-      ...base,
-      ...sharedIrt,
+      bank_type: "other" as BankType,
       bank_name: irtBankName.trim(),
       shaba_number: `IR${shabaDisplay.replace(/[\s-]/g, "")}`,
     };
@@ -143,8 +147,8 @@ export function RecipientModal({ direction, onClose, onCreated }: RecipientModal
     if (isAud) {
       autoLabel = `${accountName.trim()} — ${bankName.trim()}`;
     } else {
-      const bankNameFa = bankType === "bank_melli" ? "ملی" : (irtBankName.trim() || "سایر");
-      autoLabel = `${fullName.trim()} — ${bankNameFa}`;
+      const bankLabel = iranianBanks.find(b => b.value === irtBankName)?.label || "Other";
+      autoLabel = `${fullName.trim()} — ${bankLabel}`;
     }
 
     const payload = buildPayload(autoLabel);
@@ -170,20 +174,20 @@ export function RecipientModal({ direction, onClose, onCreated }: RecipientModal
         {/* ── Header ── */}
         <div className={styles.header}>
           <div />{/* grid spacer */}
-          <h3 className={styles.title}>
-            {isAud ? "افزودن گیرنده استرالیایی" : "افزودن گیرنده ایرانی"}
+          <h3 className={styles.title} dir="ltr" style={{ textAlign: "left", width: "100%", paddingLeft: "8px" }}>
+            {isAud ? "Add Australian Recipient" : "Add Iranian Recipient"}
           </h3>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="بستن" type="button">
+          <button className={styles.closeBtn} onClick={onClose} aria-label="Close" type="button">
             <X size={20} />
           </button>
         </div>
 
         {/* ── Scrollable body ── */}
-        <form className={styles.body} onSubmit={handleSave}>
+        <form className={styles.body} onSubmit={handleSave} dir="ltr">
 
           {/* ══ AUD ══════════════════════════════════════════════════ */}
           {isAud && (
-            <div className={styles.ltr}>
+            <div className={styles.ltr} dir="ltr" style={{ textAlign: "left" }}>
               <div className={styles.section}>
                 <p className={styles.sectionTitle}>Banking Information</p>
                 <div className={styles.row}>
@@ -244,93 +248,91 @@ export function RecipientModal({ direction, onClose, onCreated }: RecipientModal
 
           {/* ══ IRT ══════════════════════════════════════════════════ */}
           {!isAud && (
-            <>
+            <div className={styles.ltr} dir="ltr" style={{ textAlign: "left" }}>
               <div className={styles.section}>
-                <p className={styles.sectionTitle}>نوع بانک</p>
-                <SelectBox
-                  value={bankType}
-                  onChange={(val) => { setBankType(val as BankType); setIrtBankName(""); }}
-                  labeledOptions={[
-                    { value: "bank_melli", label: "بانک ملی ایران" },
-                    { value: "other",      label: "سایر بانک‌ها (شبا / IBAN)" },
-                  ]}
-                  dir="rtl"
-                  disabled={saving}
-                />
+                <p className={styles.sectionTitle}>Account Information</p>
+                
+                {/* ── Sanctions Warning Banner ── */}
+                <div 
+                  dir="ltr"
+                  style={{ 
+                    backgroundColor: "rgba(255, 170, 0, 0.1)", 
+                    color: "#b27b00", 
+                    padding: "12px", 
+                    borderRadius: "8px", 
+                    fontSize: "13px", 
+                    marginBottom: "16px", 
+                    lineHeight: "1.5", 
+                    display: "flex", 
+                    alignItems: "flex-start", 
+                    gap: "8px",
+                    textAlign: "left"
+                  }}
+                >
+                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "2px" }} />
+                  <span>
+                    <strong>Sanctions Notice:</strong> The following banks are under active sanctions:{" "}
+                    <strong style={{ color: "#ef4444" }}>
+                      Bank Saderat Iran, Bank Mellat, Bank Sepah, Bank Melli Iran, Central Bank of Iran, Ansar Bank, and Mehr Bank
+                    </strong>. If your only accounts are held with these institutions, please select the <strong>Other</strong> option from the list below.
+                  </span>
+                </div>
+
+                <div className={styles.row}>
+                  <div className={styles.field}>
+                    <label className={styles.label}>Bank Name <span className={styles.req}>*</span></label>
+                    <SelectBox
+                      value={irtBankName}
+                      onChange={(val) => setIrtBankName(val)}
+                      placeholder="Select Bank..."
+                      labeledOptions={iranianBanks}
+                      disabled={saving}
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className={styles.field}>
+                    <label className={styles.label}>IBAN (Shaba Number) <span className={styles.req}>*</span></label>
+                    <div className={styles.inputWrap} style={{ direction: "ltr" }}>
+                      <span className={styles.ibanPrefix}>IR</span>
+                      <input required type="text" inputMode="numeric" className={styles.input} placeholder="12-1111-1111-1111-1111-1111-11" value={shabaDisplay} onChange={handleShabaChange} maxLength={30} />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className={styles.section}>
-                <p className={styles.sectionTitle}>اطلاعات حساب</p>
-
-                {bankType === "bank_melli" && (
-                  <div className={styles.row}>
-                    <div className={styles.field}>
-                      <label className={styles.label}>شماره حساب <span className={styles.req}>*</span></label>
-                      <div className={styles.inputWrap}>
-                        <input required type="text" inputMode="numeric" className={styles.input} placeholder="123456789" value={irtAccountNumber} onChange={handleIrtAccountNumberChange} dir="ltr" />
-                      </div>
-                    </div>
-                    <div className={styles.field}>
-                      <label className={styles.label}>شماره کارت <span className={styles.req}>*</span></label>
-                      <div className={styles.inputWrap}>
-                        <input required type="text" inputMode="numeric" className={styles.input} placeholder="1234 - 5678 - 9012 - 3456" value={cardNumber} onChange={handleCardChange} maxLength={25} dir="ltr" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {bankType === "other" && (
-                  <div className={styles.row}>
-                    <div className={styles.field}>
-                      <label className={styles.label}>نام بانک <span className={styles.req}>*</span></label>
-                      <div className={styles.inputWrap}>
-                        <input required type="text" className={styles.input} placeholder="e.g. Mellat, Saderat" value={irtBankName} onChange={(e) => setIrtBankName(e.target.value)} dir="ltr" />
-                      </div>
-                    </div>
-                    <div className={styles.field}>
-                      <label className={styles.label}>شماره شبا (IBAN) <span className={styles.req}>*</span></label>
-                      <div className={styles.inputWrap} style={{ direction: "ltr" }}>
-                        <span className={styles.ibanPrefix}>IR</span>
-                        <input required type="text" inputMode="numeric" className={styles.input} placeholder="12-1111-1111-1111-1111-1111-11" value={shabaDisplay} onChange={handleShabaChange} maxLength={30} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.section}>
-                <p className={styles.sectionTitle}>اطلاعات صاحب حساب</p>
+                <p className={styles.sectionTitle}>Account Holder Information</p>
                 <div className={styles.field}>
-                  <label className={styles.label}>نام و نام خانوادگی <span className={styles.req}>*</span></label>
+                  <label className={styles.label}>Full Name <span className={styles.req}>*</span></label>
                   <div className={styles.inputWrap}>
                     <input required type="text" className={styles.input} placeholder="e.g. Ali Rezaei" value={fullName} onChange={(e) => setFullName(e.target.value)} dir="ltr" />
                   </div>
                 </div>
                 <div className={styles.field}>
-                  <label className={styles.label}>آدرس کامل سکونت <span className={styles.req}>*</span></label>
+                  <label className={styles.label}>Full Residential Address <span className={styles.req}>*</span></label>
                   <div className={styles.inputWrap}>
                     <input required type="text" className={styles.input} placeholder="e.g. Tehran, Artesh St., No. 10" value={irtAddress} onChange={(e) => setIrtAddress(e.target.value)} dir="ltr" />
                   </div>
                 </div>
                 <div className={styles.field}>
-                  <label className={styles.label}>شماره تلفن <span className={styles.req}>*</span></label>
+                  <label className={styles.label}>Phone Number <span className={styles.req}>*</span></label>
                   <div className={styles.inputWrap}>
                     <input required type="tel" inputMode="tel" className={styles.input} placeholder="+989123456789" value={irtPhone} onChange={handleIrtPhoneChange} dir="ltr" />
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
 
-          {errorMsg && <p className={styles.error}>{errorMsg}</p>}
+          {errorMsg && <p className={styles.error} dir="ltr" style={{ textAlign: "left" }}>{errorMsg}</p>}
 
           {/* ── Footer ── */}
-          <div className={styles.footer}>
-            <button className={`${styles.saveBtn}${saving ? ` ${styles.loading}` : ""}`} type="submit" disabled={saving}>
-              {saving ? <><span className={styles.spinner} aria-hidden="true" /> در حال ذخیره...</> : "ذخیره گیرنده"}
+          <div className={styles.footer} dir="ltr" style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+            <button className={`${styles.saveBtn}${saving ? ` ${styles.loading}` : ""}`} type="submit" disabled={saving || (!isAud && !irtBankName)}>
+              {saving ? <><span className={styles.spinner} aria-hidden="true" /> Saving...</> : "Save Recipient"}
             </button>
             <button className={styles.cancelBtn} onClick={onClose} type="button" disabled={saving}>
-              انصراف
+              Cancel
             </button>
           </div>
 

@@ -1,0 +1,31 @@
+const fs = require("fs");
+const vm = require("vm");
+const citiesPath = "components/dashboard/cities_sorted.json";
+const profilePath = "components/dashboard/DashboardProfile.tsx";
+const patchPath = ".tmp-cities-en.patch";
+const citiesText = fs.readFileSync(citiesPath, "utf8").replace(/\r\n/g, "\n");
+const profile = fs.readFileSync(profilePath, "utf8");
+const match = profile.match(/const missingEnNames: Record<string, string> = \{([\s\S]*?)\n\};/);
+const existing = vm.runInNewContext("({" + match[1] + "\n})");
+const extraById = {754:"Babakan",1359:"Bazar Jomeh",1031:"Barf Anbar",1828:"Benab Marand",1791:"Delvar",562:"Zirab",18642:"Ziveh",18857:"Sepidar",917:"Sedeh",797:"Ziaabad",1069:"Tad",225:"Tarom",18982:"Taher Gurab",1161:"Tabaqdeh",1707:"Tarq Rud",10169:"Asheqlu",1211:"Abbasabad Sardar",1508:"Fakhrabad",881:"Firuzabad",286:"Qir va Karzin",1481:"Madavan",613:"Mazhan",1448:"Mashhadrizeh",1291:"Minadasht",296:"Neyriz",848:"Nikpey",1133:"Nimvar"};
+const lines = citiesText.split("\n");
+let patch = "*** Begin Patch\n*** Update File: c:/Users/z5340863/zarman-next/components/dashboard/cities_sorted.json\n";
+for (let i = 0; i < lines.length; i++) {
+  if (!lines[i].includes('"en_name": null,')) continue;
+  const idLine = lines[i - 2] || "";
+  const nameLine = lines[i - 1] || "";
+  const idMatch = idLine.match(/"id":\s*(\d+)/);
+  const nameMatch = nameLine.match(/"name": "([^"]+)"/);
+  if (!idMatch || !nameMatch) continue;
+  const id = Number(idMatch[1]);
+  const name = nameMatch[1];
+  const en = existing[name] || extraById[id];
+  if (!en) throw new Error(`Missing translation for id=${id} name=${name}`);
+  patch += [lines[i-3], lines[i-2], lines[i-1]].filter(v => v !== undefined).join("\n") + "\n";
+  patch += "-" + lines[i] + "\n";
+  patch += "+" + lines[i].replace("null", `\"${en.replace(/\"/g, "\\\"")}\"`) + "\n";
+  patch += [lines[i+1], lines[i+2], lines[i+3]].filter(v => v !== undefined).join("\n") + "\n";
+}
+patch += "*** End Patch\n";
+fs.writeFileSync(patchPath, patch, "utf8");
+console.log(patchPath);

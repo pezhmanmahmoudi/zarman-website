@@ -1,5 +1,8 @@
+"use client";
+
 import React, { useState, useMemo, useEffect } from "react";
-import { Calculator, AlertTriangle, Lock, MessageSquare, ServerCrash, PauseCircle, Tag, Banknote } from "lucide-react";
+// ChevronDown اضافه شد
+import { Calculator, AlertTriangle, Lock, MessageSquare, ServerCrash, PauseCircle, Tag, Banknote, ChevronDown } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/[locale]/dashboard/dashboard.types";
@@ -25,7 +28,6 @@ function formatNumberUI(num: number | null, isToman: boolean = false) {
   if (num === null || !num) return "";
   const options = isToman ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
   const en = Number(num).toLocaleString("en-US", options);
-  // Toman values get Persian digits; AUD amounts stay Latin
   if (isToman) return toFaDigits(en).replace(/,/g, "،");
   return en;
 }
@@ -78,6 +80,27 @@ export function DashboardRequestHub({
 }: RequestHubProps) { 
   const amountInputRef = React.useRef<HTMLInputElement>(null);
 
+  // === منطق نشانگر اسکرول ===
+  const [isAtTop, setIsAtTop] = useState(true);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // اگر کاربر بیشتر از 50 پیکسل اسکرول کرد، نشانگر محو شود
+      setIsAtTop(window.scrollY < 50);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // بررسی وضعیت اولیه
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToForm = () => {
+    // اسکرول نرم به سمت فیلد مبلغ
+    amountInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+  // =========================
+
   const keepAmountCaretAtEnd = () => {
     requestAnimationFrame(() => {
       const el = amountInputRef.current;
@@ -94,12 +117,10 @@ export function DashboardRequestHub({
   const [reasonForTransfer, setReasonForTransfer] = useState("");
   const financeConfig = useFinanceConfig();
 
-  // Recipients
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string>("");
   const [showRecipientModal, setShowRecipientModal] = useState(false);
 
-  // Promo code
   const [promoInput, setPromoInput] = useState("");
   const [promoValidating, setPromoValidating] = useState(false);
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
@@ -124,7 +145,6 @@ export function DashboardRequestHub({
       });
   }, []);
 
-  // Load recipients when approved
   useEffect(() => {
     if (!isApproved) return;
     getRecipients().then((res) => {
@@ -163,7 +183,6 @@ export function DashboardRequestHub({
     setSelectedRecipientId(r.id);
   };
 
-  // Reset promo state when amount changes
   const resetPromo = () => {
     setPromoDiscount(null);
     setPromoFinal(null);
@@ -210,41 +229,24 @@ export function DashboardRequestHub({
 
   const activeRate = promoEffectiveRate ?? tailoredRate;
   const resultNumber = (rawAmount === 0 || isRateOffline) ? 0 : Math.round(effectiveAud * activeRate!);
-  const transactionValidityNotice = "توجه: این نرخ و درخواست، دارای اعتبار زمانی ۲ ساعته است و باید در این بازه زمانی نهایی شود.";
+  const transactionValidityNotice = "توجه: این نرخ و درخواست دارای اعتبار زمانی ۲ ساعته است و باید در این بازه زمانی نهایی شود.\nهمچنین، درخواست‌کننده و شخصی که اطلاعاتش در سیستم ثبت شده، باید همان صاحب حسابی باشد که وجه از آن انتقال می‌یابد.";
 
-  // مسدودسازی تایپ حروف الفبا برای فیلد دلار به صورت هوشمند
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
-
-    // Accept Persian/Latin digits and both decimal separators; normalize to "." internally.
     val = val.replace(/٫/g, ".").replace(/[^\d۰-۹.]/g, "");
     const normalized = faToEnDigits(val);
-
-    // Prevent more than one decimal point.
     const dotCount = (normalized.match(/\./g) || []).length;
     if (dotCount > 1) return;
 
     if (normalized === "") {
-      setAmountStr("");
-      resetPromo();
-      keepAmountCaretAtEnd();
-      return;
+      setAmountStr(""); resetPromo(); keepAmountCaretAtEnd(); return;
     }
-
     if (normalized === ".") {
-      setAmountStr("۰.");
-      resetPromo();
-      keepAmountCaretAtEnd();
-      return;
+      setAmountStr("۰."); resetPromo(); keepAmountCaretAtEnd(); return;
     }
-
     if (normalized === "0") {
-      setAmountStr("۰");
-      resetPromo();
-      keepAmountCaretAtEnd();
-      return;
+      setAmountStr("۰"); resetPromo(); keepAmountCaretAtEnd(); return;
     }
-
     if (normalized.includes(".")) {
       const [intRaw, decRaw = ""] = normalized.split(".");
       const intNum = Number(intRaw || "0");
@@ -253,8 +255,7 @@ export function DashboardRequestHub({
       const decFormatted = toFaDigits(decLimited);
       const trailingDot = normalized.endsWith(".");
       setAmountStr(trailingDot ? `${intFormatted}.` : `${intFormatted}.${decFormatted}`);
-      resetPromo();
-      keepAmountCaretAtEnd();
+      resetPromo(); keepAmountCaretAtEnd();
       return;
     }
 
@@ -276,21 +277,12 @@ export function DashboardRequestHub({
     }
 
     setIsSubmitting(true);
-
-    // ─── Pre-open WhatsApp window NOW (synchronous, direct user gesture) ───────
-    // Browsers block window.open called after an await. Opening with '' first,
-    // then navigating it after the async work, bypasses the popup blocker.
     const whatsappWindow = window.open("", "_blank");
 
     try {
       const serverData = await onSaveTransaction(
-        rawAmount,
-        txType,
-        sourceOfFunds,
-        reasonForTransfer,
-        selectedRecipientId || null,
-        appliedPromoCode,
-        isEduPayment ? (paymentLink.trim() || null) : null,
+        rawAmount, txType, sourceOfFunds, reasonForTransfer, selectedRecipientId || null,
+        appliedPromoCode, isEduPayment ? (paymentLink.trim() || null) : null,
         resultNumber > 0 ? resultNumber : null,
       );
       
@@ -313,13 +305,9 @@ export function DashboardRequestHub({
          feeText = txType === "buy_aud" ? `${serverData.appliedFee} AUD (اضافه شده)` : `${serverData.appliedFee} AUD (کسر شده)`;
       }
 
-      // Build recipient section
       let recipientSection = "";
       if (isEduPayment) {
-        recipientSection =
-          "--------------------------\n" +
-          "گیرنده: آزمون / دانشگاه / موسسه\n" +
-          (paymentLink ? `- لینک پرداخت: ${paymentLink}\n` : "");
+        recipientSection = "--------------------------\nگیرنده: آزمون / دانشگاه / موسسه\n" + (paymentLink ? `- لینک پرداخت: ${paymentLink}\n` : "");
       } else {
         const rec = recipients.find((r) => r.id === selectedRecipientId);
         if (rec) {
@@ -371,19 +359,12 @@ export function DashboardRequestHub({
         "\nلطفاً درخواست من را بررسی نمایید.";
 
       const finalUrl = buildWhatsAppUrl(text);
-
-      // Navigate the pre-opened window to the WhatsApp URL
       if (whatsappWindow && !whatsappWindow.closed) {
         whatsappWindow.location.href = finalUrl;
       } else {
-        // Fallback: pre-open was blocked — try direct navigation
         window.location.assign(finalUrl);
       }
-      setAmountStr("");
-      resetPromo();
-      setPromoInput("");
-      setSelectedRecipientId("");
-      setPaymentLink("");
+      setAmountStr(""); resetPromo(); setPromoInput(""); setSelectedRecipientId(""); setPaymentLink("");
     } catch (error) {
       whatsappWindow?.close();
       console.error(error);
@@ -411,12 +392,17 @@ export function DashboardRequestHub({
       )}
 
       {marketActive && !isApproved && !isRateOffline && (
-        <div className={styles.lockOverlay}>
-          <Lock size={48} className={styles.lockIcon} />
-          <h3 className={styles.lockTitle}>دسترسی محدود است</h3>
-          <p className={styles.lockText}> برای ثبت درخواست جدید ابتدا باید مدارک هویتی شما تکمیل و توسط مدیریت تایید شود. به قسمت "احراز هویت" بروید و اطلاعات خود را تکمیل کنید. </p>
-        </div>
-      )}
+              <div className={styles.lockOverlay}>
+                <Lock size={48} className={styles.lockIcon} />
+                <h3 className={styles.lockTitle}>دسترسی محدود است</h3>
+                <p className={styles.lockText}>
+                  کاربر گرامی، برای ثبت درخواست ارزی ابتدا باید فرآیند احراز هویت شما تکمیل و توسط مدیریت تایید گردد.
+                  <span style={{ display: "block", marginTop: "1.75rem", fontSize: "0.95em", lineHeight: "1.8" }}>
+                    برای شروع، لطفاً از منوی بالای صفحه (سمت راست) وارد بخش <strong style={{ color: "var(--warning)", padding: "0 4px" }}>«احراز هویت»</strong> شده و مدارک خود را تکمیل نمایید.
+                  </span>
+                </p>
+              </div>
+            )}
       
       <div className={cardStyles.panelHeader}>
         <div className={styles.titleWrapper}>
@@ -456,7 +442,6 @@ export function DashboardRequestHub({
               </span>
             )}
           </div>
-          {/* استفاده از استایل هاب بازگردانی شده با دیوایدر قدیم */}
           <div className={styles.hubFieldGroup}>
             <input
               ref={amountInputRef}
@@ -641,7 +626,9 @@ export function DashboardRequestHub({
             <AlertTriangle size={18} />
           </div>
           <div className={styles.noticeContent}>
-            <p className={styles.noticeText}>{transactionValidityNotice}</p>
+            <p className={styles.noticeText} style={{ whiteSpace: "pre-line", lineHeight: "1.8" }}>
+              {transactionValidityNotice}
+            </p>
           </div>
         </div>
       </div>
@@ -653,6 +640,19 @@ export function DashboardRequestHub({
           onCreated={handleRecipientCreated}
         />
       )}
+
+      {/* === نشانگر اسکرول حرفه‌ای (Stripe/Apple Style) === */}
+      <div 
+        className={`${styles.scrollIndicatorContainer} ${!isAtTop ? styles.scrollHidden : ''}`} 
+        onClick={scrollToForm} 
+        aria-hidden="true"
+      >
+        <div className={styles.scrollPill}>
+          <span>فرم درخواست حواله</span>
+          <ChevronDown size={16} className={styles.scrollIcon} />
+        </div>
+      </div>
+      {/* ================================================== */}
     </article>
   );
 }

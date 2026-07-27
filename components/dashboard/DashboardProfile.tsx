@@ -8,6 +8,14 @@ import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 
+// ایمپورت کردن دیتابیس‌های استان و شهر
+import provincesData from "@/lib/provinces.json";
+import citiesData from "@/lib/cities_sorted.json";
+
+// تبدیل آبجکت‌ها به آرایه برای استفاده راحت‌تر در حلقه‌ها
+const provincesArray = Object.values(provincesData) as any[];
+const citiesArray = Object.values(citiesData) as any[];
+
 export function DashboardProfile({ profile }: { profile: any }) {
   const hasSubmittedData = Boolean(profile?.document_type && profile?.document_type !== "later" && profile?.document_type !== "");
   const isApproved = profile?.kyc_status === "approved";
@@ -261,6 +269,30 @@ export function DashboardProfile({ profile }: { profile: any }) {
   const isVerifiedStage = isApproved;
   const isEntryStage = !isWaitingStage && !isVerifiedStage;
 
+  // ایجاد لیست استان‌های ایران (استفاده از نام انگلیسی هم برای دیتابیس و هم برای نمایش)
+  const iranProvinces = provincesArray.map((p) => ({
+    value: p.en_name || p.name,
+    label: p.en_name || p.name,
+    id: p.id,
+  }));
+
+  // پیدا کردن استان انتخاب‌شده برای استخراج لیست شهرهای آن
+  // پیدا کردن استان انتخاب‌شده برای استخراج لیست شهرهای آن
+  const selectedProvince = iranProvinces.find((p) => p.value === formData.state);
+
+  // استخراج تمام نام‌های انگلیسی (با در نظر گرفتن دیکشنری)
+  const rawCities = selectedProvince
+    ? citiesArray
+        .filter((c) => c.province_id === selectedProvince.id)
+        .map((c) => c.en_name || c.name)
+    : [];
+
+  // استفاده از Set برای حذف خودکار نام‌های تکراری (مثل دو بار Eslamabad-e Gharb)
+  const iranCities = Array.from(new Set(rawCities)).map((cityName) => ({
+    value: cityName,
+    label: cityName,
+  }));
+
   return (
     <article className={`${cardStyles.panelCard} ${styles.allowOverflow}`}>
       <div className={styles.profileHeader}>
@@ -268,8 +300,6 @@ export function DashboardProfile({ profile }: { profile: any }) {
           <UserCircle2 size={24} /> اطلاعات هویتی و امنیتی
         </h2>
       </div>
-
-      {/* loyalty savings banner removed — now shown in stat cards */}
       
       <div className={styles.mainContentWrapper}>
         <div className={styles.formCompact}>
@@ -416,10 +446,13 @@ export function DashboardProfile({ profile }: { profile: any }) {
                   {errors.dob && <span className={styles.errorText}>{errors.dob}</span>}
                 </div>
                 <div className={styles.inputGroup}>
-                  <label>Country <span className={styles.req}>*</span></label>
+                  <label>Residential Country <span className={styles.req}>*</span></label>
                   <SelectBox
                     value={formData.country}
-                    onChange={(val) => setFormData((prev) => ({ ...prev, country: val }))}
+                    onChange={(val) => {
+                      // در زمان تغییر کشور، فیلدهای آدرس را بازنشانی می‌کنیم
+                      setFormData((prev) => ({ ...prev, country: val, state: "", city: "", postalCode: "" }));
+                    }}
                     placeholder="Select country..."
                     groups={[
                       {
@@ -457,24 +490,57 @@ export function DashboardProfile({ profile }: { profile: any }) {
 
               <div className={styles.inputGroup}>
                 <label>Residential Address (Street) <span className={styles.req}>*</span></label>
-                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Street address, unit" className={errors.address ? styles.errorBorder : ""} />
+                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Unit, Street Address" className={errors.address ? styles.errorBorder : ""} />
                 {errors.address && <span className={styles.errorText}>{errors.address}</span>}
               </div>
 
               <div className={styles.row3}>
                 <div className={styles.inputGroup}>
-                  <label>City / Suburb <span className={styles.req}>*</span></label>
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City / Suburb" className={errors.city ? styles.errorBorder : ""} />
-                  {errors.city && <span className={styles.errorText}>{errors.city}</span>}
-                </div>
-                <div className={styles.inputGroup}>
-                  <label>State <span className={styles.req}>*</span></label>
-                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State" className={errors.state ? styles.errorBorder : ""} />
+                  <label>State/Province <span className={styles.req}>*</span></label>
+                  {formData.country === "Iran" ? (
+                    <SelectBox
+                      value={formData.state}
+                      onChange={(val) => {
+                        setFormData((prev) => ({ 
+                          ...prev, 
+                          state: val, 
+                          city: "" // پاک کردن شهر با تغییر استان
+                        }));
+                        if (errors.state) setErrors((prev) => ({ ...prev, state: "" }));
+                        if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
+                      }}
+                      placeholder="Select Province..."
+                      labeledOptions={iranProvinces}
+                      disabled={isSubmitting}
+                    />
+                  ) : (
+                    <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State" className={errors.state ? styles.errorBorder : ""} disabled={isSubmitting} />
+                  )}
                   {errors.state && <span className={styles.errorText}>{errors.state}</span>}
                 </div>
+
+                <div className={styles.inputGroup}>
+                  <label>City / Suburb <span className={styles.req}>*</span></label>
+                  {formData.country === "Iran" ? (
+                    <SelectBox
+                      value={formData.city}
+                      onChange={(val) => {
+                        setFormData((prev) => ({ ...prev, city: val }));
+                        if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
+                      }}
+                      placeholder="Select City..."
+                      labeledOptions={iranCities}
+                      disabled={!formData.state || isSubmitting} // تا استان انتخاب نشود غیرفعال است
+                    />
+                  ) : (
+                    <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City / Suburb" className={errors.city ? styles.errorBorder : ""} disabled={isSubmitting} />
+                  )}
+                  {errors.city && <span className={styles.errorText}>{errors.city}</span>}
+                </div>
+                
                 <div className={styles.inputGroup}>
                   <label>Postal Code <span className={styles.req}>*</span></label>
-                  <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="Postal code" className={errors.postalCode ? styles.errorBorder : ""} />
+                  <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="Postal code" className={errors.postalCode ? styles.errorBorder : ""} disabled={isSubmitting} />
                   {errors.postalCode && <span className={styles.errorText}>{errors.postalCode}</span>}
                 </div>
               </div>

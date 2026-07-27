@@ -34,19 +34,13 @@ export default function Hero() {
       const d = new Date(currentRates.lastUpdated);
       if (isNaN(d.getTime())) return null;
       
-      const datePart = d.toLocaleDateString("en-GB", {
+      // فقط استخراج و نمایش تاریخ
+      return d.toLocaleDateString("en-GB", {
         day: "numeric",
         month: "long",
         year: "numeric"
       });
       
-      const timePart = d.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      });
-      
-      return `${datePart} · ${timePart}`;
     } catch {
       return null;
     }

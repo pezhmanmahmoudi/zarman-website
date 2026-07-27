@@ -500,3 +500,85 @@
     font-weight: 600;
   }
 }
+
+
+/* =======================================
+   نشانگر اسکرول حرفه‌ای (Stripe / Apple Style)
+   ======================================= */
+.scrollIndicatorContainer {
+  position: fixed;
+  bottom: 2rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 100; 
+  /* ترنزیشن نرم برای محو شدن به سبک اپل */
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none; /* جلوگیری از تداخل کلیک با المان‌های زیرین */
+}
+
+.scrollHidden {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.scrollPill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  /* استفاده از رنگ اصلی سایت برای بک‌گراند */
+  background: var(--accent); 
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  
+  padding: 0.625rem 1.25rem;
+  border-radius: 2rem;
+  
+  /* رنگ متن و آیکون همیشه سفید می‌ماند */
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+  cursor: pointer;
+  
+  /* سایه ترکیبی قدرتمند */
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.2), 
+    0 4px 12px rgba(0, 0, 0, 0.1);
+  
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  
+  animation: stripeBounce 2.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* افکت کلیک نرم */
+.scrollPill:active {
+  transform: translateY(2px) scale(0.96);
+}
+
+.scrollIcon {
+  color: #ffffff; /* رنگ فلش هم سفید می‌شود */
+  animation: arrowPulse 2.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes stripeBounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-6px); }
+  60% { transform: translateY(-3px); }
+}
+
+@keyframes arrowPulse {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(3px); opacity: 0.6; }
+}
+
+/* در دسکتاپ نیازی به این دکمه نیست چون کل فرم در دید کاربر است */
+@media (min-width: 768px) {
+  .scrollIndicatorContainer {
+    display: none;
+  }
+}
