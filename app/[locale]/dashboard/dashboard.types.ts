@@ -56,6 +56,10 @@ export type Recipient = {
   account_number?: string | null;
   account_name?: string | null;
   residential_address?: string | null;
+  residential_city?: string | null;
+  residential_state?: string | null;
+  residential_postcode?: string | null;
+  residential_country?: string | null;
   recipient_email?: string | null;
   recipient_phone?: string | null;
   // IRT fields
@@ -65,6 +69,10 @@ export type Recipient = {
   irt_account_number?: string | null;
   full_name?: string | null;
   irt_address?: string | null;
+  irt_city?: string | null;
+  irt_state?: string | null;
+  irt_postcode?: string | null;
+  irt_country?: string | null;
   irt_phone?: string | null;
   created_at?: string;
 };

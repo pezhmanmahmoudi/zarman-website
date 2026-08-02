@@ -94,6 +94,10 @@ export function DashboardRequestHub({
   loyaltyBonus, tailoredRate, baseRate, displayFullName, profile,
   onSaveTransaction
 }: RequestHubProps) { 
+  const NEW_RECIPIENT_VALUE = "__new__";
+  const EDU_RECIPIENT_VALUE = "__edu_exam__";
+  const SELF_DESTINATION_RECIPIENT_VALUE = "__my_destination_account__";
+
   const amountInputRef = React.useRef<HTMLInputElement>(null);
   const t = useT();
   const locale = useLocale();
@@ -138,6 +142,7 @@ export function DashboardRequestHub({
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string>("");
   const [showRecipientModal, setShowRecipientModal] = useState(false);
+  const [recipientModalMode, setRecipientModalMode] = useState<"standard" | "self_destination">("standard");
 
   const [promoInput, setPromoInput] = useState("");
   const [promoValidating, setPromoValidating] = useState(false);
@@ -175,24 +180,31 @@ export function DashboardRequestHub({
   const filteredRecipients = recipients.filter((r) => r.direction === recipientDirection);
 
   const recipientOptions = [
-    { value: "__new__", label: t.hub.addRecipient },
-    { value: "__edu_exam__", label: t.hub.eduPayment },
+    { value: NEW_RECIPIENT_VALUE, label: t.hub.addRecipient },
+    { value: SELF_DESTINATION_RECIPIENT_VALUE, label: t.hub.ownDestinationAccount },
+    { value: EDU_RECIPIENT_VALUE, label: t.hub.eduPayment },
     ...filteredRecipients.map((r) => ({ value: r.id, label: r.label })),
   ];
 
-  const isEduPayment = selectedRecipientId === "__edu_exam__";
+  const isEduPayment = selectedRecipientId === EDU_RECIPIENT_VALUE;
 
   const handleRecipientChange = (val: string) => {
-    if (val === "__new__") {
+    if (val === NEW_RECIPIENT_VALUE) {
+      setRecipientModalMode("standard");
+      setShowRecipientModal(true);
+      return;
+    }
+    if (val === SELF_DESTINATION_RECIPIENT_VALUE) {
+      setRecipientModalMode("self_destination");
       setShowRecipientModal(true);
       return;
     }
     setSelectedRecipientId(val);
-    if (val !== "__edu_exam__") setPaymentLink("");
+    if (val !== EDU_RECIPIENT_VALUE) setPaymentLink("");
   };
 
   useEffect(() => {
-    if (selectedRecipientId === "__edu_exam__") {
+    if (selectedRecipientId === EDU_RECIPIENT_VALUE) {
       setReasonForTransfer("International Payment");
     }
   }, [selectedRecipientId]);
@@ -373,13 +385,22 @@ export function DashboardRequestHub({
       } else {
         const rec = recipients.find((r) => r.id === selectedRecipientId);
         if (rec) {
+          const audAddress = [rec.residential_address, rec.residential_city, rec.residential_state, rec.residential_postcode, rec.residential_country]
+            .map((v) => String(v ?? "").trim())
+            .filter(Boolean)
+            .join(", ");
+          const irtAddress = [rec.irt_address, rec.irt_city, rec.irt_state, rec.irt_postcode, rec.irt_country]
+            .map((v) => String(v ?? "").trim())
+            .filter(Boolean)
+            .join(", ");
+
           recipientSection = "--------------------------\n📋 اطلاعات گیرنده:\n";
           if (rec.direction === "aud") {
             recipientSection += `- نام صاحب حساب: ${rec.account_name || "—"}\n`;
             recipientSection += `- بانک: ${rec.bank_name || "—"}\n`;
             recipientSection += `- BSB: ${rec.bsb || "—"}\n`;
             recipientSection += `- شماره حساب: ${rec.account_number || "—"}\n`;
-            recipientSection += `- آدرس: ${rec.residential_address || "—"}\n`;
+            recipientSection += `- آدرس: ${audAddress || "—"}\n`;
             if (rec.recipient_phone) recipientSection += `- تلفن گیرنده: ${rec.recipient_phone}\n`;
             if (rec.recipient_email) recipientSection += `- ایمیل گیرنده: ${rec.recipient_email}\n`;
           } else {
@@ -393,7 +414,7 @@ export function DashboardRequestHub({
               recipientSection += `- شبا: ${rec.shaba_number || "—"}\n`;
             }
             if (rec.irt_phone) recipientSection += `- تلفن گیرنده: ${rec.irt_phone}\n`;
-            if (rec.irt_address) recipientSection += `- آدرس: ${rec.irt_address}\n`;
+            if (irtAddress) recipientSection += `- آدرس: ${irtAddress}\n`;
           }
         }
       }
@@ -739,6 +760,9 @@ export function DashboardRequestHub({
       {showRecipientModal && (
         <RecipientModal
           direction={recipientDirection}
+          mode={recipientModalMode}
+          profile={profile}
+          locale={locale}
           onClose={() => setShowRecipientModal(false)}
           onCreated={handleRecipientCreated}
         />

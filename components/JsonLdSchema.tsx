@@ -147,7 +147,6 @@ export function JsonLdSchema({ locale }: JsonLdSchemaProps) {
           ? "بهترین نرخ تبادل دلار استرالیا به تومان. ثبت‌شده در AUSTRAC. انتقال امن و سریع پول از استرالیا به ایران."
           : "Best AUD to IRT exchange rate. AUSTRAC registered. Secure and fast money transfer from Australia to Iran.",
         datePublished: "2024-01-01",
-        dateModified: new Date().toISOString().split("T")[0],
         inLanguage: locale === "fa" ? "fa-IR" : "en-AU",
         isPartOf: {
           "@id": `${PRODUCTION_URL}/#website`,

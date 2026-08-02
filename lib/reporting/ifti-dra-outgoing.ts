@@ -182,7 +182,15 @@ export type IftiSourceRecord = {
     full_name?: string | null;
     account_name?: string | null;
     residential_address?: string | null;
+    residential_city?: string | null;
+    residential_state?: string | null;
+    residential_postcode?: string | null;
+    residential_country?: string | null;
     irt_address?: string | null;
+    irt_city?: string | null;
+    irt_state?: string | null;
+    irt_postcode?: string | null;
+    irt_country?: string | null;
     recipient_phone?: string | null;
     recipient_email?: string | null;
     irt_phone?: string | null;
@@ -243,6 +251,21 @@ function createDataRow(record: IftiSourceRecord): Array<string | number> {
   const beneficiaryName = asString(recipient?.full_name) || asString(recipient?.account_name) || asString(recipient?.label);
   const orderingCountry = asString(profile?.country) || "Australia";
   const beneficiaryCountry = recipient?.direction === "aud" ? "Australia" : "Iran";
+  const beneficiaryAddress = recipient?.direction === "aud"
+    ? asString(recipient?.residential_address)
+    : asString(recipient?.irt_address);
+  const beneficiaryCity = recipient?.direction === "aud"
+    ? asString(recipient?.residential_city)
+    : asString(recipient?.irt_city);
+  const beneficiaryState = recipient?.direction === "aud"
+    ? asString(recipient?.residential_state)
+    : asString(recipient?.irt_state);
+  const beneficiaryPostcode = recipient?.direction === "aud"
+    ? asString(recipient?.residential_postcode)
+    : asString(recipient?.irt_postcode);
+  const beneficiaryCountryValue = recipient?.direction === "aud"
+    ? asString(recipient?.residential_country)
+    : asString(recipient?.irt_country);
 
   const row: Array<string | number> = new Array(112).fill("");
 
@@ -271,13 +294,17 @@ function createDataRow(record: IftiSourceRecord): Array<string | number> {
   row[35] = asString(profile?.compliance_dvs_method);
 
   row[36] = beneficiaryName;
-  row[39] = asString(recipient?.residential_address) || asString(recipient?.irt_address);
-  row[43] = beneficiaryCountry;
+  row[39] = beneficiaryAddress;
+  row[40] = beneficiaryCity;
+  row[41] = beneficiaryState;
+  row[42] = beneficiaryPostcode;
+  row[43] = beneficiaryCountryValue || beneficiaryCountry;
   row[49] = asString(recipient?.recipient_phone) || asString(recipient?.irt_phone);
   row[50] = asString(recipient?.recipient_email);
   row[54] = asString(recipient?.account_number) || asString(recipient?.irt_account_number) || asString(recipient?.card_number) || asString(recipient?.shaba_number);
   row[55] = asString(recipient?.bank_name);
-  row[57] = beneficiaryCountry;
+  row[56] = beneficiaryCity;
+  row[57] = beneficiaryCountryValue || beneficiaryCountry;
 
   // Person/organisation accepting the transfer instruction from the ordering customer — Zarman Exchange
   row[59] = "ZARMAN EXCHANGE PTY LTD";

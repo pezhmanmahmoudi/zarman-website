@@ -92,6 +92,8 @@ export async function POST(req: NextRequest) {
       ),
       recipients(
         direction, label, full_name, account_name, residential_address, irt_address,
+        residential_city, residential_state, residential_postcode, residential_country,
+        irt_city, irt_state, irt_postcode, irt_country,
         recipient_phone, recipient_email, irt_phone, account_number, card_number,
         shaba_number, irt_account_number, bank_name
       )
@@ -133,7 +135,7 @@ export async function POST(req: NextRequest) {
 
   const fileName = buildFileName(orderedRows);
 
-  return new Response(workbookBuffer, {
+  return new Response(new Uint8Array(workbookBuffer), {
     status: 200,
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

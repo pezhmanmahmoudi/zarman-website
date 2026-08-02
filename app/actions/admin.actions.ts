@@ -1044,6 +1044,10 @@ export async function createAssistedCustomerOnboarding(payload: any) {
         bsb:                  r.bsb?.trim()          || null,
         account_number:       r.account_number?.trim()       || null,
         residential_address:  r.residential_address?.trim()  || null,
+        residential_city:     r.residential_city?.trim()     || null,
+        residential_state:    r.residential_state?.trim()    || null,
+        residential_postcode: r.residential_postcode?.trim() || null,
+        residential_country:  r.residential_country?.trim()  || null,
         recipient_email:      r.recipient_email?.trim()      || null,
         recipient_phone:      r.recipient_phone?.trim()      || null,
         bank_type:            r.bank_type?.trim()   || "other",
@@ -1051,6 +1055,10 @@ export async function createAssistedCustomerOnboarding(payload: any) {
         shaba_number:         r.shaba_number?.trim()         || null,
         irt_account_number:   r.irt_account_number?.trim()   || null,
         irt_address:          r.irt_address?.trim()          || null,
+        irt_city:             r.irt_city?.trim()             || null,
+        irt_state:            r.irt_state?.trim()            || null,
+        irt_postcode:         r.irt_postcode?.trim()         || null,
+        irt_country:          r.irt_country?.trim()          || null,
         irt_phone:            r.irt_phone?.trim()            || null,
       }])
       .select("id")
@@ -1276,6 +1284,10 @@ export async function createAssistedRecipientForUser(payload: any) {
     bsb: payload.bsb?.trim() || null,
     account_number: payload.account_number?.trim() || null,
     residential_address: payload.residential_address?.trim() || null,
+    residential_city: payload.residential_city?.trim() || null,
+    residential_state: payload.residential_state?.trim() || null,
+    residential_postcode: payload.residential_postcode?.trim() || null,
+    residential_country: payload.residential_country?.trim() || null,
     recipient_email: payload.recipient_email?.trim() || null,
     recipient_phone: payload.recipient_phone?.trim() || null,
     bank_type: payload.bank_type?.trim() || null,
@@ -1283,6 +1295,10 @@ export async function createAssistedRecipientForUser(payload: any) {
     shaba_number: payload.shaba_number?.trim() || null,
     irt_account_number: payload.irt_account_number?.trim() || null,
     irt_address: payload.irt_address?.trim() || null,
+    irt_city: payload.irt_city?.trim() || null,
+    irt_state: payload.irt_state?.trim() || null,
+    irt_postcode: payload.irt_postcode?.trim() || null,
+    irt_country: payload.irt_country?.trim() || null,
     irt_phone: payload.irt_phone?.trim() || null,
   };
 
@@ -1323,6 +1339,10 @@ export async function updateAssistedRecipientForUser(payload: any) {
   if (payload.bsb !== undefined) patch.bsb = payload.bsb?.trim() || null;
   if (payload.account_number !== undefined) patch.account_number = payload.account_number?.trim() || null;
   if (payload.residential_address !== undefined) patch.residential_address = payload.residential_address?.trim() || null;
+  if (payload.residential_city !== undefined) patch.residential_city = payload.residential_city?.trim() || null;
+  if (payload.residential_state !== undefined) patch.residential_state = payload.residential_state?.trim() || null;
+  if (payload.residential_postcode !== undefined) patch.residential_postcode = payload.residential_postcode?.trim() || null;
+  if (payload.residential_country !== undefined) patch.residential_country = payload.residential_country?.trim() || null;
   if (payload.recipient_email !== undefined) patch.recipient_email = payload.recipient_email?.trim() || null;
   if (payload.recipient_phone !== undefined) patch.recipient_phone = payload.recipient_phone?.trim() || null;
   if (payload.bank_type !== undefined) patch.bank_type = payload.bank_type?.trim() || null;
@@ -1330,6 +1350,10 @@ export async function updateAssistedRecipientForUser(payload: any) {
   if (payload.shaba_number !== undefined) patch.shaba_number = payload.shaba_number?.trim() || null;
   if (payload.irt_account_number !== undefined) patch.irt_account_number = payload.irt_account_number?.trim() || null;
   if (payload.irt_address !== undefined) patch.irt_address = payload.irt_address?.trim() || null;
+  if (payload.irt_city !== undefined) patch.irt_city = payload.irt_city?.trim() || null;
+  if (payload.irt_state !== undefined) patch.irt_state = payload.irt_state?.trim() || null;
+  if (payload.irt_postcode !== undefined) patch.irt_postcode = payload.irt_postcode?.trim() || null;
+  if (payload.irt_country !== undefined) patch.irt_country = payload.irt_country?.trim() || null;
   if (payload.irt_phone !== undefined) patch.irt_phone = payload.irt_phone?.trim() || null;
 
   if (Object.keys(patch).length === 0) return { success: true };

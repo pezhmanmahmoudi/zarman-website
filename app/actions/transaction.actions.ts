@@ -202,7 +202,7 @@ export async function processTransactionSecurely({
       .from("transactions")
       .insert([{
         user_id: authenticatedUserId,
-        type: companyTradeType,
+        type: txType,
         amount_aud: rawAmount,
         equivalent_toman: equivalentToman,
         applied_rate: appliedRate,
