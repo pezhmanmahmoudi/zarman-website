@@ -1,81 +1,113 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { UserCircle2, ShieldCheck, AlertCircle, MessageCircle, Pencil, Check, X } from "lucide-react";
 import { submitKycData, savePersonalData, updatePersonalIdentityData } from "@/app/actions/kyc.actions";
 import styles from "@/styles/dashboard/DashboardProfile.module.css";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
+import { AustralianLocationFields } from "@/components/dashboard/AustralianLocationFields";
+import type { Profile as BaseProfile } from "@/app/[locale]/dashboard/dashboard.types";
+import { normalizeAustralianState } from "@/lib/australian-driver-licence";
 
 // ایمپورت کردن دیتابیس‌های استان و شهر
 import provincesData from "@/lib/provinces.json";
 import citiesData from "@/lib/cities_sorted.json";
 
 // تبدیل آبجکت‌ها به آرایه برای استفاده راحت‌تر در حلقه‌ها
-const provincesArray = Object.values(provincesData) as any[];
-const citiesArray = Object.values(citiesData) as any[];
+type ProvinceRecord = {
+  id: number;
+  name: string;
+  en_name?: string;
+};
 
-export function DashboardProfile({ profile }: { profile: any }) {
+type CityRecord = {
+  id: number;
+  province_id: number;
+  name: string;
+  en_name?: string;
+};
+
+type DashboardProfileData = BaseProfile & {
+  middle_name?: string | null;
+  document_type?: string | null;
+  license_number?: string | null;
+  card_number?: string | null;
+  expiry_date?: string | null;
+  state_of_issue?: string | null;
+  updated_at?: string | null;
+};
+
+type PersonalDataState = {
+  firstName: string;
+  lastName: string;
+  mobileNumber: string;
+};
+
+type FormDataState = {
+  dob: string;
+  country: string;
+  address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  docType: string;
+  licenseNumber: string;
+  cardNumber: string;
+  passportNumber: string;
+  expiryDate: string;
+  stateOfIssue: string;
+  consentNotice: boolean;
+  consentDVS: boolean;
+};
+
+const provincesArray = Object.values(provincesData) as ProvinceRecord[];
+const citiesArray = Object.values(citiesData) as CityRecord[];
+
+function buildPersonalData(profile: DashboardProfileData | null | undefined): PersonalDataState {
+  return {
+    firstName: profile?.first_name || "",
+    lastName: profile?.last_name || "",
+    mobileNumber: profile?.mobile_number || profile?.phone_number || "",
+  };
+}
+
+function buildFormData(profile: DashboardProfileData | null | undefined): FormDataState {
+  return {
+    dob: profile?.dob || profile?.date_of_birth || "",
+    country: profile?.country || "Australia",
+    address: profile?.address || "",
+    city: profile?.city || "",
+    state: profile?.country === "Australia" ? normalizeAustralianState(profile?.state || "") : profile?.state || "",
+    postalCode: profile?.postcode || profile?.post_code || "",
+    docType: profile?.document_type || "",
+    licenseNumber: profile?.license_number || "",
+    cardNumber: profile?.card_number || "",
+    passportNumber: profile?.passport_number || "",
+    expiryDate: profile?.expiry_date || "",
+    stateOfIssue: profile?.state_of_issue || "",
+    consentNotice: false,
+    consentDVS: false,
+  };
+}
+
+export function DashboardProfile({ profile }: { profile: DashboardProfileData | null }) {
   const hasSubmittedData = Boolean(profile?.document_type && profile?.document_type !== "later" && profile?.document_type !== "");
   const isApproved = profile?.kyc_status === "approved";
+  const initialPersonalData = buildPersonalData(profile);
 
-  const [personalData, setPersonalData] = useState({
-    firstName: "",
-    lastName: "",
-    mobileNumber: "",
-  });
-  const [personalDraft, setPersonalDraft] = useState({
-    firstName: "",
-    lastName: "",
-    mobileNumber: "",
-  });
+  const [personalData, setPersonalData] = useState<PersonalDataState>(() => initialPersonalData);
+  const [personalDraft, setPersonalDraft] = useState<PersonalDataState>(() => initialPersonalData);
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
   const [isSavingPersonal, setIsSavingPersonal] = useState(false);
   const [personalStatus, setPersonalStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
-  const [formData, setFormData] = useState({
-    dob: "", country: "Australia", address: "", city: "", state: "", postalCode: "",
-    docType: "", licenseNumber: "", cardNumber: "", passportNumber: "", expiryDate: "", stateOfIssue: "",
-    consentNotice: false, 
-    consentDVS: false,    
-  });
+  const [formData, setFormData] = useState<FormDataState>(() => buildFormData(profile));
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: "success" | "error" | ""; msg: string }>({ type: "", msg: "" });
-
-  useEffect(() => {
-    if (profile) {
-      setPersonalData({
-        firstName: profile.first_name || "",
-        lastName: profile.last_name || "",
-        mobileNumber: profile.mobile_number || profile.phone_number || "",
-      });
-      setPersonalDraft({
-        firstName: profile.first_name || "",
-        lastName: profile.last_name || "",
-        mobileNumber: profile.mobile_number || profile.phone_number || "",
-      });
-
-      setFormData({
-        dob: profile.dob || profile.date_of_birth || "",
-        country: profile.country || "Australia",
-        address: profile.address || "",
-        city: profile.city || "",
-        state: profile.state || "",
-        postalCode: profile.postcode || profile.post_code || "",
-        docType: profile.document_type || "",
-        licenseNumber: profile.license_number || "",
-        cardNumber: profile.card_number || "",
-        passportNumber: profile.passport_number || "",
-        expiryDate: profile.expiry_date || "",
-        stateOfIssue: profile.state_of_issue || "",
-        consentNotice: false,
-        consentDVS: false,
-      });
-    }
-  }, [profile]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -491,58 +523,102 @@ export function DashboardProfile({ profile }: { profile: any }) {
               <div className={styles.inputGroup}>
                 <label>Residential Address (Street) <span className={styles.req}>*</span></label>
                 <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Unit, Street Address" className={errors.address ? styles.errorBorder : ""} />
+                <span className={styles.fieldHint}>
+                  Use your residential address exactly as it appears on your bank record or identity document.
+                </span>
                 {errors.address && <span className={styles.errorText}>{errors.address}</span>}
               </div>
 
               <div className={styles.row3}>
-                <div className={styles.inputGroup}>
-                  <label>State/Province <span className={styles.req}>*</span></label>
-                  {formData.country === "Iran" ? (
-                    <SelectBox
-                      value={formData.state}
-                      onChange={(val) => {
-                        setFormData((prev) => ({ 
-                          ...prev, 
-                          state: val, 
-                          city: "" // پاک کردن شهر با تغییر استان
-                        }));
-                        if (errors.state) setErrors((prev) => ({ ...prev, state: "" }));
-                        if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
-                      }}
-                      placeholder="Select Province..."
-                      labeledOptions={iranProvinces}
-                      disabled={isSubmitting}
-                    />
-                  ) : (
-                    <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State" className={errors.state ? styles.errorBorder : ""} disabled={isSubmitting} />
-                  )}
-                  {errors.state && <span className={styles.errorText}>{errors.state}</span>}
-                </div>
+                {formData.country === "Australia" ? (
+                  <AustralianLocationFields
+                    key={normalizeAustralianState(formData.state) || "AU"}
+                    state={normalizeAustralianState(formData.state)}
+                    city={formData.city}
+                    postalCode={formData.postalCode}
+                    disabled={isSubmitting}
+                    errors={{
+                      state: errors.state,
+                      city: errors.city,
+                      postalCode: errors.postalCode,
+                    }}
+                    onStateChange={(value) => {
+                      setFormData((prev) => ({ ...prev, state: value, city: "", postalCode: "" }));
+                      setErrors((prev) => ({ ...prev, state: "", city: "", postalCode: "" }));
+                    }}
+                    onCityChange={(value) => {
+                      setFormData((prev) => ({ ...prev, city: value }));
+                      if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
+                    }}
+                    onPostalCodeChange={(value) => {
+                      setFormData((prev) => ({ ...prev, postalCode: value }));
+                      if (errors.postalCode) setErrors((prev) => ({ ...prev, postalCode: "" }));
+                    }}
+                  />
+                ) : formData.country === "Iran" ? (
+                  <>
+                    <div className={styles.inputGroup}>
+                      <label>State/Province <span className={styles.req}>*</span></label>
+                      <SelectBox
+                        value={formData.state}
+                        onChange={(val) => {
+                          setFormData((prev) => ({ 
+                            ...prev, 
+                            state: val, 
+                            city: ""
+                          }));
+                          if (errors.state) setErrors((prev) => ({ ...prev, state: "" }));
+                          if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
+                        }}
+                        placeholder="Select Province..."
+                        labeledOptions={iranProvinces}
+                        disabled={isSubmitting}
+                      />
+                      {errors.state && <span className={styles.errorText}>{errors.state}</span>}
+                    </div>
 
-                <div className={styles.inputGroup}>
-                  <label>City / Suburb <span className={styles.req}>*</span></label>
-                  {formData.country === "Iran" ? (
-                    <SelectBox
-                      value={formData.city}
-                      onChange={(val) => {
-                        setFormData((prev) => ({ ...prev, city: val }));
-                        if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
-                      }}
-                      placeholder="Select City..."
-                      labeledOptions={iranCities}
-                      disabled={!formData.state || isSubmitting} // تا استان انتخاب نشود غیرفعال است
-                    />
-                  ) : (
-                    <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City / Suburb" className={errors.city ? styles.errorBorder : ""} disabled={isSubmitting} />
-                  )}
-                  {errors.city && <span className={styles.errorText}>{errors.city}</span>}
-                </div>
-                
-                <div className={styles.inputGroup}>
-                  <label>Postal Code <span className={styles.req}>*</span></label>
-                  <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="Postal code" className={errors.postalCode ? styles.errorBorder : ""} disabled={isSubmitting} />
-                  {errors.postalCode && <span className={styles.errorText}>{errors.postalCode}</span>}
-                </div>
+                    <div className={styles.inputGroup}>
+                      <label>City / Suburb <span className={styles.req}>*</span></label>
+                      <SelectBox
+                        value={formData.city}
+                        onChange={(val) => {
+                          setFormData((prev) => ({ ...prev, city: val }));
+                          if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
+                        }}
+                        placeholder="Select City..."
+                        labeledOptions={iranCities}
+                        disabled={!formData.state || isSubmitting}
+                      />
+                      {errors.city && <span className={styles.errorText}>{errors.city}</span>}
+                    </div>
+
+                    <div className={styles.inputGroup}>
+                      <label>Postal Code <span className={styles.req}>*</span></label>
+                      <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="Postal code" className={errors.postalCode ? styles.errorBorder : ""} disabled={isSubmitting} />
+                      {errors.postalCode && <span className={styles.errorText}>{errors.postalCode}</span>}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={styles.inputGroup}>
+                      <label>State/Province <span className={styles.req}>*</span></label>
+                      <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State" className={errors.state ? styles.errorBorder : ""} disabled={isSubmitting} />
+                      {errors.state && <span className={styles.errorText}>{errors.state}</span>}
+                    </div>
+
+                    <div className={styles.inputGroup}>
+                      <label>City / Suburb <span className={styles.req}>*</span></label>
+                      <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City / Suburb" className={errors.city ? styles.errorBorder : ""} disabled={isSubmitting} />
+                      {errors.city && <span className={styles.errorText}>{errors.city}</span>}
+                    </div>
+
+                    <div className={styles.inputGroup}>
+                      <label>Postal Code <span className={styles.req}>*</span></label>
+                      <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="Postal code" className={errors.postalCode ? styles.errorBorder : ""} disabled={isSubmitting} />
+                      {errors.postalCode && <span className={styles.errorText}>{errors.postalCode}</span>}
+                    </div>
+                  </>
+                )}
               </div>
 
               {formData.country === "Australia" && (
@@ -580,12 +656,12 @@ export function DashboardProfile({ profile }: { profile: any }) {
                           labeledOptions={[
                             { value: "ACT", label: "ACT (Australian Capital Territory)" },
                             { value: "NSW", label: "NSW (New South Wales)" },
-                            { value: "NT",  label: "NT (Northern Territory)" },
+                            { value: "NT", label: "NT (Northern Territory)" },
                             { value: "QLD", label: "QLD (Queensland)" },
-                            { value: "SA",  label: "SA (South Australia)" },
+                            { value: "SA", label: "SA (South Australia)" },
                             { value: "TAS", label: "TAS (Tasmania)" },
                             { value: "VIC", label: "VIC (Victoria)" },
-                            { value: "WA",  label: "WA (Western Australia)" },
+                            { value: "WA", label: "WA (Western Australia)" },
                           ]}
                           disabled={isSubmitting}
                         />

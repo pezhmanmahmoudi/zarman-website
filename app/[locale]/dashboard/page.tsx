@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useRates } from "@/context/RateContext"; 
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { deleteTransactionSecurely, processTransactionSecurely } from "@/app/actions/transaction.actions";
@@ -11,6 +11,7 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { DashboardRequestHub } from "@/components/dashboard/DashboardRequestHub";
 import dynamic from "next/dynamic";
+import type { Transaction } from "@/app/[locale]/dashboard/dashboard.types";
 
 // Lazy-load inactive tab components — not needed on initial render
 const DashboardTransactionHistory = dynamic(
@@ -25,32 +26,31 @@ const DashboardFeedback = dynamic(
   () => import("@/components/dashboard/DashboardFeedback").then(m => ({ default: m.DashboardFeedback })),
   { ssr: false, loading: () => <div className={shellStyles.loadingState}>در حال بارگذاری...</div> }
 );
-import { AlertTriangle, X } from "lucide-react"; 
+import { AlertTriangle, LayoutDashboard, Minimize2, Rows3, X } from "lucide-react";
 import { useFinanceConfig } from "@/context/FinanceConfigContext";
 import { calcLoyaltyDiscount } from "@/lib/pricing";
+import { useT } from "@/hooks/useT";
+import { useLocale } from "@/context/LocaleContext";
 
+const DASHBOARD_THEME = "light" as const;
 
 export default function ZarmanDashboard() {
   const rateContext = useRates();
   const { profile, transactions, loading, sessionChecked } = useDashboardData();
   const financeConfig = useFinanceConfig();
+  const t = useT();
+  const locale = useLocale();
 
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"hub" | "history" | "profile" | "feedback">("hub");
+  const [showOverviewCards, setShowOverviewCards] = useState(true);
 
-  const [amountStr, setAmountStr] = useState("۱،۰۰۰");
+  const [amountStr, setAmountStr] = useState(() => (locale === "fa" ? "۱،۰۰۰" : "1,000"));
   const [txType, setTxType] = useState<"sell_aud" | "buy_aud">("buy_aud"); 
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    const savedTheme = window.localStorage.getItem("zarman-dashboard-theme");
-    if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme);
-  }, []);
-
-  useEffect(() => { window.localStorage.setItem("zarman-dashboard-theme", theme); }, [theme]);
+  const activePanelRef = React.useRef<HTMLDivElement | null>(null);
 
   const baseRate = useMemo(() => {
     const rates = rateContext?.currentRates;
@@ -66,11 +66,11 @@ export default function ZarmanDashboard() {
 
   const approvedTransactions = useMemo(() => {
     if (!transactions) return [];
-    return transactions.filter((tx: any) => tx.status === "approved");
+    return transactions.filter((tx: Transaction) => tx.status === "approved");
   }, [transactions]);
 
   const approvedVolume = useMemo(() => {
-    return approvedTransactions.reduce((sum: number, tx: any) => sum + (Number(tx.amount_aud) || 0), 0);
+    return approvedTransactions.reduce((sum: number, tx: Transaction) => sum + (Number(tx.amount_aud) || 0), 0);
   }, [approvedTransactions]);
 
   const loyaltyBonus = useMemo(() => {
@@ -85,11 +85,33 @@ export default function ZarmanDashboard() {
   const isApproved = String(profile?.kyc_status || "").replace(/['"]/g, '').trim().toLowerCase() === "approved";
   
   const displayFullName = useMemo(() => {
-    if (!profile) return "مشتری عزیز";
+    if (!profile) return locale === "fa" ? "مشتری عزیز" : "Dear Customer";
     const fullName = String(profile.full_name || "").trim();
     if (fullName) return fullName;
-    return `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "مشتری عزیز";
-  }, [profile]);
+    return `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || (locale === "fa" ? "مشتری عزیز" : "Dear Customer");
+  }, [profile, locale]);
+
+  const activePanelLabel = useMemo(() => {
+    switch (activeTab) {
+      case "hub": return t.dashboard.tabs.hub;
+      case "profile": return t.dashboard.tabs.profile;
+      case "history": return t.dashboard.tabs.history;
+      case "feedback": return t.dashboard.tabs.feedback;
+      default: return "";
+    }
+  }, [activeTab, t]);
+
+  const toggleOverviewCards = () => {
+    setShowOverviewCards((current) => {
+      const next = !current;
+      if (!next) {
+        requestAnimationFrame(() => {
+          activePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+      return next;
+    });
+  };
 
   const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud", sourceOfFunds: string, reasonForTransfer: string, recipientId?: string | null, promoCode?: string | null, paymentLink?: string | null, agreedEquivalentToman?: number | null) => {
     if (!profile || !profile.id || !isApproved || rawAmount <= 0) return null;
@@ -106,11 +128,21 @@ export default function ZarmanDashboard() {
     });
 
     if (result?.error) {
-      alert(`ثبت تراکنش مسدود شد!\nارور سرور: ${result.error}`);
+      alert(`${locale === "fa" ? "ثبت تراکنش مسدود شد!\nارور سرور: " : "Transaction blocked!\nServer error: "}${result.error}`);
       return null;
     }
 
-    return (result?.data as any) || null; 
+    return (result?.data as {
+      baseRate: number;
+      tailoredRate: number;
+      loyaltyBonus: number;
+      equivalentToman: number;
+      appliedFee: number;
+      rawAmount: number;
+      discount_amount?: number;
+      final_amount?: number;
+      promo_code?: string | null;
+    }) || null;
   };
 
   const handleDeleteRequest = (txId: string | number) => {
@@ -124,7 +156,7 @@ export default function ZarmanDashboard() {
     try {
       const result = await deleteTransactionSecurely(deleteConfirmId!);
       if (result?.error) {
-        alert(`حذف تراکنش ناموفق بود: ${result.error}`);
+        alert(`${locale === "fa" ? "حذف تراکنش ناموفق بود: " : "Failed to delete: "}${result.error}`);
       } else {
         window.location.reload(); 
       }
@@ -136,31 +168,51 @@ export default function ZarmanDashboard() {
     }
   };
 
-  if (!sessionChecked || loading) return <div className={shellStyles.dashboardWrapper} data-theme={theme}><div className={shellStyles.loadingState}>در حال برقراری اتصال با دیتابیس...</div></div>;
+  if (!sessionChecked || loading) return <div className={shellStyles.dashboardWrapper} data-theme={DASHBOARD_THEME}><div className={shellStyles.loadingState}>{t.dashboard.connecting}</div></div>;
 
   return (
-    <div className={shellStyles.dashboardWrapper} data-theme={theme}>
-      <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} theme={theme} setTheme={setTheme} />
+    <div className={shellStyles.dashboardWrapper} data-theme={DASHBOARD_THEME}>
+      <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
       
       <main className={shellStyles.mainArea}>
-        <DashboardHeader firstName={profile?.first_name || "کاربر"} isApproved={isApproved} mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
-        
-        <DashboardStats totalVolume={approvedVolume} transactionCount={approvedTransactions.length} baseRate={baseRate} loyaltyBonus={loyaltyBonus} loyaltySavings={profile?.loyalty_discount_toman ?? 0} tailoredRate={tailoredRate} txType={txType} />
-        
-        {activeTab === "hub" && (
-          <DashboardRequestHub 
-            isApproved={isApproved} txType={txType} setTxType={setTxType} amountStr={amountStr} setAmountStr={setAmountStr} 
-            loyaltyBonus={loyaltyBonus} tailoredRate={tailoredRate} baseRate={baseRate} profile={profile} displayFullName={displayFullName} 
-            onSaveTransaction={handleSaveTransaction} 
-          />
-        )}
-        
-        {activeTab === "history" && <DashboardTransactionHistory transactions={transactions} onDeleteTransaction={handleDeleteRequest} />}
-        
-        {/* 🚀 ارور تایپ‌اسکریپت از اینجا حل شد 🚀 */}
-        {activeTab === "profile" && <DashboardProfile profile={profile} />}
-        
-        {activeTab === "feedback" && <DashboardFeedback profileId={profile?.id || ""} />}
+        <DashboardHeader firstName={profile?.first_name || (locale === "fa" ? "کاربر" : "User")} isApproved={isApproved} mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+
+        <section className={shellStyles.overviewCardsWrap} aria-label={t.dashboard.accountSummary}>
+          <div className={shellStyles.overviewCardsHeader}>
+            <div className={shellStyles.overviewCardsTitle}>
+              <LayoutDashboard size={18} />
+              <span>{t.dashboard.accountSummary}</span>
+            </div>
+            <button type="button" className={shellStyles.focusToggleButton} onClick={toggleOverviewCards}>
+              {showOverviewCards ? <Minimize2 size={16} /> : <Rows3 size={16} />}
+              <span>{showOverviewCards ? t.dashboard.focusMode : t.dashboard.normalMode}</span>
+            </button>
+          </div>
+          {showOverviewCards && (
+            <DashboardStats totalVolume={approvedVolume} transactionCount={approvedTransactions.length} baseRate={baseRate} loyaltyBonus={loyaltyBonus} loyaltySavings={profile?.loyalty_discount_toman ?? 0} tailoredRate={tailoredRate} txType={txType} />
+          )}
+        </section>
+
+        <div ref={activePanelRef} className={shellStyles.activeWorkspace}>
+          {activeTab === "hub" && (
+            <DashboardRequestHub
+              isApproved={isApproved} txType={txType} setTxType={setTxType} amountStr={amountStr} setAmountStr={setAmountStr}
+              loyaltyBonus={loyaltyBonus} tailoredRate={tailoredRate} baseRate={baseRate} profile={profile} displayFullName={displayFullName}
+              onSaveTransaction={handleSaveTransaction}
+            />
+          )}
+
+          {activeTab === "history" && <DashboardTransactionHistory transactions={transactions} onDeleteTransaction={handleDeleteRequest} />}
+
+          {activeTab === "profile" && (
+            <DashboardProfile
+              key={`${profile?.id ?? "anon"}:${profile?.updated_at ?? ""}:${profile?.kyc_status ?? ""}:${profile?.document_type ?? ""}`}
+              profile={profile}
+            />
+          )}
+
+          {activeTab === "feedback" && <DashboardFeedback profileId={profile?.id || ""} />}
+        </div>
 
         {deleteConfirmId && (
           <div className={shellStyles.modalOverlay}>
@@ -168,17 +220,17 @@ export default function ZarmanDashboard() {
               <div className={shellStyles.modalHeader}>
                 <div className={shellStyles.modalTitleGroup}>
                   <AlertTriangle className={shellStyles.warningIcon} size={24} />
-                  <h3>لغو درخواست حواله</h3>
+                  <h3>{t.dashboard.deleteConfirmTitle}</h3>
                 </div>
                 <button onClick={() => setDeleteConfirmId(null)} className={shellStyles.closeBtn} disabled={isDeleting}><X size={20}/></button>
               </div>
               <div className={shellStyles.modalBody}>
-                <p>آیا از لغو و حذف این درخواست تراکنش اطمینان دارید؟ این عمل غیرقابل بازگشت است.</p>
+                <p>{t.dashboard.deleteConfirmText}</p>
               </div>
               <div className={shellStyles.modalActions}>
-                <button onClick={() => setDeleteConfirmId(null)} className={shellStyles.cancelBtn} disabled={isDeleting}>انصراف</button>
+                <button onClick={() => setDeleteConfirmId(null)} className={shellStyles.cancelBtn} disabled={isDeleting}>{t.dashboard.deleteCancel}</button>
                 <button onClick={executeDeleteTransaction} className={shellStyles.dangerBtn} disabled={isDeleting}>
-                  {isDeleting ? "در حال حذف..." : "بله، حذف شود"}
+                  {isDeleting ? t.dashboard.deleting : t.dashboard.deleteConfirm}
                 </button>
               </div>
             </div>

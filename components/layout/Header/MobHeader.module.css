@@ -35,7 +35,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-4);
+}
+
+.headerContentRtl {
   direction: rtl;
+}
+
+.headerContentLtr {
+  direction: ltr;
 }
 
 .logoContainer {
@@ -130,18 +137,58 @@
 .menuDrawer {
   position: fixed;
   top: 0;
-  right: 0;
   bottom: 0;
   width: 85%; 
   max-width: 400px;
   z-index: 9999;
   background-color: var(--color-bg-base);
+  display: flex;
+  flex-direction: column;
+}
+
+.menuDrawerRtl {
+  right: 0;
   border-left: 1px solid var(--color-border-ghost);
   border-radius: 24px 0 0 24px;
   box-shadow: -20px 0 60px rgba(0, 0, 0, 0.4);
-  transform: translateX(100%); 
-  display: flex;
-  flex-direction: column;
+  transform: translateX(100%);
+}
+
+.menuDrawerLtr {
+  left: 0;
+  border-right: 1px solid var(--color-border-ghost);
+  border-radius: 0 24px 24px 0;
+  box-shadow: 20px 0 60px rgba(0, 0, 0, 0.4);
+  transform: translateX(-100%);
+}
+
+.menuDrawerLtr .menuHeader {
+  text-align: left;
+  direction: ltr;
+}
+
+.menuDrawerLtr .navLinks {
+  direction: ltr;
+}
+
+.menuDrawerLtr .bigLink {
+  direction: ltr;
+  justify-content: flex-start;
+}
+
+.menuDrawerLtr .linkText {
+  text-align: left;
+}
+
+.menuDrawerLtr .linkArrow {
+  order: 2;
+  margin-left: auto;
+  transform: none;
+  opacity: 0.5;
+}
+
+.menuDrawerLtr .bigLink:active .linkArrow {
+  transform: translateX(2px);
 }
 
 .menuInner {

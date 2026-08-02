@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import styles from "./ConverterFa.module.css";
 import Button from "@/components/ui/Button/Button";
 import { ArrowLeft, ArrowDownCircle, Info, UserCircle, AlertTriangle } from "lucide-react";
@@ -34,13 +35,22 @@ function formatNumberFa(num: number, isToman: boolean = false) {
   return toFaDigits(en).replace(/,/g, "،");
 }
 
-const CURRENCY_OPTIONS = [
-  { value: "AUD", label: "دلار استرالیا" },
-  { value: "IRT", label: "تومان ایران" },
-];
+function formatNumberByLocale(num: number, isEn: boolean, isToman: boolean = false) {
+  const options = isToman ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
+  const en = Number(num || 0).toLocaleString("en-US", options);
+  return isEn ? en : toFaDigits(en).replace(/,/g, "،");
+}
 
 export default function ConverterFa() {
-  const [amountText, setAmountText] = useState<string>("۳،۰۰۰");
+  const { locale } = useParams<{ locale: string }>();
+  const isEn = locale === "en";
+
+  const CURRENCY_OPTIONS = [
+    { value: "AUD", label: isEn ? "Australian Dollar" : "دلار استرالیا" },
+    { value: "IRT", label: isEn ? "Iranian Toman" : "تومان ایران" },
+  ];
+
+  const [amountText, setAmountText] = useState<string>(isEn ? "3,000" : "۳،۰۰۰");
   const [from, setFrom] = useState<Currency>("AUD");
   const { currentRates, isLoading } = useRates();
   const financeConfig = useFinanceConfig();
@@ -78,8 +88,8 @@ export default function ConverterFa() {
       finalValue = Math.max(0, rawAud - feeInAud);
     }
 
-    return formatNumberFa(finalValue, to === "IRT");
-  }, [amountNum, from, safeRate, to, isFeeApplied]);
+    return formatNumberByLocale(finalValue, isEn, to === "IRT");
+  }, [amountNum, from, safeRate, to, isFeeApplied, isEn]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -88,18 +98,30 @@ export default function ConverterFa() {
       return;
     }
     const raw = getRawNumber(val);
-    setAmountText(formatNumberFa(raw, from === "IRT"));
+    if (isEn) {
+      const opts = from === "IRT" ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
+      setAmountText(raw.toLocaleString("en-AU", opts));
+    } else {
+      setAmountText(formatNumberFa(raw, from === "IRT"));
+    }
   };
 
   const handleWhatsApp = () => {
-    if (safeRate === 0) return; // اگر نرخ قطع بود دکمه کار نکند
+    if (safeRate === 0) return;
     const rateFa = formatNumberFa(safeRate, true);
     let text = "";
-    
-    if (from === "AUD") {
-        text = `سلام، من می‌خواهم ${amountText} دلار استرالیا را با نرخ ${rateFa} تبدیل کنم که در وب‌سایت، مبلغ ${resultText} تومان محاسبه شده است. لطفا مرا راهنمایی کنید.`;
+    if (isEn) {
+      if (from === "AUD") {
+        text = `Hi, I'd like to convert ${amountText} AUD at rate ${safeRate.toLocaleString("en-AU")} Toman/AUD. The website shows ${resultText} Toman. Please guide me.`;
+      } else {
+        text = `Hi, I'd like to convert ${amountText} Toman at rate ${safeRate.toLocaleString("en-AU")} Toman/AUD. The website shows ${resultText} AUD. Please guide me.`;
+      }
     } else {
+      if (from === "AUD") {
+        text = `سلام، من می‌خواهم ${amountText} دلار استرالیا را با نرخ ${rateFa} تبدیل کنم که در وب‌سایت، مبلغ ${resultText} تومان محاسبه شده است. لطفا مرا راهنمایی کنید.`;
+      } else {
         text = `سلام، من می‌خواهم ${amountText} تومان را با نرخ ${rateFa} تبدیل کنم که در وب‌سایت، مبلغ ${resultText} دلار استرالیا محاسبه شده است. لطفا مرا راهنمایی کنید.`;
+      }
     }
 
     const finalUrl = buildWhatsAppUrl(text);
@@ -116,23 +138,25 @@ export default function ConverterFa() {
     <div className={styles.card}>
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
-          <h2 className={styles.mainTitle}>ماشین‌حساب تبدیل ارز</h2>
-          <p className={styles.subTitle}>محاسبه آنلاین و لحظه‌ای نرخ حواله</p>
+          <h2 className={styles.mainTitle}>{isEn ? "Currency Exchange Calculator" : "ماشین‌حساب تبدیل ارز"}</h2>
+          <p className={styles.subTitle}>{isEn ? "Online live rate calculator" : "محاسبه آنلاین و لحظه‌ای نرخ حواله"}</p>
         </div>
         
         <div className={styles.rateInfo}>
           <span className={styles.pulse}></span>
           <span>
-            {isLoading || safeRate === 0 
-              ? "در حال دریافت نرخ..." 
-              : `نرخ فعلی: ۱ دلار استرالیا = ${formatNumberFa(safeRate, true)} تومان`}
+            {isLoading || safeRate === 0
+              ? (isEn ? "Loading rate..." : "در حال دریافت نرخ...")
+              : isEn
+                ? `Current rate: 1 AUD = ${safeRate.toLocaleString("en-AU")} Toman`
+                : `نرخ فعلی: ۱ دلار استرالیا = ${formatNumberFa(safeRate, true)} تومان`}
           </span>
         </div>
       </div>
 
       <div className={styles.converterBody}>
         <div className={styles.inputBox}>
-          <label className={styles.label}>شما ارسال می‌کنید</label>
+          <label className={styles.label}>{isEn ? "You send" : "شما ارسال می‌کنید"}</label>
           <div className={styles.fieldGroup}>
             <input
               type="text"
@@ -140,7 +164,7 @@ export default function ConverterFa() {
               onChange={handleInputChange}
               dir="ltr"
               className={styles.faInput}
-              placeholder="۰"
+              placeholder={isEn ? "0" : "۰"}
               suppressHydrationWarning
             />
             <div className={styles.divider}></div>
@@ -165,11 +189,13 @@ export default function ConverterFa() {
 
         <div className={styles.inputBox}>
           <div className={styles.labelRow}>
-            <label className={styles.label}>گیرنده دریافت می‌کند</label>
+            <label className={styles.label}>{isEn ? "Recipient receives" : "گیرنده دریافت می‌کند"}</label>
             {isFeeApplied && (
               <span className={styles.feeWarning}>
                 <AlertTriangle size={14} />
-                این تراکنش دارای کارمزد {toFaDigits(String(financeConfig.applied_fee))} دلار است
+                {isEn
+                  ? `This transaction has a ${financeConfig.applied_fee} AUD fee`
+                  : `این تراکنش دارای کارمزد ${formatNumberByLocale(financeConfig.applied_fee, false)} دلار است`}
               </span>
             )}
           </div>
@@ -180,7 +206,7 @@ export default function ConverterFa() {
               readOnly
               dir="ltr"
               className={styles.faInput}
-              placeholder="۰"
+              placeholder={isEn ? "0" : "۰"}
               suppressHydrationWarning
             />
             <div className={styles.divider}></div>
@@ -202,19 +228,21 @@ export default function ConverterFa() {
       <div className={styles.notesContainer}>
         <div className={styles.noteItem}>
           <Info size={16} strokeWidth={2} />
-            <span>
-             توجه: برای تراکنش‌های کمتر از {formatNumberFa(financeConfig.fee_threshold)} دلار، مبلغ {toFaDigits(String(financeConfig.applied_fee))} دلار به عنوان کارمزد کسر می‌گردد که در کادر بالا محاسبه میشود.
+          <span>
+            {isEn
+              ? `Note: Transactions under ${financeConfig.fee_threshold} AUD incur a ${financeConfig.applied_fee} AUD fee, which is included in the calculation above.`
+              : `توجه: برای تراکنش‌های کمتر از ${formatNumberByLocale(financeConfig.fee_threshold, false)} دلار، مبلغ ${formatNumberByLocale(financeConfig.applied_fee, false)} دلار به عنوان کارمزد کسر می‌گردد که در کادر بالا محاسبه میشود.`}
           </span>
         </div>
         <div className={styles.noteItem}>
           <UserCircle size={16} strokeWidth={2} />
-          <span>برای شخصی‌سازی قیمت توصیه می‌شود وارد پروفایل کاربری خود شده و از پنل اختصاصی درخواست دهید.</span>
+          <span>{isEn ? "For personalised rates, sign in to your account and use your dedicated panel." : "برای شخصی‌سازی قیمت توصیه می‌شود وارد پروفایل کاربری خود شده و از پنل اختصاصی درخواست دهید."}</span>
         </div>
       </div>
 
       <div className={styles.cta}>
         <Button variant="primary" fullWidth rightIcon={<ArrowLeft />} onClick={handleWhatsApp} disabled={safeRate === 0}>
-          ارسال درخواست در واتس‌اپ
+          {isEn ? "Send Request via WhatsApp" : "ارسال درخواست در واتس‌اپ"}
         </Button>
       </div>
     </div>

@@ -534,7 +534,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                           <Field label="Bank"                value={bankLabel} />
                           <Field label="Card Number"         value={r.card_number} mono />
                           <Field label="Account Number"      value={r.irt_account_number} mono />
-                          <Field label="Shaba (IBAN)"        value={r.shaba_number ? `IR${r.shaba_number}` : null} mono />
+                          <Field label="Shaba (IBAN)"        value={r.shaba_number || null} mono />
                           <Field label="Phone"               value={r.irt_phone} />
                           <Field label="Address"             value={r.irt_address} />
                         </>

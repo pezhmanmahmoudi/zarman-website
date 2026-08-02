@@ -60,6 +60,158 @@ export function calcAppliedFee(rawAmountAud: number, config: FinanceConfig): num
     : 0;
 }
 
+export type CustomerRequestType = "buy_aud" | "sell_aud";
+export type CompanyTradeType = "buy_aud" | "sell_aud";
+
+/**
+ * Customer-facing settlement AUD after fee application.
+ * - buy_aud: customer receives raw + fee
+ * - sell_aud: customer receives credit for raw - fee
+ */
+export function calcSettlementAudForRequestType(
+  rawAmountAud: number,
+  feeAud: number,
+  customerRequestType: CustomerRequestType,
+): number {
+  if (rawAmountAud <= 0) return 0;
+  if (customerRequestType === "sell_aud") {
+    return Math.max(rawAmountAud - Math.max(feeAud, 0), 0);
+  }
+  return rawAmountAud + Math.max(feeAud, 0);
+}
+
+export function calcEquivalentTomanForRequestType(
+  rawAmountAud: number,
+  executionRate: number,
+  feeAud: number,
+  customerRequestType: CustomerRequestType,
+): number {
+  const settlementAud = calcSettlementAudForRequestType(rawAmountAud, feeAud, customerRequestType);
+  return settlementAud > 0 && executionRate > 0 ? Math.round(settlementAud * executionRate) : 0;
+}
+
+export function calcRawAudFromEquivalentForRequestType(
+  equivalentToman: number,
+  executionRate: number,
+  feeAud: number,
+  customerRequestType: CustomerRequestType,
+): number {
+  if (equivalentToman <= 0 || executionRate <= 0) return 0;
+  const settlementAud = equivalentToman / executionRate;
+  return customerRequestType === "sell_aud"
+    ? Math.max(settlementAud + Math.max(feeAud, 0), 0)
+    : Math.max(settlementAud - Math.max(feeAud, 0), 0);
+}
+
+export function calcExecutionRateFromSettlementForRequestType(
+  rawAmountAud: number,
+  equivalentToman: number,
+  feeAud: number,
+  customerRequestType: CustomerRequestType,
+): number {
+  const settlementAud = calcSettlementAudForRequestType(rawAmountAud, feeAud, customerRequestType);
+  return settlementAud > 0 && equivalentToman > 0 ? equivalentToman / settlementAud : 0;
+}
+
+export function toCompanyTradeType(customerRequestType: CustomerRequestType): CompanyTradeType {
+  return customerRequestType === "buy_aud" ? "sell_aud" : "buy_aud";
+}
+
+export function calcSettlementAud(
+  rawAmountAud: number,
+  feeAud: number,
+  companyTradeType: CompanyTradeType,
+): number {
+  if (rawAmountAud <= 0) return 0;
+  if (companyTradeType === "buy_aud") {
+    return Math.max(rawAmountAud - Math.max(feeAud, 0), 0);
+  }
+  return rawAmountAud + Math.max(feeAud, 0);
+}
+
+export function calcEquivalentToman(
+  rawAmountAud: number,
+  executionRate: number,
+  feeAud: number,
+  companyTradeType: CompanyTradeType,
+): number {
+  const settlementAud = calcSettlementAud(rawAmountAud, feeAud, companyTradeType);
+  return settlementAud > 0 && executionRate > 0 ? Math.round(settlementAud * executionRate) : 0;
+}
+
+export function calcRawAudFromEquivalent(
+  equivalentToman: number,
+  executionRate: number,
+  feeAud: number,
+  companyTradeType: CompanyTradeType,
+): number {
+  if (equivalentToman <= 0 || executionRate <= 0) return 0;
+  const settlementAud = equivalentToman / executionRate;
+  return companyTradeType === "buy_aud"
+    ? Math.max(settlementAud + Math.max(feeAud, 0), 0)
+    : Math.max(settlementAud - Math.max(feeAud, 0), 0);
+}
+
+export function calcQuotedRawAudFromEquivalent(
+  equivalentToman: number,
+  executionRate: number,
+  config: FinanceConfig,
+  customerRequestType: CustomerRequestType,
+): number {
+  if (equivalentToman <= 0 || executionRate <= 0) return 0;
+
+  const noFeeCandidate = equivalentToman / executionRate;
+  if (calcAppliedFee(noFeeCandidate, config) === 0) {
+    return noFeeCandidate;
+  }
+
+  const feeCandidate = calcRawAudFromEquivalent(
+    equivalentToman,
+    executionRate,
+    config.applied_fee,
+    toCompanyTradeType(customerRequestType),
+  );
+
+  const feeCandidateByRequestType = calcRawAudFromEquivalentForRequestType(
+    equivalentToman,
+    executionRate,
+    config.applied_fee,
+    customerRequestType,
+  );
+
+  // Keep the request-type candidate as the source of truth to avoid fee-sign mistakes.
+  return calcAppliedFee(feeCandidateByRequestType, config) > 0
+    ? feeCandidateByRequestType
+    : (calcAppliedFee(feeCandidate, config) > 0 ? feeCandidate : noFeeCandidate);
+}
+
+export function calcExecutionRateFromSettlement(
+  rawAmountAud: number,
+  equivalentToman: number,
+  feeAud: number,
+  companyTradeType: CompanyTradeType,
+): number {
+  const settlementAud = calcSettlementAud(rawAmountAud, feeAud, companyTradeType);
+  return settlementAud > 0 && equivalentToman > 0 ? equivalentToman / settlementAud : 0;
+}
+
+export function calcFeeIncomeToman(feeAud: number, executionRate: number): number {
+  return feeAud > 0 && executionRate > 0 ? feeAud * executionRate : 0;
+}
+
+export function calcPrincipalToman(
+  amountToman: number,
+  executionRate: number,
+  feeAud: number,
+  companyTradeType: CompanyTradeType,
+): number {
+  const feeIncomeToman = calcFeeIncomeToman(feeAud, executionRate);
+  if (companyTradeType === "buy_aud") {
+    return amountToman + feeIncomeToman;
+  }
+  return Math.max(amountToman - feeIncomeToman, 0);
+}
+
 // ---------------------------------------------------------------------------
 // Promo code discount types and calculation
 // ---------------------------------------------------------------------------

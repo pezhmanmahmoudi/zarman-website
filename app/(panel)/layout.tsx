@@ -1,4 +1,5 @@
 import { Inter } from "next/font/google";
+import type { Metadata } from "next";
 import "@/app/globals.css";
 
 const inter = Inter({
@@ -6,6 +7,18 @@ const inter = Inter({
   variable: "--font-en",
   display: "swap",
 });
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+};
 
 export default function PanelRootLayout({
   children,

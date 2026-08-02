@@ -2,19 +2,19 @@
 
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
-import { Calculator, History, UserCircle2, Star, LogOut, Sun, Moon } from "lucide-react";
+import { Calculator, History, UserCircle2, Star, LogOut, Languages } from "lucide-react";
 import styles from "@/styles/dashboard/DashboardSidebar.module.css";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useLocale } from "@/context/LocaleContext";
+import { useT } from "@/hooks/useT";
 
 type DashboardSidebarProps = {
   activeTab: "hub" | "history" | "profile" | "feedback";
   setActiveTab: (tab: "hub" | "history" | "profile" | "feedback") => void; 
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
-  theme: "light" | "dark";
-  setTheme: (theme: "light" | "dark") => void;
 };
 
 export function DashboardSidebar({
@@ -22,19 +22,27 @@ export function DashboardSidebar({
   setActiveTab,
   mobileMenuOpen,
   setMobileMenuOpen,
-  theme,
-  setTheme,
 }: DashboardSidebarProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const locale = useLocale();
+  const t = useT();
   const sidebarRef = useRef<HTMLElement>(null);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/fa/login");
+    router.push(`/${locale}/login`);
   };
 
   const handleCloseMenu = () => {
     setMobileMenuOpen(false);
+  };
+
+  const handleLocaleSwitch = () => {
+    const targetLocale = locale === "fa" ? "en" : "fa";
+    const targetPath = pathname.replace(new RegExp(`^/(fa|en)(/|$)`), `/${targetLocale}$2`);
+    router.push(targetPath);
+    handleCloseMenu();
   };
 
   useEffect(() => {
@@ -119,7 +127,7 @@ export function DashboardSidebar({
               }}
             >
               <Calculator size={20} />
-              <span>ثبت درخواست حواله</span>
+              <span>{t.dashboard.tabs.hub}</span>
             </button>
 
             <button
@@ -133,7 +141,7 @@ export function DashboardSidebar({
               }}
             >
               <History size={20} />
-              <span>سوابق تراکنش‌ها</span>
+              <span>{t.dashboard.tabs.history}</span>
             </button>
 
             <button
@@ -147,7 +155,7 @@ export function DashboardSidebar({
               }}
             >
               <UserCircle2 size={20} />
-              <span>احراز هویت</span>
+              <span>{t.dashboard.tabs.profile}</span>
             </button>
 
             <button
@@ -161,7 +169,7 @@ export function DashboardSidebar({
               }}
             >
               <Star size={20} />
-              <span>ثبت بازخورد</span>
+              <span>{t.dashboard.tabs.feedback}</span>
             </button>
           </nav>
 
@@ -171,19 +179,18 @@ export function DashboardSidebar({
             <button
               type="button"
               className={styles.navItem}
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              onClick={handleLocaleSwitch}
             >
-              {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
-              <span>{theme === "light" ? "حالت شب" : "حالت روز"}</span>
+              <Languages size={20} />
+              <span>{locale === "fa" ? "English" : "فارسی"}</span>
             </button>
-
             <button
               type="button"
               className={`${styles.navItem} ${styles.logoutBtn}`}
               onClick={handleLogout}
             >
               <LogOut size={20} />
-              <span>خروج امن از حساب</span>
+              <span>{t.auth.logout}</span>
             </button>
           </div>
         </div>

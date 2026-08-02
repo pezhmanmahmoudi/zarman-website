@@ -44,7 +44,6 @@
   justify-content: space-between;
   gap: var(--space-6);
   padding: 0 var(--space-6);
-  direction: rtl;
   
   /* ۱. افزایش غلظت شیشه (۸۵٪) تا روی پس‌زمینه سفید کدر و چرک نشود */
   background: linear-gradient(

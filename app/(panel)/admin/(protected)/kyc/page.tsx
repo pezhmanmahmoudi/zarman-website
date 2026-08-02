@@ -5,6 +5,7 @@ import { getKycQueue, getKycHistory } from "@/app/actions/admin.actions";
 import { KycActionButtons } from "@/components/admin/KycActionButtons";
 import { EditableCustomerCode } from "@/components/admin/EditableCustomerCode";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import { formatAustralianDriverLicenceIssuer } from "@/lib/australian-driver-licence";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
@@ -193,8 +194,8 @@ export default async function KycQueuePage({
                                   style={{ display: 'flex', flexDirection: 'column', gap: '3px', whiteSpace: 'nowrap' }}
                                 >
                                   {(user as Record<string, unknown>).state_of_issue ? (
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="State of Issue">
-                                      State: {String((user as Record<string, unknown>).state_of_issue)}
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Issuing Authority">
+                                      Issuer: {formatAustralianDriverLicenceIssuer(String((user as Record<string, unknown>).state_of_issue))}
                                     </span>
                                   ) : null}
                                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Licence No.">

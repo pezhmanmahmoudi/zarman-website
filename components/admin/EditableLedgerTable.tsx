@@ -14,6 +14,9 @@ const T = {
   buy:        "خرید",
   sell:       "فروش",
   transfer:   "انتقال",
+  expense:    "هزینه",
+  ownerLoan:  "وام مالک",
+  adjustment: "اصلاح حساب",
   addRow:     "افزودن سطر",
   save:       "ذخیره",
   cancel:     "لغو",
@@ -31,6 +34,7 @@ const T = {
   colActions: "عملیات",
   colDel:     "حذف",
   errAmount:  "حداقل یکی از مبالغ دلار یا تومان باید بیشتر از صفر باشد.",
+  errTradeAmounts: "برای معامله، مبلغ AUD و IRT هر دو الزامی هستند.",
   errFee:     "کارمزد نامعتبر",
   months: [
     "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
@@ -82,8 +86,24 @@ function fmtRate(v: number) { return Math.round(v).toLocaleString("en-AU"); }
 function today()            { return new Date().toISOString().slice(0, 10); }
 function typeLabel(type: string) {
   if (type === "transfer") return T.transfer;
+  if (type === "expense") return T.expense;
+  if (type === "owner_loan") return T.ownerLoan;
+  if (type === "adjustment") return T.adjustment;
   if (type === "sell_aud") return T.sell;
   return T.buy;
+}
+
+function effectiveEntryType(row: LedgerRow): string {
+  return row.entry_type ?? "trade";
+}
+
+function rowTypeLabel(row: LedgerRow): string {
+  const entryType = effectiveEntryType(row);
+  return typeLabel(entryType === "trade" ? row.type : entryType);
+}
+
+function isTradeOrTransfer(row: LedgerRow): boolean {
+  return ["trade", "transfer"].includes(effectiveEntryType(row));
 }
 
 // -- Types ------------------------------------------------------------------
@@ -226,6 +246,10 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
       setEdit({ ...edit, err: T.errAmount }); 
       return; 
     }
+    if (edit.type !== "transfer" && (aud <= 0 || tom <= 0)) {
+      setEdit({ ...edit, err: T.errTradeAmounts });
+      return;
+    }
     if (!Number.isFinite(fee) || fee < 0) { 
       setEdit({ ...edit, err: T.errFee }); 
       return; 
@@ -259,6 +283,10 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
     if (aud <= 0 && tom <= 0) { 
       setAdd({ ...add, err: T.errAmount }); 
       return; 
+    }
+    if (add.type !== "transfer" && (aud <= 0 || tom <= 0)) {
+      setAdd({ ...add, err: T.errTradeAmounts });
+      return;
     }
     if (!Number.isFinite(fee) || fee < 0) { 
       setAdd({ ...add, err: T.errFee }); 
@@ -434,6 +462,7 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
               const fee  = Number(row.fee_aud) || 0;
               const isE  = edit?.id === row.id;
               const isDel = delId === row.id;
+              const isEditable = isTradeOrTransfer(row);
 
               return (
                 <tr key={row.id} className={isDel ? s.rowDelete : isE ? s.rowEdit : ""}>
@@ -448,7 +477,7 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                       </>
                     ) : (
                       <div className={s.btnRow}>
-                        <button className={s.btnEdit} onClick={() => startEdit(row)} disabled={busy}><Pencil size={11} />{T.edit}</button>
+                        {isEditable ? <button className={s.btnEdit} onClick={() => startEdit(row)} disabled={busy}><Pencil size={11} />{T.edit}</button> : null}
                       </div>
                     )}
                   </td>
@@ -481,7 +510,7 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                     ) : (
                       <span
                         className={`${tableStyles.badge} ${
-                          row.entry_type === "transfer"
+                          effectiveEntryType(row) !== "trade"
                             ? tableStyles.badgeArchived
                             : row.type === "buy_aud"
                               ? tableStyles.txBuy
@@ -489,7 +518,7 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                         }`}
                         style={{ fontFamily: "var(--font-fa-content)", fontSize: "0.7rem" }}
                       >
-                        {row.entry_type === "transfer" ? T.transfer : row.type === "buy_aud" ? T.buy : T.sell}
+                        {rowTypeLabel(row)}
                       </span>
                     )}
                   </td>
@@ -546,7 +575,7 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                   <td className={s.tdNum}>{isE && edit ? <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.inputSm}`} value={edit.fee} onChange={e => eSet("fee", e.target.value)} onKeyDown={kbE} /> : fee > 0 ? <span className={s.numFee}>{fee} AUD</span> : <span className={s.dim}>&mdash;</span>}</td>
                   
                   <td className={s.tdDelCol}>
-                    {isDel ? (
+                    {!isEditable ? null : isDel ? (
                       <div className={s.delInline}>
                         <p className={s.delConfirmLabel}>{T.delConfirm}</p>
                         <div className={s.btnRow}>
@@ -646,12 +675,13 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
             const fee = Number(row.fee_aud) || 0;
             const isE = edit?.id === row.id;
             const isDel = delId === row.id;
+            const isEditable = isTradeOrTransfer(row);
 
             return (
               <section key={`mobile-${row.id}`} className={`${s.mobileCard} ${isE ? s.mobileCardEdit : ""} ${isDel ? s.mobileCardDelete : ""}`}>
                 <header className={s.mobileCardHeader}>
                   <div>
-                    <h3 className={s.mobileCardTitle}>{typeLabel(row.entry_type === "transfer" ? "transfer" : row.type)}</h3>
+                    <h3 className={s.mobileCardTitle}>{rowTypeLabel(row)}</h3>
                     <p className={s.mobileCardDate}>{storedToJalali(row.date_jalali)} | {fmtGreg(row.date_gregorian)}</p>
                   </div>
 
@@ -665,12 +695,12 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                       <button className={s.btnConfirmDel} onClick={() => doDelete(row.id)} disabled={isPending}><Check size={11} /></button>
                       <button className={s.btnCancel} onClick={() => setDelId(null)}><X size={12} /></button>
                     </div>
-                  ) : (
+                  ) : isEditable ? (
                     <div className={s.btnRow}>
                       <button className={s.btnEdit} onClick={() => startEdit(row)} disabled={busy}><Pencil size={11} />{T.edit}</button>
                       <button className={s.btnDel} onClick={() => { setDelId(row.id); setEdit(null); setAdd(null); }} disabled={busy}><Trash2 size={13} /></button>
                     </div>
-                  )}
+                  ) : null}
                 </header>
 
                 {isE && edit ? (

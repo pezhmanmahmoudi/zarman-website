@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import styles from "./FinalCTA.module.css";
 import Button from "@/components/ui/Button/Button";
 import {
@@ -10,6 +11,8 @@ import {
 } from "@/lib/constants/contact";
 
 export default function FinalCTA() {
+  const { locale } = useParams<{ locale: string }>();
+  const isEn = locale === "en";
   const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_SIGNUP_HELP)}`;
   const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
 
@@ -18,22 +21,23 @@ export default function FinalCTA() {
   }, []);
 
   return (
-    <section id="contact" className={styles.section} aria-label="ثبت نام نهایی">
+    <section id="contact" className={styles.section} aria-label={isEn ? "Final sign up" : "ثبت نام نهایی"}>
       <div className={styles.container}>
         <div className={styles.card}>
           <div className={styles.glowBg} aria-hidden="true" />
-          
-          {/* 👈 نام کلاس به استانداردهای ما تغییر کرد */}
           <div className={styles.header}>
-            <h2 className={styles.title}>مدیریت مالی؛ بدون مرز، بدون دغدغه.</h2>
+            <h2 className={styles.title}>
+              {isEn ? "Financial management — borderless, worry-free." : "مدیریت مالی؛ بدون مرز، بدون دغدغه."}
+            </h2>
             <p className={styles.subtitle}>
-             فرآیندهای پیچیده‌ی سنتی را فراموش کنید. همین حالا کنترل کامل تراکنش‌های ارزی خود را در یک اکوسیستم یکپارچه به دست بگیرید.
+              {isEn
+                ? "Forget complex traditional processes. Take full control of your currency transactions in one integrated ecosystem — right now."
+                : "فرآیندهای پیچیده‌ی سنتی را فراموش کنید. همین حالا کنترل کامل تراکنش‌های ارزی خود را در یک اکوسیستم یکپارچه به دست بگیرید."}
             </p>
             <div className={styles.actions}>
-              <Button href="/fa/register" variant="primary" size="lg">
-                ایجاد حساب کاربری
+              <Button href={`/${locale}/register`} variant="primary" size="lg">
+                {isEn ? "Create Account" : "ایجاد حساب کاربری"}
               </Button>
-              
               <Button 
                 href={whatsappUrl} 
                 variant="secondary" 
@@ -41,7 +45,7 @@ export default function FinalCTA() {
                 target="_blank" 
                 rel="noopener noreferrer"
               >
-                نیاز به مشاوره دارم
+                {isEn ? "I need consultation" : "نیاز به مشاوره دارم"}
               </Button>
             </div>
           </div>

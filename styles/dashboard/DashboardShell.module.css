@@ -55,6 +55,13 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:global([dir="ltr"]) .dashboardWrapper {
+  --font-fa-stack: var(--font-en-stack);
+  --font-primary: var(--font-en-stack);
+  font-family: var(--font-en-stack);
+  direction: ltr;
+}
+
 /* 🚀 اتصال هوشمندانه متغیرهای Dark Mode به فایل tokens.css */
 .dashboardWrapper[data-theme="dark"] {
   --bg-app: var(--color-bg-base);
@@ -121,6 +128,72 @@
   gap: 1.5rem;
 }
 
+:global([dir="ltr"]) .mainArea {
+  margin-right: 0;
+  margin-left: 280px;
+}
+
+.focusToggleButton {
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0 0.95rem;
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  border-radius: 0.875rem;
+  background: rgba(var(--accent-rgb), 0.07);
+  color: var(--accent);
+  font-family: var(--font-fa-stack);
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.focusToggleButton:hover {
+  background: rgba(var(--accent-rgb), 0.12);
+  border-color: rgba(var(--accent-rgb), 0.35);
+}
+
+.focusToggleButton:active {
+  transform: scale(0.985);
+}
+
+.overviewCardsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1rem 1.125rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.overviewCardsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.overviewCardsTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.activeWorkspace {
+  scroll-margin-top: 7rem;
+}
+
 /* =====================================
    بخش بالای موبایل (حاوی دکمه همبرگری)
    ===================================== */
@@ -173,6 +246,10 @@
   flex-direction: column;
   align-items: flex-end;
   line-height: var(--leading-tight);
+}
+
+:global([dir="ltr"]) .mobileBrand {
+  align-items: flex-start;
 }
 
 .mobileBrand strong { font-size: var(--text-body-sm); /* جایگزین 0.95rem */ }
@@ -289,10 +366,32 @@
     padding: 1.25rem 1.25rem 2rem;
     gap: 1.25rem;
   }
+
+  :global([dir="ltr"]) .mainArea {
+    margin-left: 0;
+  }
+
+  .focusToggleButton {
+    width: auto;
+  }
+
+  .overviewCardsHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .focusToggleButton {
+    width: 100%;
+  }
 }
 
 @media (max-width: 520px) {
   .mainArea {
     padding: 1rem 0.875rem 2rem;
+  }
+
+  .overviewCardsWrap {
+    padding: 0.875rem 0.875rem 1rem;
+    border-radius: 1rem;
   }
 }

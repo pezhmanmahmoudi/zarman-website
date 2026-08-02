@@ -84,6 +84,24 @@ export async function POST(req: NextRequest) {
     performedByEmail: user.email ?? "admin",
   });
 
+  const amlFlag = amlResult.outcome === "FAILED"
+    ? "failed"
+    : (amlResult.outcome === "REVIEW REQUIRED" || amlResult.matchCount > 0 || amlResult.possibleMatchCount > 0)
+      ? "review_required"
+      : "clear";
+
+  // Persist that this customer has already been screened, including method and outcome.
+  await db
+    .from("profiles")
+    .update({
+      compliance_aml_status: amlResult.outcome === "FAILED" ? "failed" : "completed",
+      compliance_aml_method: "vendor_namescan",
+      compliance_aml_checked_at: new Date().toISOString(),
+      compliance_aml_outcome: amlResult.outcome,
+      compliance_aml_flag: amlFlag,
+    })
+    .eq("id", userId);
+
   // 6. Audit log — non-fatal if it fails.
   try {
     await db.from("audit_logs").insert([{
@@ -108,11 +126,6 @@ export async function POST(req: NextRequest) {
   // 7. Stream PDF directly to the client — zero storage.
   const safeId = userId.slice(0, 8);
   const ts     = Date.now();
-  const amlFlag = amlResult.outcome === "FAILED"
-    ? "failed"
-    : (amlResult.outcome === "REVIEW REQUIRED" || amlResult.matchCount > 0 || amlResult.possibleMatchCount > 0)
-      ? "review_required"
-      : "clear";
 
   return new Response(Buffer.from(pdfBytes), {
     status: 200,

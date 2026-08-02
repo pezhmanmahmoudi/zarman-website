@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image"; 
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css";
 import { Eye, EyeOff, ShieldCheck, CheckCircle, CheckCircle2 } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const { locale } = useParams<{ locale: string }>();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -50,7 +51,7 @@ export default function ResetPasswordPage() {
     } else {
       setSuccess(true);
       setTimeout(() => {
-        router.push("/fa/dashboard");
+        router.push(`/${locale}/dashboard`);
       }, 3000);
     }
   };

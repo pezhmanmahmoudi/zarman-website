@@ -22,7 +22,6 @@ export default function robots(): MetadataRoute.Robots {
           "/en/auth/",
           "/admin/",        // block admin panel routes
           "/api/",          // بستن تمام مسیرهای ای‌پی‌آی برای امنیت بیشتر
-          "/_next/",        // جلوگیری از خزش فایل‌های داخلی نکست
         ],
       },
     ],

@@ -1,19 +1,25 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-// ChevronDown اضافه شد
 import { Calculator, AlertTriangle, Lock, MessageSquare, ServerCrash, PauseCircle, Tag, Banknote, ChevronDown } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/[locale]/dashboard/dashboard.types";
 import type { Recipient } from "@/app/[locale]/dashboard/dashboard.types";
 import { useFinanceConfig } from "@/context/FinanceConfigContext";
-import { calcAppliedFee } from "@/lib/pricing";
+import {
+  calcAppliedFee,
+  calcEquivalentTomanForRequestType,
+  calcQuotedRawAudFromEquivalent,
+  calcSettlementAudForRequestType,
+} from "@/lib/pricing";
 import { buildWhatsAppUrl } from "@/lib/constants/contact";
 import { supabase } from "@/lib/supabase";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import { RecipientModal } from "@/components/dashboard/RecipientModal";
 import { getRecipients, validatePromoCode } from "@/app/actions/transaction.actions";
+import { useT } from "@/hooks/useT";
+import { useLocale } from "@/context/LocaleContext";
 
 function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]); }
 function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹"; return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d))); }
@@ -24,11 +30,13 @@ function getRawNumber(value: string) {
   return Number.isFinite(n) ? n : 0;
 }
 
-function formatNumberUI(num: number | null, isToman: boolean = false) {
+function formatNumberUI(num: number | null, locale: string, isToman: boolean = false) {
   if (num === null || !num) return "";
   const options = isToman ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
   const en = Number(num).toLocaleString("en-US", options);
-  if (isToman) return toFaDigits(en).replace(/,/g, "،");
+  if (locale === "fa") {
+    return isToman ? toFaDigits(en).replace(/,/g, "،") : toFaDigits(en);
+  }
   return en;
 }
 
@@ -36,6 +44,14 @@ function formatNumberWA(num: number | null, isToman: boolean = false) {
   if (num === null) return "0";
   const options = isToman ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
   return Number(num).toLocaleString("en-US", options);
+}
+
+function formatAudState(num: number, locale: string) {
+  return num > 0 ? formatNumberUI(num, locale, false) : "";
+}
+
+function formatIrtState(num: number, locale: string) {
+  return num > 0 ? formatNumberUI(Math.round(num), locale, true) : "";
 }
 
 type ServerTransactionResult = {
@@ -79,6 +95,8 @@ export function DashboardRequestHub({
   onSaveTransaction
 }: RequestHubProps) { 
   const amountInputRef = React.useRef<HTMLInputElement>(null);
+  const t = useT();
+  const locale = useLocale();
 
   // === منطق نشانگر اسکرول ===
   const [isAtTop, setIsAtTop] = useState(true);
@@ -124,11 +142,12 @@ export function DashboardRequestHub({
   const [promoInput, setPromoInput] = useState("");
   const [promoValidating, setPromoValidating] = useState(false);
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
-  const [promoFinal, setPromoFinal] = useState<number | null>(null);
   const [promoMsg, setPromoMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
   const [promoEffectiveRate, setPromoEffectiveRate] = useState<number | null>(null);
   const [paymentLink, setPaymentLink] = useState("");
+  const [equivalentStr, setEquivalentStr] = useState("");
+  const [quoteSource, setQuoteSource] = useState<"aud" | "irt">("aud");
 
   useEffect(() => {
     supabase
@@ -156,8 +175,8 @@ export function DashboardRequestHub({
   const filteredRecipients = recipients.filter((r) => r.direction === recipientDirection);
 
   const recipientOptions = [
-    { value: "__new__", label: "+ افزودن گیرنده جدید" },
-    { value: "__edu_exam__", label: "پرداخت برای آزمون، دانشگاه و ..." },
+    { value: "__new__", label: t.hub.addRecipient },
+    { value: "__edu_exam__", label: t.hub.eduPayment },
     ...filteredRecipients.map((r) => ({ value: r.id, label: r.label })),
   ];
 
@@ -185,7 +204,6 @@ export function DashboardRequestHub({
 
   const resetPromo = () => {
     setPromoDiscount(null);
-    setPromoFinal(null);
     setPromoMsg(null);
     setAppliedPromoCode(null);
     setPromoEffectiveRate(null);
@@ -200,17 +218,15 @@ export function DashboardRequestHub({
       if ("error" in res && res.error) {
         setPromoMsg({ type: "error", text: res.error });
         setPromoDiscount(null);
-        setPromoFinal(null);
         setAppliedPromoCode(null);
       } else if ("discount_amount" in res) {
         setPromoDiscount(res.discount_amount ?? null);
-        setPromoFinal(res.final_amount ?? null);
         setPromoEffectiveRate(res.effective_rate ?? null);
         setAppliedPromoCode(promoInput.trim().toUpperCase());
         const label = res.discount_type === "percentage"
-          ? `${res.discount_value}٪ بهبود نرخ`
-          : `${Number(res.discount_value).toLocaleString("fa-IR")} تومان بهبود نرخ`;
-        setPromoMsg({ type: "success", text: `کد تخفیف اعمال شد — ${label}` });
+          ? `${formatNumberUI(Number(res.discount_value), locale)}% improved rate`
+          : `${formatNumberUI(Number(res.discount_value), locale, true)} ${locale === "fa" ? "تومان" : "Toman"} improved rate`;
+        setPromoMsg({ type: "success", text: `${locale === "fa" ? "کد تخفیف اعمال شد — " : "Promo code applied — "}${label}` });
       }
     } finally {
       setPromoValidating(false);
@@ -220,18 +236,44 @@ export function DashboardRequestHub({
   const rawAmount = getRawNumber(amountStr);
   const appliedFee = calcAppliedFee(rawAmount, financeConfig);
   const isRateOffline = baseRate === null || tailoredRate === null;
-
-  const effectiveAud = useMemo(() => {
-    if (rawAmount === 0) return 0;
-    if (txType === "buy_aud") return rawAmount + appliedFee; 
-    else return Math.max(rawAmount - appliedFee, 0);
-  }, [rawAmount, appliedFee, txType]);
-
   const activeRate = promoEffectiveRate ?? tailoredRate;
-  const resultNumber = (rawAmount === 0 || isRateOffline) ? 0 : Math.round(effectiveAud * activeRate!);
-  const transactionValidityNotice = "توجه: این نرخ و درخواست دارای اعتبار زمانی ۲ ساعته است و باید در این بازه زمانی نهایی شود.\nهمچنین، درخواست‌کننده و شخصی که اطلاعاتش در سیستم ثبت شده، باید همان صاحب حسابی باشد که وجه از آن انتقال می‌یابد.";
+  const settlementAud = useMemo(
+    () => calcSettlementAudForRequestType(rawAmount, appliedFee, txType),
+    [rawAmount, appliedFee, txType],
+  );
+  const resultNumber = (rawAmount === 0 || isRateOffline || activeRate === null)
+    ? 0
+    : calcEquivalentTomanForRequestType(rawAmount, activeRate, appliedFee, txType);
+  const agreedEquivalentToman = quoteSource === "irt" ? getRawNumber(equivalentStr) : resultNumber;
+  const transactionValidityNotice = t.hub.validityNotice;
+
+  useEffect(() => {
+    if (quoteSource === "irt") return;
+    setEquivalentStr(resultNumber > 0 ? formatIrtState(resultNumber, locale) : "");
+  }, [quoteSource, resultNumber, locale]);
+
+  useEffect(() => {
+    if (quoteSource !== "irt") return;
+    if (isRateOffline || activeRate === null) {
+      setAmountStr("");
+      return;
+    }
+
+    const equivalentValue = getRawNumber(equivalentStr);
+    if (equivalentValue <= 0) {
+      setAmountStr("");
+      return;
+    }
+
+    const nextRaw = calcQuotedRawAudFromEquivalent(equivalentValue, activeRate, financeConfig, txType);
+    const nextAmount = formatAudState(nextRaw, locale);
+    if (nextAmount !== amountStr) {
+      setAmountStr(nextAmount);
+    }
+  }, [quoteSource, equivalentStr, isRateOffline, activeRate, financeConfig, txType, amountStr, setAmountStr, locale]);
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuoteSource("aud");
     let val = e.target.value;
     val = val.replace(/٫/g, ".").replace(/[^\d۰-۹.]/g, "");
     const normalized = faToEnDigits(val);
@@ -242,17 +284,17 @@ export function DashboardRequestHub({
       setAmountStr(""); resetPromo(); keepAmountCaretAtEnd(); return;
     }
     if (normalized === ".") {
-      setAmountStr("۰."); resetPromo(); keepAmountCaretAtEnd(); return;
+      setAmountStr(locale === "fa" ? "۰." : "0."); resetPromo(); keepAmountCaretAtEnd(); return;
     }
     if (normalized === "0") {
-      setAmountStr("۰"); resetPromo(); keepAmountCaretAtEnd(); return;
+      setAmountStr(locale === "fa" ? "۰" : "0"); resetPromo(); keepAmountCaretAtEnd(); return;
     }
     if (normalized.includes(".")) {
       const [intRaw, decRaw = ""] = normalized.split(".");
       const intNum = Number(intRaw || "0");
-      const intFormatted = toFaDigits(intNum.toLocaleString("en-US"));
+      const intFormatted = locale === "fa" ? toFaDigits(intNum.toLocaleString("en-US")) : intNum.toLocaleString("en-US");
       const decLimited = decRaw.slice(0, 2);
-      const decFormatted = toFaDigits(decLimited);
+      const decFormatted = locale === "fa" ? toFaDigits(decLimited) : decLimited;
       const trailingDot = normalized.endsWith(".");
       setAmountStr(trailingDot ? `${intFormatted}.` : `${intFormatted}.${decFormatted}`);
       resetPromo(); keepAmountCaretAtEnd();
@@ -260,19 +302,37 @@ export function DashboardRequestHub({
     }
 
     const raw = getRawNumber(normalized);
-    setAmountStr(raw > 0 ? toFaDigits(Number(raw).toLocaleString("en-US", { maximumFractionDigits: 2 })) : "");
+    setAmountStr(formatAudState(raw, locale));
     resetPromo();
     keepAmountCaretAtEnd();
+  };
+
+  const handleEquivalentInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuoteSource("irt");
+    let val = e.target.value;
+    val = val.replace(/[^\d۰-۹]/g, "");
+    const normalized = faToEnDigits(val).replace(/[^\d]/g, "");
+
+    if (!normalized) {
+      setEquivalentStr("");
+      setAmountStr("");
+      resetPromo();
+      return;
+    }
+
+    const equivalentValue = Number(normalized);
+    setEquivalentStr(formatIrtState(equivalentValue, locale));
+    resetPromo();
   };
 
   const submit = async () => {
     if (!profile || !isApproved || rawAmount <= 0 || isRateOffline || isSubmitting || !marketActive) return;
     if (!sourceOfFunds || !reasonForTransfer || !selectedRecipientId) {
-      alert("لطفاً تمامی فیلدهای اجباری (ستاره‌دار) را تکمیل نمایید.");
+      alert(t.hub.allFieldsRequired);
       return;
     }
     if (isEduPayment && !paymentLink.trim()) {
-      alert("لطفاً لینک صفحه پرداخت را وارد کنید.");
+      alert(t.hub.paymentLinkRequired);
       return;
     }
 
@@ -283,7 +343,7 @@ export function DashboardRequestHub({
       const serverData = await onSaveTransaction(
         rawAmount, txType, sourceOfFunds, reasonForTransfer, selectedRecipientId || null,
         appliedPromoCode, isEduPayment ? (paymentLink.trim() || null) : null,
-        resultNumber > 0 ? resultNumber : null,
+        agreedEquivalentToman > 0 ? agreedEquivalentToman : null,
       );
       
       if (!serverData) {
@@ -291,7 +351,9 @@ export function DashboardRequestHub({
         return;
       }
 
-      const actionLabel = txType === "sell_aud" ? "فروش AUD (مشتری دلار می‌دهد)" : "خرید AUD (مشتری تومان می‌دهد)";
+      const actionLabel = txType === "sell_aud"
+        ? (locale === "fa" ? "فروش AUD (مشتری دلار می‌دهد)" : "Sell AUD (Customer sends AUD)")
+        : (locale === "fa" ? "خرید AUD (مشتری تومان می‌دهد)" : "Buy AUD (Customer sends Toman)");
       const totalLoyalty = serverData.loyaltyBonus * serverData.rawAmount;
 
       const fmtAmount = formatNumberWA(serverData.rawAmount, false);
@@ -378,27 +440,27 @@ export function DashboardRequestHub({
       {!marketActive && (
         <div className={`${styles.lockOverlay} ${styles.offlineOverlay}`}>
           <PauseCircle size={48} className={`${styles.lockIcon} ${styles.offlineIcon}`} />
-          <h3 className={styles.lockTitle}>بازار موقتاً متوقف شده است</h3>
-          <p className={styles.lockText}>{pauseMessage || "در حال حاضر امکان ثبت درخواست وجود ندارد. لطفاً بعداً مراجعه کنید."}</p>
+          <h3 className={styles.lockTitle}>{t.hub.marketPaused}</h3>
+          <p className={styles.lockText}>{pauseMessage || t.hub.marketPausedDefault}</p>
         </div>
       )}
 
       {marketActive && isRateOffline && (
         <div className={`${styles.lockOverlay} ${styles.offlineOverlay}`}>
           <ServerCrash size={48} className={`${styles.lockIcon} ${styles.offlineIcon}`} />
-          <h3 className={styles.lockTitle}>ارتباط با سرور جهانی نرخ قطع است</h3>
-          <p className={styles.lockText}>متاسفانه در حال حاضر دریافت نرخ لحظه‌ای امکان‌پذیر نیست. ثبت تراکنش موقتاً غیرفعال شده است. لطفاً دقایقی دیگر تلاش کنید.</p>
+          <h3 className={styles.lockTitle}>{t.hub.rateOfflineTitle}</h3>
+          <p className={styles.lockText}>{t.hub.rateOfflineText}</p>
         </div>
       )}
 
       {marketActive && !isApproved && !isRateOffline && (
               <div className={styles.lockOverlay}>
                 <Lock size={48} className={styles.lockIcon} />
-                <h3 className={styles.lockTitle}>دسترسی محدود است</h3>
+                <h3 className={styles.lockTitle}>{t.hub.accessLimited}</h3>
                 <p className={styles.lockText}>
-                  کاربر گرامی، برای ثبت درخواست ارزی ابتدا باید فرآیند احراز هویت شما تکمیل و توسط مدیریت تایید گردد.
+                  {t.hub.accessLimitedText}
                   <span style={{ display: "block", marginTop: "1.75rem", fontSize: "0.95em", lineHeight: "1.8" }}>
-                    برای شروع، لطفاً از منوی بالای صفحه (سمت راست) وارد بخش <strong style={{ color: "var(--warning)", padding: "0 4px" }}>«احراز هویت»</strong> شده و مدارک خود را تکمیل نمایید.
+                    {t.hub.accessLimitedKyc}
                   </span>
                 </p>
               </div>
@@ -408,76 +470,106 @@ export function DashboardRequestHub({
         <div className={styles.titleWrapper}>
           <h2 className={styles.panelTitle}>
             <Calculator size={26} className={styles.titleIcon} /> 
-            محاسبه‌گر نرخ اختصاصی
+            {t.hub.title}
           </h2>
         </div>
       </div>
       
-      <div className={styles.formRow}>
+      <div className={`${styles.formRow} ${styles.formRowCompact}`}>
         <div className={styles.inputBox}>
           <div className={styles.labelRow}>
-            <label className={styles.label}>نوع تراکنش ارزی از جانب مشتری <span className={styles.requiredMark}>*</span></label>
+            <label className={styles.label}>{t.hub.txType} <span className={styles.requiredMark}>*</span></label>
           </div>
             <SelectBox
               value={txType}
               onChange={(val) => setTxType(val as "buy_aud" | "sell_aud")}
-              dir="rtl"
+              dir={locale === "fa" ? "rtl" : "ltr"}
               labeledOptions={[
-                { value: "buy_aud",  label: "خرید AUD (تومان می‌دهم، دلار می‌گیرم)" },
-                { value: "sell_aud", label: "فروش AUD (دلار می‌دهم، تومان می‌گیرم)" },
+                { value: "buy_aud",  label: t.hub.buyAud },
+                { value: "sell_aud", label: t.hub.sellAud },
               ]}
               disabled={isSubmitting}
             />
         </div>
 
-        <div className={styles.inputBox}>
-          <div className={styles.labelRow}>
-            <label className={styles.label}>مقدار به دلار (AUD) <span className={styles.requiredMark}>*</span></label>
-            {appliedFee > 0 && (
-              <span className={styles.feeWarning}>
-                <AlertTriangle size={14} /> 
-                {txType === "buy_aud"
-                  ? `افزوده شدن ${toFaDigits(String(financeConfig.applied_fee))} دلار کارمزد`
-                  : `کسر ${toFaDigits(String(financeConfig.applied_fee))} دلار کارمزد`}
-              </span>
-            )}
-          </div>
-          <div className={styles.hubFieldGroup}>
-            <input
-              ref={amountInputRef}
-              type="text"
-              inputMode="decimal"
-              pattern="[0-9۰-۹.,٫]*"
-              value={amountStr}
-              onChange={handleInput}
-              onFocus={keepAmountCaretAtEnd}
-              onClick={keepAmountCaretAtEnd}
-              dir="ltr"
-              className={styles.hubFaInput}
-              placeholder="۰"
-              disabled={isRateOffline || isSubmitting}
-            />
-            <div className={styles.hubDivider}></div>
-            <span className={styles.currencyLabelFixed}>AUD</span>
+        <div className={`${styles.inputBox} ${styles.quoteColumn}`}>
+          <div className={styles.quoteInputStack}>
+            <div className={styles.inputBox}>
+              <div className={styles.labelRow}>
+                <label className={styles.label}>{t.hub.amountAud} <span className={styles.requiredMark}>*</span></label>
+                {appliedFee > 0 && (
+                  <span className={styles.feeWarning}>
+                    <AlertTriangle size={14} />
+                    {txType === "buy_aud"
+                      ? t.hub.feeAddedBuy.replace("{{fee}}", formatNumberUI(financeConfig.applied_fee, locale))
+                      : t.hub.feeDeductedSell.replace("{{fee}}", formatNumberUI(financeConfig.applied_fee, locale))}
+                  </span>
+                )}
+              </div>
+              <div className={`${styles.hubFieldGroup} ${styles.quoteFieldGroup}`}>
+                <input
+                  ref={amountInputRef}
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9۰-۹.,٫]*"
+                  value={amountStr}
+                  onChange={handleInput}
+                  onFocus={keepAmountCaretAtEnd}
+                  onClick={keepAmountCaretAtEnd}
+                  dir="ltr"
+                  className={`${styles.hubFaInput} ${styles.quoteFieldInput} ${styles.quoteAudInput}`}
+                  placeholder={locale === "fa" ? "۰" : "0"}
+                  disabled={isRateOffline || isSubmitting}
+                />
+                <div className={styles.hubDivider}></div>
+                <span className={`${styles.currencyLabelFixed} ${styles.quoteCurrencyLabel}`}>AUD</span>
+              </div>
+            </div>
+
+            <div className={styles.inputBox}>
+              <label className={`${styles.label} ${styles.labelWithIcon}`}>
+                <Banknote size={14} className={styles.inlineLabelIcon} />
+                {txType === "buy_aud" ? t.hub.amountPayToman : t.hub.amountReceiveToman}
+              </label>
+              <div className={`${styles.hubFieldGroup} ${styles.quoteFieldGroup} ${quoteSource === "irt" ? styles.hubFieldActive : ""}`}>
+                <input
+                  type="text"
+                  value={isRateOffline ? "" : equivalentStr}
+                  onChange={handleEquivalentInput}
+                  dir="ltr"
+                  className={`${styles.hubFaInput} ${styles.hubResultInput} ${styles.quoteFieldInput}`}
+                  placeholder={locale === "fa" ? "۰" : "0"}
+                  disabled={isRateOffline || isSubmitting}
+                />
+                <div className={styles.hubDivider}></div>
+                <span className={`${styles.currencyLabelFixed} ${styles.quoteCurrencyLabel}`}>{locale === "fa" ? "تومان" : "Toman"}</span>
+              </div>
+              <span className={styles.fieldHint}>{t.hub.tomanHint}</span>
+              {promoDiscount !== null && promoDiscount > 0 && (
+                <p className={styles.promoSuccess}>
+                  {t.hub.promoSavings} {formatNumberUI(promoDiscount, locale, true)} {locale === "fa" ? "تومان" : "Toman"}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
       
       <div className={styles.formRow}>
         <div className={styles.inputBox}>
-          <label className={styles.label}>انتخاب گیرنده <span className={styles.requiredMark}>*</span></label>
+          <label className={styles.label}>{t.hub.recipient} <span className={styles.requiredMark}>*</span></label>
           <SelectBox
             value={selectedRecipientId}
             onChange={handleRecipientChange}
-            placeholder="— انتخاب کنید —"
+            placeholder={locale === "fa" ? "— انتخاب کنید —" : "— Select recipient —"}
             labeledOptions={recipientOptions}
             disabled={isSubmitting}
-            dir="rtl"
+            dir={locale === "fa" ? "rtl" : "ltr"}
           />
         </div>
         {isEduPayment ? (
           <div className={styles.inputBox}>
-            <label className={styles.label}>لینک صفحه پرداخت <span className={styles.requiredMark}>*</span></label>
+            <label className={styles.label}>{t.hub.paymentLink} <span className={styles.requiredMark}>*</span></label>
             <div className={styles.hubFieldGroup}>
               <input
                 type="url"
@@ -489,21 +581,22 @@ export function DashboardRequestHub({
                 disabled={isSubmitting}
                />
             </div>
-            <span className={styles.fieldHint}>لینک صفحه پرداخت آزمون، دانشگاه یا موسسه مربوطه</span>
+            <span className={styles.fieldHint}>{t.hub.paymentLinkHint}</span>
           </div>
         ) : (
-          <div className={styles.inputBox} />
+          <></>
         )}
       </div>
 
       <div className={styles.formRow}>
         <div className={styles.inputBox}>
-          <label className={styles.label}>منبع وجه (Source of Funds) <span className={styles.requiredMark}>*</span></label>
+          <label className={styles.label}>{t.hub.sourceOfFunds} <span className={styles.requiredMark}>*</span></label>
           <SelectBox
             value={sourceOfFunds}
             onChange={setSourceOfFunds}
             placeholder="Select Source of Funds"
             disabled={isSubmitting}
+            dir={locale === "fa" ? "rtl" : "ltr"}
             options={[
               "Employment income e.g. salary, bonus, commission",
               "Business income e.g. earnings, profits",
@@ -523,12 +616,13 @@ export function DashboardRequestHub({
         </div>
 
         <div className={styles.inputBox}>
-          <label className={styles.label}>دلیل انتقال (Reason for Transfer) <span className={styles.requiredMark}>*</span></label>
+          <label className={styles.label}>{t.hub.reasonForTransfer} <span className={styles.requiredMark}>*</span></label>
           <SelectBox
             value={reasonForTransfer}
             onChange={setReasonForTransfer}
             placeholder="Select reason"
             disabled={isSubmitting}
+            dir={locale === "fa" ? "rtl" : "ltr"}
             options={[
               "Support Family",
               "Loan repayment",
@@ -547,26 +641,9 @@ export function DashboardRequestHub({
 
       <div className={styles.formRow}>
         <div className={styles.inputBox}>
-          <label className={styles.label}>
-            <Banknote size={14} style={{ display: "inline", verticalAlign: "middle", marginLeft: "4px" }} />
-            {txType === "buy_aud" ? "مبلغ قابل پرداخت به تومان (IRT)" : "مبلغ دریافتی شما به تومان (IRT)"}
-          </label>
-          <div className={`${styles.hubFieldGroup} ${styles.hubLocked}`}>
-            <input type="text" value={isRateOffline ? "—" : formatNumberUI(resultNumber, true)} readOnly dir="ltr" className={`${styles.hubFaInput} ${styles.hubResultInput}`} placeholder="۰" />
-            <div className={styles.hubDivider}></div>
-            <span className={styles.currencyLabelFixed}>تومان</span>
-          </div>
-          {promoDiscount !== null && promoDiscount > 0 && (
-            <p className={styles.promoSuccess}>
-              سود کد تخفیف: {formatNumberUI(promoDiscount, true)} تومان
-            </p>
-          )}
-        </div>
-
-        <div className={styles.inputBox}>
-          <label className={styles.label}>
-            <Tag size={14} style={{ display: "inline", verticalAlign: "middle", marginLeft: "4px" }} />
-            کد تخفیف (اختیاری)
+          <label className={`${styles.label} ${styles.labelWithIcon}`}>
+            <Tag size={14} className={styles.inlineLabelIcon} />
+            {t.hub.promoCode}
           </label>
           <div className={styles.promoRow}>
             <div className={styles.hubFieldGroup}>
@@ -586,36 +663,62 @@ export function DashboardRequestHub({
               onClick={handleApplyPromo}
               disabled={promoValidating || isSubmitting || !promoInput.trim() || rawAmount <= 0}
             >
-              {promoValidating ? <><span className={cardStyles.spinner} aria-hidden="true" /></> : "اعمال"}
+              {promoValidating ? <><span className={cardStyles.spinner} aria-hidden="true" /></> : t.hub.promoApply}
             </button>
           </div>
           {promoMsg && <p className={promoMsg.type === "success" ? styles.promoSuccess : styles.promoError}>{promoMsg.text}</p>}
         </div>
+
       </div>
       
       <div className={styles.summaryBox}>
         <div className={styles.summaryText}>
           <strong className={styles.summaryRate}>
-            نرخ اختصاصی شما: {isRateOffline ? "—" : formatNumberUI(activeRate, true)} تومان
+            {t.hub.yourRate} {isRateOffline ? t.hub.rateOffline : formatNumberUI(activeRate, locale, true)} {locale === "fa" ? "تومان" : "Toman"}
           </strong>
           {promoEffectiveRate && tailoredRate && !isRateOffline && (
             <span className={styles.summaryHint}>
-              بهبودیافته با کد تخفیف — نرخ پایه: {formatNumberUI(tailoredRate, true)} تومان
+              {t.hub.improvedRate} {formatNumberUI(tailoredRate, locale, true)} {locale === "fa" ? "تومان" : "Toman"}
             </span>
           )}
           {(loyaltyBonus > 0 && !isRateOffline) && (
             <span className={styles.summaryHint}>
               {rawAmount > 0 
-                ? `شامل ${formatNumberUI(loyaltyBonus * rawAmount, true)} تومان سود وفاداری در این تراکنش.`
-                : `شما ${formatNumberUI(loyaltyBonus, true)} تومان سود وفاداری روی هر دلار دارید.`}
+                ? t.hub.loyaltyThisTx.replace("{{amount}}", formatNumberUI(loyaltyBonus * rawAmount, locale, true))
+                : t.hub.loyaltyPerDollar.replace("{{amount}}", formatNumberUI(loyaltyBonus, locale, true))}
             </span>
+          )}
+        </div>
+        <div className={styles.summaryFacts}>
+          <div className={styles.summaryFact}>
+            <span>{t.hub.requestedAmount}</span>
+            <strong className={styles.summaryFactValue}>{rawAmount > 0 ? `${formatNumberUI(rawAmount, locale)} AUD` : "—"}</strong>
+          </div>
+          {appliedFee > 0 ? (
+            <>
+              <div className={styles.summaryFact}>
+                <span>{t.hub.fixedFee}</span>
+                <strong className={styles.summaryFactValue}>{`${formatNumberUI(appliedFee, locale)} AUD`}</strong>
+              </div>
+              {txType === "sell_aud" && (
+                <div className={styles.summaryFact}>
+                  <span>{t.hub.netSale}</span>
+                  <strong className={styles.summaryFactValue}>{settlementAud > 0 ? `${formatNumberUI(settlementAud, locale)} AUD` : "—"}</strong>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className={`${styles.summaryFact} ${styles.summaryFactCalm}`}>
+              <span>{t.hub.feeStatus}</span>
+              <strong className={styles.summaryFactText}>{t.hub.noFeeStatus}</strong>
+            </div>
           )}
         </div>
         <button className={`${cardStyles.primaryButton}${isSubmitting ? ` ${cardStyles.loading}` : ""}`} onClick={submit} disabled={!isApproved || rawAmount <= 0 || isRateOffline || isSubmitting || !marketActive} type="button">
           {isSubmitting ? (
-            <><span className={cardStyles.spinner} aria-hidden="true" /> در حال پردازش امن...</>
+            <><span className={cardStyles.spinner} aria-hidden="true" /> {t.hub.processing}</>
           ) : (
-            <><MessageSquare size={20} /> تایید و ارسال به واتس‌اپ</>
+            <><MessageSquare size={20} /> {t.hub.submitBtn}</>
           )}
         </button>
       </div>
@@ -648,7 +751,7 @@ export function DashboardRequestHub({
         aria-hidden="true"
       >
         <div className={styles.scrollPill}>
-          <span>فرم درخواست حواله</span>
+          <span>{t.hub.scrollIndicator}</span>
           <ChevronDown size={16} className={styles.scrollIcon} />
         </div>
       </div>

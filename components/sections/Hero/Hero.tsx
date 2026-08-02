@@ -19,6 +19,7 @@ import MessageStrip from "@/components/sections/MessageStrip/MessageStrip";
 export default function Hero() {
   const heroRef = useRef<HTMLElement | null>(null);
   const { locale } = useParams<{ locale: string }>();
+  const isEn = locale === "en";
   const { currentRates, isLoading } = useRates();
 
   const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_TRANSFER_HELP)}`;
@@ -95,7 +96,7 @@ export default function Hero() {
   );
 
   return (
-    <section id="hero" ref={heroRef} className={styles.hero} aria-label="معرفی زرمان">
+    <section id="hero" ref={heroRef} className={styles.hero} aria-label={isEn ? "Zarman Exchange" : "معرفی زرمان"}>
       <div className={styles.bgBase} aria-hidden="true" />
       <div className={styles.bgGlow} aria-hidden="true" />
 
@@ -103,38 +104,76 @@ export default function Hero() {
         <div className={styles.layout}>
           
           <div className={styles.content}>
-            <h1 className={styles.eyebrow}>صرافی زرمان</h1>
-            <h2 className={styles.title}>
-              از{' '}
-              <span className={styles.tooltipWrapper}>
-                اولورو
-                <Info className={styles.infoIcon} strokeWidth={2.5} />
-                <span className={styles.tooltipText}>
-                  اولورو (<span className={styles.uluruEnText}>Uluru</span>) صخره‌ایست مقدس و عظیم در قلب استرالیا
+            <h1 className={styles.eyebrow}>{isEn ? "Zarman Exchange" : "صرافی زرمان"}</h1>
+            {isEn ? (
+              <h2 className={styles.title}>
+                From{' '}
+                <span
+                  className={styles.tooltipWrapper}
+                  tabIndex={0}
+                  aria-label="Uluru is a sacred and massive sandstone monolith in the heart of Australia"
+                >
+                  <span>Uluru</span>
+                  <Info className={styles.infoIcon} strokeWidth={2.5} aria-hidden="true" />
+                  <span className={styles.tooltipText}>
+                    Uluru is a sacred and massive sandstone monolith in the heart of Australia
+                  </span>
                 </span>
-              </span>
-              {' '}تا دماوند
-              <br />
-              <span className={styles.titleAccent}>تنها در چند ساعت...</span>
-            </h2>
+                <br />
+                <span className={styles.titleLineTwo}>to Damavand</span>
+                <br />
+                <span className={`${styles.titleAccent} ${styles.titleAccentEn}`}>in just a few hours...</span>
+              </h2>
+            ) : (
+              <h2 className={styles.title}>
+                از{' '}
+                <span
+                  className={styles.tooltipWrapper}
+                  tabIndex={0}
+                  aria-label="اولورو صخره‌ایست مقدس و عظیم در قلب استرالیا"
+                >
+                  اولورو
+                  <Info className={styles.infoIcon} strokeWidth={2.5} />
+                  <span className={styles.tooltipText}>
+                    اولورو (<span className={styles.uluruEnText}>Uluru</span>) صخره‌ایست مقدس و عظیم در قلب استرالیا
+                  </span>
+                </span>
+                {' '}تا دماوند
+                <br />
+                <span className={styles.titleAccent}>تنها در چند ساعت...</span>
+              </h2>
+            )}
             <p className={styles.subtitle}>
-              ما تلاش می‌کنیم با تمرکز بر سرعت، شفافیت و پشتیبانی همیشگی، تجربه ثبت و پیگیری درخواست‌های مالی را برای شما آسان‌تر و روشن‌تر کنیم.
+              {isEn
+                ? "We focus on speed, transparency, and round-the-clock support to make your financial transfer requests easier and more straightforward."
+                : "ما تلاش می‌کنیم با تمرکز بر سرعت، شفافیت و پشتیبانی همیشگی، تجربه ثبت و پیگیری درخواست‌های مالی را برای شما آسان‌تر و روشن‌تر کنیم."}
             </p>
             
             <div className={styles.actions}>
               <Button href={`/${locale}/register`} variant="primary" size="lg" className={styles.btn}>
-                شروع ثبت‌نام
+                {isEn ? "Get Started" : "شروع ثبت‌نام"}
               </Button>
               <Button href={whatsappUrl} variant="secondary" size="lg" className={styles.btn} target="_blank" rel="noopener noreferrer">
-                تماس با ما
+                {isEn ? "Contact Us" : "تماس با ما"}
               </Button>
             </div>
 
             <div className={styles.meta}>
-              <span>سریع</span><span className={styles.dot} />
-              <span>شفاف</span><span className={styles.dot} />
-              <span>شخصی سازی قیمت</span><span className={styles.dot} />
-              <span>قابل اعتماد</span>
+              {isEn ? (
+                <>
+                  <span>Fast</span><span className={styles.dot} />
+                  <span>Transparent</span><span className={styles.dot} />
+                  <span>Personalised Rate</span><span className={styles.dot} />
+                  <span>Trusted</span>
+                </>
+              ) : (
+                <>
+                  <span>سریع</span><span className={styles.dot} />
+                  <span>شفاف</span><span className={styles.dot} />
+                  <span>شخصی سازی قیمت</span><span className={styles.dot} />
+                  <span>قابل اعتماد</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -143,11 +182,13 @@ export default function Hero() {
           </div>
 
           <div className={styles.visual}>
-            <div className={styles.rateWidget} aria-label="نرخ لحظه‌ای ارز">
+            <div className={styles.rateWidget} aria-label={isEn ? "Live exchange rate" : "نرخ لحظه‌ای ارز"}>
               <div className={styles.widgetHeader}>
                 <span className={styles.pulseDot}></span>
                 <span className={styles.status}>
-                  {isLoading ? "در حال دریافت..." : "نرخ لحظه‌ای دلار"}
+                  {isLoading
+                    ? (isEn ? "Loading..." : "در حال دریافت...")
+                    : (isEn ? "Live AUD Rate" : "نرخ لحظه‌ای دلار")}
                 </span>
               </div>
 
@@ -158,17 +199,19 @@ export default function Hero() {
 
                 <div className={styles.ratesData}>
                   <div className={styles.rateCol}>
-                    <span className={styles.label}>فروش دلار استرالیا</span>
+                    <span className={styles.label}>{isEn ? "Sell AUD" : "فروش دلار استرالیا"}</span>
                     <strong className={styles.value}>
                       {isLoading ? (
-                        <span style={{ fontSize: 'var(--text-body-md)' }}>در حال دریافت...</span>
+                        <span style={{ fontSize: 'var(--text-body-md)' }}>{isEn ? "Loading..." : "در حال دریافت..."}</span>
                       ) : currentRates.sellAUD ? (
                         <>
-                          {currentRates.sellAUD!.toLocaleString("fa-IR")} 
-                          <span className={styles.currency}>تومان</span>
+                          {isEn
+                            ? currentRates.sellAUD!.toLocaleString("en-AU")
+                            : currentRates.sellAUD!.toLocaleString("fa-IR")}
+                          <span className={styles.currency}>{isEn ? "Toman" : "تومان"}</span>
                         </>
                       ) : (
-                        <span style={{ fontSize: 'var(--text-card-title)', color: 'var(--warning)' }}>تماس بگیرید</span>
+                        <span style={{ fontSize: 'var(--text-card-title)', color: 'var(--warning)' }}>{isEn ? "Contact us" : "تماس بگیرید"}</span>
                       )}
                     </strong>
                   </div>
@@ -176,17 +219,19 @@ export default function Hero() {
                   <div className={styles.rateDivider}></div>
 
                   <div className={styles.rateCol}>
-                    <span className={styles.label}>خرید دلار استرالیا</span>
+                    <span className={styles.label}>{isEn ? "Buy AUD" : "خرید دلار استرالیا"}</span>
                     <strong className={styles.value}>
                       {isLoading ? (
-                        <span style={{ fontSize: 'var(--text-body-md)' }}>در حال دریافت...</span>
+                        <span style={{ fontSize: 'var(--text-body-md)' }}>{isEn ? "Loading..." : "در حال دریافت..."}</span>
                       ) : currentRates.buyAUD ? (
                         <>
-                          {currentRates.buyAUD!.toLocaleString("fa-IR")} 
-                          <span className={styles.currency}>تومان</span>
+                          {isEn
+                            ? currentRates.buyAUD!.toLocaleString("en-AU")
+                            : currentRates.buyAUD!.toLocaleString("fa-IR")}
+                          <span className={styles.currency}>{isEn ? "Toman" : "تومان"}</span>
                         </>
                       ) : (
-                        <span style={{ fontSize: 'var(--text-card-title)', color: 'var(--warning)' }}>تماس بگیرید</span>
+                        <span style={{ fontSize: 'var(--text-card-title)', color: 'var(--warning)' }}>{isEn ? "Contact us" : "تماس بگیرید"}</span>
                       )}
                     </strong>
                   </div>
@@ -196,7 +241,7 @@ export default function Hero() {
               {!isLoading && formattedLastUpdated && (
                 <div className={styles.lastUpdated} aria-live="polite">
                   <Clock size={13} className={styles.clockIcon} />
-                  <span className={styles.lastUpdatedLabel}>آخرین به‌روزرسانی:</span>
+                  <span className={styles.lastUpdatedLabel}>{isEn ? "Last updated:" : "آخرین به‌روزرسانی:"}</span>
                   <span className={styles.lastUpdatedTime} dir="ltr">{formattedLastUpdated}</span>
                 </div>
               )}

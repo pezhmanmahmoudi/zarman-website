@@ -18,7 +18,7 @@ export async function generateMetadata({
 
   return {
     title: isEn
-      ? "Zarman Exchange | Personalized Change Rates"
+      ? "Zarman Exchange | Personalized Exchange Rates"
       : "صرافی زرمان | زرمان اکسچنج | نرخ شخصی سازی شده حواله دلار استرالیا",
     description: isEn
       ? "Zarman Exchange is an AUSTRAC-registered remittance dealer (ABN 70 692 742 957) specialising in AUD to IRT transfers. Learn about our compliance framework, mission, and team."
@@ -33,7 +33,7 @@ export async function generateMetadata({
     },
     openGraph: {
       title: isEn
-        ? "Zarman Exchange | Personalized Change Rates"
+        ? "Zarman Exchange | Personalized Exchange Rates"
         : "صرافی زرمان | زرمان اکسچنج | نرخ شخصی سازی شده حواله دلار استرالیا",
       description: isEn
         ? "AUSTRAC-registered AUD to IRT remittance. ABN 70 692 742 957. Enterprise-grade compliance and transparent pricing."

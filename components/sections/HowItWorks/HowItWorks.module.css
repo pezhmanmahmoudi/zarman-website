@@ -5,7 +5,7 @@
   background-color: var(--color-bg-base);
   padding: var(--section-pad-major) 0;
   overflow: hidden;
-  direction: rtl;
+  direction: inherit;
 }
 
 .container {
@@ -196,6 +196,10 @@
   text-align: right; 
 }
 
+:global([dir="ltr"]) .ctaContent {
+  text-align: left;
+}
+
 .ctaTitle {
   margin: 0 0 var(--space-4);
   color: var(--color-text-primary);
@@ -216,6 +220,10 @@
    font-weight: var(--font-weight-semibold);
 }
 
+:global([dir="ltr"]) .ctaText {
+  margin: 0;
+}
+
 .ctaActions {
   position: relative;
   z-index: 2;
@@ -223,6 +231,10 @@
   align-items: center;
   gap: var(--space-4);
   flex-shrink: 0;
+}
+
+:global([dir="ltr"]) .ctaActions {
+  justify-content: flex-start;
 }
 
 /* ==================

@@ -58,6 +58,7 @@ export default async function AuditPage({
                     <tr>
                       <th>Timestamp</th>
                       <th>Admin</th>
+                      <th>Actor</th>
                       <th>Action</th>
                       <th>Target Type</th>
                       <th>Target ID</th>
@@ -78,7 +79,10 @@ export default async function AuditPage({
                           })}
                         </td>
                         <td className={`${tableStyles.cellSmall} ${tableStyles.cellStrong}`}>
-                          {log.actor_email}
+                          {log.actor_is_admin ? log.actor_email : "—"}
+                        </td>
+                        <td className={`${tableStyles.cellSmall} ${tableStyles.cellStrong}`}>
+                          {log.actor_email || "—"}
                         </td>
                         <td>
                           <span

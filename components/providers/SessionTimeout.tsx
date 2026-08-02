@@ -8,6 +8,7 @@ export default function SessionTimeout({ timeoutMinutes = 15 }: { timeoutMinutes
   const router = useRouter();
   const pathname = usePathname();
   const timeoutId = useRef<NodeJS.Timeout | null>(null);
+  const locale = pathname.startsWith("/en") ? "en" : "fa";
   
   // ساخت کلاینت سوپابیس برای محیط مرورگر
   const supabase = createBrowserClient(
@@ -20,7 +21,7 @@ export default function SessionTimeout({ timeoutMinutes = 15 }: { timeoutMinutes
       // پاک کردن سشن از دیتابیس سوپابیس
       await supabase.auth.signOut();
       // هدایت کاربر به صفحه لاگین با یک پیام (از طریق URL)
-      router.push("/fa/login?reason=timeout");
+      router.push(`/${locale}/login?reason=timeout`);
     } catch (error) {
       console.error("Error auto-logging out:", error);
     }
@@ -36,11 +37,11 @@ export default function SessionTimeout({ timeoutMinutes = 15 }: { timeoutMinutes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT" && pathname.includes("/dashboard")) {
-        router.push("/fa/login?reason=session_expired");
+        router.push(`/${locale}/login?reason=session_expired`);
       }
     });
     return () => subscription.unsubscribe();
-  }, [pathname]);
+  }, [locale, pathname, router]);
 
   useEffect(() => {
     // فقط در مسیرهای داشبورد این نگهبان فعال باشد

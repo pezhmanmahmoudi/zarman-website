@@ -16,6 +16,13 @@
   transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
 }
 
+:global([dir="ltr"]) .sidebar {
+  right: auto;
+  left: 0;
+  border-left: none;
+  border-right: 1px solid var(--border-soft);
+}
+
 .sidebarScroll {
   height: 100%;
   overflow-y: auto;
@@ -94,6 +101,11 @@
   direction: rtl;
 }
 
+:global([dir="ltr"]) .sectionLabel {
+  text-align: left;
+  direction: ltr;
+}
+
 .divider { height: 1px; background-color: var(--border-soft); margin: var(--space-6) var(--space-2); flex-shrink: 0; }
 .navMenu { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; }
 
@@ -105,6 +117,12 @@
   cursor: pointer; transition: color 0.2s ease, background-color 0.2s ease;
   border: none; background: transparent; width: 100%; text-align: right;
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif); font-size: 0.9375rem; direction: rtl;
+}
+
+:global([dir="ltr"]) .navItem {
+  text-align: left;
+  direction: ltr;
+  font-family: var(--font-en-stack, 'Inter', sans-serif);
 }
 
 .navItem span { flex: 1; }
@@ -124,6 +142,11 @@
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.4);
   display: none; align-items: center; justify-content: center; flex-direction: column; gap: 6px;
   cursor: pointer; z-index: 10001; transition: transform 0.22s ease, background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+:global([dir="ltr"]) .mobileMenuTrigger {
+  right: auto;
+  left: 18px;
 }
 
 .mobileMenuTrigger:hover { transform: translateY(-1px); }
@@ -151,6 +174,20 @@
   .divider { margin: var(--space-4) var(--space-2); }
   .navItem { min-height: 52px; border-radius: var(--radius-lg); font-size: var(--text-body-lg); }
   .sidebarFooter { gap: var(--space-2); padding-bottom: var(--space-2); }
+
+  :global([dir="ltr"]) .sidebar {
+    right: auto;
+    left: 0;
+    border-left: none;
+    border-right: 1px solid var(--border-soft);
+    border-radius: 0 28px 28px 0;
+    box-shadow: 24px 0 60px rgba(2, 6, 23, 0.22), 6px 0 18px rgba(2, 6, 23, 0.08);
+    transform: translateX(-104%);
+  }
+
+  :global([dir="ltr"]) .sidebarOpen {
+    transform: translateX(0);
+  }
 }
 
 @media (max-width: 640px) {
@@ -160,6 +197,15 @@
   .logoTitle { font-size: var(--text-body-lg); }
   .logoSubtitle { font-size: var(--text-caption); }
   .navItem { min-height: 50px; font-size: var(--text-body-md); gap: var(--space-2); }
+
+  :global([dir="ltr"]) .mobileMenuTrigger {
+    right: auto;
+    left: 14px;
+  }
+
+  :global([dir="ltr"]) .sidebar {
+    border-radius: 0 24px 24px 0;
+  }
 }
 
 .sidebar::-webkit-scrollbar, .sidebarScroll::-webkit-scrollbar { width: 6px; }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -8,7 +9,7 @@ import styles from "./HowItWorks.module.css";
 import Button from "@/components/ui/Button/Button";
 import { UserPlus, ShieldCheck, CreditCard, Send } from "lucide-react";
 import {
-  WHATSAPP_NUMBER, // 👈 اضافه شد
+  WHATSAPP_NUMBER,
   buildWhatsAppUrl,
   WHATSAPP_MESSAGE_SIGNUP_HELP,
 } from "@/lib/constants/contact";
@@ -17,7 +18,7 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const steps = [
+const stepsFa = [
   {
     id: "step-1",
     number: "01",
@@ -48,14 +49,46 @@ const steps = [
   },
 ];
 
+const stepsEn = [
+  {
+    id: "step-1",
+    number: "01",
+    title: "Submit a Transaction Request",
+    text: "For the best rate, sign in to your account and enter the amount in your dashboard. After viewing the live rate, submit your transaction request. You can also request directly via WhatsApp.",
+    icon: UserPlus,
+  },
+  {
+    id: "step-2",
+    number: "02",
+    title: "Identity Verification (KYC)",
+    text: "In compliance with Australian financial regulations, identity verification is required before any transaction. This simple process involves submitting a valid ID document and proof of residence.",
+    icon: ShieldCheck,
+  },
+  {
+    id: "step-3",
+    number: "03",
+    title: "Deposit Funds",
+    text: "Once your identity is verified, you will receive our bank account details for the deposit. Simply transfer the specified amount to Zarman's account within the agreed timeframe.",
+    icon: CreditCard,
+  },
+  {
+    id: "step-4",
+    number: "04",
+    title: "Transfer & Final Settlement",
+    text: "As soon as we confirm receipt of funds, the transfer to the destination account is processed at the highest speed, and an official transaction receipt is sent to your email.",
+    icon: Send,
+  },
+];
+
 export default function HowItWorks() {
   const sectionRef = useRef<HTMLElement | null>(null);
+  const { locale } = useParams<{ locale: string }>();
+  const isEn = locale === "en";
+  const steps = isEn ? stepsEn : stepsFa;
 
-  // ۱. مقدار اولیه امن برای رندر سرور (SSR)
   const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_SIGNUP_HELP)}`;
   const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
 
-  // ۲. آپدیت شدن لینک پس از لود شدن در مرورگر کلاینت
   useEffect(() => {
     setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP));
   }, []);
@@ -103,12 +136,15 @@ export default function HowItWorks() {
     >
       <div className={styles.container}>
         <div className={styles.header}>
-          <p className={styles.eyebrow}>مراحل انتقال</p>
+          <p className={styles.eyebrow}>{isEn ? "How It Works" : "مراحل انتقال"}</p>
           <h2 id="how-it-works-title" className={styles.title}>
-           مسیر هوشمند انتقال وجه در زرمان
+            {isEn ? "The Smart Path to Money Transfer at Zarman" : "مسیر هوشمند انتقال وجه در زرمان"}
           </h2>
           <p className={styles.subtitle}>
-         مراحل ثبت درخواست تا تکمیل تراکنش، با تمرکز بر سادگی و سرعت طراحی شده است. پنل کاربری اختصاصی زرمان، تجربه‌ای شفاف، بی‌دردسر و مدرن از مدیریت امور ارزی را برای شما رقم می‌زند.          </p>
+            {isEn
+              ? "From request to completed transaction — designed for simplicity and speed. Zarman's dedicated user panel delivers a transparent, seamless, and modern experience for managing your currency affairs."
+              : "مراحل ثبت درخواست تا تکمیل تراکنش، با تمرکز بر سادگی و سرعت طراحی شده است. پنل کاربری اختصاصی زرمان، تجربه‌ای شفاف، بی‌دردسر و مدرن از مدیریت امور ارزی را برای شما رقم می‌زند."}
+          </p>
         </div>
 
         <div className={styles.grid}>
@@ -136,19 +172,22 @@ export default function HowItWorks() {
         <div className={styles.ctaBanner}>
           <div className={styles.ctaGlow} aria-hidden="true" />
           <div className={styles.ctaContent}>
-            <h3 className={styles.ctaTitle}>آماده‌ی یک تجربه جدید هستید؟</h3>
+            <h3 className={styles.ctaTitle}>
+              {isEn ? "Ready for a New Experience?" : "آماده‌ی یک تجربه جدید هستید؟"}
+            </h3>
             <p className={styles.ctaText}>
-             زمان آن رسیده که تمرکزتان را روی اهداف بزرگ‌تر بگذارید و دغدغه‌های جابه‌جایی پول را خط بزنید. اولین قدم را برای یک تجربه یکپارچه و مدرن بردارید.
+              {isEn
+                ? "It's time to focus on bigger goals and leave money transfer worries behind. Take the first step toward a seamless, modern experience."
+                : "زمان آن رسیده که تمرکزتان را روی اهداف بزرگ‌تر بگذارید و دغدغه‌های جابه‌جایی پول را خط بزنید. اولین قدم را برای یک تجربه یکپارچه و مدرن بردارید."}
             </p>
           </div>
 
           <div className={styles.ctaActions}>
-            <Button href="/fa/register" variant="primary" size="lg">
-              شروع ثبت‌نام در زرمان
+            <Button href={`/${locale}/register`} variant="primary" size="lg">
+              {isEn ? "Sign up with Zarman" : "شروع ثبت‌نام در زرمان"}
             </Button>
-            {/* 👇 متغیر جدید جایگزین شد */}
             <Button href={whatsappUrl} target="_blank" rel="noopener noreferrer" variant="secondary" size="lg">
-              درخواست مشاوره
+              {isEn ? "Request Consultation" : "درخواست مشاوره"}
             </Button>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css";
 import { ArrowLeft, KeyRound, ShieldCheck, CheckCircle2 } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
@@ -14,6 +14,7 @@ const OTP_LENGTH = 6;
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const { locale } = useParams<{ locale: string }>();
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -121,7 +122,7 @@ export default function ForgotPasswordPage() {
     }
 
     setOtpSuccess(true);
-    setTimeout(() => router.push("/fa/reset-password"), 1500);
+    setTimeout(() => router.push(`/${locale}/reset-password`), 1500);
   };
 
   const handleResend = async () => {
@@ -146,7 +147,7 @@ export default function ForgotPasswordPage() {
       <div className={`${styles.card} ${step === 2 ? styles.confirmCard : styles.authCardSmall}`}>
 
         <div className={styles.topNav}>
-          <Link href="/fa/login" className={styles.backHome} aria-label="Back to Login">
+          <Link href={`/${locale}/login`} className={styles.backHome} aria-label="Back to Login">
             <ArrowLeft size={18} strokeWidth={2.5} />
           </Link>
         </div>

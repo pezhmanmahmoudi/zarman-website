@@ -5,6 +5,7 @@
  */
 
 const PRODUCTION_URL = "https://zarman.com.au";
+const SITE_CONTENT_LAST_MODIFIED = "2026-05-01";
 
 interface JsonLdSchemaProps {
   locale: string;
@@ -171,6 +172,7 @@ export function JsonLdSchema({ locale }: JsonLdSchemaProps) {
             },
           ],
         },
+        dateModified: SITE_CONTENT_LAST_MODIFIED,
       },
     ],
   };

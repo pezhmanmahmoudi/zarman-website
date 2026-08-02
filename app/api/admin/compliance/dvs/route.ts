@@ -93,6 +93,17 @@ export async function POST(req: NextRequest) {
     performedByEmail: user.email ?? "admin",
   });
 
+  // Persist that this customer has already been DVS checked, including method and outcome.
+  await db
+    .from("profiles")
+    .update({
+      compliance_dvs_status: dvsResult.outcome === "FAILED" ? "failed" : dvsResult.outcome === "SKIPPED" ? "skipped" : "completed",
+      compliance_dvs_method: "vendor_rapidid",
+      compliance_dvs_checked_at: new Date().toISOString(),
+      compliance_dvs_outcome: dvsResult.outcome,
+    })
+    .eq("id", userId);
+
   // 6. Audit log — non-fatal if it fails.
   try {
     await db.from("audit_logs").insert([{
@@ -124,6 +135,7 @@ export async function POST(req: NextRequest) {
       "Content-Length":      String(pdfBytes.byteLength),
       "Cache-Control":       "no-store, no-cache",
       "X-Content-Type-Options": "nosniff",
+      "X-DVS-Outcome": dvsResult.outcome,
     },
   });
 }

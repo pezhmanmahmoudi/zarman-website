@@ -3,7 +3,7 @@
 .section {
   padding: var(--section-pad-major) 0;
   background-color: var(--color-bg-base);
-  direction: rtl;
+  direction: inherit;
   overflow: hidden;
 }
 

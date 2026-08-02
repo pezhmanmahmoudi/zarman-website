@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image"; 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css"; 
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { locale } = useParams<{ locale: string }>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +33,7 @@ export default function LoginPage() {
       setError("Email or password is incorrect.");
       setLoading(false);
     } else {
-      router.push("/fa/dashboard");
+      router.push(`/${locale}/dashboard`);
     }
   };
 
@@ -45,7 +46,7 @@ export default function LoginPage() {
       <div className={`${styles.card} ${styles.authCardSmall}`}>
         
         <div className={styles.topNav}>
-          <Link href="/" className={styles.backHome} aria-label="Back to Website">
+          <Link href={`/${locale}`} className={styles.backHome} aria-label="Back to Website">
             <ArrowLeft size={18} strokeWidth={2.5} />
           </Link>
         </div>
@@ -87,7 +88,7 @@ export default function LoginPage() {
               <div className={styles.inputGroup}>
                 <div className={styles.flexBetween}>
                   <label htmlFor="password" className={styles.labelNoMargin}>Password</label>
-                  <Link href="/fa/forgot-password" className={styles.forgotLink}>
+                  <Link href={`/${locale}/forgot-password`} className={styles.forgotLink}>
                     Forgot Password?
                   </Link>
                 </div>
@@ -118,7 +119,7 @@ export default function LoginPage() {
 
         <div className={styles.footerText}>
           Don't have an account? 
-          <Link href="/fa/register" className={styles.footerLink}>
+          <Link href={`/${locale}/register`} className={styles.footerLink}>
             Sign up
           </Link>
         </div>

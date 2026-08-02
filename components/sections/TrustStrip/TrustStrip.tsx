@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useParams } from "next/navigation";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -12,35 +13,45 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const trustItems = [
-  {
-    id: "competitive-rates",
-    title: "نرخ شخصی سازی شده",
-    text: "در زرمان نرخ با شما رشد می کند. هر تراکنش، یک قدم به نرخ بهتر نزدیک تر.",
-    icon: TrendingUp,
-  },
-  {
-    id: "fast-settlement",
-    title: "پرداخت و تسویه سریع",
-    text: "درخواست بدهید مابقی با ماست، تسویه در کمترین زمان ممکن.",
-    icon: Zap,
-  },
-  {
-    id: "support-24-7",
-    title: "همیشه در کنار شما",
-    text: "تیم زرمان حتی در تعطیلات هم بیکار نیست. سوال دارید؟ ما اینجاییم، هر روز و هر ساعت.",
-    icon: Headset,
-  },
-  {
-    id: "max-security",
-    title: "خیالتان راحت، امن‌ترین انتخاب",
-    text: "حفظ حریم خصوصی و امنیت سرمایه شما خط قرمز ماست. با شماییم از ابتدا تا انتها.",
-    icon: ShieldCheck,
-  },
-];
-
 export default function TrustStrip() {
   const sectionRef = useRef<HTMLElement | null>(null);
+  const { locale } = useParams<{ locale: string }>();
+  const isEn = locale === "en";
+
+  const trustItems = [
+    {
+      id: "competitive-rates",
+      title: isEn ? "Personalised Rate" : "نرخ شخصی سازی شده",
+      text: isEn
+        ? "Your rate grows with you at Zarman. Every transaction brings you one step closer to a better rate."
+        : "در زرمان نرخ با شما رشد می کند. هر تراکنش، یک قدم به نرخ بهتر نزدیک تر.",
+      icon: TrendingUp,
+    },
+    {
+      id: "fast-settlement",
+      title: isEn ? "Fast Settlement" : "پرداخت و تسویه سریع",
+      text: isEn
+        ? "Submit your request and leave the rest to us. Settlement in the shortest time possible."
+        : "درخواست بدهید مابقی با ماست، تسویه در کمترین زمان ممکن.",
+      icon: Zap,
+    },
+    {
+      id: "support-24-7",
+      title: isEn ? "Always By Your Side" : "همیشه در کنار شما",
+      text: isEn
+        ? "The Zarman team is never idle, even on holidays. Have a question? We're here, every day, every hour."
+        : "تیم زرمان حتی در تعطیلات هم بیکار نیست. سوال دارید؟ ما اینجاییم، هر روز و هر ساعت.",
+      icon: Headset,
+    },
+    {
+      id: "max-security",
+      title: isEn ? "Peace of Mind, Safest Choice" : "خیالتان راحت، امن‌ترین انتخاب",
+      text: isEn
+        ? "Your privacy and financial security are our red lines. We are with you from start to finish."
+        : "حفظ حریم خصوصی و امنیت سرمایه شما خط قرمز ماست. با شماییم از ابتدا تا انتها.",
+      icon: ShieldCheck,
+    },
+  ];
 
   // انیمیشن نرم برای ظاهر شدن پلکانی (Staggered Reveal)
   useGSAP(
@@ -82,9 +93,11 @@ export default function TrustStrip() {
     >
       <div className={styles.container}>
         <div className={styles.header}>
-          <p className={styles.eyebrow}>چرا زرمان!؟</p>
+          <p className={styles.eyebrow}>{isEn ? "Why Zarman?" : "چرا زرمان!\u061f"}</p>
           <h2 id="trust-strip-title" className={styles.title}>
-            انتقال پول در کمترین زمان، حداکثر امنیت و بهترین قیمت
+            {isEn
+              ? "Fast transfers, maximum security, best rates"
+              : "انتقال پول در کمترین زمان، حداکثر امنیت و بهترین قیمت"}
           </h2>
         </div>
 

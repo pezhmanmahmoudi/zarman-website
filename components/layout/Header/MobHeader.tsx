@@ -8,12 +8,15 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
 
-import { publicNavItems } from "@/data/navigation";
+import { getPublicNavItems } from "@/data/navigation";
 import {
-  WHATSAPP_NUMBER, // 👈 اضافه شد
+  WHATSAPP_NUMBER,
   buildWhatsAppUrl,
   WHATSAPP_MESSAGE_SIGNUP_HELP,
 } from "@/lib/constants/contact";
+import { useLocale } from "@/context/LocaleContext";
+import { useT } from "@/hooks/useT";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher/LanguageSwitcher";
 import styles from "./MobHeader.module.css";
 
 type NavItem = {
@@ -36,11 +39,13 @@ export default function MobHeader({
   isAuthenticated = false,
   logoSrc = "/images/logo-no-text-light.svg",
   brandAriaLabel = "Zarman Exchange",
-  signupHref = "/fa/register",
-  loginHref = "/fa/login",
   navItems,
 }: MobHeaderProps) {
-  const items = useMemo(() => navItems ?? publicNavItems, [navItems]);
+  const locale = useLocale();
+  const isEn = locale === "en";
+  const t = useT();
+  const defaultNavItems = getPublicNavItems(locale);
+  const items = useMemo(() => navItems ?? defaultNavItems, [navItems, defaultNavItems]);
 
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
@@ -92,6 +97,7 @@ export default function MobHeader({
       const drawer = drawerRef.current;
       const animatedItems = linksRef.current ? Array.from(linksRef.current.children) : [];
       const tl = gsap.timeline();
+      const hiddenX = isEn ? "-100%" : "100%";
 
       if (open) {
         gsap.set(overlay, { display: "block" });
@@ -104,7 +110,7 @@ export default function MobHeader({
             "-=0.4"
           );
       } else {
-        tl.to(drawer, { x: "100%", duration: 0.4, ease: "power3.in" })
+        tl.to(drawer, { x: hiddenX, duration: 0.4, ease: "power3.in" })
           .to(overlay, { 
             opacity: 0, 
             duration: 0.3, 
@@ -115,7 +121,7 @@ export default function MobHeader({
           }, "-=0.2");
       }
     },
-    { dependencies: [open] }
+    { dependencies: [open, isEn] }
   );
 
   const toggle = () => setOpen((prev) => !prev);
@@ -126,18 +132,18 @@ export default function MobHeader({
   return createPortal(
     <>
       <div ref={rootRef} className={`${styles.headerPill} ${open ? styles.headerPillActive : ""}`}>
-        <div className={styles.headerContent}>
+        <div className={`${styles.headerContent} ${isEn ? styles.headerContentLtr : styles.headerContentRtl}`}>
           <button
             type="button"
             className={`${styles.burger} ${open ? styles.burgerActive : ""}`}
             onClick={toggle}
-            aria-label={open ? "بستن منو" : "باز کردن منو"}
+            aria-label={open ? t.header.closeMenu : t.header.openMenu}
           >
             <span className={styles.burgerLine}></span>
             <span className={styles.burgerLine}></span>
           </button>
 
-          <Link href="/fa" className={styles.logoContainer} onClick={close} aria-label={brandAriaLabel}>
+          <Link href={`/${locale}`} className={styles.logoContainer} onClick={close} aria-label={brandAriaLabel}>
             <Image 
               src={logoSrc} 
               alt="Zarman Logo" 
@@ -151,12 +157,12 @@ export default function MobHeader({
           </Link>
 
           {isAuthenticated ? (
-            <Button href="/fa/dashboard" variant="secondary" size="sm" onClick={close}>
-              پنل کاربری
+            <Button href={`/${locale}/dashboard`} variant="secondary" size="sm" onClick={close}>
+              {t.dashboard.tabs.hub}
             </Button>
           ) : (
-            <Button href={signupHref} variant="primary" size="sm" onClick={close}>
-              ثبت‌نام
+            <Button href={`/${locale}/login`} variant="primary" size="sm" onClick={close}>
+              {t.auth.login}
             </Button>
           )}
         </div>
@@ -164,18 +170,18 @@ export default function MobHeader({
 
       <div ref={overlayRef} className={styles.menuOverlay} onClick={close} aria-hidden="true" />
 
-      <div ref={drawerRef} className={styles.menuDrawer} role="dialog" aria-modal="true">
+      <div ref={drawerRef} className={`${styles.menuDrawer} ${isEn ? styles.menuDrawerLtr : styles.menuDrawerRtl}`} role="dialog" aria-modal="true">
         <div className={styles.menuInner}>
           <div className={styles.menuHeader}>
-            <span className={styles.menuLabel}>فهرست دسترسی</span>
+            <span className={styles.menuLabel}>{locale === "fa" ? "فهرست دسترسی" : "Navigation"}</span>
           </div>
 
-          <nav className={styles.navLinks} aria-label="ناوبری موبایل">
+          <nav className={styles.navLinks} aria-label={t.header.mainNav}>
             <div ref={linksRef}>
               {items.map((item) => (
                 <Link key={item.href} href={item.href} className={styles.bigLink} onClick={close}>
                   <span className={styles.linkText}>{item.label}</span>
-                  <span className={styles.linkArrow}>←</span>
+                  <span className={styles.linkArrow}>{locale === "fa" ? "←" : "→"}</span>
                 </Link>
               ))}
             </div>
@@ -185,28 +191,36 @@ export default function MobHeader({
             <div className={styles.mobileActions}>
               {isAuthenticated ? (
                 <>
-                  <Button href="/fa/dashboard" variant="primary" fullWidth onClick={close}>
-                    رفتن به داشبورد
+                  <Button href={`/${locale}/dashboard`} variant="primary" fullWidth onClick={close}>
+                    {locale === "fa" ? "رفتن به داشبورد" : "Go to Dashboard"}
                   </Button>
                   <Button href={whatsappUrl} target="_blank" variant="secondary" fullWidth onClick={close}>
-                    تماس با پشتیبانی
+                    {locale === "fa" ? "تماس با پشتیبانی" : "Contact Support"}
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button href={loginHref} variant="primary" fullWidth onClick={close}>
-                    ورود به حساب کاربری
+                  <Button href={`/${locale}/register`} variant="primary" fullWidth onClick={close}>
+                    {t.auth.register}
                   </Button>
                   <Button href={whatsappUrl} target="_blank" variant="secondary" fullWidth onClick={close}>
-                    پشتیبانی در واتس‌اپ
+                    {locale === "fa" ? "پشتیبانی در واتس‌اپ" : "WhatsApp Support"}
                   </Button>
                 </>
               )}
             </div>
 
+            <div className={styles.divider} />
+
+            <div className={styles.mobileActions}>
+              <LanguageSwitcher variant="menu-item" />
+            </div>
+
             <div className={styles.menuFooter}>
-              <p>زرمان اکسچنج</p>
-              <p className={styles.menuFooterSub}>تجربه‌ای هوشمند برای تبادل ارز</p>
+              <p>Zarman Exchange</p>
+              <p className={styles.menuFooterSub}>
+                {locale === "fa" ? "تجربه‌ای هوشمند برای تبادل ارز" : "Smart currency exchange experience"}
+              </p>
             </div>
           </nav>
         </div>

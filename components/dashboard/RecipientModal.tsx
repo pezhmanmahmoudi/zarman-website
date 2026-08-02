@@ -305,19 +305,19 @@ export function RecipientModal({ direction, onClose, onCreated }: RecipientModal
                 <div className={styles.field}>
                   <label className={styles.label}>Full Name <span className={styles.req}>*</span></label>
                   <div className={styles.inputWrap}>
-                    <input required type="text" className={styles.input} placeholder="e.g. Ali Rezaei" value={fullName} onChange={(e) => setFullName(e.target.value)} dir="ltr" />
+                    <input required type="text" className={styles.input} placeholder="Type valid name in English" value={fullName} onChange={(e) => setFullName(e.target.value)} dir="ltr" />
                   </div>
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label}>Full Residential Address <span className={styles.req}>*</span></label>
                   <div className={styles.inputWrap}>
-                    <input required type="text" className={styles.input} placeholder="e.g. Tehran, Artesh St., No. 10" value={irtAddress} onChange={(e) => setIrtAddress(e.target.value)} dir="ltr" />
+                    <input required type="text" className={styles.input} placeholder="Type valid address in English" value={irtAddress} onChange={(e) => setIrtAddress(e.target.value)} dir="ltr" />
                   </div>
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label}>Phone Number <span className={styles.req}>*</span></label>
                   <div className={styles.inputWrap}>
-                    <input required type="tel" inputMode="tel" className={styles.input} placeholder="+989123456789" value={irtPhone} onChange={handleIrtPhoneChange} dir="ltr" />
+                    <input required type="tel" inputMode="tel" className={styles.input} placeholder="Type valid phone number in English" value={irtPhone} onChange={handleIrtPhoneChange} dir="ltr" />
                   </div>
                 </div>
               </div>

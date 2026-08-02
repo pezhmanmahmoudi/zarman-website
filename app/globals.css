@@ -137,6 +137,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html[dir="ltr"] body {
+  --font-primary: var(--font-en-stack);
+  --font-fa-content: var(--font-en-stack);
+  --font-fa-stack: var(--font-en-stack);
+  font-family: var(--font-en-stack);
+}
+
+html[dir="rtl"] body {
+  --font-primary: "IRANSansX", "Peyda", system-ui, -apple-system, sans-serif;
+  --font-fa-content: "IRANSansX", "Peyda", system-ui, -apple-system, sans-serif;
+  --font-fa-stack: "IRANSansX", "Peyda", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-fa-stack);
+}
+
 h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-primary);
   line-height: var(--leading-tight);
@@ -179,6 +193,11 @@ h1, h2, h3, h4, h5, h6 {
 .en-text {
   font-family: var(--font-en-stack) !important;
   letter-spacing: 0; /* فونت Inter خودش فاصله‌گذاری ایده‌آلی دارد */
+}
+
+[dir="rtl"],
+.fa-text {
+  font-family: var(--font-fa-stack, "IRANSansX", "Peyda", sans-serif) !important;
 }
 
 /* ========== Scroll Margins (For Anchor Links) ========== */

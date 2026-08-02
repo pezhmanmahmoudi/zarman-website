@@ -1,24 +1,10 @@
 "use client";
 
-// components/admin/ComplianceCheckButtons.tsx
-// Manual AML/CTF compliance trigger buttons for the admin KYC panel.
-//
-// Workflow:
-//   1. Admin clicks a button.
-//   2. Client POSTs to the respective Route Handler.
-//   3. Handler calls vendor API, generates PDF in-memory, streams it back.
-//   4. Client receives the blob and triggers a native browser download.
-//   5. Nothing is stored in Supabase Storage or the database.
-//
-// Visibility rules:
-//   AU customers  → "Run DVS" (if driver_licence or passport) + "Run AML Screening"
-//   Non-AU        → "Run AML Screening" only
-
-import React, { useState } from "react";
-import { ShieldCheck, Search, Download, AlertTriangle, Loader2, CheckCircle2, Flag } from "lucide-react";
-import formStyles from "@/styles/admin/AdminForms.module.css";
-import cardStyles from "@/styles/admin/AdminCards.module.css";
+import React, { useState, useTransition } from "react";
+import { ShieldCheck, Search, Download, AlertTriangle, Loader2, CheckCircle2, Flag, Save } from "lucide-react";
 import styles from "@/styles/admin/ComplianceButtons.module.css";
+import { recordCustomerComplianceCheck, saveCustomerComplianceReview } from "@/app/actions/admin.actions";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -26,11 +12,26 @@ interface Props {
   userId: string;
   country: string | null;
   documentType: string | null;
+  initialDvsStatus?: string | null;
+  initialDvsMethod?: string | null;
+  initialDvsCheckedAt?: string | null;
+  initialDvsOutcome?: string | null;
+  initialAmlStatus?: string | null;
+  initialAmlMethod?: string | null;
+  initialAmlCheckedAt?: string | null;
+  initialAmlOutcome?: string | null;
+  initialAmlFlag?: AmlFlag | null;
+  initialCustomerFlagged?: boolean | null;
+  initialCustomerFlagReason?: string | null;
+  initialCustomerNote?: string | null;
+  onSaved?: () => void;
 }
 
 type CheckType = "dvs" | "aml";
 type CheckState = "idle" | "loading" | "success" | "error";
 type AmlFlag = "none" | "clear" | "review_required" | "failed";
+type DvsMethod = "vendor_rapidid" | "manual_document_review" | "manual_video_call" | "manual_in_person";
+type AmlMethod = "vendor_namescan" | "manual_austrac_watchlist" | "manual_internal_review";
 
 interface CheckStatus {
   dvs: CheckState;
@@ -38,6 +39,19 @@ interface CheckStatus {
   dvsError: string | null;
   amlError: string | null;
   amlFlag: AmlFlag;
+}
+
+interface PersistedCheckInfo {
+  status: string;
+  method: string | null;
+  checkedAt: string | null;
+  outcome: string | null;
+}
+
+interface TriggerResult {
+  error?: string;
+  amlFlag?: AmlFlag;
+  outcome?: string | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -50,7 +64,7 @@ function isDvsCapable(documentType: string | null): boolean {
   return documentType === "driver_license" || documentType === "passport";
 }
 
-async function triggerComplianceCheck(type: CheckType, userId: string): Promise<{ error?: string; amlFlag?: AmlFlag }> {
+async function triggerComplianceCheck(type: CheckType, userId: string): Promise<TriggerResult> {
   const endpoint = type === "dvs"
     ? "/api/admin/compliance/dvs"
     : "/api/admin/compliance/aml";
@@ -73,6 +87,9 @@ async function triggerComplianceCheck(type: CheckType, userId: string): Promise<
   }
 
   const amlFlagHeader = type === "aml" ? res.headers.get("x-aml-flag") : null;
+  const outcomeHeader = type === "aml"
+    ? res.headers.get("x-aml-outcome")
+    : res.headers.get("x-dvs-outcome");
   const amlFlag: AmlFlag =
     amlFlagHeader === "clear" ||
     amlFlagHeader === "review_required" ||
@@ -96,21 +113,109 @@ async function triggerComplianceCheck(type: CheckType, userId: string): Promise<
   // Schedule revocation after the browser has had time to start the download.
   setTimeout(() => URL.revokeObjectURL(url), 5_000);
 
-  return { amlFlag };
+  return { amlFlag, outcome: outcomeHeader ?? null };
+}
+
+function formatDateTime(value: string | null): string {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
+}
+
+function formatMethod(method: string | null): string {
+  if (!method) return "-";
+  const labels: Record<string, string> = {
+    vendor_rapidid: "Vendor (RapidID)",
+    manual_document_review: "Manual: extra documents",
+    manual_video_call: "Manual: video call",
+    manual_in_person: "Manual: in person",
+    vendor_namescan: "Vendor (NameScan)",
+    manual_austrac_watchlist: "Manual: AUSTRAC list review",
+    manual_internal_review: "Manual: internal review",
+  };
+  return labels[method] ?? method;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function ComplianceCheckButtons({ userId, country, documentType }: Props) {
+export function ComplianceCheckButtons({
+  userId,
+  country,
+  documentType,
+  initialDvsStatus,
+  initialDvsMethod,
+  initialDvsCheckedAt,
+  initialDvsOutcome,
+  initialAmlStatus,
+  initialAmlMethod,
+  initialAmlCheckedAt,
+  initialAmlOutcome,
+  initialAmlFlag,
+  initialCustomerFlagged,
+  initialCustomerFlagReason,
+  initialCustomerNote,
+  onSaved,
+}: Props) {
   const [state, setState] = useState<CheckStatus>({
     dvs: "idle", aml: "idle",
     dvsError: null, amlError: null,
-    amlFlag: "none",
+    amlFlag: initialAmlFlag ?? "none",
   });
+  const [dvsMethod, setDvsMethod] = useState<DvsMethod>((initialDvsMethod as DvsMethod) ?? "vendor_rapidid");
+  const [amlMethod, setAmlMethod] = useState<AmlMethod>((initialAmlMethod as AmlMethod) ?? "vendor_namescan");
+  const [dvsInfo, setDvsInfo] = useState<PersistedCheckInfo>({
+    status: initialDvsStatus ?? "not_started",
+    method: initialDvsMethod ?? null,
+    checkedAt: initialDvsCheckedAt ?? null,
+    outcome: initialDvsOutcome ?? null,
+  });
+  const [amlInfo, setAmlInfo] = useState<PersistedCheckInfo>({
+    status: initialAmlStatus ?? "not_started",
+    method: initialAmlMethod ?? null,
+    checkedAt: initialAmlCheckedAt ?? null,
+    outcome: initialAmlOutcome ?? null,
+  });
+  const [flagged, setFlagged] = useState(Boolean(initialCustomerFlagged));
+  const [flagReason, setFlagReason] = useState(initialCustomerFlagReason ?? "");
+  const [note, setNote] = useState(initialCustomerNote ?? "");
+  const [reviewStatus, setReviewStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isReviewPending, startReviewTransition] = useTransition();
 
   const auCustomer  = isAustralia(country);
   const dvsCapable  = isDvsCapable(documentType);
   const showDvs     = auCustomer && dvsCapable;
+
+  const markManualCheck = async (type: CheckType): Promise<boolean> => {
+    const method = type === "dvs" ? dvsMethod : amlMethod;
+    const outcome = type === "dvs" ? "MANUAL_COMPLETED" : "CLEAR";
+    const result = await recordCustomerComplianceCheck({
+      userId,
+      checkType: type,
+      method,
+      outcome,
+      amlFlag: type === "aml" ? "clear" : undefined,
+    });
+
+    if ("error" in result && result.error) {
+      setState((prev) => ({
+        ...prev,
+        [type]: "error",
+        [`${type}Error`]: result.error ?? "Unknown error.",
+      }));
+      return false;
+    }
+
+    const now = new Date().toISOString();
+    if (type === "dvs") {
+      setDvsInfo({ status: "completed", method, checkedAt: now, outcome });
+    } else {
+      setAmlInfo({ status: "completed", method, checkedAt: now, outcome });
+      setState((prev) => ({ ...prev, amlFlag: "clear" }));
+    }
+    onSaved?.();
+    return true;
+  };
 
   const run = async (type: CheckType) => {
     setState((prev) => ({
@@ -119,6 +224,16 @@ export function ComplianceCheckButtons({ userId, country, documentType }: Props)
       [`${type}Error`]: null,
       ...(type === "aml" ? { amlFlag: "none" as AmlFlag } : {}),
     }));
+
+    const selectedMethod = type === "dvs" ? dvsMethod : amlMethod;
+    const isManual = selectedMethod.startsWith("manual_");
+    if (isManual) {
+      const ok = await markManualCheck(type);
+      if (ok) {
+        setState((prev) => ({ ...prev, [type]: "success", [`${type}Error`]: null }));
+      }
+      return;
+    }
 
     const result = await triggerComplianceCheck(type, userId);
 
@@ -135,11 +250,53 @@ export function ComplianceCheckButtons({ userId, country, documentType }: Props)
         [`${type}Error`]: null,
         ...(type === "aml" ? { amlFlag: result.amlFlag ?? "none" } : {}),
       }));
+
+      const now = new Date().toISOString();
+      if (type === "dvs") {
+        setDvsInfo({
+          status: "completed",
+          method: "vendor_rapidid",
+          checkedAt: now,
+          outcome: result.outcome ?? "COMPLETED",
+        });
+      } else {
+        setAmlInfo({
+          status: "completed",
+          method: "vendor_namescan",
+          checkedAt: now,
+          outcome: result.outcome ?? "COMPLETED",
+        });
+      }
+      onSaved?.();
     }
+  };
+
+  const saveReview = () => {
+    setReviewStatus(null);
+    startReviewTransition(async () => {
+      const result = await saveCustomerComplianceReview({
+        userId,
+        flagged,
+        flagReason,
+        note,
+      });
+
+      if ("error" in result && result.error) {
+        setReviewStatus({ type: "error", text: result.error });
+        return;
+      }
+
+      setReviewStatus({ type: "success", text: "Customer flag and note saved." });
+      onSaved?.();
+    });
   };
 
   const dvsState = state.dvs;
   const amlState = state.aml;
+  const dvsCompleted = dvsInfo.status === "completed";
+  const amlCompleted = amlInfo.status === "completed";
+  const dvsManualSelected = dvsMethod.startsWith("manual_");
+  const amlManualSelected = amlMethod.startsWith("manual_");
 
   return (
     <div className={styles.root}>
@@ -148,15 +305,47 @@ export function ComplianceCheckButtons({ userId, country, documentType }: Props)
         Compliance Checks
       </div>
 
+      <div className={styles.summaryGrid}>
+        {showDvs && (
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryTitle}>DVS</div>
+            <div className={styles.summaryLine}><strong>Status:</strong> {dvsInfo.status}</div>
+            <div className={styles.summaryLine}><strong>Method:</strong> {formatMethod(dvsInfo.method)}</div>
+            <div className={styles.summaryLine}><strong>Checked:</strong> {formatDateTime(dvsInfo.checkedAt)}</div>
+          </div>
+        )}
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryTitle}>AML / CTF</div>
+          <div className={styles.summaryLine}><strong>Status:</strong> {amlInfo.status}</div>
+          <div className={styles.summaryLine}><strong>Method:</strong> {formatMethod(amlInfo.method)}</div>
+          <div className={styles.summaryLine}><strong>Checked:</strong> {formatDateTime(amlInfo.checkedAt)}</div>
+        </div>
+      </div>
+
       <div className={styles.btnRow}>
-        {/* ── DVS button (AU + driver_licence or passport only) ── */}
+        {/* DVS button (AU + driver_license or passport only) */}
         {showDvs && (
           <div className={styles.checkGroup}>
+            <label className={styles.inlineLabel}>DVS method</label>
+            <SelectBox
+              className={styles.methodSelect}
+              labeledOptions={[
+                { value: "vendor_rapidid", label: "Vendor (RapidID)" },
+                { value: "manual_document_review", label: "Manual: extra documents" },
+                { value: "manual_video_call", label: "Manual: video call verification" },
+                { value: "manual_in_person", label: "Manual: in person verification" },
+              ]}
+              value={dvsMethod}
+              onChange={(val) => setDvsMethod(val as DvsMethod)}
+              disabled={dvsState === "loading"}
+              dir="ltr"
+            />
+
             <button
               type="button"
-              className={`${styles.btn} ${dvsState === "success" ? styles.btnSuccess : styles.btnPrimary}`}
+              className={`${styles.btn} ${(dvsCompleted || dvsState === "success") ? styles.btnSuccess : styles.btnPrimary}`}
               onClick={() => run("dvs")}
-              disabled={dvsState === "loading"}
+              disabled={dvsState === "loading" || (dvsManualSelected && dvsCompleted)}
               title="Run Document Verification Service check via RapidID"
             >
               {dvsState === "loading" ? (
@@ -166,7 +355,11 @@ export function ComplianceCheckButtons({ userId, country, documentType }: Props)
               ) : (
                 <ShieldCheck size={13} />
               )}
-              {dvsState === "loading" ? "Running DVS…" : dvsState === "success" ? "Report Downloaded" : "Run DVS"}
+              {dvsState === "loading"
+                ? "Running DVS..."
+                : dvsManualSelected
+                  ? (dvsCompleted ? "DVS Completed" : "Mark DVS Completed")
+                  : "Run DVS"}
             </button>
 
             {dvsState === "error" && state.dvsError && (
@@ -176,7 +369,7 @@ export function ComplianceCheckButtons({ userId, country, documentType }: Props)
               </span>
             )}
 
-            {dvsState === "success" && (
+            {(dvsState === "success" || dvsInfo.status === "completed") && (
               <span className={styles.statusOk}>
                 <CheckCircle2 size={11} />
                 DVS check completed
@@ -185,13 +378,27 @@ export function ComplianceCheckButtons({ userId, country, documentType }: Props)
           </div>
         )}
 
-        {/* ── AML button (all customers) ── */}
+        {/* AML button (all customers) */}
         <div className={styles.checkGroup}>
+          <label className={styles.inlineLabel}>AML method</label>
+          <SelectBox
+            className={styles.methodSelect}
+            labeledOptions={[
+              { value: "vendor_namescan", label: "Vendor (NameScan)" },
+              { value: "manual_austrac_watchlist", label: "Manual: AUSTRAC list review" },
+              { value: "manual_internal_review", label: "Manual: internal compliance review" },
+            ]}
+            value={amlMethod}
+            onChange={(val) => setAmlMethod(val as AmlMethod)}
+            disabled={amlState === "loading"}
+            dir="ltr"
+          />
+
           <button
             type="button"
-            className={`${styles.btn} ${amlState === "success" ? styles.btnSuccess : styles.btnSecondary}`}
+              className={`${styles.btn} ${(amlCompleted || amlState === "success") ? styles.btnSuccess : styles.btnSecondary}`}
             onClick={() => run("aml")}
-            disabled={amlState === "loading"}
+              disabled={amlState === "loading" || (amlManualSelected && amlCompleted)}
             title="Run PEP & sanctions screening via NameScan"
           >
             {amlState === "loading" ? (
@@ -201,7 +408,11 @@ export function ComplianceCheckButtons({ userId, country, documentType }: Props)
             ) : (
               <Search size={13} />
             )}
-            {amlState === "loading" ? "Screening…" : amlState === "success" ? "Report Downloaded" : "Run AML Screening"}
+            {amlState === "loading"
+              ? "Screening..."
+              : amlManualSelected
+                ? (amlCompleted ? "AML Completed" : "Mark AML Completed")
+                : "Run AML Screening"}
           </button>
 
           {amlState === "error" && state.amlError && (
@@ -211,28 +422,28 @@ export function ComplianceCheckButtons({ userId, country, documentType }: Props)
             </span>
           )}
 
-          {amlState === "success" && state.amlFlag === "clear" && (
+          {(amlState === "success" || amlInfo.status === "completed") && state.amlFlag === "clear" && (
             <span className={styles.statusOk}>
               <CheckCircle2 size={11} />
               AML completed: no sanctions/PEP hit
             </span>
           )}
 
-          {amlState === "success" && state.amlFlag === "review_required" && (
+          {(amlState === "success" || amlInfo.status === "completed") && state.amlFlag === "review_required" && (
             <span className={styles.statusWarn}>
               <Flag size={11} />
               AML completed: potential sanctions/PEP match, review required
             </span>
           )}
 
-          {amlState === "success" && state.amlFlag === "failed" && (
+          {(amlState === "success" || amlInfo.status === "completed") && state.amlFlag === "failed" && (
             <span className={styles.statusWarn}>
               <AlertTriangle size={11} />
               AML completed with vendor failure, review report details
             </span>
           )}
 
-          {amlState === "success" && state.amlFlag === "none" && (
+          {(amlState === "success" || amlInfo.status === "completed") && state.amlFlag === "none" && (
             <span className={styles.statusOk}>
               <CheckCircle2 size={11} />
               AML check completed
@@ -252,6 +463,46 @@ export function ComplianceCheckButtons({ userId, country, documentType }: Props)
           DVS not available — no supported identity document (driver licence or passport) on file.
         </p>
       )}
+
+      <div className={styles.reviewBlock}>
+        <div className={styles.reviewHeader}>Customer Flag and Internal Note</div>
+        <label className={styles.checkboxRow}>
+          <input
+            type="checkbox"
+            checked={flagged}
+            onChange={(e) => setFlagged(e.target.checked)}
+          />
+          Flag this customer for compliance follow-up
+        </label>
+
+        {flagged && (
+          <input
+            className={styles.textInput}
+            placeholder="Flag reason (e.g. refused extra documents)"
+            value={flagReason}
+            onChange={(e) => setFlagReason(e.target.value)}
+          />
+        )}
+
+        <textarea
+          className={styles.noteInput}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Internal note for this customer"
+          rows={4}
+        />
+
+        <button type="button" className={styles.saveBtn} onClick={saveReview} disabled={isReviewPending}>
+          <Save size={13} />
+          {isReviewPending ? "Saving..." : "Save Flag/Note"}
+        </button>
+
+        {reviewStatus && (
+          <div className={reviewStatus.type === "success" ? styles.statusOk : styles.errorMsg}>
+            {reviewStatus.text}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

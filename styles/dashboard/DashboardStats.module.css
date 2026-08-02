@@ -54,7 +54,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  font-family: 'IRANSansX', sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   letter-spacing: 0;
   margin: 0;
 }
@@ -65,10 +65,18 @@
   line-height: 1.15;
   overflow-wrap: anywhere;
   display: block;
-  font-family: 'Inter', 'IRANSansX', sans-serif;
+  font-family: var(--font-en-stack, 'Inter', sans-serif);
   letter-spacing: -0.03em;
   margin: 0;
   color: var(--text-main);
+}
+
+:global([dir="ltr"]) .statLabel {
+  font-family: var(--font-en-stack, 'Inter', sans-serif);
+}
+
+:global([dir="rtl"]) .statValue {
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 /* ═══════════════════════════════════════

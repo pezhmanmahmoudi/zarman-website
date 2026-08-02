@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { revalidateTag } from "next/cache";
 import { getRatesSnapshot } from "@/lib/rates";
+import { calcExecutionRateFromSettlement } from "@/lib/pricing";
 
 const AUDIT_LOG_RETRY_COUNT = 2;
 const DEFAULT_HISTORY_LIMIT = 50;
@@ -13,6 +14,21 @@ const MAX_AUDIT_PAGE_SIZE = 100;
 const MAX_AUDIT_PAGE = 10_000;
 const MAX_SEARCH_QUERY_LENGTH = 64;
 const PRIVILEGED_ROLES = new Set(["admin", "supabase_admin", "service_role"]);
+const COMPLIANCE_NOTE_MAX_LENGTH = 2_000;
+const COMPLIANCE_REASON_MAX_LENGTH = 500;
+
+const DVS_METHODS = new Set([
+  "vendor_rapidid",
+  "manual_document_review",
+  "manual_video_call",
+  "manual_in_person",
+]);
+
+const AML_METHODS = new Set([
+  "vendor_namescan",
+  "manual_austrac_watchlist",
+  "manual_internal_review",
+]);
 
 type AdminAuthErrorCode = "AUTH_UNAUTHORIZED" | "AUTH_FORBIDDEN";
 
@@ -118,12 +134,32 @@ function toJalaliStr(date: Date): string {
   return `${jy}/${String(jm + 1).padStart(2, "0")}/${String(j_d_no + 1).padStart(2, "0")}`;
 }
 
+function resolveTradeExecutionRate(
+  tradeType: "buy_aud" | "sell_aud",
+  amountAud: number,
+  equivalentToman: number,
+  feeAud: number,
+  appliedRate?: number | null,
+) {
+  if (Number.isFinite(appliedRate) && Number(appliedRate) > 0) {
+    return Number(appliedRate);
+  }
+  return calcExecutionRateFromSettlement(amountAud, equivalentToman, feeAud, tradeType);
+}
+
 function sanitizeSearchQuery(query: string) {
   return query
     .trim()
     .slice(0, MAX_SEARCH_QUERY_LENGTH)
     .replace(/[%_,()]/g, " ")
     .replace(/\s+/g, " ");
+}
+
+function trimToNullable(value: unknown, maxLength = 255): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  if (!normalized) return null;
+  return normalized.slice(0, maxLength);
 }
 
 function isPrivilegedRole(role: unknown): role is string {
@@ -411,6 +447,108 @@ export async function updateUserIdentityKycProfile(payload: any) {
   return { success: true };
 }
 
+export async function recordCustomerComplianceCheck(payload: {
+  userId: string;
+  checkType: "dvs" | "aml";
+  method: string;
+  outcome?: string | null;
+  amlFlag?: "none" | "clear" | "review_required" | "failed" | null;
+}) {
+  const admin = await requireAdmin();
+  if (!payload.userId) return { error: "Missing user ID." };
+
+  const db = makeServiceRoleClient();
+  const now = new Date().toISOString();
+
+  if (payload.checkType === "dvs") {
+    if (!DVS_METHODS.has(payload.method)) return { error: "Invalid DVS method." };
+
+    const patch: Record<string, unknown> = {
+      compliance_dvs_status: "completed",
+      compliance_dvs_method: payload.method,
+      compliance_dvs_checked_at: now,
+      compliance_dvs_outcome: trimToNullable(payload.outcome, 120) ?? "COMPLETED",
+    };
+
+    const { error } = await db.from("profiles").update(patch).eq("id", payload.userId);
+    if (error) return { error: error.message };
+
+    await writeAuditLog({
+      actorId: admin.id,
+      actorEmail: admin.email ?? "",
+      action: "ADMIN_DVS_CHECK_RECORDED",
+      targetType: "profile",
+      targetId: payload.userId,
+      newValue: patch,
+    }).catch(() => {});
+
+    return { success: true };
+  }
+
+  if (!AML_METHODS.has(payload.method)) return { error: "Invalid AML method." };
+
+  const amlFlag = payload.amlFlag ?? "none";
+  if (!["none", "clear", "review_required", "failed"].includes(amlFlag)) {
+    return { error: "Invalid AML flag." };
+  }
+
+  const patch: Record<string, unknown> = {
+    compliance_aml_status: "completed",
+    compliance_aml_method: payload.method,
+    compliance_aml_checked_at: now,
+    compliance_aml_outcome: trimToNullable(payload.outcome, 120) ?? "COMPLETED",
+    compliance_aml_flag: amlFlag,
+  };
+
+  const { error } = await db.from("profiles").update(patch).eq("id", payload.userId);
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "ADMIN_AML_CHECK_RECORDED",
+    targetType: "profile",
+    targetId: payload.userId,
+    newValue: patch,
+  }).catch(() => {});
+
+  return { success: true };
+}
+
+export async function saveCustomerComplianceReview(payload: {
+  userId: string;
+  flagged: boolean;
+  flagReason?: string | null;
+  note?: string | null;
+}) {
+  const admin = await requireAdmin();
+  if (!payload.userId) return { error: "Missing user ID." };
+
+  const db = makeServiceRoleClient();
+  const patch: Record<string, unknown> = {
+    compliance_customer_flagged: payload.flagged,
+    compliance_customer_flagged_at: payload.flagged ? new Date().toISOString() : null,
+    compliance_customer_flag_reason: payload.flagged
+      ? trimToNullable(payload.flagReason, COMPLIANCE_REASON_MAX_LENGTH)
+      : null,
+    compliance_admin_note: trimToNullable(payload.note, COMPLIANCE_NOTE_MAX_LENGTH),
+  };
+
+  const { error } = await db.from("profiles").update(patch).eq("id", payload.userId);
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "ADMIN_COMPLIANCE_REVIEW_UPDATED",
+    targetType: "profile",
+    targetId: payload.userId,
+    newValue: patch,
+  }).catch(() => {});
+
+  return { success: true };
+}
+
 // ===========================================================================
 // TRANSACTIONS QUEUE
 // ===========================================================================
@@ -465,7 +603,7 @@ export async function approveTransaction(
   const { data: before } = await db
     .from("transactions")
     .select(`
-      status, user_id, amount_aud, equivalent_toman, type, created_at, payment_link,
+      status, user_id, amount_aud, equivalent_toman, applied_rate, type, created_at, payment_link,
       profiles(first_name, last_name, email),
       recipients(full_name, account_name)
     `)
@@ -479,7 +617,7 @@ export async function approveTransaction(
 
   const { error } = await db
     .from("transactions")
-    .update({ status: "approved" })
+    .update({ status: "approved", approved_at: new Date().toISOString() })
     .eq("id", transactionId);
 
   if (error) return { error: error.message };
@@ -495,10 +633,16 @@ export async function approveTransaction(
 
     const audAmt   = Number(before.amount_aud ?? 0);
     const tomanAmt = Number(before.equivalent_toman ?? 0);
-    const rate     = audAmt > 0 ? tomanAmt / audAmt : 0;
     const feeThreshold = Number(rateRow?.fee_threshold ?? 1000);
     const appliedFee   = Number(rateRow?.applied_fee   ?? 30);
     const feeAud = audAmt > 0 && audAmt < feeThreshold ? appliedFee : 0;
+    const rate = resolveTradeExecutionRate(
+      before.type as "buy_aud" | "sell_aud",
+      audAmt,
+      tomanAmt,
+      feeAud,
+      Number((before as { applied_rate?: number | null }).applied_rate ?? 0),
+    );
 
     const txDate = before.created_at ? new Date(before.created_at) : new Date();
     const dateGregorian = txDate.toISOString().slice(0, 10);
@@ -715,13 +859,43 @@ export async function updateSystemSettings(payload: any) {
 // AUDIT LOGS
 // ===========================================================================
 export async function getAuditLogs(page = 1, pageSize = 10) {
-  const db = await getAuthorizedServerClient();
+  await getAuthorizedServerClient();
+  const db = makeServiceRoleClient();
   const safePage = clampInt(page, 1, MAX_AUDIT_PAGE, 1);
   const safePageSize = clampInt(pageSize, 1, MAX_AUDIT_PAGE_SIZE, 10);
   const from = (safePage - 1) * safePageSize;
   const to = from + safePageSize - 1;
   const { data, count } = await db.from("audit_logs").select("*", { count: "exact" }).order("created_at", { ascending: false }).range(from, to);
-  return { data: data ?? [], total: count ?? 0 };
+
+  const logs = data ?? [];
+  const actorIds = Array.from(
+    new Set(
+      logs
+        .map((log) => (typeof log.actor_id === "string" ? log.actor_id : ""))
+        .filter(Boolean)
+    )
+  );
+
+  const actorRoleEntries = await Promise.all(
+    actorIds.map(async (actorId) => {
+      const { data: actorData, error } = await db.auth.admin.getUserById(actorId);
+      if (error || !actorData.user) return [actorId, null] as const;
+      const role = actorData.user.app_metadata?.role;
+      return [actorId, isPrivilegedRole(role) ? String(role) : null] as const;
+    })
+  );
+
+  const actorRoles = new Map(actorRoleEntries);
+  const enrichedLogs = logs.map((log) => {
+    const actorRole = typeof log.actor_id === "string" ? actorRoles.get(log.actor_id) ?? null : null;
+    return {
+      ...log,
+      actor_role: actorRole,
+      actor_is_admin: actorRole !== null,
+    };
+  });
+
+  return { data: enrichedLogs, total: count ?? 0 };
 }
 
 // ===========================================================================
@@ -930,10 +1104,16 @@ export async function createAssistedCustomerOnboarding(payload: any) {
 
         const audAmt   = Number(tx.amount_aud ?? 0);
         const tomanAmt = Number(tx.equivalent_toman ?? 0);
-        const rate     = audAmt > 0 ? tomanAmt / audAmt : 0;
         const feeThreshold = Number(rateRes.data?.fee_threshold ?? 1000);
         const appliedFee   = Number(rateRes.data?.applied_fee   ?? 30);
         const feeAud = audAmt > 0 && audAmt < feeThreshold ? appliedFee : 0;
+        const rate = resolveTradeExecutionRate(
+          String(tx.type || "buy_aud") as "buy_aud" | "sell_aud",
+          audAmt,
+          tomanAmt,
+          feeAud,
+          Number(tx.applied_rate ?? 0),
+        );
         const txDate = new Date();
         const dateGregorian = txDate.toISOString().slice(0, 10);
         const dateJalali    = toJalaliStr(txDate);
@@ -1025,10 +1205,16 @@ export async function createAssistedTransactionForUser(payload: any) {
 
       const audAmt   = Number(payload.amount_aud ?? 0);
       const tomanAmt = Number(payload.equivalent_toman ?? 0);
-      const rate     = audAmt > 0 ? tomanAmt / audAmt : 0;
       const feeThreshold = Number(rateRes.data?.fee_threshold ?? 1000);
       const appliedFee   = Number(rateRes.data?.applied_fee   ?? 30);
       const feeAud = audAmt > 0 && audAmt < feeThreshold ? appliedFee : 0;
+      const rate = resolveTradeExecutionRate(
+        String(payload.type || "buy_aud") as "buy_aud" | "sell_aud",
+        audAmt,
+        tomanAmt,
+        feeAud,
+        Number(payload.applied_rate ?? 0),
+      );
 
       const txDate = insertRow.created_at ? new Date(insertRow.created_at as string) : new Date();
       const dateGregorian = txDate.toISOString().slice(0, 10);
@@ -1226,7 +1412,7 @@ export async function updateAssistedTransactionForUser(payload: any) {
   // Fetch current state before update to detect status change to approved
   const { data: before } = await db
     .from("transactions")
-    .select("status, type, amount_aud, equivalent_toman, created_at, user_id")
+    .select("status, type, amount_aud, equivalent_toman, applied_rate, created_at, user_id")
     .eq("id", transactionId)
     .maybeSingle();
 
@@ -1254,9 +1440,13 @@ export async function updateAssistedTransactionForUser(payload: any) {
   const { error } = await db.from("transactions").update(patch).eq("id", transactionId);
   if (error) return { error: error.message };
 
-  // ── If status is being changed to approved and wasn't before, insert ledger ──
+  // ── If status is being changed to approved and wasn't before, stamp approved_at + insert ledger ──
   const wasNotApproved = before?.status !== "approved";
   const isNowApproved  = payload.status === "approved";
+
+  if (wasNotApproved && isNowApproved) {
+    await db.from("transactions").update({ approved_at: new Date().toISOString() }).eq("id", transactionId);
+  }
 
   if (wasNotApproved && isNowApproved) {
     try {
@@ -1279,10 +1469,16 @@ export async function updateAssistedTransactionForUser(payload: any) {
         const tomanAmt = Number(patch.equivalent_toman ?? before?.equivalent_toman ?? 0);
         const txType   = String(patch.type   ?? before?.type   ?? "buy_aud");
         const userId   = String(before?.user_id ?? "");
-        const rate     = audAmt > 0 ? tomanAmt / audAmt : 0;
         const feeThreshold = Number(rateRes.data?.fee_threshold ?? 1000);
         const appliedFee   = Number(rateRes.data?.applied_fee   ?? 30);
         const feeAud = audAmt > 0 && audAmt < feeThreshold ? appliedFee : 0;
+        const rate = resolveTradeExecutionRate(
+          txType as "buy_aud" | "sell_aud",
+          audAmt,
+          tomanAmt,
+          feeAud,
+          Number(patch.applied_rate ?? before?.applied_rate ?? 0),
+        );
 
         const rawDate   = patch.created_at ?? before?.created_at;
         const txDate    = rawDate ? new Date(rawDate as string) : new Date();
@@ -1459,14 +1655,25 @@ export async function getActiveBankAccountsForAdmin() {
   return data ?? [];
 }
 
-export async function getTransactionHistoryWithDetails(page = 1, pageSize = 10, status: "all" | "approved" | "rejected" | "archived" = "all") {
+type TransactionHistoryFilters = {
+  status?: "all" | "approved" | "rejected" | "archived";
+  startDate?: string;
+  endDate?: string;
+  direction?: "all" | "incoming" | "outgoing";
+};
+
+export async function getTransactionHistoryWithDetails(
+  page = 1,
+  pageSize = 10,
+  filters: TransactionHistoryFilters = {},
+) {
   await requireAdmin(); // auth + role check only
   const db = makeServiceRoleClient(); // service role bypasses RLS on recipients
   const safePage = clampInt(page, 1, MAX_AUDIT_PAGE, 1);
   const safePageSize = clampInt(pageSize, 1, 50, 10);
   const offset = (safePage - 1) * safePageSize;
 
-  const specificStatus = status !== "all" ? status : null;
+  const specificStatus = filters.status && filters.status !== "all" ? filters.status : null;
 
   const countBaseQuery = db.from("transactions").select("id", { count: "exact", head: true });
   const dataBaseQuery = db
@@ -1479,13 +1686,29 @@ export async function getTransactionHistoryWithDetails(page = 1, pageSize = 10, 
                  card_number, shaba_number, bank_type, direction)
     `);
 
-  const countQuery = specificStatus
+  let countQuery = specificStatus
     ? countBaseQuery.eq("status", specificStatus)
     : countBaseQuery.neq("status", "pending");
 
-  const dataQuery = specificStatus
+  let dataQuery = specificStatus
     ? dataBaseQuery.eq("status", specificStatus)
     : dataBaseQuery.neq("status", "pending");
+
+  if (filters.startDate) {
+    countQuery = countQuery.gte("created_at", `${filters.startDate}T00:00:00.000Z`);
+    dataQuery = dataQuery.gte("created_at", `${filters.startDate}T00:00:00.000Z`);
+  }
+  if (filters.endDate) {
+    countQuery = countQuery.lte("created_at", `${filters.endDate}T23:59:59.999Z`);
+    dataQuery = dataQuery.lte("created_at", `${filters.endDate}T23:59:59.999Z`);
+  }
+  if (filters.direction === "incoming" || filters.direction === "outgoing") {
+    // buy_aud = Zarman buys AUD from customer → AUD exits Australia → AUSTRAC outgoing
+    // sell_aud = Zarman sells AUD to customer → AUD enters Australia → AUSTRAC incoming
+    const transactionType = filters.direction === "outgoing" ? "buy_aud" : "sell_aud";
+    countQuery = countQuery.eq("type", transactionType);
+    dataQuery = dataQuery.eq("type", transactionType);
+  }
 
   const [countRes, dataRes] = await Promise.all([
     countQuery,
@@ -1520,6 +1743,43 @@ export async function getTransactionHistoryWithDetails(page = 1, pageSize = 10, 
   return { data: enrichedRows, total: countRes.count ?? 0 };
 }
 
+export async function bulkDeleteTransactions(transactionIds: string[]) {
+  const admin = await requireAdmin();
+  const uniqueIds = Array.from(new Set(transactionIds));
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  if (uniqueIds.length === 0) return { error: "Select at least one transaction." };
+  if (uniqueIds.length > 100) return { error: "A maximum of 100 transactions can be deleted at once." };
+  if (uniqueIds.some((id) => !uuidPattern.test(id))) return { error: "One or more transaction IDs are invalid." };
+
+  const db = makeServiceRoleClient();
+  const { data: transactions, error: fetchError } = await db
+    .from("transactions")
+    .select("id, user_id, type, status, amount_aud, reference_code, created_at")
+    .in("id", uniqueIds);
+
+  if (fetchError) return { error: fetchError.message };
+  if ((transactions ?? []).length !== uniqueIds.length) return { error: "One or more transactions no longer exist." };
+
+  const invalid = (transactions ?? []).filter((transaction) => !["rejected", "archived"].includes(transaction.status ?? ""));
+  if (invalid.length > 0) return { error: "Only rejected or archived transactions can be deleted." };
+
+  const { error: deleteError } = await db.from("transactions").delete().in("id", uniqueIds);
+  if (deleteError) return { error: deleteError.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "TRANSACTIONS_BULK_DELETED",
+    targetType: "transaction_batch",
+    targetId: null,
+    oldValue: transactions,
+    newValue: { deletedCount: uniqueIds.length, transactionIds: uniqueIds },
+  }).catch(() => {});
+
+  return { success: true, deletedCount: uniqueIds.length };
+}
+
 export async function getTransactionHistoryStatusCounts() {
   await requireAdmin();
   const db = makeServiceRoleClient();
@@ -1545,7 +1805,11 @@ export async function getTransactionHistoryStatusCounts() {
 // ===========================================================================
 // LEDGER — all approved transactions for P&L tracking (MULTI-POCKET EDITION)
 // ===========================================================================
-export async function getLedgerData(page = 1, pageSize = 20) {
+export async function getLedgerData(
+  page = 1,
+  pageSize = 20,
+  filters: { start?: string; end?: string; type?: string; search?: string } = {},
+) {
   const ssrClient = await createSupabaseServerActionClient();
   await requireAdmin(ssrClient);
   const db = makeServiceRoleClient();
@@ -1554,19 +1818,47 @@ export async function getLedgerData(page = 1, pageSize = 20) {
   const safeSize = clampInt(pageSize, 1, 100, 20);
   const offset   = (safePage - 1) * safeSize;
 
-  const [allRes, pageRes, rateRes] = await Promise.all([
-    // All ledger rows — for P&L metrics
-    db.from("ledger").select("type, amount_aud, amount_toman, fee_aud, entry_type, payer_account_id, receiver_account_id"),
-    // Paginated rows — for the table (fetching new Pocket references)
-    db
-      .from("ledger")
+  let countQuery = db.from("ledger").select("id", { count: "exact", head: true });
+  let pageQuery = db
+    .from("ledger")
       .select(`
         id, transaction_id, date_gregorian, date_jalali, type, entry_type, 
         exchange_rate, amount_aud, amount_toman, sender, recipient, fee_aud, 
         notes, created_at, payer_account_id, receiver_account_id
-      `)
+      `);
+
+  const validDate = /^\d{4}-\d{2}-\d{2}$/;
+  if (filters.start && validDate.test(filters.start)) {
+    countQuery = countQuery.gte("date_gregorian", filters.start);
+    pageQuery = pageQuery.gte("date_gregorian", filters.start);
+  }
+  if (filters.end && validDate.test(filters.end)) {
+    countQuery = countQuery.lte("date_gregorian", filters.end);
+    pageQuery = pageQuery.lte("date_gregorian", filters.end);
+  }
+  if (filters.type === "transfer") {
+    countQuery = countQuery.eq("entry_type", "transfer");
+    pageQuery = pageQuery.eq("entry_type", "transfer");
+  } else if (filters.type === "buy_aud" || filters.type === "sell_aud") {
+    countQuery = countQuery.eq("type", filters.type).or("entry_type.eq.trade,entry_type.is.null");
+    pageQuery = pageQuery.eq("type", filters.type).or("entry_type.eq.trade,entry_type.is.null");
+  } else if (["expense", "owner_loan", "adjustment"].includes(filters.type ?? "")) {
+    countQuery = countQuery.eq("entry_type", filters.type!);
+    pageQuery = pageQuery.eq("entry_type", filters.type!);
+  }
+
+  const search = sanitizeSearchQuery(filters.search ?? "");
+  if (search) {
+    const expression = `sender.ilike.%${search}%,recipient.ilike.%${search}%`;
+    countQuery = countQuery.or(expression);
+    pageQuery = pageQuery.or(expression);
+  }
+
+  const [countRes, pageRes, rateRes] = await Promise.all([
+    countQuery,
+    pageQuery
       .order("date_gregorian", { ascending: false })
-      .order("created_at",     { ascending: false })
+      .order("created_at", { ascending: false })
       .range(offset, offset + safeSize - 1),
     // Current market rate
     db
@@ -1577,13 +1869,13 @@ export async function getLedgerData(page = 1, pageSize = 20) {
       .maybeSingle(),
   ]);
 
-  if (allRes.error)  throw new Error(allRes.error.message);
+  if (countRes.error) throw new Error(countRes.error.message);
   if (pageRes.error) throw new Error(pageRes.error.message);
 
   return {
-    allLedgerRows:  allRes.data  ?? [],
+    allLedgerRows:  [],
     pageLedgerRows: pageRes.data ?? [],
-    total:          allRes.data?.length ?? 0,
+    total:          countRes.count ?? 0,
     currentBuyRate: Number(rateRes.data?.buy_aud ?? 0),
   };
 }
@@ -1613,6 +1905,20 @@ export async function updateLedgerEntry(
 ): Promise<{ success: true } | { error: string }> {
   const admin = await requireAdmin();
   if (!id) return { error: "Missing ledger entry ID." };
+
+  const allowedEntryTypes = new Set(["trade", "transfer", "expense", "owner_loan", "adjustment"]);
+  if (updates.entry_type !== undefined && !allowedEntryTypes.has(updates.entry_type)) {
+    return { error: "Invalid ledger entry type." };
+  }
+
+  const db = makeServiceRoleClient();
+  const { data: before, error: beforeError } = await db
+    .from("ledger")
+    .select("date_gregorian, type, entry_type, exchange_rate, amount_aud, amount_toman, sender, recipient, fee_aud, payer_account_id, receiver_account_id, notes")
+    .eq("id", id)
+    .maybeSingle();
+  if (beforeError) return { error: beforeError.message };
+  if (!before) return { error: "Ledger entry not found." };
 
   const patch: Record<string, unknown> = {};
 
@@ -1645,9 +1951,46 @@ export async function updateLedgerEntry(
 
   if (Object.keys(patch).length === 0) return { success: true };
 
-  const db = makeServiceRoleClient();
+  const merged = { ...before, ...patch };
+  const entryType = String(merged.entry_type ?? "trade");
+  const amountAud = Number(merged.amount_aud ?? 0);
+  const amountToman = Number(merged.amount_toman ?? 0);
+  const feeAud = Number(merged.fee_aud ?? 0);
+  if (!Number.isFinite(amountAud) || amountAud < 0 || !Number.isFinite(amountToman) || amountToman < 0) {
+    return { error: "Ledger amounts must be valid non-negative numbers." };
+  }
+  if (!Number.isFinite(feeAud) || feeAud < 0) return { error: "Invalid fee amount." };
+  if (entryType === "trade" && (amountAud <= 0 || amountToman <= 0)) {
+    return { error: "Trades require both AUD and IRT amounts." };
+  }
+  if (entryType === "transfer") {
+    const payerId = merged.payer_account_id ? String(merged.payer_account_id) : null;
+    const receiverId = merged.receiver_account_id ? String(merged.receiver_account_id) : null;
+    if (!payerId || !receiverId || payerId === receiverId) {
+      return { error: "Transfers require two distinct accounts." };
+    }
+    const { data: accounts, error: accountError } = await db
+      .from("bank_accounts")
+      .select("id, currency")
+      .in("id", [payerId, receiverId]);
+    if (accountError) return { error: accountError.message };
+    if ((accounts ?? []).length !== 2 || accounts?.[0]?.currency !== accounts?.[1]?.currency) {
+      return { error: "Transfers require accounts with the same currency." };
+    }
+  }
+
   const { error } = await db.from("ledger").update(patch).eq("id", id);
   if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "LEDGER_ENTRY_UPDATED",
+    targetType: "ledger",
+    targetId: id,
+    oldValue: before,
+    newValue: merged,
+  });
 
   return { success: true };
 }
@@ -1680,6 +2023,9 @@ export async function addManualLedgerEntry({
   if (!Number.isFinite(amountAud)   || amountAud   < 0) return { error: "Invalid AUD amount." };
   if (!Number.isFinite(amountToman) || amountToman < 0) return { error: "Invalid Toman amount." };
   if (amountAud === 0 && amountToman === 0) return { error: "حداقل یکی از مبالغ باید بیشتر از صفر باشد." };
+  if (type !== "transfer" && (amountAud <= 0 || amountToman <= 0)) {
+    return { error: "Trades require both AUD and IRT amounts." };
+  }
 
   const txDate  = dateGregorian ? new Date(dateGregorian + "T00:00:00.000Z") : new Date();
   const dateGre = txDate.toISOString().slice(0, 10);
@@ -1689,7 +2035,21 @@ export async function addManualLedgerEntry({
   const dbType = type === "transfer" ? "buy_aud" : type;
 
   const db = makeServiceRoleClient();
-  const { error } = await db.from("ledger").insert([{
+  if (type === "transfer") {
+    if (!payer_account_id || !receiver_account_id || payer_account_id === receiver_account_id) {
+      return { error: "Transfers require two distinct accounts." };
+    }
+    const { data: accounts, error: accountError } = await db
+      .from("bank_accounts")
+      .select("id, currency")
+      .in("id", [payer_account_id, receiver_account_id]);
+    if (accountError) return { error: accountError.message };
+    if ((accounts ?? []).length !== 2 || accounts?.[0]?.currency !== accounts?.[1]?.currency) {
+      return { error: "Transfers require accounts with the same currency." };
+    }
+  }
+
+  const insertRow = {
     transaction_id:      null,
     date_gregorian:      dateGre,
     date_jalali:         dateJal,
@@ -1705,9 +2065,18 @@ export async function addManualLedgerEntry({
     receiver_account_id: receiver_account_id || null,
     notes:               notes?.trim() || null,
     created_by:          admin.id,
-  }]);
+  };
+  const { data: inserted, error } = await db.from("ledger").insert([insertRow]).select("id").single();
 
   if (error) return { error: error.message };
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "LEDGER_ENTRY_ADDED",
+    targetType: "ledger",
+    targetId: inserted?.id ? String(inserted.id) : null,
+    newValue: insertRow,
+  });
   return { success: true };
 }
 
@@ -1717,8 +2086,20 @@ export async function deleteLedgerEntry(id: string): Promise<{ success: true } |
   if (!id) return { error: "Missing ledger entry ID." };
 
   const db = makeServiceRoleClient();
+  const { data: before, error: beforeError } = await db.from("ledger").select("*").eq("id", id).maybeSingle();
+  if (beforeError) return { error: beforeError.message };
+  if (!before) return { error: "Ledger entry not found." };
   const { error } = await db.from("ledger").delete().eq("id", id);
   if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "LEDGER_ENTRY_DELETED",
+    targetType: "ledger",
+    targetId: id,
+    oldValue: before,
+  });
 
   return { success: true };
 }

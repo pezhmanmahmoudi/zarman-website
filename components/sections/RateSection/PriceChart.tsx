@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import {
   Area,
   AreaChart,
@@ -24,15 +25,25 @@ type PreparedChartPoint = ChartDataPoint & {
 type CustomTooltipProps = {
   active?: boolean;
   payload?: Array<{ payload: PreparedChartPoint }>;
+  isEn: boolean;
 };
 
-const TABS: Array<{ id: Timeframe; label: string }> = [
+const TABS_FA: Array<{ id: Timeframe; label: string }> = [
   { id: "1W", label: "۱ هفته" },
   { id: "1M", label: "۱ ماه" },
   { id: "3M", label: "۳ ماه" },
   { id: "1Y", label: "۱ سال" },
   { id: "3Y", label: "۳ سال" },
   { id: "ALL", label: "همه" },
+];
+
+const TABS_EN: Array<{ id: Timeframe; label: string }> = [
+  { id: "1W", label: "1W" },
+  { id: "1M", label: "1M" },
+  { id: "3M", label: "3M" },
+  { id: "1Y", label: "1Y" },
+  { id: "3Y", label: "3Y" },
+  { id: "ALL", label: "All" },
 ];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -61,13 +72,11 @@ function formatDateForXAxis(date: string, timeframe: Timeframe) {
   }
 }
 
-function formatPrice(num: number) {
+function formatPrice(num: number, isEn: boolean) {
   const enFormatted = Number(num).toLocaleString("en-US");
+  if (isEn) return enFormatted;
   const faDigits = "۰۱۲۳۴۵۶۷۸۹";
-  
-  return enFormatted
-    .replace(/\d/g, (d) => faDigits[Number(d)])
-    .replace(/,/g, "،");
+  return enFormatted.replace(/\d/g, (d) => faDigits[Number(d)]).replace(/,/g, "،");
 }
 
 // 🚀 جادوی ریاضی برای حل مشکل نمودار هفتگی
@@ -114,20 +123,20 @@ function calculateNiceTicks(rawMin: number, rawMax: number, maxTicks = 6) {
   return { min: niceMin, max: niceMax, ticks };
 }
 
-const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, isEn }) => {
   if (active && payload && payload.length > 0) {
     const data = payload[0].payload;
     return (
       <div className={styles.tooltip}>
         <div className={styles.tooltipRow}>
-          <span className={styles.tooltipLabel}>نرخ فروش</span>
+          <span className={styles.tooltipLabel}>{isEn ? "Sell Rate" : "نرخ فروش"}</span>
           <span className={styles.tooltipDate}>
             {formatDateForTooltip(data.date)}
           </span>
         </div>
         <div className={styles.tooltipValueRow}>
-          <span className={styles.tooltipValue}>{formatPrice(data.value)}</span>
-          <span className={styles.tooltipCurrency}>تومان</span>
+          <span className={styles.tooltipValue}>{formatPrice(data.value, isEn)}</span>
+          <span className={styles.tooltipCurrency}>{isEn ? "Toman" : "تومان"}</span>
         </div>
       </div>
     );
@@ -136,6 +145,9 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
 };
 
 export default function PriceChart() {
+  const { locale } = useParams<{ locale: string }>();
+  const isEn = locale === "en";
+  const tabs = isEn ? TABS_EN : TABS_FA;
   const [timeframe, setTimeframe] = useState<Timeframe>("1W");
   const { chartDataDaily, isLoading } = useRates();
 
@@ -181,7 +193,7 @@ export default function PriceChart() {
       <div className={styles.card}>
         <div className={styles.loadingContainer}>
           <div className={styles.spinner} />
-          <span>در حال دریافت اطلاعات...</span>
+          <span>{isEn ? "Loading data..." : "در حال دریافت اطلاعات..."}</span>
         </div>
       </div>
     );
@@ -191,12 +203,12 @@ export default function PriceChart() {
     <div className={styles.card}>
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
-          <h3 className={styles.mainTitle}>روند قیمت دلار استرالیا</h3>
-          <p className={styles.subTitle}>تاریخچه نوسانات بازار </p>
+          <h3 className={styles.mainTitle}>{isEn ? "AUD Price Trend" : "روند قیمت دلار استرالیا"}</h3>
+          <p className={styles.subTitle}>{isEn ? "Market volatility history" : "تاریخچه نوسانات بازار"}</p>
         </div>
 
         <div className={styles.tabs}>
-          {TABS.map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               className={`${styles.tab} ${timeframe === tab.id ? styles.activeTab : ""}`}
@@ -210,7 +222,7 @@ export default function PriceChart() {
 
       <div className={styles.chartContainer}>
         {chartData.length === 0 ? (
-          <div className={styles.emptyState}>داده‌ای برای این بازه یافت نشد.</div>
+          <div className={styles.emptyState}>{isEn ? "No data available for this range." : "داده‌ای برای این بازه یافت نشد."}</div>
         ) : (
           <ResponsiveContainer width="100%" height={380}>
             <AreaChart
@@ -250,7 +262,7 @@ export default function PriceChart() {
                 ticks={yAxisConfig.ticks}
                 orientation="right"
                 width={75}
-                tickFormatter={(value) => formatPrice(Number(value))}
+                tickFormatter={(value) => formatPrice(Number(value), isEn)}
                 axisLine={{ stroke: "#2b3b5c", strokeWidth: 1 }}
                 tickLine={false}
                 tickMargin={12}
@@ -262,7 +274,7 @@ export default function PriceChart() {
               />
 
               <Tooltip
-                content={<CustomTooltip />}
+                content={<CustomTooltip isEn={isEn} />}
                 cursor={{
                   stroke: "rgba(255, 255, 255, 0.15)",
                   strokeWidth: 1,

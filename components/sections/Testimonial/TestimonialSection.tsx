@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -60,6 +61,8 @@ const ReviewCard = ({ review }: { review: any }) => (
 
 export default function TestimonialSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
+  const { locale } = useParams<{ locale: string }>();
+  const isEn = locale === "en";
   const [reviews, setReviews] = useState<any[]>(fallbackReviews);
   const [stats, setStats] = useState({ avg: 4.8, total: fallbackReviews.length });
 
@@ -78,7 +81,7 @@ export default function TestimonialSection() {
         if (testData && testData.length > 0) {
           
           const liveReviews = testData.map((item: any) => {
-            const fName = item.profiles?.first_name || "کاربر";
+            const fName = item.profiles?.first_name || (isEn ? "User" : "کاربر");
             const lName = item.profiles?.last_name ? ` ${item.profiles.last_name.charAt(0)}.` : "";
             
             return {
@@ -118,8 +121,8 @@ export default function TestimonialSection() {
     <section className={styles.section} ref={sectionRef} aria-labelledby="test-title">
       <div className={styles.container}>
         <div className={styles.header}>
-          <span className={styles.eyebrow}>تجربه کاربران</span>
-          <h2 id="test-title" className={styles.title}>اعتمادی که ساخته‌ایم</h2>
+          <span className={styles.eyebrow}>{isEn ? "What Our Users Say" : "تجربه کاربران"}</span>
+          <h2 id="test-title" className={styles.title}>{isEn ? "Trust We've Built" : "اعتمادی که ساخته‌ایم"}</h2>
           
           <div className={styles.headerStats}>
             <div className={styles.starsContainer}>
@@ -128,7 +131,9 @@ export default function TestimonialSection() {
               ))}
             </div>
             <span className={styles.statsText}>
-              <strong>{stats.avg.toLocaleString("fa-IR")} از ۵</strong> (بر اساس {stats.total.toLocaleString("fa-IR")} نظر ثبت شده)
+              {isEn
+                ? <><strong>{stats.avg.toLocaleString("en-AU")} out of 5</strong> (based on {stats.total.toLocaleString("en-AU")} reviews)</>  
+                : <><strong>{stats.avg.toLocaleString("fa-IR")} از ۵</strong> (بر اساس {stats.total.toLocaleString("fa-IR")} نظر ثبت شده)</>}
             </span>
           </div>
         </div>

@@ -18,6 +18,7 @@ import {
   X,
   BookOpen,
   TrendingUp,
+  ChartNoAxesCombined,
 } from "lucide-react";
 import styles from "@/styles/admin/AdminShell.module.css";
 import { supabase } from "@/lib/supabase";
@@ -58,6 +59,7 @@ export function AdminSidebar({
     { href: "/admin/settings", label: "System Settings", icon: <Settings size={18} /> },
     { href: "/admin/audit", label: "Audit Logs", icon: <ClipboardList size={18} /> },
     { href: "/admin/ledger", label: "Ledger", icon: <BookOpen size={18} /> },
+    { href: "/admin/reports", label: "Reports", icon: <ChartNoAxesCombined size={18} /> },
     { href: "/admin/treasury", label: "Treasury", icon: <TrendingUp size={18} /> },
   ];
 
@@ -88,7 +90,7 @@ export function AdminSidebar({
     });
   };
 
-  const SidebarContent = () => (
+  const renderSidebarContent = () => (
     <>
       <div className={styles.sidebarHeader}>
         <Link href="/admin/dashboard" className={styles.sidebarBrand} onClick={() => setMobileOpen(false)}>
@@ -152,7 +154,7 @@ export function AdminSidebar({
   return (
     <>
       <nav className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`} aria-label="Admin navigation">
-        <SidebarContent />
+        {renderSidebarContent()}
       </nav>
 
       {mobileOpen && (

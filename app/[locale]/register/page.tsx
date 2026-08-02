@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import styles from "@/styles/Register.module.css";
 import { 
   ArrowLeft, Eye, EyeOff, ShieldCheck, KeyRound, CheckCircle2, AlertTriangle
@@ -25,6 +25,7 @@ const OTP_LENGTH = 6;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { locale } = useParams<{ locale: string }>();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
@@ -186,7 +187,7 @@ export default function RegisterPage() {
     }
 
     setOtpSuccess(true);
-    setTimeout(() => router.push("/fa/dashboard"), 1500);
+    setTimeout(() => router.push(`/${locale}/dashboard`), 1500);
   };
 
   const handleResend = async () => {
@@ -215,7 +216,7 @@ export default function RegisterPage() {
       <div className={`${styles.card} ${step === 2 ? styles.confirmCard : ''}`}>
         
         <div className={styles.topNav}>
-          <Link href="/" className={styles.backHome} aria-label="Back to Website"><ArrowLeft size={18} strokeWidth={2.5} /></Link>
+          <Link href={`/${locale}`} className={styles.backHome} aria-label="Back to Website"><ArrowLeft size={18} strokeWidth={2.5} /></Link>
         </div>
 
         <div className={styles.logoContainer}>

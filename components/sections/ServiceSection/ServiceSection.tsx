@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { motion, Variants } from "framer-motion";
 import styles from "./ServiceSection.module.css";
@@ -64,7 +65,7 @@ type ServiceItem = {
   Icon: React.ComponentType;
 };
 
-const SERVICES: ServiceItem[] = [
+const SERVICES_FA: ServiceItem[] = [
   {
     title: "تسهیلات ارزی در مسیر مهاجرت تحصیلی",
     text: "تمرکز خود را روی تحصیل بگذارید و دغدغه‌های مالی را به ما بسپارید. انجام کلیه امور ارزی دانشجویان شامل پرداخت شهریه (Tuition Fee)، هزینه‌های ویزا، اقامت و بیمه (OSHC) با بهترین نرخ و بدون هیچ‌گونه کارمزد.",
@@ -83,6 +84,29 @@ const SERVICES: ServiceItem[] = [
   {
   title: "زیرساخت پرداخت‌های تجاری ",
   text: "تسهیل مبادلات تجاری و مدیریت نقدینگی فرامرزی با تمرکز بر سرعت در انتقال. ",
+    Icon: ReceiptIcon,
+  },
+];
+
+const SERVICES_EN: ServiceItem[] = [
+  {
+    title: "Currency Services for Student Migration",
+    text: "Focus on your studies while we handle your financial transfers. We cover tuition fee payments, visa costs, accommodation, and OSHC insurance at competitive rates with no hidden fees.",
+    Icon: GraduationIcon,
+  },
+  {
+    title: "Currency Services for Healthcare Professionals",
+    text: "End-to-end payments for healthcare migration and registration in Australia, including AMC, PESCI, ADC, NCLEX, OSCE, OET, and AHPRA-related costs, processed quickly and transparently.",
+    Icon: StethoscopeIcon,
+  },
+  {
+    title: "Secure Transfer of Personal and Family Assets",
+    text: "Move large amounts with confidence. We provide a secure and fast channel for transferring personal capital, property sale proceeds, and family assets between Iran and Australia.",
+    Icon: BankIcon,
+  },
+  {
+    title: "Commercial Payment Infrastructure",
+    text: "Simplify cross-border business transactions and liquidity management with reliable execution and fast settlement.",
     Icon: ReceiptIcon,
   },
 ];
@@ -107,6 +131,9 @@ const cardVariants: Variants = {
 };
 
 export default function Services() {
+  const { locale } = useParams<{ locale: string }>();
+  const isEn = locale === "en";
+  const SERVICES = isEn ? SERVICES_EN : SERVICES_FA;
   return (
     <section id="services" className={styles.section} aria-labelledby="services-title">
       <div className={styles.bgGrid} aria-hidden="true" />
@@ -117,12 +144,12 @@ export default function Services() {
         {/* 👈 className changed to styles.header */}
         <header className={styles.header}>
           <motion.p
-            className={styles.eyebrow} /* 👈 className changed to styles.eyebrow */
+            className={styles.eyebrow}
             {...highlightAnim}
             viewport={{ once: true }}
             transition={{ duration: 0.8, ease: EASE }}
           >
-            خدمات ویژه ما
+            {isEn ? "Our Specialised Services" : "خدمات ویژه ما"}
           </motion.p>
 
           <motion.h2
@@ -132,7 +159,7 @@ export default function Services() {
             viewport={{ once: true }}
             transition={{ duration: 0.8, ease: EASE, delay: 0.1 }}
           >
-            اکوسیستم مالی زرمان
+            {isEn ? "Zarman Financial Ecosystem" : "اکوسیستم مالی زرمان"}
           </motion.h2>
 
           <motion.p
@@ -141,7 +168,9 @@ export default function Services() {
             viewport={{ once: true }}
             transition={{ duration: 0.8, ease: EASE, delay: 0.2 }}
           >
-            مسیری هوشمند و امن برای انتقال سرمایه و پرداخت‌های ارزی به استرالیا. 
+            {isEn
+              ? "A smart, secure path for capital transfers and currency payments to Australia."
+              : "مسیری هوشمند و امن برای انتقال سرمایه و پرداخت‌های ارزی به استرالیا."}
           </motion.p>
         </header>
 
@@ -200,14 +229,14 @@ export default function Services() {
                 </div>
               </div>
 
-              {/* 👈 className changed to styles.eyebrow and changed tag to <p> */}
+              {/* ===== Mobile header ===== */}
               <motion.p
                 className={styles.eyebrow}
                 {...highlightAnim}
                 viewport={{ once: true }}
                 transition={{ duration: 0.78, ease: EASE }}
               >
-                خدمات ویژه ما              
+                {isEn ? "Our Specialised Services" : "خدمات ویژه ما"}
               </motion.p>
               
               <motion.h3
@@ -216,7 +245,7 @@ export default function Services() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.78, ease: EASE, delay: 0.1 }}
               >
-                اکوسیستم مالی زرمان
+                {isEn ? "Zarman Financial Ecosystem" : "اکوسیستم مالی زرمان"}
               </motion.h3>
 
               <motion.p
@@ -225,7 +254,9 @@ export default function Services() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.78, ease: EASE, delay: 0.2 }}
               >
-                مسیری هوشمند و امن برای انتقال سرمایه و پرداخت‌های ارزی به استرالیا.
+                {isEn
+                  ? "A smart, secure path for capital transfers and currency payments to Australia."
+                  : "مسیری هوشمند و امن برای انتقال سرمایه و پرداخت‌های ارزی به استرالیا."}
               </motion.p>
             </div>
 

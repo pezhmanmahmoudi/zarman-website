@@ -3,7 +3,7 @@
 .section {
   padding: var(--section-pad-major) 0;
   background-color: var(--color-bg-base);
-  direction: rtl;
+  direction: inherit;
 }
 
 .container {
@@ -74,13 +74,26 @@
   color: var(--color-text-primary);
 }
 
+:global([dir="ltr"]) .questionBtn {
+  text-align: left;
+  direction: ltr;
+}
+
 .questionText {
+  flex: 1;
+  min-width: 0;
+  display: block;
   font-family: var(--font-primary);
   font-size: var(--text-body-lg);
   font-weight: var(--font-weight-semibold);
   line-height: var(--leading-snug);
   padding-left: var(--space-4);
-  
+  text-align: inherit;
+}
+
+:global([dir="ltr"]) .questionText {
+  padding-left: 0;
+  padding-right: var(--space-4);
 }
 
 .icon {

@@ -2,34 +2,45 @@
 
 import Link from "next/link";
 import Button from "@/components/ui/Button/Button";
+import { useLocale } from "@/context/LocaleContext";
+import { useT } from "@/hooks/useT";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher/LanguageSwitcher";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 export default function HeaderAuth({ className = "" }: { className?: string }) {
+  const locale = useLocale();
+  const t = useT();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push(`/${locale}/login`);
+  };
+
   return (
     <header className={`h-header ${className}`} role="banner">
       <a className="h-skip" href="#main-content">
-        پرش به محتوای اصلی
+        {t.nav.skipToContent}
       </a>
 
       <div className="h-inner">
-        <div className="h-logo-wrap" aria-label="لوگوی داشبورد زرمان">
-          {/* 👈 استایل‌های خطی پاک شدند چون حالا CSS مرکزی این کار را انجام می‌دهد */}
+        <div className="h-logo-wrap" aria-label="Zarman Dashboard">
           <div className="h-authTitle">
-            ZARMAN DASHBOARD
+            {t.header.dashboard}
           </div>
         </div>
 
-        <nav className="h-nav" aria-label="ناوبری داشبورد">
-          <Link href="/fa/dashboard/profile" className="h-link">
-            حساب کاربری
-          </Link>
-          <Link href="/fa/dashboard/transactions" className="h-link">
-            تاریخچه تراکنش‌ها
+        <nav className="h-nav" aria-label={t.header.dashboardNav}>
+          <Link href={`/${locale}/dashboard`} className="h-link">
+            {t.header.account}
           </Link>
         </nav>
 
-        <div className="h-auth" aria-label="خروج">
-          <Button variant="secondary" size="sm" className="hBtnTight">
-            خروج
+        <div className="h-auth" aria-label={t.auth.logout}>
+          <LanguageSwitcher variant="pill" />
+          <Button variant="secondary" size="sm" className="hBtnTight" onClick={handleLogout}>
+            {t.auth.logout}
           </Button>
         </div>
       </div>

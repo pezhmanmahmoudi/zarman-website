@@ -2,12 +2,15 @@
 
 import React from "react";
 import Image from "next/image";
+import { useParams } from "next/navigation";
 import { ShieldCheck, LogIn, CheckCircle2 } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
 import styles from "@/styles/Register.module.css"; 
 
 export default function ConfirmEmailPage() {
+  const { locale } = useParams<{ locale: string }>();
+
   return (
     <div className={styles.pageWrapper}>
       <div className={styles.gradientContainer} aria-hidden="true">
@@ -55,7 +58,7 @@ export default function ConfirmEmailPage() {
           </div>
 
           <div className={styles.btnContainer}>
-            <Button href="/fa/login" variant="primary" size="lg" fullWidth rightIcon={<LogIn />}>
+            <Button href={`/${locale}/login`} variant="primary" size="lg" fullWidth rightIcon={<LogIn />}>
               Proceed to Secure Login
             </Button>
           </div>

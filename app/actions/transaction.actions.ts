@@ -2,7 +2,13 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { getFinanceConfig } from "@/lib/finance-config";
-import { calcLoyaltyDiscount, calcAppliedFee, applyPromoCode } from "@/lib/pricing";
+import {
+  applyPromoCode,
+  calcAppliedFee,
+  calcEquivalentTomanForRequestType,
+  calcExecutionRateFromSettlementForRequestType,
+  calcLoyaltyDiscount,
+} from "@/lib/pricing";
 import type { PromoCodeData } from "@/lib/pricing";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import type { Recipient } from "@/app/[locale]/dashboard/dashboard.types";
@@ -145,10 +151,12 @@ export async function processTransactionSecurely({
 
     // For percentage promos: final_amount = rawAmount (AUD unchanged, rate improved).
     // For fixed promos: final_amount < rawAmount (AUD reduced, rate unchanged).
-    const effectiveAud = txType === "buy_aud"
-      ? final_amount + appliedFee
-      : Math.max(final_amount - appliedFee, 0);
-    const serverEquivalentToman = Math.round(effectiveAud * promoAdjustedRate);
+    const serverEquivalentToman = calcEquivalentTomanForRequestType(
+      final_amount,
+      promoAdjustedRate,
+      appliedFee,
+      txType,
+    );
 
     // Use client-agreed amount when it is within ±15 % of server's calculation.
     // This preserves the rate the customer was shown (which includes loyalty)
@@ -161,8 +169,13 @@ export async function processTransactionSecurely({
       Math.abs(clientToman - serverEquivalentToman) / serverEquivalentToman < 0.15;
 
     const equivalentToman = useClientToman ? clientToman : serverEquivalentToman;
-    const appliedRate = effectiveAud > 0 ? Math.round(equivalentToman / effectiveAud) : Math.round(promoAdjustedRate);
-    const loyalty_discount_toman = loyaltyBonus > 0 ? Math.round(effectiveAud * loyaltyBonus) : 0;
+    const appliedRate = calcExecutionRateFromSettlementForRequestType(
+      final_amount,
+      equivalentToman,
+      appliedFee,
+      txType,
+    ) || promoAdjustedRate;
+    const loyalty_discount_toman = loyaltyBonus > 0 ? Math.round(final_amount * loyaltyBonus) : 0;
 
     // ۵. اعتبارسنجی گیرنده (اگر انتخاب شده بود)
     // __edu_exam__ یک گیرنده مجازی است و نیاز به جستجو در دیتابیس ندارد
@@ -189,7 +202,7 @@ export async function processTransactionSecurely({
       .from("transactions")
       .insert([{
         user_id: authenticatedUserId,
-        type: txType === "buy_aud" ? "sell_aud" : "buy_aud",
+        type: companyTradeType,
         amount_aud: rawAmount,
         equivalent_toman: equivalentToman,
         applied_rate: appliedRate,
@@ -238,11 +251,11 @@ export async function processTransactionSecurely({
       }
     };
 
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized request") {
+  } catch (caughtError) {
+    if (caughtError instanceof Error && caughtError.message === "Unauthorized request") {
       return { error: "Unauthorized request" };
     }
-    console.error("Server Error:", error);
+    console.error("Server Error:", caughtError);
     return { error: "خطای سیستمی رخ داد." };
   }
 }
@@ -260,8 +273,8 @@ export async function deleteTransactionSecurely(transactionId: number | string) 
     if (error) return { error: "عملیات حذف ناموفق بود." };
 
     return { success: true };
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized request") {
+  } catch (caughtError) {
+    if (caughtError instanceof Error && caughtError.message === "Unauthorized request") {
       return { error: "Unauthorized request" };
     }
     return { error: "خطای سرور در هنگام حذف." };
@@ -411,7 +424,7 @@ export async function validatePromoCode(
       discount_type: data.discount_type,
       discount_value: data.discount_value,
     };
-  } catch (err) {
+  } catch {
     return { error: "خطای سیستمی رخ داد." };
   }
 }

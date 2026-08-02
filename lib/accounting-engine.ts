@@ -11,6 +11,8 @@
  * 4. Accrual Basis: پشتیبانی از تعهدات ارزی مشتریان بدون کسر کاذب از انبار.
  */
 
+import { calcFeeIncomeToman, calcPrincipalToman } from "@/lib/pricing";
+
 // ── Input types ────────────────────────────────────────────────────────────
 
 export type LedgerRowInput = {
@@ -120,6 +122,13 @@ function sortLedgerRows(rows: LedgerRowInput[]): LedgerRowInput[] {
   });
 }
 
+function executionRate(row: LedgerRowInput): number {
+  const explicitRate = n(row.exchange_rate);
+  if (explicitRate > 0) return explicitRate;
+  const aud = n(row.amount_aud);
+  return aud > 0 ? n(row.amount_toman) / aud : 0;
+}
+
 // ── Core Engines ──────────────────────────────────────────────────────────
 
 /**
@@ -128,6 +137,8 @@ function sortLedgerRows(rows: LedgerRowInput[]): LedgerRowInput[] {
  */
 function calcDynamicDrawerBalances(
   ledgerRows: LedgerRowInput[],
+  expenses: ExpenseRowInput[],
+  ownerLoans: OwnerLoanRowInput[],
   accountsMeta: AccountMeta[],
   warnings: string[]
 ): Record<string, DrawerBalance> {
@@ -145,14 +156,23 @@ function calcDynamicDrawerBalances(
   }
 
   for (const row of ledgerRows) {
+    const entryType = row.entry_type ?? "trade";
+    if (entryType === "expense" || entryType === "owner_loan") continue;
+    if (!['trade', 'transfer', 'adjustment'].includes(entryType)) {
+      warnings.push(`Ledger row ${row.id} has unsupported entry type: ${entryType}`);
+      continue;
+    }
+
     const aud = n(row.amount_aud);
     const irt = n(row.amount_toman);
-    const fee = n(row.fee_aud); // در صورت وجود کارمزد انتقالات
+    const fee = n(row.fee_aud);
 
     // پردازش کشوی مبدأ (Payer) -> خروج پول
     if (row.payer_account_id && balances[row.payer_account_id]) {
       const payer = balances[row.payer_account_id];
-      const amountToDeduct = payer.currency === "AUD" ? (aud + fee) : irt;
+      const amountToDeduct = payer.currency === "AUD"
+        ? (entryType === "transfer" ? aud + fee : aud)
+        : irt;
       payer.balance -= amountToDeduct;
     }
 
@@ -164,13 +184,42 @@ function calcDynamicDrawerBalances(
     }
   }
 
+  for (const expense of expenses) {
+    if (expense.status !== "paid" || !expense.payer_account_id) continue;
+    const account = balances[expense.payer_account_id];
+    if (!account) {
+      warnings.push(`Paid expense ${expense.id} references an unknown account.`);
+      continue;
+    }
+    if (account.currency !== expense.currency) {
+      warnings.push(`Paid expense ${expense.id} currency does not match its account.`);
+      continue;
+    }
+    account.balance -= n(expense.amount);
+  }
+
+  for (const loan of ownerLoans) {
+    if (!loan.account_id) continue;
+    const account = balances[loan.account_id];
+    if (!account) {
+      warnings.push(`Owner loan ${loan.id} references an unknown account.`);
+      continue;
+    }
+    if (account.currency !== loan.currency) {
+      warnings.push(`Owner loan ${loan.id} currency does not match its account.`);
+      continue;
+    }
+    const movement = loan.loan_type === "injection" ? n(loan.amount) : -n(loan.amount);
+    account.balance += movement;
+  }
+
   return balances;
 }
 
 /**
  * محاسبه WAC (فقط روی تراکنش‌های Trade که مستقیماً به انبار متصلند)
  */
-function calcMovingWAC(rows: LedgerRowInput[], warnings: string[]) {
+function calcMovingWAC(rows: LedgerRowInput[]) {
   let inventoryAUD = 0;
   let wac = 0;
   let realizedProfit = 0;
@@ -178,22 +227,23 @@ function calcMovingWAC(rows: LedgerRowInput[], warnings: string[]) {
 
   for (const row of rows) {
     const et = row.entry_type ?? "trade";
-    // انتقال بین حساب‌ها تاثیری در WAC و انبار مرکزی ندارد!
-    if (et === "transfer" || et === "expense" || et === "owner_loan") continue;
+    if (et !== "trade") continue;
 
     const aud = n(row.amount_aud);
     const irt = n(row.amount_toman);
-    if (aud <= 0 || irt <= 0) continue;
+    const feeAud = n(row.fee_aud);
+    const principalIrt = calcPrincipalToman(irt, executionRate(row), feeAud, row.type as "buy_aud" | "sell_aud");
+    if (aud <= 0 || principalIrt <= 0) continue;
 
     if (row.type === "buy_aud") {
-      const buyRate = irt / aud;
+      const buyRate = principalIrt / aud;
       wac = inventoryAUD > 0 
         ? (inventoryAUD * wac + aud * buyRate) / (inventoryAUD + aud)
         : buyRate;
       inventoryAUD += aud;
       wacHistory.push({ date: row.date_gregorian, wac, inventoryAfter: inventoryAUD });
     } else if (row.type === "sell_aud") {
-      realizedProfit += (irt - (aud * wac));
+      realizedProfit += (principalIrt - (aud * wac));
       inventoryAUD -= aud;
     }
   }
@@ -206,8 +256,7 @@ function calcMovingWAC(rows: LedgerRowInput[], warnings: string[]) {
  */
 function calcExpensesWithFX(
   expenses: ExpenseRowInput[],
-  currentBuyRate: number,
-  warnings: string[]
+  currentBuyRate: number
 ) {
   let paidIRT = 0;
   let pendingIRT = 0;
@@ -248,8 +297,7 @@ function calcExpensesWithFX(
  */
 function calcOwnerLoansWithFX(
   loans: OwnerLoanRowInput[],
-  currentBuyRate: number,
-  warnings: string[]
+  currentBuyRate: number
 ) {
   let balanceIRT = 0;
   let fxTranslationGainLossIRT = 0;
@@ -294,19 +342,19 @@ export function calcAccountingSnapshot(
   const sortedRows = sortLedgerRows(ledgerRows);
 
   // ۱. محاسبه پویای تمام کشوها (حل گپ مغایرت‌گیری و تعهدی)
-  const drawerBalances = calcDynamicDrawerBalances(sortedRows, accountsMeta, warnings);
+  const drawerBalances = calcDynamicDrawerBalances(sortedRows, expenses, ownerLoans, accountsMeta, warnings);
 
   // ۲. محاسبه WAC انبار و سود معاملات
-  const { inventoryAUD, wac, realizedProfit, wacHistory } = calcMovingWAC(sortedRows, warnings);
+  const { inventoryAUD, wac, realizedProfit, wacHistory } = calcMovingWAC(sortedRows);
 
   // ۳. درآمد کارمزدها
   const feeIncomeIRT = sortedRows
-    .filter(r => (r.entry_type ?? "trade") !== "transfer") // کارمزد انتقالات هزینه است، نه درآمد
-    .reduce((sum, r) => sum + (n(r.fee_aud) * (n(r.amount_toman) / (n(r.amount_aud) || 1))), 0);
+    .filter(r => (r.entry_type ?? "trade") === "trade")
+    .reduce((sum, r) => sum + calcFeeIncomeToman(n(r.fee_aud), executionRate(r)), 0);
 
   // ۴. هزینه‌ها + وام‌ها + محاسبه تسعیر ارز (FX Gain/Loss)
-  const expCalc = calcExpensesWithFX(expenses, safeRate, warnings);
-  const loanCalc = calcOwnerLoansWithFX(ownerLoans, safeRate, warnings);
+  const expCalc = calcExpensesWithFX(expenses, safeRate);
+  const loanCalc = calcOwnerLoansWithFX(ownerLoans, safeRate);
 
   const totalFxTranslation = expCalc.fxTranslationGainLossIRT + loanCalc.fxTranslationGainLossIRT;
 

@@ -13,7 +13,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  direction: rtl; 
+  direction: inherit;
 }
 
 /* Background Architecture */
@@ -53,7 +53,7 @@
 
 /* Content Styles */
 .content {
-  text-align: right;
+  text-align: start;
   max-width: 640px;
   order: 1; /* تعیین جایگاه اول در دسکتاپ */
 }
@@ -69,12 +69,76 @@
 }
 
 .eyebrow {
-  margin: 0 0 var(--space-3);
-  color: var(--color-accent-secondary); 
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 var(--space-4);
+  color: #cdd8ff;
   font-family: var(--font-primary);
-  font-size: var(--text-body-md);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 0.9px;
+  font-size: clamp(0.96rem, 1.05vw, 1.08rem);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  position: relative;
+  padding: 0 0 0.62rem 18px;
+  text-transform: uppercase;
+  isolation: isolate;
+  text-shadow: 0 8px 26px rgba(59, 130, 246, 0.2);
+}
+
+.eyebrow::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1.5px;
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.95) 0%, rgba(96, 165, 250, 0.82) 42%, rgba(45, 212, 191, 0.58) 75%, rgba(45, 212, 191, 0) 100%);
+  box-shadow: 0 0 26px rgba(96, 165, 250, 0.3);
+}
+
+:global([dir="ltr"]) .eyebrow::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.28em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(191, 219, 254, 1) 0%, rgba(96, 165, 250, 0.9) 38%, rgba(96, 165, 250, 0.25) 72%);
+  box-shadow: 0 0 18px rgba(96, 165, 250, 0.7);
+  z-index: 1;
+}
+
+:global([dir="ltr"]) .eyebrow {
+  font-family: var(--font-en-stack);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  background: linear-gradient(95deg, #f6f8ff 0%, #dbeafe 28%, #a5b4fc 60%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+:global([dir="rtl"]) .eyebrow {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: clamp(1.02rem, 1.32vw, 1.22rem);
+  font-weight: 700;
+  padding: 0 18px 0.62rem 0;
+}
+
+:global([dir="rtl"]) .eyebrow::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0.28em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(191, 219, 254, 1) 0%, rgba(96, 165, 250, 0.9) 38%, rgba(96, 165, 250, 0.25) 72%);
+  box-shadow: 0 0 18px rgba(96, 165, 250, 0.7);
+  z-index: 1;
 }
 
 .title {
@@ -93,35 +157,39 @@
   color: var(--color-accent-secondary); 
 }
 
+.titleAccentEn {
+  font-size: 0.82em;
+}
+
+.titleLineTwo {
+  display: inline-block;
+}
+
 /* ====================================================
    Tooltip Styles
    ==================================================== */
 .tooltipWrapper {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
   cursor: help;
   white-space: nowrap;
-  padding-left: 4px; 
-  margin: 0 3px;
+  line-height: inherit;
 }
 
 .infoIcon {
-  color: var(--color-accent-secondary); 
-  opacity: 0.9;
-  position: absolute; 
-  top: -8px; 
-  left: 12px;
-
-  width: 0.4em !important;  
-  height: 0.4em !important;
-  
-  max-width: 22px !important; 
-  max-height: 22px !important;
-  min-width: 14px !important; 
-  min-height: 14px !important;
-
-  top: -8px; 
-  left: 8px;
+  color: #7c89ff;
+  opacity: 0.95;
+  width: 11px !important;
+  height: 11px !important;
+  max-width: 11px !important;
+  max-height: 11px !important;
+  min-width: 11px !important;
+  min-height: 11px !important;
+  margin-inline-start: -1px;
+  transform: translateY(-0.2em);
+  flex-shrink: 0;
 }
 
 .uluruEnText {
@@ -132,40 +200,40 @@
 
 .tooltipText {
   visibility: hidden;
-  width: 260px;
-  background-color: rgba(15, 23, 42, 0.98); 
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  color: var(--color-text-primary);
-  text-align: center;
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border-ghost-light);
-  box-shadow: var(--shadow-md), 0 10px 40px rgba(0,0,0,0.5);
+  width: min(360px, calc(100vw - 36px));
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.98) 0%, rgba(17, 24, 39, 0.98) 100%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  color: #eaf0ff;
+  text-align: left;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  box-shadow: 0 20px 50px rgba(3, 7, 18, 0.62), 0 0 0 1px rgba(59, 130, 246, 0.07) inset;
   
   position: absolute;
   z-index: 999;
-  top: 100%; 
-  right: 50%;
-  transform: translateX(50%);
-  margin-top: 20px; 
+  top: calc(100% + 14px);
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+  transform: none;
   
   font-family: var(--font-primary);
-  font-size: var(--text-caption);
-  font-weight: 400;
-  line-height: 1.6;
+  font-size: 0.97rem;
+  font-weight: 500;
+  line-height: 1.72;
+  letter-spacing: 0.004em;
   white-space: normal;
   
   opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.24s ease, transform 0.24s ease;
 }
 
 .tooltipText::after {
   content: "";
   position: absolute;
-  bottom: 100%; 
-  right: 50%;
-  transform: translateX(50%);
+  bottom: 100%;
+  left: 16px;
   border-width: 6px;
   border-style: solid;
   border-color: transparent transparent rgba(15, 23, 42, 0.98) transparent;
@@ -174,7 +242,42 @@
 .tooltipWrapper:hover .tooltipText {
   visibility: visible;
   opacity: 1;
-  margin-top: 10px; 
+  transform: translateY(0);
+}
+
+.tooltipWrapper:focus-within .tooltipText {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tooltipWrapper:focus-visible {
+  outline: 2px solid rgba(124, 58, 237, 0.8);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+:global([dir="ltr"]) .tooltipText {
+  left: 0;
+  right: auto;
+  text-align: left;
+  font-family: var(--font-en-stack);
+}
+
+:global([dir="ltr"]) .tooltipText::after {
+  left: 14px;
+  right: auto;
+}
+
+:global([dir="rtl"]) .tooltipText {
+  right: 0;
+  left: auto;
+  text-align: right;
+}
+
+:global([dir="rtl"]) .tooltipText::after {
+  right: 14px;
+  left: auto;
 }
 
 /* ==================================================== */
@@ -357,7 +460,7 @@
   font-size: var(--text-body-sm); 
   font-weight: var(--font-weight-regular);
   color: var(--color-text-tertiary);
-  margin-right: var(--space-2);
+  margin-inline-start: var(--space-2);
 }
 
 /* ====================================================
@@ -368,7 +471,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  direction: rtl;
+  direction: inherit;
 
   /* ایجاد عمق و حالت شیشه‌ای مات به جای رنگ تخت */
   background: linear-gradient(180deg, rgba(30, 41, 59, 0.15) 0%, rgba(15, 23, 42, 0.6) 100%);
@@ -446,17 +549,12 @@
   }
 
   .tooltipText {
-    transform: translateX(70%); 
+    width: min(320px, calc(100vw - 40px));
+    top: calc(100% + 12px);
   }
   
-  .tooltipText::after {
-    right: 80%; 
-    transform: translateX(40%);
-  }
-
   .infoIcon {
-    top: -8px !important; 
-    left: 4px !important; 
+    transform: translateY(-0.22em);
   }
 }
 
@@ -501,18 +599,34 @@
   }
 
   .tooltipText {
-    right: 0 !important; 
-    transform: none !important; 
+    width: min(290px, calc(100vw - 28px));
+    top: calc(100% + 10px);
   }
   
-  .tooltipText::after {
-    right: 20px !important; 
+:global([dir="ltr"]) .tooltipText {
+    right: 0 !important;
+    left: auto !important;
     transform: none !important;
   }
 
+  :global([dir="rtl"]) .tooltipText {
+    right: 0 !important;
+    left: auto !important;
+    transform: none !important;
+  }
+
+  :global([dir="ltr"]) .tooltipText::after {
+    right: 16px !important;
+    left: auto !important;
+  }
+
+  :global([dir="rtl"]) .tooltipText::after {
+    right: 16px !important;
+    left: auto !important;
+  }
+
   .infoIcon {
-    top: -8px !important; 
-    left: 4px !important; 
+    transform: translateY(-0.22em);
   }
 
   /* حذف کلمات متا در موبایل و تنظیم فاصله جایگزین (Message Strip) */

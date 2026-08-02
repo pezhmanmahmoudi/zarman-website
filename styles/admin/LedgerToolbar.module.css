@@ -1,0 +1,133 @@
+.toolbar {
+  --field-h: 42px;
+  display: grid;
+  grid-template-columns: minmax(190px, .72fr) minmax(160px, .58fr) minmax(300px, 2fr);
+  align-items: end;
+  gap: .75rem;
+  margin-bottom: 1rem;
+  padding: .85rem 1rem;
+  border: 1px solid var(--border-soft, #e5e9e7);
+  border-radius: 12px;
+  background: var(--bg-card, #fff);
+  box-shadow: 0 6px 18px rgba(24, 44, 38, .06);
+  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+}
+
+.control {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.controlLabel,
+.customRangeLabel,
+.dateControl > span {
+  color: var(--text-soft, #66716e);
+  font-size: .68rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.selectTrigger {
+  --select-font-size: .8rem;
+  padding-inline: .8rem !important;
+  border-color: var(--border-soft, #e5e9e7) !important;
+  background: var(--bg-soft, #f7f8f8) !important;
+  font-family: inherit;
+}
+
+.searchField {
+  height: var(--field-h);
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding-inline: .85rem;
+  border: 1px solid var(--border-soft, #e5e9e7);
+  border-radius: 8px;
+  background: var(--bg-soft, #f7f8f8);
+  color: var(--text-dim, #84908c);
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.searchField:focus-within {
+  border-color: var(--accent, #4338ca);
+  background: var(--bg-card, #fff);
+  box-shadow: 0 0 0 3px rgba(67, 56, 202, .1);
+}
+
+.searchField svg { flex: 0 0 auto; }
+
+.searchField input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-main, #17211f);
+  font: inherit;
+  font-size: .8rem;
+  direction: rtl;
+  text-align: right;
+}
+
+.searchField input::placeholder { color: var(--text-dim, #8a9491); opacity: 1; }
+.searchField input::-webkit-search-cancel-button { cursor: pointer; }
+
+.customRange {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(190px, 1fr) minmax(190px, 1fr) auto;
+  align-items: end;
+  gap: .75rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--border-soft, #e5e9e7);
+}
+
+.customRangeLabel { align-self: center; color: var(--text-main, #17211f); }
+.dateControl { min-width: 0; display: flex; flex-direction: column; gap: .35rem; }
+
+.datePicker {
+  --field-h: 42px;
+  border-color: var(--border-soft, #e5e9e7) !important;
+  background: var(--bg-soft, #f7f8f8) !important;
+  font-size: .8rem !important;
+}
+
+.applyButton {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding-inline: 1rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent, #4338ca);
+  color: #fff;
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s ease, opacity .2s ease;
+}
+
+.applyButton:hover:not(:disabled) { background: var(--accent-hover, #3730a3); }
+.applyButton:disabled { opacity: .45; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+  .toolbar { grid-template-columns: 1fr 1fr; }
+  .searchControl { grid-column: 1 / -1; grid-row: 1; }
+  .customRange { grid-template-columns: 1fr 1fr; }
+  .customRangeLabel { grid-column: 1 / -1; }
+  .applyButton { grid-column: 1 / -1; }
+}
+
+@media (max-width: 560px) {
+  .toolbar { grid-template-columns: 1fr; padding: .75rem; }
+  .searchControl { grid-column: auto; grid-row: auto; }
+  .customRange { grid-template-columns: 1fr; }
+  .customRangeLabel,
+  .applyButton { grid-column: auto; }
+}

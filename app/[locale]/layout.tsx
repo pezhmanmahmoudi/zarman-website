@@ -5,6 +5,7 @@ import "../globals.css";
 import { JsonLdSchema } from "@/components/JsonLdSchema";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
+import { LocaleProvider } from "@/context/LocaleContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -175,10 +176,12 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir} data-scroll-behavior="smooth">
       <body className={`${fontClass} min-h-screen antialiased bg-[#080B12] text-white`}>
-        <JsonLdSchema locale={locale} />
-        <main id="main-content">{children}</main>
-        <SpeedInsights />
-        <Analytics />
+        <LocaleProvider locale={locale as "fa" | "en"}>
+          <JsonLdSchema locale={locale} />
+          <main id="main-content">{children}</main>
+          <SpeedInsights />
+          <Analytics />
+        </LocaleProvider>
       </body>
     </html>
   );

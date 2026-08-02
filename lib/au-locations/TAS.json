@@ -1,0 +1,3250 @@
+[
+  {
+    "suburb": "ABBOTSHAM",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "ABELS BAY",
+    "postcode": "7112"
+  },
+  {
+    "suburb": "ABERDEEN",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "ACACIA HILLS",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "ACTON",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "ACTON PARK",
+    "postcode": "7170"
+  },
+  {
+    "suburb": "ADVENTURE BAY",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "AKAROA",
+    "postcode": "7216"
+  },
+  {
+    "suburb": "ALANVALE",
+    "postcode": "7248"
+  },
+  {
+    "suburb": "ALBERTON",
+    "postcode": "7263"
+  },
+  {
+    "suburb": "ALBION HEIGHTS",
+    "postcode": "7050"
+  },
+  {
+    "suburb": "ALCOMIE",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "ALLENS RIVULET",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "ALONNAH",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "AMBLESIDE",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "ANDOVER",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "ANSONS BAY",
+    "postcode": "7216"
+  },
+  {
+    "suburb": "ANSONS BAY",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "ANTILL PONDS",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "APOLLO BAY",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "APSLAWN",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "APSLEY",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "ARTHUR RIVER",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "ARTHURS LAKE",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "AUSTINS FERRY",
+    "postcode": "7011"
+  },
+  {
+    "suburb": "AVOCA",
+    "postcode": "7213"
+  },
+  {
+    "suburb": "BADEN",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "BADGER HEAD",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "BAGDAD",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "BAGDAD NORTH",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "BAKERS BEACH",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "BANCA",
+    "postcode": "7265"
+  },
+  {
+    "suburb": "BANGOR",
+    "postcode": "7267"
+  },
+  {
+    "suburb": "BARNES BAY",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "BARRETTA",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "BARRINGTON",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "BATHURST STREET PO",
+    "postcode": "7000"
+  },
+  {
+    "suburb": "BATTERY POINT",
+    "postcode": "7004"
+  },
+  {
+    "suburb": "BEACONSFIELD",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "BEAUMARIS",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "BEAUTY POINT",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "BEECHFORD",
+    "postcode": "7252"
+  },
+  {
+    "suburb": "BELL BAY",
+    "postcode": "7253"
+  },
+  {
+    "suburb": "BELLERIVE",
+    "postcode": "7018"
+  },
+  {
+    "suburb": "BELLINGHAM",
+    "postcode": "7254"
+  },
+  {
+    "suburb": "BEN LOMOND",
+    "postcode": "7212"
+  },
+  {
+    "suburb": "BERRIEDALE",
+    "postcode": "7011"
+  },
+  {
+    "suburb": "BEULAH",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "BICHENO",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "BINALONG BAY",
+    "postcode": "7216"
+  },
+  {
+    "suburb": "BIRCHS BAY",
+    "postcode": "7162"
+  },
+  {
+    "suburb": "BIRRALEE",
+    "postcode": "7303"
+  },
+  {
+    "suburb": "BISHOPSBOURNE",
+    "postcode": "7301"
+  },
+  {
+    "suburb": "BLACK HILLS",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "BLACK RIVER",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "BLACKMANS BAY",
+    "postcode": "7052"
+  },
+  {
+    "suburb": "BLACKSTONE HEIGHTS",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "BLACKWALL",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "BLACKWOOD CREEK",
+    "postcode": "7301"
+  },
+  {
+    "suburb": "BLESSINGTON",
+    "postcode": "7212"
+  },
+  {
+    "suburb": "BLUE ROCKS",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "BLUMONT",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "BOAT HARBOUR",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "BOAT HARBOUR BEACH",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "BONNET HILL",
+    "postcode": "7053"
+  },
+  {
+    "suburb": "BOOBYALLA",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "BOOMER BAY",
+    "postcode": "7177"
+  },
+  {
+    "suburb": "BOTHWELL",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "BOYER",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "BRACKNELL",
+    "postcode": "7302"
+  },
+  {
+    "suburb": "BRADYS LAKE",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "BRANDUM",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "BRANXHOLM",
+    "postcode": "7261"
+  },
+  {
+    "suburb": "BREADALBANE",
+    "postcode": "7258"
+  },
+  {
+    "suburb": "BREAM CREEK",
+    "postcode": "7175"
+  },
+  {
+    "suburb": "BREONA",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "BRIDGENORTH",
+    "postcode": "7277"
+  },
+  {
+    "suburb": "BRIDGEWATER",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "BRIDPORT",
+    "postcode": "7262"
+  },
+  {
+    "suburb": "BRIGHTON",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "BRITTONS SWAMP",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "BROADMARSH",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "BROADMEADOWS",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "BRONTE PARK",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "BROOKLYN",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "BROOKS BAY",
+    "postcode": "7116"
+  },
+  {
+    "suburb": "BUCKLAND",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "BUNGAREE",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "BURNIE",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "BURNS CREEK",
+    "postcode": "7212"
+  },
+  {
+    "suburb": "BUSHY PARK",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "BUTLERS GORGE",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "CAIRNS BAY",
+    "postcode": "7116"
+  },
+  {
+    "suburb": "CALDER",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "CAMBRIDGE",
+    "postcode": "7170"
+  },
+  {
+    "suburb": "CAMDALE",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "CAMENA",
+    "postcode": "7316"
+  },
+  {
+    "suburb": "CAMPANIA",
+    "postcode": "7026"
+  },
+  {
+    "suburb": "CAMPBELL TOWN",
+    "postcode": "7210"
+  },
+  {
+    "suburb": "CAPE BARREN ISLAND",
+    "postcode": "7257"
+  },
+  {
+    "suburb": "CAPE PILLAR",
+    "postcode": "7182"
+  },
+  {
+    "suburb": "CAPE PORTLAND",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "CAPE RAOUL",
+    "postcode": "7184"
+  },
+  {
+    "suburb": "CARLTON",
+    "postcode": "7173"
+  },
+  {
+    "suburb": "CARLTON RIVER",
+    "postcode": "7173"
+  },
+  {
+    "suburb": "CARRICK",
+    "postcode": "7291"
+  },
+  {
+    "suburb": "CASEY",
+    "postcode": "7151"
+  },
+  {
+    "suburb": "CASTLE FORBES BAY",
+    "postcode": "7116"
+  },
+  {
+    "suburb": "CASTRA",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "CATAMARAN",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "CAVESIDE",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "CENTRAL PLATEAU",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "CETHANA",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "CHAIN OF LAGOONS",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "CHARLOTTE COVE",
+    "postcode": "7112"
+  },
+  {
+    "suburb": "CHASM CREEK",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "CHIGWELL",
+    "postcode": "7011"
+  },
+  {
+    "suburb": "CHRISTMAS HILLS",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "CHUDLEIGH",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "CLAREMONT",
+    "postcode": "7011"
+  },
+  {
+    "suburb": "CLARENCE POINT",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "CLARENDON VALE",
+    "postcode": "7019"
+  },
+  {
+    "suburb": "CLAUDE ROAD",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "CLEVELAND",
+    "postcode": "7211"
+  },
+  {
+    "suburb": "CLIFTON BEACH",
+    "postcode": "7020"
+  },
+  {
+    "suburb": "CLUAN",
+    "postcode": "7303"
+  },
+  {
+    "suburb": "COLEBROOK",
+    "postcode": "7027"
+  },
+  {
+    "suburb": "COLES BAY",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "COLLINSVALE",
+    "postcode": "7012"
+  },
+  {
+    "suburb": "CONARA",
+    "postcode": "7211"
+  },
+  {
+    "suburb": "CONINGHAM",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "CONNELLYS MARSH",
+    "postcode": "7173"
+  },
+  {
+    "suburb": "COOEE",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "COPPING",
+    "postcode": "7174"
+  },
+  {
+    "suburb": "CORINNA",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "CORNELIAN BAY",
+    "postcode": "7008"
+  },
+  {
+    "suburb": "CORNWALL",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "COUTA ROCKS",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "COWRIE POINT",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "CRABTREE",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "CRADLE MOUNTAIN",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "CRADOC",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "CRAMPS BAY",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "CRANBROOK",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "CRAYFISH CREEK",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "CREMORNE",
+    "postcode": "7024"
+  },
+  {
+    "suburb": "CRESSY",
+    "postcode": "7302"
+  },
+  {
+    "suburb": "CUCKOO",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "CUPRONA",
+    "postcode": "7316"
+  },
+  {
+    "suburb": "CURRIE",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "CYGNET",
+    "postcode": "7112"
+  },
+  {
+    "suburb": "DAIRY PLAINS",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "DAVIS",
+    "postcode": "7151"
+  },
+  {
+    "suburb": "DEDDINGTON",
+    "postcode": "7212"
+  },
+  {
+    "suburb": "DEE",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "DEEP BAY",
+    "postcode": "7112"
+  },
+  {
+    "suburb": "DELORAINE",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "DENNES POINT",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "DERBY",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "DERWENT BRIDGE",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "DERWENT PARK",
+    "postcode": "7009"
+  },
+  {
+    "suburb": "DETENTION",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "DEVIOT",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "DEVON HILLS",
+    "postcode": "7300"
+  },
+  {
+    "suburb": "DEVONPORT",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "DILSTON",
+    "postcode": "7252"
+  },
+  {
+    "suburb": "DOCTORS POINT",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "DOCTORS ROCKS",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "DODGES FERRY",
+    "postcode": "7173"
+  },
+  {
+    "suburb": "DOLPHIN SANDS",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "DON",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "DOUGLAS RIVER",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "DOUGLAS-APSLEY",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "DOVER",
+    "postcode": "7117"
+  },
+  {
+    "suburb": "DOWNLANDS",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "DOWSING POINT",
+    "postcode": "7010"
+  },
+  {
+    "suburb": "DROMEDARY",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "DULCOT",
+    "postcode": "7025"
+  },
+  {
+    "suburb": "DUNALLEY",
+    "postcode": "7177"
+  },
+  {
+    "suburb": "DUNORLAN",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "DYNNYRNE",
+    "postcode": "7005"
+  },
+  {
+    "suburb": "DYSART",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "EAGLEHAWK NECK",
+    "postcode": "7179"
+  },
+  {
+    "suburb": "EAST CAM",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "EAST DEVONPORT",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "EAST LAUNCESTON",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "EAST RIDGLEY",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "EDDYSTONE",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "EDDYSTONE POINT",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "EDGCUMBE BEACH",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "EDITH CREEK",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "EGG LAGOON",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "EGGS AND BACON BAY",
+    "postcode": "7112"
+  },
+  {
+    "suburb": "ELDERSLIE",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "ELECTRONA",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "ELIZABETH TOWN",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "ELLENDALE",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "ELLIOTT",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "ELPHIN",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "ELWICK",
+    "postcode": "7010"
+  },
+  {
+    "suburb": "EMITA",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "EMU HEIGHTS",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "EPPING FOREST",
+    "postcode": "7211"
+  },
+  {
+    "suburb": "ERRIBA",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "EUGENANA",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "EVANDALE",
+    "postcode": "7212"
+  },
+  {
+    "suburb": "EXETER",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "EXTON",
+    "postcode": "7303"
+  },
+  {
+    "suburb": "FALMOUTH",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "FENTONBURY",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "FERN TREE",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "FINGAL",
+    "postcode": "7214"
+  },
+  {
+    "suburb": "FITZGERALD",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "FLAGSTAFF GULLY",
+    "postcode": "7015"
+  },
+  {
+    "suburb": "FLINTSTONE",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "FLORENTINE",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "FLOWERDALE",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "FLOWERPOT",
+    "postcode": "7163"
+  },
+  {
+    "suburb": "FLOWERY GULLY",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "FORCETT",
+    "postcode": "7173"
+  },
+  {
+    "suburb": "FOREST",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "FORESTER",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "FORTESCUE",
+    "postcode": "7182"
+  },
+  {
+    "suburb": "FORTH",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "FORTHSIDE",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "FOUR MILE CREEK",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "FRANKFORD",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "FRANKLIN",
+    "postcode": "7113"
+  },
+  {
+    "suburb": "FREYCINET",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "FRIENDLY BEACHES",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "GAGEBROOK",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "GARDEN ISLAND CREEK",
+    "postcode": "7112"
+  },
+  {
+    "suburb": "GARDNERS BAY",
+    "postcode": "7112"
+  },
+  {
+    "suburb": "GAWLER",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "GEEVESTON",
+    "postcode": "7116"
+  },
+  {
+    "suburb": "GEILSTON BAY",
+    "postcode": "7015"
+  },
+  {
+    "suburb": "GEORGE TOWN",
+    "postcode": "7253"
+  },
+  {
+    "suburb": "GLADSTONE",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "GLAZIERS BAY",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "GLEBE",
+    "postcode": "7000"
+  },
+  {
+    "suburb": "GLEN DHU",
+    "postcode": "7249"
+  },
+  {
+    "suburb": "GLEN HUON",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "GLENDEVIE",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "GLENFERN",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "GLENGARRY",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "GLENLUSK",
+    "postcode": "7012"
+  },
+  {
+    "suburb": "GLENORA",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "GLENORCHY",
+    "postcode": "7010"
+  },
+  {
+    "suburb": "GOLCONDA",
+    "postcode": "7254"
+  },
+  {
+    "suburb": "GOLDEN VALLEY",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "GOODWOOD",
+    "postcode": "7010"
+  },
+  {
+    "suburb": "GORDON",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "GORMANSTON",
+    "postcode": "7466"
+  },
+  {
+    "suburb": "GOSHEN",
+    "postcode": "7216"
+  },
+  {
+    "suburb": "GOULDS COUNTRY",
+    "postcode": "7216"
+  },
+  {
+    "suburb": "GOWRIE PARK",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "GRANTON",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "GRANVILLE HARBOUR",
+    "postcode": "7469"
+  },
+  {
+    "suburb": "GRASSTREE HILL",
+    "postcode": "7017"
+  },
+  {
+    "suburb": "GRASSY",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "GRAVELLY BEACH",
+    "postcode": "7276"
+  },
+  {
+    "suburb": "GRAY",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "GREAT BAY",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "GREENS BEACH",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "GRETNA",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "GRINDELWALD",
+    "postcode": "7277"
+  },
+  {
+    "suburb": "GROVE",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "GUILDFORD",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "GUNNS PLAINS",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "HADSPEN",
+    "postcode": "7290"
+  },
+  {
+    "suburb": "HAGLEY",
+    "postcode": "7292"
+  },
+  {
+    "suburb": "HAMILTON",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "HAMPSHIRE",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "HARFORD",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "HASTINGS",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "HAVENVIEW",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "HAWLEY BEACH",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "HAYES",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "HEARD ISLAND",
+    "postcode": "7151"
+  },
+  {
+    "suburb": "HELLYER",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "HENRIETTA",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "HERDSMANS COVE",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "HERMITAGE",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "HERRICK",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "HEYBRIDGE",
+    "postcode": "7316"
+  },
+  {
+    "suburb": "HIGHCLERE",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "HIGHCROFT",
+    "postcode": "7183"
+  },
+  {
+    "suburb": "HILLCREST",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "HILLWOOD",
+    "postcode": "7252"
+  },
+  {
+    "suburb": "HOBART",
+    "postcode": "7000"
+  },
+  {
+    "suburb": "HOBART",
+    "postcode": "7001"
+  },
+  {
+    "suburb": "HOLLOW TREE",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "HOLWELL",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "HONEYWOOD",
+    "postcode": "7017"
+  },
+  {
+    "suburb": "HOWDEN",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "HOWRAH",
+    "postcode": "7018"
+  },
+  {
+    "suburb": "HOWTH",
+    "postcode": "7316"
+  },
+  {
+    "suburb": "HUNTER ISLAND",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "HUNTINGFIELD",
+    "postcode": "7055"
+  },
+  {
+    "suburb": "HUON ISLAND",
+    "postcode": "7112"
+  },
+  {
+    "suburb": "HUONVILLE",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "IDA BAY",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "ILFRAVILLE",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "INTERLAKEN",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "INVERESK",
+    "postcode": "7248"
+  },
+  {
+    "suburb": "INVERMAY",
+    "postcode": "7248"
+  },
+  {
+    "suburb": "IRISHTOWN",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "JACKEYS MARSH",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "JERICHO",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "JETSONVILLE",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "JUDBURY",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "KAMONA",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "KAOOTA",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "KARANJA",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "KAROOLA",
+    "postcode": "7267"
+  },
+  {
+    "suburb": "KAYENA",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "KELLEVIE",
+    "postcode": "7176"
+  },
+  {
+    "suburb": "KELSO",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "KEMPTON",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "KETTERING",
+    "postcode": "7155"
+  },
+  {
+    "suburb": "KILLIECRANKIE",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "KILLORA",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "KIMBERLEY",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "KINDRED",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "KINGS MEADOWS",
+    "postcode": "7249"
+  },
+  {
+    "suburb": "KINGSTON",
+    "postcode": "7050"
+  },
+  {
+    "suburb": "KINGSTON",
+    "postcode": "7051"
+  },
+  {
+    "suburb": "KINGSTON BEACH",
+    "postcode": "7050"
+  },
+  {
+    "suburb": "KOONYA",
+    "postcode": "7187"
+  },
+  {
+    "suburb": "LACHLAN",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "LACKRANA",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "LADY BARRON",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "LAKE LEAKE",
+    "postcode": "7210"
+  },
+  {
+    "suburb": "LAKE MARGARET",
+    "postcode": "7467"
+  },
+  {
+    "suburb": "LAKE SORELL",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "LAKE ST CLAIR",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "LALLA",
+    "postcode": "7267"
+  },
+  {
+    "suburb": "LANENA",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "LAPOINYA",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "LATROBE",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "LAUDERDALE",
+    "postcode": "7021"
+  },
+  {
+    "suburb": "LAUNCESTON",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "LAWITTA",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "LEBRINA",
+    "postcode": "7254"
+  },
+  {
+    "suburb": "LEEKA",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "LEFROY",
+    "postcode": "7252"
+  },
+  {
+    "suburb": "LEGANA",
+    "postcode": "7277"
+  },
+  {
+    "suburb": "LEGERWOOD",
+    "postcode": "7263"
+  },
+  {
+    "suburb": "LEITH",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "LEMONT",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "LENAH VALLEY",
+    "postcode": "7008"
+  },
+  {
+    "suburb": "LESLIE VALE",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "LEVENDALE",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "LEWISHAM",
+    "postcode": "7173"
+  },
+  {
+    "suburb": "LIAWENEE",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "LIENA",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "LIETINNA",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "LIFFEY",
+    "postcode": "7301"
+  },
+  {
+    "suburb": "LILEAH",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "LILLICO",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "LILYDALE",
+    "postcode": "7268"
+  },
+  {
+    "suburb": "LINDISFARNE",
+    "postcode": "7015"
+  },
+  {
+    "suburb": "LISLE",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "LITTLE PINE LAGOON",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "LITTLE SWANPORT",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "LOCCOTA",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "LOIRA",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "LONDON LAKES",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "LONG REACH",
+    "postcode": "7253"
+  },
+  {
+    "suburb": "LONGFORD",
+    "postcode": "7301"
+  },
+  {
+    "suburb": "LONGLEY",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "LONNAVALE",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "LOONGANA",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "LOORANA",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "LORINNA",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "LOTTAH",
+    "postcode": "7216"
+  },
+  {
+    "suburb": "LOW HEAD",
+    "postcode": "7253"
+  },
+  {
+    "suburb": "LOWER BARRINGTON",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "LOWER BEULAH",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "LOWER LONGLEY",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "LOWER MARSHES",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "LOWER SANDY BAY",
+    "postcode": "7005"
+  },
+  {
+    "suburb": "LOWER SNUG",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "LOWER TURNERS MARSH",
+    "postcode": "7267"
+  },
+  {
+    "suburb": "LOWER WATTLE GROVE",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "LOWER WILMOT",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "LOYETEA",
+    "postcode": "7316"
+  },
+  {
+    "suburb": "LUCASTON",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "LUGHRATA",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "LUINA",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "LULWORTH",
+    "postcode": "7252"
+  },
+  {
+    "suburb": "LUNAWANNA",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "LUNE RIVER",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "LUTANA",
+    "postcode": "7009"
+  },
+  {
+    "suburb": "LYMINGTON",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "LYMWOOD",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "MACQUARIE",
+    "postcode": "7151"
+  },
+  {
+    "suburb": "MACQUARIE HEADS",
+    "postcode": "7468"
+  },
+  {
+    "suburb": "MACQUARIE ISLAND",
+    "postcode": "7151"
+  },
+  {
+    "suburb": "MACQUARIE PLAINS",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "MAGRA",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "MALBINA",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "MANGALORE",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "MANGANA",
+    "postcode": "7214"
+  },
+  {
+    "suburb": "MARGATE",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "MARIA ISLAND",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "MARION BAY",
+    "postcode": "7175"
+  },
+  {
+    "suburb": "MARRAWAH",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "MATHINNA",
+    "postcode": "7214"
+  },
+  {
+    "suburb": "MAWBANNA",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "MAWSON",
+    "postcode": "7151"
+  },
+  {
+    "suburb": "MAYBERRY",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "MAYDENA",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "MAYFIELD",
+    "postcode": "7248"
+  },
+  {
+    "suburb": "MCDONALD ISLANDS",
+    "postcode": "7151"
+  },
+  {
+    "suburb": "MEADOWBANK",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "MEANDER",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "MELLA",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "MELROSE",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "MELTON MOWBRAY",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "MEMANA",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "MENGHA",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "MERSEY FOREST",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "MERSEYLEA",
+    "postcode": "7305"
+  },
+  {
+    "suburb": "MEUNNA",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "MIANDETTA",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "MIDDLESEX",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "MIDDLETON",
+    "postcode": "7163"
+  },
+  {
+    "suburb": "MIDWAY POINT",
+    "postcode": "7171"
+  },
+  {
+    "suburb": "MIENA",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "MILABENA",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "MILLERS BLUFF",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "MOINA",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "MOLE CREEK",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "MOLESWORTH",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "MOLTEMA",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "MONTAGU",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "MONTAGU BAY",
+    "postcode": "7018"
+  },
+  {
+    "suburb": "MONTANA",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "MONTELLO",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "MONTROSE",
+    "postcode": "7010"
+  },
+  {
+    "suburb": "MONTUMANA",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "MOOGARA",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "MOONAH",
+    "postcode": "7009"
+  },
+  {
+    "suburb": "MOOREVILLE",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "MOORINA",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "MOORLEAH",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "MORASS BAY",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "MORIARTY",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "MORNINGTON",
+    "postcode": "7018"
+  },
+  {
+    "suburb": "MOUNT DIRECTION",
+    "postcode": "7252"
+  },
+  {
+    "suburb": "MOUNT FIELD",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "MOUNT HICKS",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "MOUNT LLOYD",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "MOUNT NELSON",
+    "postcode": "7007"
+  },
+  {
+    "suburb": "MOUNT ROLAND",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "MOUNT RUMNEY",
+    "postcode": "7170"
+  },
+  {
+    "suburb": "MOUNT SEYMOUR",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "MOUNT STUART",
+    "postcode": "7000"
+  },
+  {
+    "suburb": "MOUNT WILLIAM",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "MOUNTAIN RIVER",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "MOWBRAY",
+    "postcode": "7248"
+  },
+  {
+    "suburb": "MOWBRAY HEIGHTS",
+    "postcode": "7248"
+  },
+  {
+    "suburb": "MURDUNNA",
+    "postcode": "7178"
+  },
+  {
+    "suburb": "MUSSELROE BAY",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "MYALLA",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "MYRTLE BANK",
+    "postcode": "7259"
+  },
+  {
+    "suburb": "NABAGEENA",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "NABOWLA",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "NARACOOPA",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "NATIONAL PARK",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "NATONE",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "NEEDLES",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "NEIKA",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "NELSON BAY",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "NEW NORFOLK",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "NEW TOWN",
+    "postcode": "7008"
+  },
+  {
+    "suburb": "NEWNHAM",
+    "postcode": "7248"
+  },
+  {
+    "suburb": "NEWSTEAD",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "NICHOLLS RIVULET",
+    "postcode": "7112"
+  },
+  {
+    "suburb": "NIERINNA",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "NIETTA",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "NILE",
+    "postcode": "7212"
+  },
+  {
+    "suburb": "NOOK",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "NORTH BRUNY",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "NORTH HOBART",
+    "postcode": "7000"
+  },
+  {
+    "suburb": "NORTH HOBART",
+    "postcode": "7002"
+  },
+  {
+    "suburb": "NORTH LILYDALE",
+    "postcode": "7268"
+  },
+  {
+    "suburb": "NORTH MOTTON",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "NORTH SCOTTSDALE",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "NORTHDOWN",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "NORWOOD",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "NORWOOD AVENUE PO",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "NOTLEY HILLS",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "NOWHERE ELSE",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "NUBEENA",
+    "postcode": "7184"
+  },
+  {
+    "suburb": "NUGARA",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "NUGENT",
+    "postcode": "7172"
+  },
+  {
+    "suburb": "NUNAMARA",
+    "postcode": "7259"
+  },
+  {
+    "suburb": "OAKDOWNS",
+    "postcode": "7019"
+  },
+  {
+    "suburb": "OAKS",
+    "postcode": "7303"
+  },
+  {
+    "suburb": "OATLANDS",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "OCEAN VISTA",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "OLD BEACH",
+    "postcode": "7017"
+  },
+  {
+    "suburb": "OLDINA",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "OONAH",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "OPOSSUM BAY",
+    "postcode": "7023"
+  },
+  {
+    "suburb": "ORFORD",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "ORIELTON",
+    "postcode": "7172"
+  },
+  {
+    "suburb": "OSMASTON",
+    "postcode": "7303"
+  },
+  {
+    "suburb": "OSTERLEY",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "OTAGO",
+    "postcode": "7017"
+  },
+  {
+    "suburb": "OUSE",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "OYSTER COVE",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "PALANA",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "PALOONA",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "PARADISE",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "PARATTAH",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "PARK GROVE",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "PARKHAM",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "PARKLANDS",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "PARRAWE",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "PATERSONIA",
+    "postcode": "7259"
+  },
+  {
+    "suburb": "PAWLEENA",
+    "postcode": "7172"
+  },
+  {
+    "suburb": "PAWTELLA",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "PEARSHAPE",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "PEGARAH",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "PELHAM",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "PELVERATA",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "PENGUIN",
+    "postcode": "7316"
+  },
+  {
+    "suburb": "PENNA",
+    "postcode": "7171"
+  },
+  {
+    "suburb": "PERTH",
+    "postcode": "7300"
+  },
+  {
+    "suburb": "PETCHEYS BAY",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "PIERSONS POINT",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "PIONEER",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "PIPERS BROOK",
+    "postcode": "7254"
+  },
+  {
+    "suburb": "PIPERS RIVER",
+    "postcode": "7252"
+  },
+  {
+    "suburb": "PLENTY",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "POATINA",
+    "postcode": "7302"
+  },
+  {
+    "suburb": "POLICE POINT",
+    "postcode": "7116"
+  },
+  {
+    "suburb": "PONTVILLE",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "PONTYPOOL",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "PORT ARTHUR",
+    "postcode": "7182"
+  },
+  {
+    "suburb": "PORT HUON",
+    "postcode": "7116"
+  },
+  {
+    "suburb": "PORT LATTA",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "PORT SORELL",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "POWRANNA",
+    "postcode": "7300"
+  },
+  {
+    "suburb": "PREMAYDENA",
+    "postcode": "7185"
+  },
+  {
+    "suburb": "PREOLENNA",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "PRESERVATION BAY",
+    "postcode": "7316"
+  },
+  {
+    "suburb": "PRESTON",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "PRIMROSE SANDS",
+    "postcode": "7173"
+  },
+  {
+    "suburb": "PROMISED LAND",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "PROSPECT",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "PROSPECT VALE",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "PUNCHBOWL",
+    "postcode": "7249"
+  },
+  {
+    "suburb": "PYENGANA",
+    "postcode": "7216"
+  },
+  {
+    "suburb": "QUAMBY BEND",
+    "postcode": "7292"
+  },
+  {
+    "suburb": "QUAMBY BROOK",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "QUEENS DOMAIN",
+    "postcode": "7000"
+  },
+  {
+    "suburb": "QUEENSTOWN",
+    "postcode": "7467"
+  },
+  {
+    "suburb": "QUOIBA",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "RAILTON",
+    "postcode": "7305"
+  },
+  {
+    "suburb": "RAMINEA",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "RANDALLS BAY",
+    "postcode": "7112"
+  },
+  {
+    "suburb": "RANELAGH",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "RANGA",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "RAVENSWOOD",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "RECHERCHE",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "RED HILLS",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "REDPA",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "REEDY MARSH",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "REEKARA",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "RELBIA",
+    "postcode": "7258"
+  },
+  {
+    "suburb": "RENISON BELL",
+    "postcode": "7469"
+  },
+  {
+    "suburb": "RETREAT",
+    "postcode": "7254"
+  },
+  {
+    "suburb": "REYNOLDS NECK",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "RHEBAN",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "RHYNDASTON",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "RIANA",
+    "postcode": "7316"
+  },
+  {
+    "suburb": "RICHMOND",
+    "postcode": "7025"
+  },
+  {
+    "suburb": "RIDGEWAY",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "RIDGLEY",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "RINGAROOMA",
+    "postcode": "7263"
+  },
+  {
+    "suburb": "RISDON",
+    "postcode": "7017"
+  },
+  {
+    "suburb": "RISDON VALE",
+    "postcode": "7016"
+  },
+  {
+    "suburb": "RIVERSIDE",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "ROBBINS ISLAND",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "ROBIGANA",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "ROCHERLEA",
+    "postcode": "7248"
+  },
+  {
+    "suburb": "ROCHES BEACH",
+    "postcode": "7170"
+  },
+  {
+    "suburb": "ROCKY CAPE",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "ROCKY HILLS",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "ROGER RIVER",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "ROKEBY",
+    "postcode": "7019"
+  },
+  {
+    "suburb": "ROLAND",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "ROMAINE",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "ROSE BAY",
+    "postcode": "7015"
+  },
+  {
+    "suburb": "ROSEBERY",
+    "postcode": "7470"
+  },
+  {
+    "suburb": "ROSEGARLAND",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "ROSETTA",
+    "postcode": "7010"
+  },
+  {
+    "suburb": "ROSEVALE",
+    "postcode": "7292"
+  },
+  {
+    "suburb": "ROSEVEARS",
+    "postcode": "7277"
+  },
+  {
+    "suburb": "ROSNY",
+    "postcode": "7018"
+  },
+  {
+    "suburb": "ROSNY PARK",
+    "postcode": "7018"
+  },
+  {
+    "suburb": "ROSS",
+    "postcode": "7209"
+  },
+  {
+    "suburb": "ROSSARDEN",
+    "postcode": "7213"
+  },
+  {
+    "suburb": "ROUND HILL",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "ROWELLA",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "ROYAL GEORGE",
+    "postcode": "7213"
+  },
+  {
+    "suburb": "RUNNYMEDE",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "RUSHY LAGOON",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "SALTWATER RIVER",
+    "postcode": "7186"
+  },
+  {
+    "suburb": "SANDFLY",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "SANDFORD",
+    "postcode": "7020"
+  },
+  {
+    "suburb": "SANDHILL",
+    "postcode": "7249"
+  },
+  {
+    "suburb": "SANDY BAY",
+    "postcode": "7005"
+  },
+  {
+    "suburb": "SANDY BAY",
+    "postcode": "7006"
+  },
+  {
+    "suburb": "SASSAFRAS",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "SAVAGE RIVER",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "SCAMANDER",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "SCOPUS",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "SCOTCHTOWN",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "SCOTTSDALE",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "SEA ELEPHANT",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "SEABROOK",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "SELBOURNE",
+    "postcode": "7292"
+  },
+  {
+    "suburb": "SEVEN MILE BEACH",
+    "postcode": "7170"
+  },
+  {
+    "suburb": "SEYMOUR",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "SHANNON",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "SHEARWATER",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "SHEFFIELD",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "SHOREWELL PARK",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "SIDMOUTH",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "SIMPSONS BAY",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "SISTERS BEACH",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "SISTERS CREEK",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "SLOPING MAIN",
+    "postcode": "7186"
+  },
+  {
+    "suburb": "SMITHTON",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "SNUG",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "SOMERSET",
+    "postcode": "7322"
+  },
+  {
+    "suburb": "SORELL",
+    "postcode": "7172"
+  },
+  {
+    "suburb": "SORELL CREEK",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "SOUTH ARM",
+    "postcode": "7022"
+  },
+  {
+    "suburb": "SOUTH BRUNY",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "SOUTH BURNIE",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "SOUTH FOREST",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "SOUTH HOBART",
+    "postcode": "7004"
+  },
+  {
+    "suburb": "SOUTH LAUNCESTON",
+    "postcode": "7249"
+  },
+  {
+    "suburb": "SOUTH MOUNT CAMERON",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "SOUTH NIETTA",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "SOUTH PRESTON",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "SOUTH RIANA",
+    "postcode": "7316"
+  },
+  {
+    "suburb": "SOUTH SPREYTON",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "SOUTH SPRINGFIELD",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "SOUTHPORT",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "SOUTHPORT LAGOON",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "SPALFORD",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "SPRENT",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "SPREYTON",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "SPRING BEACH",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "SPRINGFIELD",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "SQUEAKING POINT",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "ST HELENS",
+    "postcode": "7216"
+  },
+  {
+    "suburb": "ST LEONARDS",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "ST MARYS",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "STANLEY",
+    "postcode": "7331"
+  },
+  {
+    "suburb": "STAVERTON",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "STEPPES",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "STIEGLITZ",
+    "postcode": "7216"
+  },
+  {
+    "suburb": "STONEHENGE",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "STONOR",
+    "postcode": "7119"
+  },
+  {
+    "suburb": "STONY HEAD",
+    "postcode": "7252"
+  },
+  {
+    "suburb": "STONY RISE",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "STOODLEY",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "STORMLEA",
+    "postcode": "7184"
+  },
+  {
+    "suburb": "STORYS CREEK",
+    "postcode": "7213"
+  },
+  {
+    "suburb": "STOWPORT",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "STRAHAN",
+    "postcode": "7468"
+  },
+  {
+    "suburb": "STRATHBLANE",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "STRATHGORDON",
+    "postcode": "7139"
+  },
+  {
+    "suburb": "STRICKLAND",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "STRZELECKI",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "STYX",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "SULPHUR CREEK",
+    "postcode": "7316"
+  },
+  {
+    "suburb": "SUMMERHILL",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "SUNNYSIDE",
+    "postcode": "7305"
+  },
+  {
+    "suburb": "SURGES BAY",
+    "postcode": "7116"
+  },
+  {
+    "suburb": "SURPRISE BAY",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "SURVEYORS BAY",
+    "postcode": "7116"
+  },
+  {
+    "suburb": "SWAN BAY",
+    "postcode": "7252"
+  },
+  {
+    "suburb": "SWAN POINT",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "SWANSEA",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "SWANSTON",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "TABLE CAPE",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "TAKONE",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "TALAWA",
+    "postcode": "7263"
+  },
+  {
+    "suburb": "TARANNA",
+    "postcode": "7180"
+  },
+  {
+    "suburb": "TARGA",
+    "postcode": "7259"
+  },
+  {
+    "suburb": "TARLETON",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "TAROONA",
+    "postcode": "7053"
+  },
+  {
+    "suburb": "TARRALEAH",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "TASMAN ISLAND",
+    "postcode": "7001"
+  },
+  {
+    "suburb": "TAYENE",
+    "postcode": "7259"
+  },
+  {
+    "suburb": "TEA TREE",
+    "postcode": "7017"
+  },
+  {
+    "suburb": "TELITA",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "TEMMA",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "TEWKESBURY",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "THE GARDENS",
+    "postcode": "7216"
+  },
+  {
+    "suburb": "THIRLSTANE",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "THREE HUMMOCK ISLAND",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "TIBERIAS",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "TINDERBOX",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "TODS CORNER",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "TOGARI",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "TOIBERRY",
+    "postcode": "7301"
+  },
+  {
+    "suburb": "TOLMANS HILL",
+    "postcode": "7007"
+  },
+  {
+    "suburb": "TOMAHAWK",
+    "postcode": "7262"
+  },
+  {
+    "suburb": "TONGANAH",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "TOOMS LAKE",
+    "postcode": "7209"
+  },
+  {
+    "suburb": "TRANMERE",
+    "postcode": "7018"
+  },
+  {
+    "suburb": "TRAVELLERS REST",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "TRENAH",
+    "postcode": "7263"
+  },
+  {
+    "suburb": "TREVALLYN",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "TRIABUNNA",
+    "postcode": "7190"
+  },
+  {
+    "suburb": "TRIAL HARBOUR",
+    "postcode": "7469"
+  },
+  {
+    "suburb": "TROWUTTA",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "TUGRAH",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "TULENDEENA",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "TULLAH",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "TUNBRIDGE",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "TUNNACK",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "TUNNEL",
+    "postcode": "7254"
+  },
+  {
+    "suburb": "TURNERS BEACH",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "TURNERS MARSH",
+    "postcode": "7267"
+  },
+  {
+    "suburb": "TYENNA",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "ULVERSTONE",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "UNDERWOOD",
+    "postcode": "7268"
+  },
+  {
+    "suburb": "UNIVERSITY OF TASMANIA",
+    "postcode": "7005"
+  },
+  {
+    "suburb": "UPPER BLESSINGTON",
+    "postcode": "7212"
+  },
+  {
+    "suburb": "UPPER BURNIE",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "UPPER CASTRA",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "UPPER ESK",
+    "postcode": "7214"
+  },
+  {
+    "suburb": "UPPER NATONE",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "UPPER SCAMANDER",
+    "postcode": "7215"
+  },
+  {
+    "suburb": "UPPER STOWPORT",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "UPPER WOODSTOCK",
+    "postcode": "7150"
+  },
+  {
+    "suburb": "UXBRIDGE",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "VERONA SANDS",
+    "postcode": "7112"
+  },
+  {
+    "suburb": "VICTORIA VALLEY",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "WADDAMANA",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "WALLS OF JERUSALEM",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "WARATAH",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "WARRANE",
+    "postcode": "7018"
+  },
+  {
+    "suburb": "WARRENTINNA",
+    "postcode": "7261"
+  },
+  {
+    "suburb": "WATERHOUSE",
+    "postcode": "7262"
+  },
+  {
+    "suburb": "WATERLOO",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "WATTLE GROVE",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "WATTLE HILL",
+    "postcode": "7172"
+  },
+  {
+    "suburb": "WAVERLEY",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "WAYATINAH",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "WEEGENA",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "WEETAH",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "WELDBOROUGH",
+    "postcode": "7264"
+  },
+  {
+    "suburb": "WELLINGTON PARK",
+    "postcode": "7054"
+  },
+  {
+    "suburb": "WESLEY VALE",
+    "postcode": "7307"
+  },
+  {
+    "suburb": "WEST DEVONPORT",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "WEST HOBART",
+    "postcode": "7000"
+  },
+  {
+    "suburb": "WEST KENTISH",
+    "postcode": "7306"
+  },
+  {
+    "suburb": "WEST LAUNCESTON",
+    "postcode": "7250"
+  },
+  {
+    "suburb": "WEST MONTAGU",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "WEST MOONAH",
+    "postcode": "7009"
+  },
+  {
+    "suburb": "WEST MOOREVILLE",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "WEST PINE",
+    "postcode": "7316"
+  },
+  {
+    "suburb": "WEST RIDGLEY",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "WEST SCOTTSDALE",
+    "postcode": "7260"
+  },
+  {
+    "suburb": "WEST TAKONE",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "WEST ULVERSTONE",
+    "postcode": "7315"
+  },
+  {
+    "suburb": "WESTBURY",
+    "postcode": "7303"
+  },
+  {
+    "suburb": "WESTERN CREEK",
+    "postcode": "7304"
+  },
+  {
+    "suburb": "WESTERN JUNCTION",
+    "postcode": "7212"
+  },
+  {
+    "suburb": "WESTERWAY",
+    "postcode": "7140"
+  },
+  {
+    "suburb": "WESTWOOD",
+    "postcode": "7292"
+  },
+  {
+    "suburb": "WEYMOUTH",
+    "postcode": "7252"
+  },
+  {
+    "suburb": "WHITE BEACH",
+    "postcode": "7184"
+  },
+  {
+    "suburb": "WHITE HILLS",
+    "postcode": "7258"
+  },
+  {
+    "suburb": "WHITEFOORD",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "WHITEMARK",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "WHITEMORE",
+    "postcode": "7303"
+  },
+  {
+    "suburb": "WICKHAM",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "WILBURVILLE",
+    "postcode": "7030"
+  },
+  {
+    "suburb": "WILMOT",
+    "postcode": "7310"
+  },
+  {
+    "suburb": "WILTSHIRE",
+    "postcode": "7321"
+  },
+  {
+    "suburb": "WINDERMERE",
+    "postcode": "7252"
+  },
+  {
+    "suburb": "WINGAROO",
+    "postcode": "7255"
+  },
+  {
+    "suburb": "WINKLEIGH",
+    "postcode": "7275"
+  },
+  {
+    "suburb": "WINNALEAH",
+    "postcode": "7265"
+  },
+  {
+    "suburb": "WIVENHOE",
+    "postcode": "7320"
+  },
+  {
+    "suburb": "WOODBRIDGE",
+    "postcode": "7162"
+  },
+  {
+    "suburb": "WOODBURY",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "WOODSDALE",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "WOODSTOCK",
+    "postcode": "7109"
+  },
+  {
+    "suburb": "WOOLNORTH",
+    "postcode": "7330"
+  },
+  {
+    "suburb": "WYENA",
+    "postcode": "7254"
+  },
+  {
+    "suburb": "WYNYARD",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "YAMBACOONA",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "YARRA CREEK",
+    "postcode": "7256"
+  },
+  {
+    "suburb": "YOLLA",
+    "postcode": "7325"
+  },
+  {
+    "suburb": "YORK PLAINS",
+    "postcode": "7120"
+  },
+  {
+    "suburb": "YORK TOWN",
+    "postcode": "7270"
+  },
+  {
+    "suburb": "YOUNGTOWN",
+    "postcode": "7249"
+  },
+  {
+    "suburb": "ZEEHAN",
+    "postcode": "7469"
+  }
+]

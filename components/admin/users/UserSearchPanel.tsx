@@ -50,6 +50,7 @@ export function UserSearchPanel({
               className={`${formStyles.input} ${formStyles.inputWithIcon}`}
               placeholder="Enter name, email, or phone number..."
               value={query}
+              suppressHydrationWarning
               onChange={(e) => onQueryChange(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && onSearch()}
             />

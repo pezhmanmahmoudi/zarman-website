@@ -52,17 +52,31 @@
    ======================================= */
 .formRow { 
   display: grid; 
-  grid-template-columns: repeat(2, minmax(0, 1fr)); 
-  gap: var(--space-6); 
-  margin-bottom: var(--space-6);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
   align-items: start;
+  justify-items: center;
+}
+.formRowCompact {
+  align-items: stretch;
 }
 .inputBox { 
   display: flex; 
   flex-direction: column; 
   gap: var(--space-2); 
   min-width: 0; 
-  margin-bottom: var(--space-4);
+  margin-bottom: 0;
+  width: min(100%, 860px);
+}
+.quoteColumn {
+  align-self: stretch;
+  width: min(100%, 760px);
+}
+.quoteInputStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 .formRow .inputBox {
   margin-bottom: 0; /* جلوگیری از فاصله دوگانه در گرید */
@@ -79,6 +93,16 @@
   font-size: 0.8125rem;
   color: var(--text-soft);
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+}
+
+.labelWithIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.inlineLabelIcon {
+  flex-shrink: 0;
 }
 
 /* رفع قطعی مشکل ستاره قرمز */
@@ -110,9 +134,22 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.12);
 }
+.quoteFieldGroup {
+  min-height: 4.15rem;
+  padding: 0 1.15rem;
+  border-radius: 1rem;
+  border-color: rgba(67, 56, 202, 0.18);
+  background: linear-gradient(180deg, rgba(248, 248, 255, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%);
+  box-shadow: 0 10px 30px rgba(67, 56, 202, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
 .hubLocked {
   background-color: var(--bg-soft);
   border-color: rgba(67, 56, 202, 0.2);
+}
+
+.hubFieldActive {
+  border-color: rgba(67, 56, 202, 0.4);
+  background: rgba(67, 56, 202, 0.04);
 }
 
 .hubFaInput {
@@ -129,6 +166,15 @@
   width: 100%;
   text-align: right !important;
   direction: ltr !important;
+}
+.quoteFieldInput {
+  text-align: center !important;
+  font-size: var(--text-card-title) !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.01em;
+}
+.quoteAudInput {
+  color: var(--success) !important;
 }
 .hubFaInput::placeholder { color: var(--text-placeholder); font-weight: 500; font-family: var(--font-fa-stack, 'IRANSansX', sans-serif) !important; }
 
@@ -150,7 +196,7 @@
 .hubEnInput::placeholder {
   color: var(--text-placeholder);
   font-weight: 400;
-  font-family: 'IRANSansX', sans-serif !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
   letter-spacing: normal;
   text-align: right;
 }
@@ -175,8 +221,8 @@
 
 .hubResultInput { 
   color: var(--accent) !important; 
-  font-size: var(--text-card-title) !important; 
-  font-weight: 900 !important; 
+  font-size: var(--text-card-title) !important;
+  font-weight: 900 !important;
 }
 
 .hubDivider { 
@@ -184,6 +230,19 @@
   height: var(--space-6); 
   background-color: var(--border-input); 
   margin: 0 var(--space-4); 
+}
+.currencyLabelFixed {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+  white-space: nowrap;
+}
+.quoteCurrencyLabel {
+  min-width: 3.8rem;
+  text-align: center;
+  color: var(--accent);
 }
 
 /* =======================================
@@ -228,13 +287,13 @@
 
 /* ورودی‌های انگلیسی (ایمیل، نام حساب استرالیا) */
 .enInput {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
   font-size: 1rem !important;
   font-weight: 500 !important;
   letter-spacing: 0.5px;
 }
 .enInput::placeholder {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
   font-size: 0.875rem !important;
   font-weight: 400 !important;
   letter-spacing: normal;
@@ -263,10 +322,94 @@
 .ltrWhenFilled:not(:placeholder-shown) {
   direction: ltr !important;
   text-align: left !important;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
   font-size: 1.05rem !important;
   font-weight: 600 !important;
   letter-spacing: 2px; 
+}
+
+/* Locale-specific font contract: EN => Inter, FA => IRANSansX */
+:global([dir="ltr"]) .lockTitle,
+:global([dir="ltr"]) .lockText,
+:global([dir="ltr"]) .panelTitle,
+:global([dir="ltr"]) .label,
+:global([dir="ltr"]) .currencyLabelFixed,
+:global([dir="ltr"]) .promoApplyBtn,
+:global([dir="ltr"]) .promoSuccess,
+:global([dir="ltr"]) .promoError,
+:global([dir="ltr"]) .fieldHint,
+:global([dir="ltr"]) .feeWarning,
+:global([dir="ltr"]) .noticeText,
+:global([dir="ltr"]) .summaryFact span,
+:global([dir="ltr"]) .summaryFactValue,
+:global([dir="ltr"]) .summaryFactText,
+:global([dir="ltr"]) .summaryRate,
+:global([dir="ltr"]) .summaryHint,
+:global([dir="ltr"]) .scrollPill {
+  font-family: 'Inter', system-ui, sans-serif !important;
+}
+
+:global([dir="ltr"]) .hubFaInput,
+:global([dir="ltr"]) .hubFaInput::placeholder,
+:global([dir="ltr"]) .faInput,
+:global([dir="ltr"]) .faInput::placeholder,
+:global([dir="ltr"]) .ltrWhenFilled:placeholder-shown {
+  font-family: 'Inter', system-ui, sans-serif !important;
+}
+
+:global([dir="rtl"]) .lockTitle,
+:global([dir="rtl"]) .lockText,
+:global([dir="rtl"]) .panelTitle,
+:global([dir="rtl"]) .label,
+:global([dir="rtl"]) .currencyLabelFixed,
+:global([dir="rtl"]) .promoApplyBtn,
+:global([dir="rtl"]) .promoSuccess,
+:global([dir="rtl"]) .promoError,
+:global([dir="rtl"]) .fieldHint,
+:global([dir="rtl"]) .feeWarning,
+:global([dir="rtl"]) .noticeText,
+:global([dir="rtl"]) .summaryFact span,
+:global([dir="rtl"]) .summaryFactValue,
+:global([dir="rtl"]) .summaryFactText,
+:global([dir="rtl"]) .summaryRate,
+:global([dir="rtl"]) .summaryHint,
+:global([dir="rtl"]) .scrollPill,
+:global([dir="rtl"]) .hubFaInput,
+:global([dir="rtl"]) .hubFaInput::placeholder,
+:global([dir="rtl"]) .faInput,
+:global([dir="rtl"]) .faInput::placeholder {
+  font-family: 'IRANSansX', 'Peyda', sans-serif !important;
+}
+
+/* English/LTR arrangement refinements for dashboard request hub */
+:global([dir="ltr"]) .formRow {
+  justify-items: center;
+}
+
+:global([dir="ltr"]) .labelWithIcon {
+  flex-direction: row;
+}
+
+:global([dir="rtl"]) .labelWithIcon {
+  flex-direction: row;
+}
+
+:global([dir="ltr"]) .label,
+:global([dir="ltr"]) .fieldHint,
+:global([dir="ltr"]) .promoSuccess,
+:global([dir="ltr"]) .promoError,
+:global([dir="ltr"]) .feeWarning,
+:global([dir="ltr"]) .noticeText,
+:global([dir="ltr"]) .summaryText {
+  text-align: left;
+}
+
+:global([dir="ltr"]) .currencyLabelFixed {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+:global([dir="ltr"]) .labelRow {
+  flex-direction: row;
 }
 
 /* =======================================
@@ -406,6 +549,50 @@
   flex-direction: column;
   gap: 4px;
 }
+.summaryFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  width: 100%;
+}
+.summaryFact {
+  min-width: 140px;
+  padding: 0.7rem 0.875rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.72);
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  align-items: center;
+  text-align: center;
+}
+.summaryFact span {
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: 'IRANSansX', 'Peyda', sans-serif;
+  text-align: center;
+}
+.summaryFactValue {
+  color: var(--text-main);
+  font-size: 0.92rem;
+  font-weight: 800;
+  font-family: 'IRANSansX', 'Peyda', var(--font-en-stack), sans-serif;
+  direction: ltr;
+  text-align: center;
+}
+.summaryFactText {
+  color: #059669;
+  font-size: 0.92rem;
+  font-weight: 800;
+  font-family: 'IRANSansX', 'Peyda', sans-serif;
+  text-align: center;
+}
+.summaryFactCalm {
+  background: rgba(5, 150, 105, 0.06);
+  border-color: rgba(5, 150, 105, 0.14);
+}
 .summaryRate {
   color: var(--accent);
   display: block;
@@ -432,8 +619,13 @@
    ======================================= */
 @media (max-width: 768px) {
   .formRow {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 0.875rem;
+    margin-bottom: 0.875rem;
+  }
+  .quoteInputStack { gap: 0.875rem; }
+  .inputBox,
+  .quoteColumn {
+    width: 100%;
   }
   .summaryBox {
     flex-direction: column;
@@ -441,6 +633,12 @@
     text-align: center;
     gap: 0.75rem;
     padding: 1rem;
+  }
+  .summaryFacts {
+    flex-direction: column;
+  }
+  .summaryFact {
+    min-width: 0;
   }
   .summaryText {
     flex: 0 0 auto;
@@ -464,20 +662,30 @@
   .summaryRate { font-size: 1.5rem; }
   .panelTitle { font-size: 1.0625rem; margin-bottom: 1.25rem; }
   .hubFieldGroup { height: 3.25rem; }
+
+  :global([dir="ltr"]) .label,
+  :global([dir="ltr"]) .fieldHint,
+  :global([dir="ltr"]) .noticeText,
+  :global([dir="ltr"]) .summaryText {
+    text-align: left;
+  }
 }
 
 @media (max-width: 520px) {
-  .promoRow { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+  .promoRow { grid-template-columns: 1fr; align-items: stretch; gap: 0.75rem; }
   .promoApplyBtn { height: 3.25rem; width: 100%; }
   /* iOS Safari: font-size ≥ 16px prevents zoom-on-focus */
   .hubFaInput   { font-size: 1rem !important; }
+  .quoteFieldInput { font-size: 1.12rem !important; }
+  .hubResultInput { font-size: 1.12rem !important; }
   .hubEnInput   { font-size: 1rem !important; }
   .hubEnInputLtr { font-size: 1rem !important; }
   .hubFieldGroup { height: 3.25rem; }
+  .quoteFieldGroup { min-height: 3.7rem; padding-inline: 0.9rem; }
+  .currencyLabelFixed { font-size: 0.875rem; }
   .label { font-size: 0.875rem; }
   .fieldHint { font-size: 0.875rem; }
-  .formRow { gap: 0.875rem; }
-  .inputBox { margin-bottom: 0.75rem; }
+  .formRow { gap: 0.75rem; margin-bottom: 0.75rem; }
   .summaryBox { gap: 0.5rem; padding: 0.875rem; }
   .summaryText { flex: 0 0 auto; }
   .noticeBannerContainer {

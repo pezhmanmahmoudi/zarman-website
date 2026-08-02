@@ -4,6 +4,7 @@ import React from "react";
 import { ShieldCheck, Clock } from "lucide-react";
 import styles from "@/styles/dashboard/DashboardHeader.module.css";
 import shellStyles from "@/styles/dashboard/DashboardShell.module.css";
+import { useT } from "@/hooks/useT";
 
 type DashboardHeaderProps = {
   firstName: string;
@@ -18,6 +19,8 @@ export function DashboardHeader({
   mobileMenuOpen,
   setMobileMenuOpen,
 }: DashboardHeaderProps) {
+  const t = useT();
+
   return (
     <>
       <div className={shellStyles.mobileTopbar}>
@@ -27,7 +30,7 @@ export function DashboardHeader({
             mobileMenuOpen ? shellStyles.mobileMenuBtnActive : ""
           }`}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label={mobileMenuOpen ? "بستن منو" : "باز کردن منو"}
+          aria-label={mobileMenuOpen ? t.header.closeMenu : t.header.openMenu}
           aria-expanded={mobileMenuOpen}
           aria-controls="dashboard-mobile-sidebar"
         >
@@ -38,18 +41,16 @@ export function DashboardHeader({
 
       <header className={styles.headerCard}>
         <div className={styles.headerContent}>
-          <span className={styles.headerEyebrow}>پنل مدیریت تراکنش کاربر</span>
+          <span className={styles.headerEyebrow}>{t.dashboard.title}</span>
 
-          {/* 🚀 رنگ‌بندی حرفه‌ای: "Hi" رنگ اصلی و نام کاربر رنگ Accent می‌گیرد */}
           <h1 className={styles.headerTitle} dir="ltr">
             Hi <span className={styles.textAccent}>{firstName}</span>!
           </h1>
 
           <p className={styles.headerDescription}>
-            به پنل مدیریت تراکنش خوش آمدید.
+            {t.dashboard.welcome}
             <br />
-            از اینجا می‌توانید ثبت نام خود را برای احراز هویت تکمیل کنید،  درخواست تراکنش دهید، نرخ اختصاصی خود را
-            ببینید و حواله‌های خود را مدیریت کنید.
+            {t.dashboard.welcomeDetail}
           </p>
         </div>
 
@@ -61,7 +62,7 @@ export function DashboardHeader({
           >
             {isApproved ? <ShieldCheck size={20} /> : <Clock size={20} />}
             <strong>
-              {isApproved ? "هویت تایید شده" : "در انتظار تایید هویت"}
+              {isApproved ? t.dashboard.kycApproved : t.dashboard.kycPending}
             </strong>
           </div>
         </div>

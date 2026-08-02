@@ -4,7 +4,7 @@
   position: relative;
   background-color: #ffffff; /* پس‌زمینه سفید خالص */
   padding: var(--section-pad-major) 0;
-  direction: rtl;
+  direction: inherit;
   overflow: hidden;
 }
 

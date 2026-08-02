@@ -7,6 +7,8 @@ import formStyles from "@/styles/admin/AdminForms.module.css";
 import { createAssistedCustomerOnboarding } from "@/app/actions/admin.actions";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
+import { AustralianLocationFields } from "@/components/dashboard/AustralianLocationFields";
+import { AU_DRIVER_LICENCE_ISSUER_OPTIONS, normalizeAustralianState } from "@/lib/australian-driver-licence";
 
 type Props = {
   onCreated?: (userId: string) => void;
@@ -254,23 +256,82 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                 <div className={`${formStyles.fieldGroup} ${formStyles.fieldGroupFull}`}>
                   <label className={formStyles.label}>Street Address</label>
                   <input className={formStyles.input} value={form.address} onChange={(e) => setField("address", e.target.value)} placeholder="123 Example St" />
-                </div>
-                <div className={formStyles.fieldGroup}>
-                  <label className={formStyles.label}>City / Suburb</label>
-                  <input className={formStyles.input} value={form.city} onChange={(e) => setField("city", e.target.value)} />
-                </div>
-                <div className={formStyles.fieldGroup}>
-                  <label className={formStyles.label}>State</label>
-                  <input className={formStyles.input} value={form.state} onChange={(e) => setField("state", e.target.value)} placeholder="NSW" />
-                </div>
-                <div className={formStyles.fieldGroup}>
-                  <label className={formStyles.label}>Postcode</label>
-                  <input className={formStyles.input} value={form.postcode} onChange={(e) => setField("postcode", e.target.value)} />
+                  <span className={formStyles.hintText}>
+                    Use the customer&apos;s residential address exactly as shown on their bank statement or identity document.
+                  </span>
                 </div>
                 <div className={formStyles.fieldGroup}>
                   <label className={formStyles.label}>Country</label>
-                  <input className={formStyles.input} value={form.country} onChange={(e) => setField("country", e.target.value)} />
+                  <SelectBox
+                    className={formStyles.input}
+                    groups={[
+                      {
+                        label: "Common",
+                        options: [
+                          "Australia", "Iran", "United Arab Emirates", "Canada",
+                          "Turkey", "United Kingdom", "United States",
+                        ],
+                      },
+                      {
+                        label: "All Countries",
+                        options: [
+                          "Afghanistan","Albania","Algeria","Argentina","Armenia",
+                          "Austria","Azerbaijan","Bahrain","Bangladesh","Belgium",
+                          "Brazil","Bulgaria","China","Croatia","Cyprus",
+                          "Czech Republic","Denmark","Egypt","Estonia","Finland",
+                          "France","Georgia","Germany","Greece","Hong Kong",
+                          "Hungary","India","Indonesia","Iraq","Ireland","Italy",
+                          "Japan","Jordan","Kazakhstan","Kuwait","Kyrgyzstan",
+                          "Latvia","Lebanon","Libya","Lithuania","Malaysia",
+                          "Mexico","Netherlands","Nigeria","Norway","Oman",
+                          "Pakistan","Philippines","Poland","Portugal","Qatar",
+                          "Romania","Russia","Saudi Arabia","Serbia","Singapore",
+                          "Slovakia","Slovenia","South Africa","South Korea","Spain",
+                          "Sri Lanka","Sweden","Switzerland","Syria","Tajikistan",
+                          "Thailand","Tunisia","Turkmenistan","Ukraine","Uzbekistan",
+                          "Vietnam","Yemen",
+                        ],
+                      },
+                    ]}
+                    value={form.country}
+                    onChange={(val) => setForm((prev) => ({ ...prev, country: val, state: "", city: "", postcode: "" }))}
+                    disabled={isPending}
+                  />
                 </div>
+                {form.country === "Australia" ? (
+                  <AustralianLocationFields
+                    key={normalizeAustralianState(form.state) || "AU-admin-onboarding"}
+                    state={normalizeAustralianState(form.state)}
+                    city={form.city}
+                    postalCode={form.postcode}
+                    disabled={isPending}
+                    ui={{
+                      fieldGroupClassName: formStyles.fieldGroup,
+                      labelClassName: formStyles.label,
+                      inputClassName: formStyles.input,
+                      errorTextClassName: formStyles.errorText,
+                      hintTextClassName: formStyles.hintText,
+                    }}
+                    onStateChange={(value) => setForm((prev) => ({ ...prev, state: value, city: "", postcode: "" }))}
+                    onCityChange={(value) => setField("city", value)}
+                    onPostalCodeChange={(value) => setField("postcode", value)}
+                  />
+                ) : (
+                  <>
+                    <div className={formStyles.fieldGroup}>
+                      <label className={formStyles.label}>City / Suburb</label>
+                      <input className={formStyles.input} value={form.city} onChange={(e) => setField("city", e.target.value)} />
+                    </div>
+                    <div className={formStyles.fieldGroup}>
+                      <label className={formStyles.label}>State</label>
+                      <input className={formStyles.input} value={form.state} onChange={(e) => setField("state", e.target.value)} placeholder="State / Province" />
+                    </div>
+                    <div className={formStyles.fieldGroup}>
+                      <label className={formStyles.label}>Postcode</label>
+                      <input className={formStyles.input} value={form.postcode} onChange={(e) => setField("postcode", e.target.value)} />
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className={formStyles.divider} />
@@ -305,20 +366,10 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                       <input className={formStyles.input} value={form.doc_card_number} onChange={(e) => setField("doc_card_number", e.target.value)} placeholder="Printed on front of licence" />
                     </div>
                     <div className={formStyles.fieldGroup}>
-                      <label className={formStyles.label}>State of Issue</label>
+                      <label className={formStyles.label}>Issuing Authority</label>
                       <SelectBox
                       className={formStyles.input}
-                      labeledOptions={[
-                        { value: "", label: "— Select state —" },
-                        { value: "NSW", label: "NSW" },
-                        { value: "VIC", label: "VIC" },
-                        { value: "QLD", label: "QLD" },
-                        { value: "WA", label: "WA" },
-                        { value: "SA", label: "SA" },
-                        { value: "TAS", label: "TAS" },
-                        { value: "ACT", label: "ACT" },
-                        { value: "NT", label: "NT" },
-                      ]}
+                      labeledOptions={[{ value: "", label: "— Select issuer —" }, ...AU_DRIVER_LICENCE_ISSUER_OPTIONS]}
                       value={form.state_of_issue}
                       onChange={(val) => setField("state_of_issue", val)}
                       disabled={isPending}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import { useParams } from "next/navigation";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -11,7 +12,7 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const HIGHLIGHTS = [
+const HIGHLIGHTS_FA = [
   {
     id: "highlight-1",
     number: "01",
@@ -46,8 +47,46 @@ const HIGHLIGHTS = [
   },
 ];
 
+const HIGHLIGHTS_EN = [
+  {
+    id: "highlight-1",
+    number: "01",
+    Icon: TrendingUp,
+    stat: "Best Rate",
+    label: "Australian Dollar",
+    body: "With our loyalty-rate engine, larger transaction volumes unlock smarter pricing and lower effective costs, helping you secure the best AUD rates.",
+  },
+  {
+    id: "highlight-2",
+    number: "02",
+    Icon: ShieldCheck,
+    stat: "Officially Licensed",
+    label: "Australian Compliant Exchange",
+    body: "Your capital security is our first priority. Zarman is a registered financial entity under AUSTRAC and operates in full legal compliance.",
+  },
+  {
+    id: "highlight-3",
+    number: "03",
+    Icon: ArrowLeftRight,
+    stat: "Reliable Remittance",
+    label: "Australia to Iran",
+    body: "Using Offset Settlement infrastructure, we bypass direct-banking constraints and provide a faster route with strong legal assurance.",
+  },
+  {
+    id: "highlight-4",
+    number: "04",
+    Icon: Calculator,
+    stat: "Live Pricing",
+    label: "AUD to Toman",
+    body: "Track market movement in real time. Our platform surfaces high-opportunity windows to help you secure stronger execution rates.",
+  },
+];
+
 export default function ExchangeHighlightSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
+  const { locale } = useParams<{ locale: string }>();
+  const isEn = locale === "en";
+  const highlights = isEn ? HIGHLIGHTS_EN : HIGHLIGHTS_FA;
 
   useGSAP(
     () => {
@@ -82,23 +121,26 @@ export default function ExchangeHighlightSection() {
       ref={sectionRef}
       className={styles.section}
       aria-labelledby="highlight-title"
-      dir="rtl"
     >
       <div className={styles.container}>
         <div className={styles.header}>
-          <p className={styles.eyebrow}>چرا زرمان؟</p>
+          <p className={styles.eyebrow}>{isEn ? "Why Zarman?" : "چرا زرمان؟"}</p>
           <h2 id="highlight-title" className={styles.title}>
-            بهترین نرخ دلار استرالیا
+            {isEn ? "Best AUD Rates" : "بهترین نرخ دلار استرالیا"}
             <br />
-            <span className={styles.titleAccent}>برای جامعه ایرانی در استرالیا</span>
+            <span className={styles.titleAccent}>
+              {isEn ? "For the Iranian Community in Australia" : "برای جامعه ایرانی در استرالیا"}
+            </span>
           </h2>
           <p className={styles.subtitle}>
-            خرید و فروش دلار استرالیا با بهترین نرخ، به صورت قانونی و کاملاً شفاف در بستری مدرن.
+            {isEn
+              ? "Buy and sell AUD at competitive rates in a lawful, transparent, and modern financial platform."
+              : "خرید و فروش دلار استرالیا با بهترین نرخ، به صورت قانونی و کاملاً شفاف در بستری مدرن."}
           </p>
         </div>
 
         <div className={styles.grid}>
-          {HIGHLIGHTS.map((item) => {
+          {highlights.map((item) => {
             const Icon = item.Icon;
             return (
               <article key={item.id} className={styles.card}>

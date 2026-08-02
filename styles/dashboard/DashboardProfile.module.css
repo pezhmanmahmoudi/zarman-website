@@ -429,6 +429,87 @@
 /* خطاهای فرم (برای متن‌های انگلیسی فیلدها) */
 .errorBorder { border-color: #ef4444 !important; background-color: rgba(239, 68, 68, 0.03) !important; }
 .errorText { color: #ef4444 !important; font-size: 12px; font-weight: 600; margin-top: 4px; font-family: var(--font-en-stack) !important; text-align: left; direction: ltr; }
+.fieldHint { color: var(--text-soft) !important; font-size: 12px; line-height: 1.5; font-family: var(--font-en-stack) !important; text-align: left; direction: ltr; }
+
+.auSuggestionShell {
+  position: relative;
+}
+
+.auSuggestionInput {
+  padding-right: 42px !important;
+}
+
+.auSuggestionToggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.auSuggestionToggle:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.auSuggestionChevronOpen {
+  transform: rotate(180deg);
+}
+
+.auSuggestionDropdown {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+  padding: 8px;
+}
+
+.auSuggestionOption {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  text-align: left;
+  font-family: var(--font-en-stack, 'Inter', sans-serif);
+  font-size: 0.9375rem;
+  padding: 12px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.auSuggestionOption:hover,
+.auSuggestionOptionActive {
+  background: rgba(56, 72, 245, 0.08);
+  color: var(--accent);
+}
+
+:global([data-theme="dark"]) .auSuggestionDropdown {
+  background: rgba(15, 23, 42, 0.94);
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
+}
+
+:global([data-theme="dark"]) .auSuggestionOption {
+  color: #e2e8f0;
+}
 
 /* استایل اختصاصی برای متون ارور فارسی */
 .errorTextFa {

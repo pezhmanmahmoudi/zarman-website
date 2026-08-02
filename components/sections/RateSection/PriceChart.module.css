@@ -10,7 +10,7 @@
   background: #090e17; 
   padding: 0; 
   border-radius: var(--radius-xl);
-  direction: rtl;
+  direction: inherit;
   border: 1px solid #1d2d47;
   box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.03);
 }
@@ -135,7 +135,7 @@
   border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5);
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
-  direction: rtl;
+  direction: inherit;
   min-width: 180px;
 }
 
@@ -170,7 +170,7 @@
 
 .tooltipValue {
   color: #ffffff;
-  font-family: "IRANSansX", sans-serif;
+  font-family: var(--font-primary);
   font-size: var(--text-card-title); 
   font-weight: var(--font-weight-bold);
   letter-spacing: -0.5px;
@@ -180,6 +180,22 @@
   color: #38bdf8;
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
+}
+
+:global([dir="ltr"]) .tooltip {
+  direction: ltr;
+}
+
+:global([dir="ltr"]) .tooltipValueRow {
+  justify-content: flex-start;
+}
+
+:global([dir="rtl"]) .tooltip {
+  direction: rtl;
+}
+
+:global([dir="rtl"]) .tooltipValueRow {
+  justify-content: flex-end;
 }
 
 /* ========== Responsive Breakpoints ========== */

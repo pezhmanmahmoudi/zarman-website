@@ -5,7 +5,7 @@
   background-color: var(--color-bg-base);
   padding: var(--section-pad-major) 0;
   overflow: hidden;
-  direction: rtl;
+  direction: inherit;
 }
 
 .container {

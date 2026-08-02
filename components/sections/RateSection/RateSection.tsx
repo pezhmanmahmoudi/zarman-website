@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useParams } from "next/navigation";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -16,6 +17,8 @@ if (typeof window !== "undefined") {
 
 export default function RateSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
+  const { locale } = useParams<{ locale: string }>();
+  const isEn = locale === "en";
 
   // انیمیشن نرم برای ظاهر شدن (Reveal) المان‌ها هنگام اسکرول
   useGSAP(
@@ -56,15 +59,16 @@ export default function RateSection() {
     >
       <div className={styles.container}>
         <div className={styles.header}>
-          <p className={styles.eyebrow}>نرخ لحظه‌ای و محاسبه‌گر</p>
+          <p className={styles.eyebrow}>{isEn ? "Live Rate & Calculator" : "نرخ لحظه‌ای و محاسبه‌گر"}</p>
 
           <h2 id="rate-section-title" className={styles.title}>
-            محاسبه سریع، شفافیت در روند
+            {isEn ? "Calculate Instantly, Stay Transparent" : "محاسبه سریع، شفافیت در روند"}
           </h2>
 
           <p className={styles.subtitle}>
-            مبلغ ارسالی و دریافتی خود را با نرخ‌ لحظه ای محاسبه کنید. 
-           و با مشاهده نمودار تغییرات، تصمیمی آگاهانه بگیرید.
+            {isEn
+              ? "Calculate your send and receive amounts at live rates. View the rate chart to make an informed decision."
+              : "مبلغ ارسالی و دریافتی خود را با نرخ‌ لحظه ای محاسبه کنید. و با مشاهده نمودار تغییرات، تصمیمی آگاهانه بگیرید."}
           </p>
         </div>
 

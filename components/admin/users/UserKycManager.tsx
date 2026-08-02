@@ -11,6 +11,8 @@ import { updateUserIdentityKycProfile } from "@/app/actions/admin.actions";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { ComplianceCheckButtons } from "@/components/admin/ComplianceCheckButtons";
+import { AustralianLocationFields } from "@/components/dashboard/AustralianLocationFields";
+import { AU_DRIVER_LICENCE_ISSUER_OPTIONS, formatAustralianDriverLicenceIssuer, normalizeAustralianState } from "@/lib/australian-driver-licence";
 import type { getUserFinancialProfile } from "@/app/actions/admin.actions";
 
 type Profile = Awaited<ReturnType<typeof getUserFinancialProfile>>["profile"];
@@ -27,7 +29,7 @@ const ROWS: [string, (p: NonNullable<Profile>) => string | null | undefined][] =
   ["Date of Birth",   (p) => p.dob],
   ["Address",         (p) => [p.address, p.city, p.state, (p as Record<string, unknown>).postcode as string | null, p.country].filter(Boolean).join(", ") || null],
   ["Document Type",   (p) => p.document_type],
-  ["State of Issue",  (p) => (p as Record<string, unknown>).state_of_issue as string | null],
+  ["Issuing Authority",  (p) => formatAustralianDriverLicenceIssuer((p as Record<string, unknown>).state_of_issue as string | null) || null],
   ["Licence Number",  (p) => (p as Record<string, unknown>).license_number  as string | null],
   ["Card Number",     (p) => (p as Record<string, unknown>).card_number      as string | null],
   ["Passport Number", (p) => (p as Record<string, unknown>).passport_number  as string | null],
@@ -50,7 +52,7 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
     dob:            p?.dob            as string ?? "",
     address:        p?.address        as string ?? "",
     city:           p?.city           as string ?? "",
-    state:          p?.state          as string ?? "",
+    state:          (p?.country as string ?? "") === "Australia" ? normalizeAustralianState(p?.state as string ?? "") : p?.state as string ?? "",
     postcode:       p?.postcode       as string ?? "",
     country:        p?.country        as string ?? "",
     document_type:  p?.document_type  as string ?? "",
@@ -152,23 +154,81 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Street Address</label>
                 <input className={formStyles.input} value={form.address} onChange={(e) => setField("address", e.target.value)} />
-              </div>
-              <div className={formStyles.fieldGroup}>
-                <label className={formStyles.label}>City</label>
-                <input className={formStyles.input} value={form.city} onChange={(e) => setField("city", e.target.value)} />
-              </div>
-              <div className={formStyles.fieldGroup}>
-                <label className={formStyles.label}>State</label>
-                <input className={formStyles.input} value={form.state} onChange={(e) => setField("state", e.target.value)} />
-              </div>
-              <div className={formStyles.fieldGroup}>
-                <label className={formStyles.label}>Postcode</label>
-                <input className={formStyles.input} value={form.postcode} onChange={(e) => setField("postcode", e.target.value)} />
+                <span className={formStyles.hintText}>
+                  Use the customer&apos;s residential address exactly as shown on their bank statement or identity document.
+                </span>
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Country</label>
-                <input className={formStyles.input} value={form.country} onChange={(e) => setField("country", e.target.value)} />
+                <SelectBox
+                  className={formStyles.input}
+                  groups={[
+                    {
+                      label: "Common",
+                      options: [
+                        "Australia", "Iran", "United Arab Emirates", "Canada",
+                        "Turkey", "United Kingdom", "United States",
+                      ],
+                    },
+                    {
+                      label: "All Countries",
+                      options: [
+                        "Afghanistan","Albania","Algeria","Argentina","Armenia",
+                        "Austria","Azerbaijan","Bahrain","Bangladesh","Belgium",
+                        "Brazil","Bulgaria","China","Croatia","Cyprus",
+                        "Czech Republic","Denmark","Egypt","Estonia","Finland",
+                        "France","Georgia","Germany","Greece","Hong Kong",
+                        "Hungary","India","Indonesia","Iraq","Ireland","Italy",
+                        "Japan","Jordan","Kazakhstan","Kuwait","Kyrgyzstan",
+                        "Latvia","Lebanon","Libya","Lithuania","Malaysia",
+                        "Mexico","Netherlands","Nigeria","Norway","Oman",
+                        "Pakistan","Philippines","Poland","Portugal","Qatar",
+                        "Romania","Russia","Saudi Arabia","Serbia","Singapore",
+                        "Slovakia","Slovenia","South Africa","South Korea","Spain",
+                        "Sri Lanka","Sweden","Switzerland","Syria","Tajikistan",
+                        "Thailand","Tunisia","Turkmenistan","Ukraine","Uzbekistan",
+                        "Vietnam","Yemen",
+                      ],
+                    },
+                  ]}
+                  value={form.country}
+                  onChange={(val) => setForm((prev) => ({ ...prev, country: val, state: "", city: "", postcode: "" }))}
+                />
               </div>
+              {form.country === "Australia" ? (
+                <AustralianLocationFields
+                  key={normalizeAustralianState(form.state) || "AU-admin-kyc"}
+                  state={normalizeAustralianState(form.state)}
+                  city={form.city}
+                  postalCode={form.postcode}
+                  disabled={isPending}
+                  ui={{
+                    fieldGroupClassName: formStyles.fieldGroup,
+                    labelClassName: formStyles.label,
+                    inputClassName: formStyles.input,
+                    errorTextClassName: formStyles.errorText,
+                    hintTextClassName: formStyles.hintText,
+                  }}
+                  onStateChange={(value) => setForm((prev) => ({ ...prev, state: value, city: "", postcode: "" }))}
+                  onCityChange={(value) => setField("city", value)}
+                  onPostalCodeChange={(value) => setField("postcode", value)}
+                />
+              ) : (
+                <>
+                  <div className={formStyles.fieldGroup}>
+                    <label className={formStyles.label}>City</label>
+                    <input className={formStyles.input} value={form.city} onChange={(e) => setField("city", e.target.value)} />
+                  </div>
+                  <div className={formStyles.fieldGroup}>
+                    <label className={formStyles.label}>State</label>
+                    <input className={formStyles.input} value={form.state} onChange={(e) => setField("state", e.target.value)} />
+                  </div>
+                  <div className={formStyles.fieldGroup}>
+                    <label className={formStyles.label}>Postcode</label>
+                    <input className={formStyles.input} value={form.postcode} onChange={(e) => setField("postcode", e.target.value)} />
+                  </div>
+                </>
+              )}
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Document Type</label>
                 <SelectBox
@@ -184,8 +244,13 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
                 />
               </div>
               <div className={formStyles.fieldGroup}>
-                <label className={formStyles.label}>State of Issue</label>
-                <input className={formStyles.input} value={form.state_of_issue} onChange={(e) => setField("state_of_issue", e.target.value)} />
+                <label className={formStyles.label}>Issuing Authority</label>
+                <SelectBox
+                  className={formStyles.input}
+                  labeledOptions={[{ value: "", label: "— Select issuer —" }, ...AU_DRIVER_LICENCE_ISSUER_OPTIONS]}
+                  value={form.state_of_issue}
+                  onChange={(val) => setField("state_of_issue", val)}
+                />
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Licence Number</label>
@@ -281,6 +346,19 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
                 userId={profile.id}
                 country={(profile as Record<string, unknown>).country as string | null}
                 documentType={(profile as Record<string, unknown>).document_type as string | null}
+                initialDvsStatus={(profile as Record<string, unknown>).compliance_dvs_status as string | null}
+                initialDvsMethod={(profile as Record<string, unknown>).compliance_dvs_method as string | null}
+                initialDvsCheckedAt={(profile as Record<string, unknown>).compliance_dvs_checked_at as string | null}
+                initialDvsOutcome={(profile as Record<string, unknown>).compliance_dvs_outcome as string | null}
+                initialAmlStatus={(profile as Record<string, unknown>).compliance_aml_status as string | null}
+                initialAmlMethod={(profile as Record<string, unknown>).compliance_aml_method as string | null}
+                initialAmlCheckedAt={(profile as Record<string, unknown>).compliance_aml_checked_at as string | null}
+                initialAmlOutcome={(profile as Record<string, unknown>).compliance_aml_outcome as string | null}
+                initialAmlFlag={(profile as Record<string, unknown>).compliance_aml_flag as "none" | "clear" | "review_required" | "failed" | null}
+                initialCustomerFlagged={(profile as Record<string, unknown>).compliance_customer_flagged as boolean | null}
+                initialCustomerFlagReason={(profile as Record<string, unknown>).compliance_customer_flag_reason as string | null}
+                initialCustomerNote={(profile as Record<string, unknown>).compliance_admin_note as string | null}
+                onSaved={onProfileUpdated}
               />
             )}
             {profile && <KycActionButtons userId={profile.id} />}
