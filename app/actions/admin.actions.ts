@@ -5,6 +5,11 @@ import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { revalidateTag } from "next/cache";
 import { getRatesSnapshot } from "@/lib/rates";
 import { calcExecutionRateFromSettlement } from "@/lib/pricing";
+import {
+  calcIranBankTransferFee,
+  getIranBankTransferFeeError,
+  type IranBankTransferMethod,
+} from "@/lib/iran-bank-transfer-fees";
 
 const AUDIT_LOG_RETRY_COUNT = 2;
 const DEFAULT_HISTORY_LIMIT = 50;
@@ -593,7 +598,8 @@ export async function getTransactionHistory(limitCount: number = DEFAULT_HISTORY
 export async function approveTransaction(
   transactionId: string | number,
   payerAccountId?: string,
-  receiverAccountId?: string
+  receiverAccountId?: string,
+  transferMethod: IranBankTransferMethod = "free"
 ) {
   const admin = await requireAdmin();
   if (!transactionId) return { error: "Missing transaction ID." };
@@ -639,21 +645,30 @@ export async function approveTransaction(
 
   const txType = String(before.type ?? "");
   if (txType === "buy_aud") {
-    if (payerAccount.currency !== "AUD" || receiverAccount.currency !== "IRT") {
-      return { error: "برای buy_aud کشوی مبدأ باید AUD و کشوی مقصد باید IRT باشد." };
+    if (payerAccount.currency !== "IRT" || receiverAccount.currency !== "AUD") {
+      return { error: "برای buy_aud کشوی مبدأ باید IRT و کشوی مقصد باید AUD باشد." };
     }
   } else if (txType === "sell_aud") {
-    if (payerAccount.currency !== "IRT" || receiverAccount.currency !== "AUD") {
-      return { error: "برای sell_aud کشوی مبدأ باید IRT و کشوی مقصد باید AUD باشد." };
+    if (payerAccount.currency !== "AUD" || receiverAccount.currency !== "IRT") {
+      return { error: "برای sell_aud کشوی مبدأ باید AUD و کشوی مقصد باید IRT باشد." };
     }
   }
 
-  const { error } = await db
-    .from("transactions")
-    .update({ status: "approved", approved_at: new Date().toISOString() })
-    .eq("id", transactionId);
+  const settlementToman = Number(before.equivalent_toman ?? 0);
+  const transferFeeEligible = payerAccount.currency === "IRT";
+  const effectiveTransferMethod = transferFeeEligible ? transferMethod : "free";
+  const transferFeeToman = transferFeeEligible
+    ? calcIranBankTransferFee(settlementToman, effectiveTransferMethod)
+    : 0;
+  const feeError = transferFeeEligible
+    ? getIranBankTransferFeeError(settlementToman, effectiveTransferMethod)
+    : null;
+  if (feeError) return { error: feeError };
 
-  if (error) return { error: error.message };
+  const approvedAt = new Date().toISOString();
+  const approvedAtDate = new Date(approvedAt);
+  const txDate = before.created_at ? new Date(before.created_at) : new Date();
+  const feeMonth = `${approvedAtDate.getUTCFullYear()}-${String(approvedAtDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
 
   // ── Insert ledger snapshot with Sub-Ledger Drawers ───────────────
   try {
@@ -665,7 +680,7 @@ export async function approveTransaction(
       .maybeSingle();
 
     const audAmt   = Number(before.amount_aud ?? 0);
-    const tomanAmt = Number(before.equivalent_toman ?? 0);
+    const tomanAmt = settlementToman;
     const feeThreshold = Number(rateRow?.fee_threshold ?? 1000);
     const appliedFee   = Number(rateRow?.applied_fee   ?? 30);
     const feeAud = audAmt > 0 && audAmt < feeThreshold ? appliedFee : 0;
@@ -677,7 +692,6 @@ export async function approveTransaction(
       Number((before as { applied_rate?: number | null }).applied_rate ?? 0),
     );
 
-    const txDate = before.created_at ? new Date(before.created_at) : new Date();
     const dateGregorian = txDate.toISOString().slice(0, 10);
     const dateJalali    = toJalaliStr(txDate);
 
@@ -688,7 +702,7 @@ export async function approveTransaction(
     const sender    = p ? (`${p.first_name ?? ""} ${p.last_name ?? ""}`).trim() || String(p.email ?? "") : "";
     const recipient = r ? (String(r.full_name ?? r.account_name ?? "")).trim() : ((before as any).payment_link ? "Payment Link" : "");
 
-    await db.from("ledger").insert([{
+    const { error: ledgerError } = await db.from("ledger").insert([{
       transaction_id:      String(transactionId),
       date_gregorian:      dateGregorian,
       date_jalali:         dateJalali,
@@ -704,8 +718,42 @@ export async function approveTransaction(
       receiver_account_id: receiverAccountId || null,
       created_by:          admin.id,
     }]);
+
+    if (ledgerError) {
+      throw new Error(ledgerError.message);
+    }
+
+    if (transferFeeToman > 0) {
+      const { error: feeInsertError } = await db.from("bank_transfer_fee_accruals").insert([{
+        transaction_id: String(transactionId),
+        fee_month: feeMonth,
+        transfer_method: effectiveTransferMethod,
+        transaction_amount_toman: settlementToman,
+        fee_amount_toman: transferFeeToman,
+        payer_account_id: payerAccountId,
+        receiver_account_id: receiverAccountId,
+        status: "accrued",
+        accrued_at: approvedAt,
+        created_by: admin.id,
+      }]);
+
+      if (feeInsertError) {
+        throw new Error(feeInsertError.message);
+      }
+    }
+
+    const { error: approvalError } = await db
+      .from("transactions")
+      .update({ status: "approved", approved_at: approvedAt })
+      .eq("id", transactionId);
+
+    if (approvalError) {
+      throw new Error(approvalError.message);
+    }
   } catch (e) { 
-    // console.error("Ledger insert failed:", e); 
+    await db.from("ledger").delete().eq("transaction_id", String(transactionId));
+    await db.from("bank_transfer_fee_accruals").delete().eq("transaction_id", String(transactionId));
+    return { error: e instanceof Error ? e.message : "ثبت دفتر کل با خطا مواجه شد." };
   }
 
   // ── Audit log ────────────────────────────────────────────────────────────
@@ -723,7 +771,9 @@ export async function approveTransaction(
         amount_aud: before.amount_aud, 
         type: before.type,
         payer_account_id: payerAccountId,
-        receiver_account_id: receiverAccountId
+        receiver_account_id: receiverAccountId,
+        transfer_method: effectiveTransferMethod,
+        bank_transfer_fee_toman: transferFeeToman,
       },
     });
   } catch (auditError) {}

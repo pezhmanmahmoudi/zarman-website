@@ -725,6 +725,37 @@ export async function postRecurringExpense(
 }
 
 /**
+ * Post one month of accrued bank transfer fees as consolidated operating expenses.
+ */
+export async function postMonthlyBankTransferFees(feeMonth?: string): Promise<{ success: true; posted: number } | { error: string }> {
+  const admin = await requireAdmin();
+  const db = makeServiceRoleClient();
+
+  const monthStart = feeMonth
+    ? `${feeMonth.slice(0, 7)}-01`
+    : `${new Date().toISOString().slice(0, 7)}-01`;
+
+  const { data, error } = await db.rpc("post_monthly_bank_transfer_fees", {
+    p_fee_month: monthStart,
+  });
+
+  if (error) return { error: error.message };
+
+  const posted = Array.isArray(data) ? data.length : 0;
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "BANK_TRANSFER_FEES_POSTED",
+    targetType: "bank_transfer_fee_accruals",
+    newValue: { feeMonth: monthStart, posted },
+  }).catch(() => {});
+
+  revalidatePath("/admin/treasury");
+  return { success: true, posted };
+}
+
+/**
  * تعریف و ایجاد یک کشو (حساب بانکی یا مجازی) جدید در سیستم زرمان
  */
 export async function addBankAccount(payload: {

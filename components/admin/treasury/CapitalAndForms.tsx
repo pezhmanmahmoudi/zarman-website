@@ -43,7 +43,7 @@ export default function CapitalAndForms({
             </span>
             <span className={cardStyles.statLabel}>
               <Tooltip text="این عدد بدهی قابل پرداخت کسب‌وکار به مالک را نشان می‌دهد. عدد مثبت یعنی هنوز باید به مالک بازپرداخت شود.">
-                بدهی به مالک (Owner Loan Payable)
+                بدهی به مالک 
               </Tooltip>
             </span>
           </div>

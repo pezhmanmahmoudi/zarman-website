@@ -100,6 +100,33 @@
   cursor: not-allowed;
 }
 
+.feeSummary {
+  margin-top: 0.25rem;
+  padding: 0.875rem;
+  border-radius: 0.875rem;
+  border: 1px solid #e5e7eb;
+  background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
+}
+
+.feeSummaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  color: #4b5563;
+}
+
+.feeSummaryRow + .feeSummaryRow {
+  margin-top: 0.5rem;
+}
+
+.feeSummaryTotal {
+  padding-top: 0.5rem;
+  border-top: 1px dashed #d1d5db;
+  color: #111827;
+}
+
 .approveActions {
   display: flex;
   gap: 0.75rem;

@@ -10,13 +10,23 @@ import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminToast } from "@/components/admin/ui/AdminToast";
 import overlayStyles from "@/styles/admin/AdminOverlays.module.css";
+import {
+  IRAN_BANK_TRANSFER_METHOD_OPTIONS,
+  calcIranBankTransferFee,
+  getIranBankTransferFeeError,
+  type IranBankTransferMethod,
+} from "@/lib/iran-bank-transfer-fees";
 
 export function TransactionApproveButton({
   transactionId,
+  transactionAmountToman,
+  transactionType,
   bankAccounts = [], // دریافت لیست کشوها از دیتابیس
 }: {
   transactionId: string | number;
-  bankAccounts?: any[];
+  transactionAmountToman: number;
+  transactionType: "buy_aud" | "sell_aud" | string;
+  bankAccounts?: { id: string; account_name?: string | null; currency?: string | null }[];
 }) {
   const router = useRouter();
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
@@ -25,11 +35,13 @@ export function TransactionApproveButton({
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [payerId, setPayerId] = useState("");
   const [receiverId, setReceiverId] = useState("");
+  const [transferMethod, setTransferMethod] = useState<IranBankTransferMethod>("free");
   const [isApproving, setIsApproving] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -53,8 +65,20 @@ export function TransactionApproveButton({
 
   // باز کردن مودال تایید چندکشویی
   const handleApproveClick = () => {
+    setTransferMethod("free");
+    setPayerId("");
+    setReceiverId("");
     setShowApproveModal(true);
   };
+
+  const payerCurrency = transactionType === "buy_aud" ? "IRT" : "AUD";
+  const receiverCurrency = transactionType === "buy_aud" ? "AUD" : "IRT";
+  const payerLabelFA = payerCurrency === "IRT" ? "حساب پرداخت‌کننده ایران" : "حساب پرداخت‌کننده استرالیا";
+  const receiverLabelFA = receiverCurrency === "IRT" ? "حساب دریافت‌کننده ایران" : "حساب دریافت‌کننده استرالیا";
+
+  const payerAccounts = bankAccounts.filter((account) => account.currency === payerCurrency);
+  const receiverAccounts = bankAccounts.filter((account) => account.currency === receiverCurrency);
+  const feeEligible = payerCurrency === "IRT";
 
   // ارسال تراکنش و ثبت در لجر به صورت دوطرفه
   const submitApprove = async () => {
@@ -63,12 +87,21 @@ export function TransactionApproveButton({
       return;
     }
 
+    if (feeEligible) {
+      const transferFeeError = getIranBankTransferFeeError(transactionAmountToman, transferMethod);
+      if (transferFeeError) {
+        showToast({ type: "error", message: transferFeeError });
+        return;
+      }
+    }
+
     setIsApproving(true);
     // ارسال به اکشن سرور
     const result = await approveTransaction(
       transactionId, 
       payerId || undefined, 
-      receiverId || undefined
+      receiverId || undefined,
+      feeEligible ? transferMethod : "free"
     );
     setIsApproving(false);
 
@@ -77,6 +110,7 @@ export function TransactionApproveButton({
     } else {
       showToast({ type: "success", message: "تراکنش با موفقیت تایید و در دفتر کل ثبت شد." });
       setShowApproveModal(false);
+      setTransferMethod("free");
       router.refresh();
     }
   };
@@ -109,6 +143,10 @@ export function TransactionApproveButton({
     });
   };
 
+  const selectedTransferFee = feeEligible ? calcIranBankTransferFee(transactionAmountToman, transferMethod) : 0;
+  const settlementAmountText = transactionAmountToman.toLocaleString("en-US");
+  const totalDebitText = (transactionAmountToman + selectedTransferFee).toLocaleString("en-US");
+
   return (
     <>
       <AdminConfirmDialog {...dialogProps} />
@@ -139,7 +177,7 @@ export function TransactionApproveButton({
             <div className={overlayStyles.approveBody}>
               <div className={overlayStyles.field}>
                 <label className={overlayStyles.label}>
-                حساب دریافت‌کننده
+                  {receiverLabelFA}
                 </label>
                 <select
                   value={receiverId}
@@ -147,8 +185,8 @@ export function TransactionApproveButton({
                   disabled={isApproving}
                   className={overlayStyles.nativeSelect}
                 >
-                  <option value="">--بانک دریافت کننده--</option>
-                  {bankAccounts.map((b) => (
+                  <option value="">-- انتخاب حساب --</option>
+                  {receiverAccounts.map((b) => (
                     <option key={`receiver-${b.id}`} value={String(b.id)}>
                       {`${b.account_name} (${b.currency})`}
                     </option>
@@ -158,7 +196,7 @@ export function TransactionApproveButton({
 
               <div className={overlayStyles.field}>
                 <label className={overlayStyles.label}>
-                  حساب پرداخت‌کننده
+                  {payerLabelFA}
                 </label>
                 <select
                   value={payerId}
@@ -166,14 +204,54 @@ export function TransactionApproveButton({
                   disabled={isApproving}
                   className={overlayStyles.nativeSelect}
                 >
-                  <option value="">--بانک پرداخت کننده--</option>
-                  {bankAccounts.map((b) => (
+                  <option value="">-- انتخاب حساب --</option>
+                  {payerAccounts.map((b) => (
                     <option key={`payer-${b.id}`} value={String(b.id)}>
                       {`${b.account_name} (${b.currency})`}
                     </option>
                   ))}
                 </select>
               </div>
+
+              {feeEligible && (
+                <>
+                  <div className={overlayStyles.field}>
+                    <label className={overlayStyles.label}>
+                      روش انتقال بانکی
+                    </label>
+                    <select
+                      value={transferMethod}
+                      onChange={(e) => setTransferMethod(e.target.value as IranBankTransferMethod)}
+                      disabled={isApproving}
+                      className={overlayStyles.nativeSelect}
+                    >
+                      {IRAN_BANK_TRANSFER_METHOD_OPTIONS.map((method) => {
+                        const isDisabled = getIranBankTransferFeeError(transactionAmountToman, method.value) !== null;
+                        return (
+                          <option key={method.value} value={method.value} disabled={isDisabled}>
+                            {`${method.labelFA} (${method.labelEN})`}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <div className={overlayStyles.feeSummary}>
+                    <div className={overlayStyles.feeSummaryRow}>
+                      <span>مبلغ تسویه به مقصد</span>
+                      <strong>{settlementAmountText} تومان</strong>
+                    </div>
+                    <div className={overlayStyles.feeSummaryRow}>
+                      <span>کارمزد شبکه</span>
+                      <strong>{selectedTransferFee.toLocaleString("en-US")} تومان</strong>
+                    </div>
+                    <div className={`${overlayStyles.feeSummaryRow} ${overlayStyles.feeSummaryTotal}`}>
+                      <span>جمع برداشت از مبدأ</span>
+                      <strong>{totalDebitText} تومان</strong>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className={overlayStyles.approveActions}>

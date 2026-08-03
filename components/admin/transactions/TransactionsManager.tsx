@@ -323,7 +323,12 @@ function TxTable({
                 </td>
                 <td>
                   {isPending ? (
-                    <TransactionApproveButton transactionId={tx.id} bankAccounts={bankAccounts || []} />
+                    <TransactionApproveButton
+                      transactionId={tx.id}
+                      transactionAmountToman={Number(tx.equivalent_toman)}
+                      transactionType={tx.type}
+                      bankAccounts={bankAccounts || []}
+                    />
                   ) : (
                     tx.status === "approved" && (
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>

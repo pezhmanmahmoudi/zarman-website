@@ -593,7 +593,12 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
                         <Trash2 size={14} />
                       </button>
                       {tx.status === "pending" ? (
-                        <TransactionApproveButton transactionId={tx.id} bankAccounts={bankAccounts} />
+                        <TransactionApproveButton
+                          transactionId={tx.id}
+                          transactionAmountToman={Number(tx.equivalent_toman)}
+                          transactionType={String(tx.type ?? "buy_aud")}
+                          bankAccounts={bankAccounts}
+                        />
                       ) : (
                         <span className={`${tableStyles.cellDim} ${tableStyles.cellProcessed}`}>
                           Processed
