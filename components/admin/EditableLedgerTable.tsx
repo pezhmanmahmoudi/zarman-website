@@ -25,7 +25,7 @@ const T = {
   delConfirm: "حذف شود؟",
   colDate:    "تاریخ",
   colType:    "نوع",
-  colPockets: "مسیر داخلی (مبدأ ⬅ مقصد)",
+  colPockets: "مسیر بانکی (پرداخت‌کننده ⬅ دریافت‌کننده)",
   colCustomers: "طرف حساب (فرستنده ⬅ گیرنده)",
   colRate:    "نرخ",
   colAud:     "AUD ($)",
@@ -626,8 +626,8 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
 
                 <label className={s.mobileFieldLabel}>{T.colCustomers}</label>
                 <div className={s.fieldStack}>
-                  <input type="text" className={s.inputTxt} value={add.sender} onChange={e => aSet("sender", e.target.value)} placeholder="فرستنده..." onKeyDown={kbA} />
-                  <input type="text" className={s.inputTxt} value={add.recipient} onChange={e => aSet("recipient", e.target.value)} placeholder="گیرنده..." onKeyDown={kbA} />
+                      <input type="text" className={s.inputTxt} value={add.sender} onChange={e => aSet("sender", e.target.value)} placeholder="فرستنده..." onKeyDown={kbA} />
+                      <input type="text" className={s.inputTxt} value={add.recipient} onChange={e => aSet("recipient", e.target.value)} placeholder="گیرنده..." onKeyDown={kbA} />
                 </div>
 
                 <label className={s.mobileFieldLabel}>{T.colPockets}</label>
@@ -766,9 +766,9 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                 ) : (
                   <dl className={s.mobileSummaryGrid}>
                     <dt>{T.colCustomers}</dt>
-                    <dd>{row.sender || "-"} | {row.recipient || "-"}</dd>
+                    <dd>{row.recipient || "-"} | {row.sender || "-"}</dd>
                     <dt>{T.colPockets}</dt>
-                    <dd>{getAccountName(row.payer_account_id)} | {getAccountName(row.receiver_account_id)}</dd>
+                    <dd>{getAccountName(row.receiver_account_id)} | {getAccountName(row.payer_account_id)}</dd>
                     <dt>{T.colRate}</dt>
                     <dd>{rate > 0 ? fmtRate(rate) : "-"}</dd>
                     <dt>{T.colAud}</dt>

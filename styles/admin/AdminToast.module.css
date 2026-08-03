@@ -13,7 +13,7 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  z-index: 100000;
+  z-index: 120030;
   pointer-events: none;
   /* Prevent inherited RTL from shifting the centred position */
   direction: ltr;
@@ -37,6 +37,11 @@
   pointer-events: all;
   font-family: inherit;
   animation: toastIn 0.2s ease-out;
+}
+
+.toastFa {
+  font-family: 'IRANSansX', 'Peyda', system-ui, -apple-system, sans-serif;
+  text-align: right;
 }
 
 @keyframes toastIn {

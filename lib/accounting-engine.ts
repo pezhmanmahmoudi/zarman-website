@@ -143,6 +143,13 @@ function calcDynamicDrawerBalances(
   warnings: string[]
 ): Record<string, DrawerBalance> {
   const balances: Record<string, DrawerBalance> = {};
+  const unknownAccountWarnings = new Set<string>();
+
+  function warnOnce(message: string) {
+    if (unknownAccountWarnings.has(message)) return;
+    unknownAccountWarnings.add(message);
+    warnings.push(message);
+  }
 
   // مقداردهی اولیه کشوها
   for (const acc of accountsMeta) {
@@ -166,6 +173,18 @@ function calcDynamicDrawerBalances(
     const aud = n(row.amount_aud);
     const irt = n(row.amount_toman);
     const fee = n(row.fee_aud);
+
+    if (entryType === "trade" && !row.payer_account_id && !row.receiver_account_id) {
+      warnOnce(`Trade row ${row.id} has no payer/receiver account mapping.`);
+    }
+
+    if (row.payer_account_id && !balances[row.payer_account_id]) {
+      warnOnce(`Ledger row ${row.id} references unknown payer account ${row.payer_account_id}.`);
+    }
+
+    if (row.receiver_account_id && !balances[row.receiver_account_id]) {
+      warnOnce(`Ledger row ${row.id} references unknown receiver account ${row.receiver_account_id}.`);
+    }
 
     // پردازش کشوی مبدأ (Payer) -> خروج پول
     if (row.payer_account_id && balances[row.payer_account_id]) {

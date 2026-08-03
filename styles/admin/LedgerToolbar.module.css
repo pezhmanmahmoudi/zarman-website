@@ -1,7 +1,7 @@
 .toolbar {
   --field-h: 42px;
   display: grid;
-  grid-template-columns: minmax(190px, .72fr) minmax(160px, .58fr) minmax(300px, 2fr);
+  grid-template-columns: minmax(190px, .72fr) minmax(160px, .58fr) minmax(210px, .78fr) minmax(300px, 2fr) auto;
   align-items: end;
   gap: .75rem;
   margin-bottom: 1rem;
@@ -10,7 +10,7 @@
   border-radius: 12px;
   background: var(--bg-card, #fff);
   box-shadow: 0 6px 18px rgba(24, 44, 38, .06);
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .control {
@@ -116,9 +116,37 @@
 .applyButton:hover:not(:disabled) { background: var(--accent-hover, #3730a3); }
 .applyButton:disabled { opacity: .45; cursor: not-allowed; }
 
+.actionsControl {
+  align-self: end;
+}
+
+.exportButton {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding-inline: 1rem;
+  border: 1px solid var(--border-soft, #e5e9e7);
+  border-radius: 8px;
+  background: var(--bg-soft, #f7f8f8);
+  color: var(--text-main, #17211f);
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease;
+}
+
+.exportButton:hover {
+  border-color: var(--accent, #4338ca);
+  background: #fff;
+}
+
 @media (max-width: 900px) {
   .toolbar { grid-template-columns: 1fr 1fr; }
   .searchControl { grid-column: 1 / -1; grid-row: 1; }
+  .actionsControl { grid-column: 1 / -1; }
   .customRange { grid-template-columns: 1fr 1fr; }
   .customRangeLabel { grid-column: 1 / -1; }
   .applyButton { grid-column: 1 / -1; }

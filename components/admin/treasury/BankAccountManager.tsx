@@ -88,7 +88,7 @@ export default function BankAccountManager({ bankAccounts }: Props) {
   const isEditMode = Boolean(editingId);
 
   return (
-    <details className={s.formDetails} open>
+    <details className={s.formDetails}>
       <summary className={s.formSummary}>
         <ChevronDown size={16} className={s.formSummaryChevron} />
         <span className={s.formSummaryTitle}>مدیریت حساب‌های بانکی</span>

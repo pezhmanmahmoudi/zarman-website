@@ -1,0 +1,197 @@
+/*
+ * AdminOverlays.module.css
+ * Shared overlay and sheet styles for admin mobile-safe dialogs.
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.46);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 120000;
+  overflow-y: auto;
+}
+
+.approveCard {
+  width: min(96vw, 480px);
+  max-height: min(88dvh, 700px);
+  background: #ffffff;
+  border: 1px solid #eaecf0;
+  border-radius: 1rem;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.16),
+    0 4px 16px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  direction: rtl;
+  font-family: 'IRANSansX', 'Peyda', system-ui, -apple-system, sans-serif;
+}
+
+.approveHeader {
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.approveTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.approveHint {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.approveBody {
+  padding: 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.field {
+  margin-bottom: 1rem;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4b5563;
+  margin-bottom: 0.4rem;
+}
+
+.nativeSelect {
+  width: 100%;
+  min-height: 2.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+}
+
+.nativeSelect:focus {
+  outline: 2px solid rgba(5, 150, 105, 0.2);
+  border-color: #059669;
+}
+
+.nativeSelect:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.approveActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding: 0.9rem 1rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #eaecf0;
+  background: #ffffff;
+}
+
+.btn {
+  border-radius: 0.625rem;
+  padding: 0.62rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.btnCancel {
+  background: transparent;
+  border-color: #d0d5dd;
+  color: #4b5563;
+}
+
+.btnApprove {
+  background: #059669;
+  color: #ffffff;
+}
+
+.btnApprove:disabled,
+.btnCancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.drillPanel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: min(100vw, 480px);
+  background: var(--bg-app, #fbfcfd);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  z-index: 120010;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  direction: ltr;
+}
+
+.drillPanelOpen {
+  transform: translateX(0);
+}
+
+@media (max-width: 640px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .approveCard {
+    width: 100%;
+    max-height: calc(100dvh - 0.75rem);
+    border-radius: 1.25rem 1.25rem 0 0;
+    border-bottom: 0;
+  }
+
+  .approveHeader {
+    padding-top: 0.85rem;
+  }
+
+  .approveHeader::before {
+    content: "";
+    display: block;
+    width: 34px;
+    height: 4px;
+    border-radius: 999px;
+    background: #d0d5dd;
+    margin: 0 auto 0.75rem;
+  }
+
+  .approveActions {
+    flex-direction: column-reverse;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .drillPanel {
+    width: 100%;
+  }
+}

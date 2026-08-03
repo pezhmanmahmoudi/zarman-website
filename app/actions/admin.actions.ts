@@ -615,6 +615,39 @@ export async function approveTransaction(
     return { error: `Transaction is already '${before.status}'.` };
   }
 
+  if (!payerAccountId || !receiverAccountId) {
+    return { error: "برای ثبت صحیح در دفتر کل، انتخاب هر دو کشوی مبدأ و مقصد الزامی است." };
+  }
+
+  if (payerAccountId === receiverAccountId) {
+    return { error: "کشوی مبدأ و مقصد نمی‌توانند یکسان باشند." };
+  }
+
+  const { data: selectedAccounts, error: selectedAccountsError } = await db
+    .from("bank_accounts")
+    .select("id, currency")
+    .in("id", [payerAccountId, receiverAccountId]);
+
+  if (selectedAccountsError) return { error: selectedAccountsError.message };
+
+  const payerAccount = (selectedAccounts ?? []).find((a: any) => a.id === payerAccountId);
+  const receiverAccount = (selectedAccounts ?? []).find((a: any) => a.id === receiverAccountId);
+
+  if (!payerAccount || !receiverAccount) {
+    return { error: "یکی از کشوهای انتخابی یافت نشد." };
+  }
+
+  const txType = String(before.type ?? "");
+  if (txType === "buy_aud") {
+    if (payerAccount.currency !== "AUD" || receiverAccount.currency !== "IRT") {
+      return { error: "برای buy_aud کشوی مبدأ باید AUD و کشوی مقصد باید IRT باشد." };
+    }
+  } else if (txType === "sell_aud") {
+    if (payerAccount.currency !== "IRT" || receiverAccount.currency !== "AUD") {
+      return { error: "برای sell_aud کشوی مبدأ باید IRT و کشوی مقصد باید AUD باشد." };
+    }
+  }
+
   const { error } = await db
     .from("transactions")
     .update({ status: "approved", approved_at: new Date().toISOString() })
@@ -1832,7 +1865,7 @@ export async function getTransactionHistoryStatusCounts() {
 export async function getLedgerData(
   page = 1,
   pageSize = 20,
-  filters: { start?: string; end?: string; type?: string; search?: string } = {},
+  filters: { start?: string; end?: string; type?: string; search?: string; account?: string } = {},
 ) {
   const ssrClient = await createSupabaseServerActionClient();
   await requireAdmin(ssrClient);
@@ -1851,24 +1884,44 @@ export async function getLedgerData(
         notes, created_at, payer_account_id, receiver_account_id
       `);
 
+  let exportQuery = db
+    .from("ledger")
+      .select(`
+        id, transaction_id, date_gregorian, date_jalali, type, entry_type, 
+        exchange_rate, amount_aud, amount_toman, sender, recipient, fee_aud, 
+        notes, created_at, payer_account_id, receiver_account_id
+      `);
+
   const validDate = /^\d{4}-\d{2}-\d{2}$/;
   if (filters.start && validDate.test(filters.start)) {
     countQuery = countQuery.gte("date_gregorian", filters.start);
     pageQuery = pageQuery.gte("date_gregorian", filters.start);
+    exportQuery = exportQuery.gte("date_gregorian", filters.start);
   }
   if (filters.end && validDate.test(filters.end)) {
     countQuery = countQuery.lte("date_gregorian", filters.end);
     pageQuery = pageQuery.lte("date_gregorian", filters.end);
+    exportQuery = exportQuery.lte("date_gregorian", filters.end);
   }
   if (filters.type === "transfer") {
     countQuery = countQuery.eq("entry_type", "transfer");
     pageQuery = pageQuery.eq("entry_type", "transfer");
+    exportQuery = exportQuery.eq("entry_type", "transfer");
   } else if (filters.type === "buy_aud" || filters.type === "sell_aud") {
     countQuery = countQuery.eq("type", filters.type).or("entry_type.eq.trade,entry_type.is.null");
     pageQuery = pageQuery.eq("type", filters.type).or("entry_type.eq.trade,entry_type.is.null");
+    exportQuery = exportQuery.eq("type", filters.type).or("entry_type.eq.trade,entry_type.is.null");
   } else if (["expense", "owner_loan", "adjustment"].includes(filters.type ?? "")) {
     countQuery = countQuery.eq("entry_type", filters.type!);
     pageQuery = pageQuery.eq("entry_type", filters.type!);
+    exportQuery = exportQuery.eq("entry_type", filters.type!);
+  }
+
+  if (filters.account) {
+    const accountExpr = `payer_account_id.eq.${filters.account},receiver_account_id.eq.${filters.account}`;
+    countQuery = countQuery.or(accountExpr);
+    pageQuery = pageQuery.or(accountExpr);
+    exportQuery = exportQuery.or(accountExpr);
   }
 
   const search = sanitizeSearchQuery(filters.search ?? "");
@@ -1876,14 +1929,18 @@ export async function getLedgerData(
     const expression = `sender.ilike.%${search}%,recipient.ilike.%${search}%`;
     countQuery = countQuery.or(expression);
     pageQuery = pageQuery.or(expression);
+    exportQuery = exportQuery.or(expression);
   }
 
-  const [countRes, pageRes, rateRes] = await Promise.all([
+  const [countRes, pageRes, exportRes, rateRes] = await Promise.all([
     countQuery,
     pageQuery
       .order("date_gregorian", { ascending: false })
       .order("created_at", { ascending: false })
       .range(offset, offset + safeSize - 1),
+    exportQuery
+      .order("date_gregorian", { ascending: false })
+      .order("created_at", { ascending: false }),
     // Current market rate
     db
       .from("rates_history")
@@ -1895,9 +1952,10 @@ export async function getLedgerData(
 
   if (countRes.error) throw new Error(countRes.error.message);
   if (pageRes.error) throw new Error(pageRes.error.message);
+  if (exportRes.error) throw new Error(exportRes.error.message);
 
   return {
-    allLedgerRows:  [],
+    allLedgerRows:  exportRes.data ?? [],
     pageLedgerRows: pageRes.data ?? [],
     total:          countRes.count ?? 0,
     currentBuyRate: Number(rateRes.data?.buy_aud ?? 0),

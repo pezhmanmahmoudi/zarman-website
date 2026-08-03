@@ -14,7 +14,7 @@
   flex: 1;
   direction: rtl;
   text-align: right;
-  font-family: "IRANSansX", "Peyda", "Tahoma", sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .topBarText h1 {

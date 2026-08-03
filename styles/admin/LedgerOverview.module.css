@@ -10,7 +10,7 @@
   background: var(--bg-card, #fff);
   box-shadow: 0 8px 24px rgba(24, 44, 38, 0.06);
   color: var(--ledger-ink);
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   text-align: right;
 }
 
@@ -30,7 +30,7 @@
 .headingIcon { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border-radius: 9px; background: #e3f4ee; color: var(--ledger-green); }
 .headingCopy { min-width: 0; display: flex; flex-direction: column; gap: .12rem; }
 .headingTitleRow { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
-.header h1 { margin: 0; color: var(--ledger-ink); font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif; font-size: 1rem; font-weight: 800; letter-spacing: 0; line-height: 1.5; }
+.header h1 { margin: 0; color: var(--ledger-ink); font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif); font-size: 1rem; font-weight: 800; letter-spacing: 0; line-height: 1.5; }
 .header p { margin: 0; color: var(--text-soft, #66716e); font-size: .7rem; line-height: 1.55; }
 .headingBadge { display: inline-flex; align-items: center; min-height: 22px; padding: .15rem .55rem; border-radius: 999px; background: var(--bg-soft, #f4f6f5); color: var(--text-soft, #66716e); font-size: .6rem; font-weight: 700; line-height: 1.4; white-space: nowrap; }
 .periodMeta { min-width: 185px; display: flex; flex-direction: column; align-items: flex-end; gap: .08rem; direction: rtl; text-align: right; }

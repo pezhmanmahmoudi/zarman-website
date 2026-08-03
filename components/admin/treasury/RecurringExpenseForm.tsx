@@ -200,7 +200,7 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
   const filteredAccounts = bankAccounts.filter(acc => acc.currency === form.currency);
 
   return (
-    <details className={s.formDetails} open>
+    <details className={s.formDetails}>
       <summary className={s.formSummary}>
         <ChevronDown size={16} className={s.formSummaryChevron} />
         <span className={s.formSummaryTitle}>{FA.secRecurring}</span>
@@ -220,7 +220,7 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
           )}
         </div>
 
-      <p style={{ fontSize: "0.78rem", color: "var(--text-dim, #6b7280)", marginBottom: "0.75rem", direction: "rtl", fontFamily: "IRANSansX, Peyda, Tahoma, sans-serif" }}>
+      <p style={{ fontSize: "0.78rem", color: "var(--text-dim, #6b7280)", marginBottom: "0.75rem", direction: "rtl", fontFamily: "var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif)" }}>
         {FA.secRecurringDesc}
       </p>
 
@@ -372,7 +372,7 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
 
       {/* ── List ──────────────────────────────────────────────────── */}
       {recurringExpenses.length === 0 && !showForm ? (
-        <p style={{ fontSize: "0.82rem", color: "var(--text-dim, #6b7280)", textAlign: "center", padding: "1.5rem 0", direction: "rtl", fontFamily: "IRANSansX, Peyda, Tahoma, sans-serif" }}>
+        <p style={{ fontSize: "0.82rem", color: "var(--text-dim, #6b7280)", textAlign: "center", padding: "1.5rem 0", direction: "rtl", fontFamily: "var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif)" }}>
           {FA.recurringNoItems}
         </p>
       ) : recurringExpenses.length > 0 && (

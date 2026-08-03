@@ -21,7 +21,8 @@
 
   --sidebar-width: 280px;
 
-  --font-en-stack: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-en-stack: var(--font-en, 'Inter'), system-ui, -apple-system, sans-serif;
+  --font-fa-stack: 'IRANSansX', 'Peyda', system-ui, -apple-system, sans-serif;
 
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
@@ -39,6 +40,19 @@
 .adminShell *::before,
 .adminShell *::after {
   box-sizing: border-box;
+}
+
+/* Apply IRANSansX to Farsi/RTL text in admin UI controls and labels. */
+.adminShell :where([dir="rtl"], .fa-text, [lang="fa"], [lang^="fa-"]) {
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif) !important;
+}
+
+.adminShell :where([dir="rtl"], .fa-text, [lang="fa"], [lang^="fa-"]) :is(input, textarea, select, button, label, option) {
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif) !important;
+}
+
+.adminShell :where([dir="rtl"], .fa-text, [lang="fa"], [lang^="fa-"]) :is(input, textarea)::placeholder {
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif) !important;
 }
 
 /* ── Sidebar ── */

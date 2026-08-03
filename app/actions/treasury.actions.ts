@@ -111,7 +111,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     db.from("owner_loans").select("*").order("date", { ascending: false }),
     db.from("treasury_settings").select("*").eq("id", 1).maybeSingle(),
     db.from("rates_history").select("buy_aud").order("date", { ascending: false }).limit(1).maybeSingle(),
-    db.from("bank_accounts").select("*").eq("is_active", true),
+    db.from("bank_accounts").select("*"),
   ]);
 
   // هزینه‌های دوره‌ای را جداگانه واکشی می‌کنیم تا در صورت عدم وجود جدول، صفحه خراب نشود
@@ -127,7 +127,9 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
   }
 
   // ۱. مپ کردن ساختار کشوها برای پردازش در موتور حسابداری
-  const accountsMeta: AccountMeta[] = (accountsRes.data ?? []).map((a: any) => ({
+  const allAccounts = accountsRes.data ?? [];
+
+  const accountsMeta: AccountMeta[] = allAccounts.map((a: any) => ({
     id: String(a.id),
     name: String(a.account_name),
     currency: a.currency as "AUD" | "IRT",
@@ -226,7 +228,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     ownerLoans: loanRes.data ?? [],
     expenses: expenseRes.data ?? [],
     recurringExpenses: recurringRes.data ?? [],
-    bankAccounts: accountsRes.data ?? [],
+    bankAccounts: allAccounts.filter((a: any) => a.is_active),
     settings,
   };
 }

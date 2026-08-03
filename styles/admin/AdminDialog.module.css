@@ -26,7 +26,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 99999;
+  z-index: 120020;
   padding: 1.25rem;
   /* Prevent inherited RTL from shifting the flex alignment off-centre */
   direction: ltr;
@@ -47,6 +47,12 @@
   /* Override any inherited RTL direction from the parent page */
   direction: ltr;
   text-align: left;
+}
+
+.dialogFa {
+  direction: rtl;
+  text-align: right;
+  font-family: 'IRANSansX', 'Peyda', system-ui, -apple-system, sans-serif;
 }
 
 @keyframes dialogIn {

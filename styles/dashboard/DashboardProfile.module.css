@@ -54,6 +54,20 @@
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif) !important;
 }
 
+.stageBannerLtr {
+  direction: ltr;
+  text-align: left;
+  font-family: var(--font-en-stack, 'Inter', sans-serif) !important;
+}
+
+.stageBannerLtr p {
+  text-align: left;
+}
+
+.stageBannerLtr .stageBannerSubtext {
+  text-align: left;
+}
+
 .stageBanner p {
   margin: 0;
   font-size: 0.86rem;

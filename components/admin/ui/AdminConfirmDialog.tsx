@@ -64,6 +64,8 @@ export function AdminConfirmDialog({
   onConfirm,
   onCancel,
 }: AdminConfirmDialogProps) {
+  const isFa = /[\u0600-\u06FF]/.test(`${title} ${message} ${confirmLabel}`);
+
   // Lock body scroll while dialog is open
   useEffect(() => {
     if (!open) return;
@@ -111,7 +113,7 @@ export function AdminConfirmDialog({
         if (e.target === e.currentTarget && !loading) onCancel();
       }}
     >
-      <div ref={dialogRef} className={styles.dialog}>
+      <div ref={dialogRef} className={`${styles.dialog} ${isFa ? styles.dialogFa : ""}`} dir={isFa ? "rtl" : "ltr"}>
         <div className={`${styles.iconWrap} ${VARIANT_ICON_CLASS[variant]}`}>
           {VARIANT_ICON[variant]}
         </div>

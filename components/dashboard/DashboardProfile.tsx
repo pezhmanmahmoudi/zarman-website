@@ -10,6 +10,7 @@ import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { AustralianLocationFields } from "@/components/dashboard/AustralianLocationFields";
 import type { Profile as BaseProfile } from "@/app/[locale]/dashboard/dashboard.types";
 import { normalizeAustralianState } from "@/lib/australian-driver-licence";
+import { useLocale } from "@/context/LocaleContext";
 
 // ایمپورت کردن دیتابیس‌های استان و شهر
 import provincesData from "@/lib/provinces.json";
@@ -93,6 +94,8 @@ function buildFormData(profile: DashboardProfileData | null | undefined): FormDa
 }
 
 export function DashboardProfile({ profile }: { profile: DashboardProfileData | null }) {
+  const locale = useLocale();
+  const isEn = locale === "en";
   const hasSubmittedData = Boolean(profile?.document_type && profile?.document_type !== "later" && profile?.document_type !== "");
   const isApproved = profile?.kyc_status === "approved";
   const initialPersonalData = buildPersonalData(profile);
@@ -177,7 +180,7 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
 
     setPersonalData(personalDraft);
     setIsEditingPersonal(false);
-    setPersonalStatus({ type: "success", msg: "اطلاعات شخصی شما ذخیره شد." });
+    setPersonalStatus({ type: "success", msg: isEn ? "Your personal information has been saved." : "اطلاعات شخصی شما ذخیره شد." });
     setIsSavingPersonal(false);
   };
 
@@ -211,7 +214,9 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
 
       if (formData.docType && formData.docType !== "none") {
         if (!formData.consentNotice || !formData.consentDVS) {
-          newErrors.consents = "لطفاً جهت انجام استعلام هویتی، هر دو مورد حقوقی را تایید کنید.";
+          newErrors.consents = isEn
+            ? "Please accept both legal consents to complete identity verification."
+            : "لطفاً جهت انجام استعلام هویتی، هر دو مورد حقوقی را تایید کنید.";
         }
       }
     }
@@ -222,7 +227,7 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
 
   const handleSubmit = async () => {
     if (isEditingPersonal) {
-      setSubmitStatus({ type: "error", msg: "ابتدا تغییرات اطلاعات شخصی را ذخیره یا لغو کنید." });
+      setSubmitStatus({ type: "error", msg: isEn ? "Please save or cancel personal-info edits first." : "ابتدا تغییرات اطلاعات شخصی را ذخیره یا لغو کنید." });
       return;
     }
 
@@ -255,7 +260,12 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
     if (result.error) {
       setSubmitStatus({ type: "error", msg: result.error });
     } else {
-      setSubmitStatus({ type: "success", msg: "اطلاعات شما با موفقیت ثبت شد. بررسی معمولاً کمتر از ۱۰ دقیقه زمان می برد. لطفاً چند دقیقه دیگر صفحه را تازه سازی کنید." });
+      setSubmitStatus({
+        type: "success",
+        msg: isEn
+          ? "Your information was submitted successfully. Review usually takes less than 10 minutes. Please refresh this page shortly."
+          : "اطلاعات شما با موفقیت ثبت شد. بررسی معمولاً کمتر از ۱۰ دقیقه زمان می برد. لطفاً چند دقیقه دیگر صفحه را تازه سازی کنید.",
+      });
     }
 
     setIsSubmitting(false);
@@ -287,13 +297,16 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
       setSubmitStatus({ type: "error", msg: result.error });
     } else {
       if (win) win.location.href = whatsappLink;
-      setSubmitStatus({ type: "success", msg: "اطلاعات ذخیره شد. در حال انتقال به واتس‌اپ..." });
+      setSubmitStatus({ type: "success", msg: isEn ? "Information saved. Redirecting to WhatsApp..." : "اطلاعات ذخیره شد. در حال انتقال به واتس‌اپ..." });
     }
 
     setIsSubmitting(false);
   };
 
-  const whatsappLink = `https://wa.me/61497851631?text=${encodeURIComponent("سلام. من گواهینامه و پاسپورت استرالیا ندارم، برای احراز هویت به من کمک کنید.")}`;
+  const whatsappMessage = isEn
+    ? "Hello. I do not have an Australian driver's licence or passport. Please help me with identity verification."
+    : "سلام. من گواهینامه و پاسپورت استرالیا ندارم، برای احراز هویت به من کمک کنید.";
+  const whatsappLink = `https://wa.me/61497851631?text=${encodeURIComponent(whatsappMessage)}`;
   const showSubmitSuccessOnly = submitStatus.type === "success";
   const kycStatus = String(profile?.kyc_status ?? "").toLowerCase();
   const isPendingReview = hasSubmittedData && ["pending", "under_review"].includes(kycStatus);
@@ -329,7 +342,7 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
     <article className={`${cardStyles.panelCard} ${styles.allowOverflow}`}>
       <div className={styles.profileHeader}>
         <h2 className={`${cardStyles.panelTitle} ${styles.persianTitle}`}>
-          <UserCircle2 size={24} /> اطلاعات هویتی و امنیتی
+          <UserCircle2 size={24} /> {isEn ? "Identity & Security Information" : "اطلاعات هویتی و امنیتی"}
         </h2>
       </div>
       
@@ -429,33 +442,37 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
         <div className={styles.divider}></div>
 
         <div className={styles.kycSection}>
-          {isEntryStage && <h3 className={styles.persianSectionTitle}>تکمیل اطلاعات</h3>}
+          {isEntryStage && <h3 className={styles.persianSectionTitle}>{isEn ? "Complete Your Information" : "تکمیل اطلاعات"}</h3>}
 
           {isEntryStage && (
-            <div className={`${styles.stageBanner} ${styles.stageBannerEntry}`}>
+            <div className={`${styles.stageBanner} ${styles.stageBannerEntry} ${isEn ? styles.stageBannerLtr : ""}`}>
               <AlertCircle size={18} aria-hidden="true" />
               <div>
                 <p>
-                  اطلاعات را کاملاً دقیق ثبت کنید. <strong>تمام فیلدها باید فقط با حروف انگلیسی (English) تکمیل شوند.</strong>
+                  {isEn
+                    ? <>Please enter your details carefully. <strong>All fields must be completed using English characters only.</strong></>
+                    : <>اطلاعات را کاملاً دقیق ثبت کنید. <strong>تمام فیلدها باید فقط با حروف انگلیسی (English) تکمیل شوند.</strong></>}
                 </p>
                 <p className={styles.stageBannerSubtext}>
-                  پس از ثبت اطلاعات، بررسی هویت معمولاً کمتر از ۱۰ دقیقه زمان می‌برد و پس از تأیید، پنل درخواست‌ها فعال می‌شود.
+                  {isEn
+                    ? "After submission, identity review usually takes less than 10 minutes. Once approved, your request panel will be activated."
+                    : "پس از ثبت اطلاعات، بررسی هویت معمولاً کمتر از ۱۰ دقیقه زمان می‌برد و پس از تأیید، پنل درخواست‌ها فعال می‌شود."}
                 </p>
               </div>
             </div>
           )}
 
           {isWaitingStage && (
-            <div className={`${styles.stageBanner} ${styles.stageBannerWaiting}`}>
+            <div className={`${styles.stageBanner} ${styles.stageBannerWaiting} ${isEn ? styles.stageBannerLtr : ""}`}>
               <ShieldCheck size={18} aria-hidden="true" />
-              <p>درخواست احراز هویت شما ثبت شد. بررسی معمولاً کمتر از ۱۰ دقیقه زمان می‌برد. لطفاً چند دقیقه دیگر صفحه را تازه‌سازی کنید.</p>
+              <p>{isEn ? "Your identity verification request has been submitted. Review usually takes less than 10 minutes. Please refresh this page shortly." : "درخواست احراز هویت شما ثبت شد. بررسی معمولاً کمتر از ۱۰ دقیقه زمان می‌برد. لطفاً چند دقیقه دیگر صفحه را تازه‌سازی کنید."}</p>
             </div>
           )}
 
           {isVerifiedStage && (
-            <div className={`${styles.stageBanner} ${styles.stageBannerVerified}`}>
+            <div className={`${styles.stageBanner} ${styles.stageBannerVerified} ${isEn ? styles.stageBannerLtr : ""}`}>
               <ShieldCheck size={18} aria-hidden="true" />
-              <p>احراز هویت شما با موفقیت تأیید شد. اکنون می‌توانید از پنل درخواست‌ها استفاده کنید.</p>
+              <p>{isEn ? "Your identity verification has been approved successfully. You can now use the request panel." : "احراز هویت شما با موفقیت تأیید شد. اکنون می‌توانید از پنل درخواست‌ها استفاده کنید."}</p>
             </div>
           )}
 
@@ -723,12 +740,12 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
                   {formData.docType === "none" && (
                     <div className={styles.whatsappBox}>
                       <AlertCircle size={28} color="#25d366" style={{ marginBottom: "4px" }} />
-                      <h4 className={styles.persianSectionTitle} style={{ fontSize: '15px', color: '#25d366' }}>نیاز به راهنمایی دارید؟</h4>
+                      <h4 className={styles.persianSectionTitle} style={{ fontSize: '15px', color: '#25d366' }}>{isEn ? "Need guidance?" : "نیاز به راهنمایی دارید؟"}</h4>
                       <p className={styles.persianSectionSubtitle} style={{ marginBottom: '12px', textAlign: 'center' }}>
-                        در صورتی که گواهینامه یا پاسپورت استرالیا ندارید، جهت بررسی مدارک جایگزین در واتس‌اپ پیام دهید.
+                        {isEn ? "If you do not have an Australian driver's licence or passport, contact us on WhatsApp for alternative document review." : "در صورتی که گواهینامه یا پاسپورت استرالیا ندارید، جهت بررسی مدارک جایگزین در واتس‌اپ پیام دهید."}
                       </p>
                       <button type="button" onClick={handleWhatsAppSubmit} disabled={isSubmitting} className={styles.whatsappBtn} style={{ cursor: isSubmitting ? 'not-allowed' : 'pointer' }}>
-                        <MessageCircle size={18} /> {isSubmitting ? "در حال ارسال..." : "تماس با پشتیبانی در واتس‌اپ"}
+                        <MessageCircle size={18} /> {isSubmitting ? (isEn ? "Sending..." : "در حال ارسال...") : (isEn ? "Contact Support on WhatsApp" : "تماس با پشتیبانی در واتس‌اپ")}
                       </button>
                     </div>
                   )}
@@ -739,14 +756,14 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
                         <label className={styles.finePrintLabel}>
                           <input type="checkbox" name="consentNotice" checked={formData.consentNotice} onChange={handleChange} />
                           <span>
-                            I have read and agree to the <a href="/en/legal/privacy-policy" target="_blank">Privacy Policy</a> & <a href="/en/legal/dvs-notice" target="_blank">Verification Notice</a>. <span className={styles.req}></span>
+                            I have read and agree to the <a href={`/${locale}/legal/privacy-policy`} target="_blank">Privacy Policy</a> & <a href={`/${locale}/legal/dvs-notice`} target="_blank">Verification Notice</a>. <span className={styles.req}></span>
                           </span>
                         </label>
 
                         <label className={styles.finePrintLabel}>
                           <input type="checkbox" name="consentDVS" checked={formData.consentDVS} onChange={handleChange} />
                           <span>
-                            I consent to Zarman Exchange verifying my personal details and ID documents via official records (DVS) as per the <a href="/en/legal/dvs-consent" target="_blank">Identity Verification Consent</a>. <span className={styles.req}></span>
+                            I consent to Zarman Exchange verifying my personal details and ID documents via official records (DVS) as per the <a href={`/${locale}/legal/dvs-consent`} target="_blank">Identity Verification Consent</a>. <span className={styles.req}></span>
                           </span>
                         </label>
 

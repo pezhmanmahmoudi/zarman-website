@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Check, X, Archive } from "lucide-react";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
@@ -8,7 +9,7 @@ import { approveTransaction, rejectTransaction, archiveTransaction } from "@/app
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminToast } from "@/components/admin/ui/AdminToast";
-import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import overlayStyles from "@/styles/admin/AdminOverlays.module.css";
 
 export function TransactionApproveButton({
   transactionId,
@@ -25,6 +26,30 @@ export function TransactionApproveButton({
   const [payerId, setPayerId] = useState("");
   const [receiverId, setReceiverId] = useState("");
   const [isApproving, setIsApproving] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!showApproveModal) return;
+
+    const prevOverflow = document.body.style.overflow;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isApproving) {
+        setShowApproveModal(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showApproveModal, isApproving]);
 
   // باز کردن مودال تایید چندکشویی
   const handleApproveClick = () => {
@@ -33,6 +58,11 @@ export function TransactionApproveButton({
 
   // ارسال تراکنش و ثبت در لجر به صورت دوطرفه
   const submitApprove = async () => {
+    if (!payerId || !receiverId) {
+      showToast({ type: "error", message: "برای تایید تراکنش، انتخاب هر دو کشوی مبدأ و مقصد الزامی است." });
+      return;
+    }
+
     setIsApproving(true);
     // ارسال به اکشن سرور
     const result = await approveTransaction(
@@ -84,57 +114,89 @@ export function TransactionApproveButton({
       <AdminConfirmDialog {...dialogProps} />
       <AdminToast {...toastProps} />
 
-      {/* 🌟 پنجره‌ی هوشمند انتخاب کشوها 🌟 */}
-      {showApproveModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)' }}>
-          <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '1rem', width: '90%', maxWidth: '450px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', direction: 'rtl', fontFamily: 'var(--font-fa-content, Tahoma, sans-serif)' }}>
-            <h3 style={{ marginTop: 0, fontSize: '1.1rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-               <Check size={20} color="#059669" /> تایید نهایی تراکنش
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              لطفاً کشوهای درگیر در این تراکنش را مشخص کنید تا مغایرت‌گیری بانکی به صورت خودکار انجام شود.
-            </p>
+      {mounted && showApproveModal && createPortal(
+        <div
+          className={overlayStyles.overlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="approve-transaction-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isApproving) {
+              setShowApproveModal(false);
+            }
+          }}
+        >
+          <div className={overlayStyles.approveCard}>
+            <div className={overlayStyles.approveHeader}>
+              <h3 id="approve-transaction-title" className={overlayStyles.approveTitle}>
+                <Check size={18} color="#059669" /> تایید نهایی تراکنش
+              </h3>
+              <p className={overlayStyles.approveHint}>
+                لطفا حساب های درگیر در این تراکنش را مشخص کنید تا ثبت دفتر کل و مغایرت گیری دقیق انجام شود.
+              </p>
+            </div>
 
-            <div style={{ marginBottom: '1rem' }}>
-               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#4b5563', marginBottom: '0.4rem' }}>
-                 مشتری پول را به کدام حساب واریز کرد؟ (دریافتی ما)
-               </label>
-               <SelectBox
-                  labeledOptions={[
-                    { value: "", label: "-- در صورت واریز، کشوی مقصد را انتخاب کنید --" },
-                    ...bankAccounts.map(b => ({ value: b.id, label: `${b.account_name} (${b.currency})` })),
-                  ]}
+            <div className={overlayStyles.approveBody}>
+              <div className={overlayStyles.field}>
+                <label className={overlayStyles.label}>
+                حساب دریافت‌کننده
+                </label>
+                <select
                   value={receiverId}
-                  onChange={(val) => setReceiverId(val)}
+                  onChange={(e) => setReceiverId(e.target.value)}
                   disabled={isApproving}
-               />
-            </div>
+                  className={overlayStyles.nativeSelect}
+                >
+                  <option value="">--بانک دریافت کننده--</option>
+                  {bankAccounts.map((b) => (
+                    <option key={`receiver-${b.id}`} value={String(b.id)}>
+                      {`${b.account_name} (${b.currency})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
-               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#4b5563', marginBottom: '0.4rem' }}>
-                 ارز از کدام حساب/انبار به مشتری داده شد؟ (پرداختی ما)
-               </label>
-               <SelectBox
-                  labeledOptions={[
-                    { value: "", label: "-- در صورت انتقال، کشوی مبدأ را انتخاب کنید --" },
-                    ...bankAccounts.map(b => ({ value: b.id, label: `${b.account_name} (${b.currency})` })),
-                  ]}
+              <div className={overlayStyles.field}>
+                <label className={overlayStyles.label}>
+                  حساب پرداخت‌کننده
+                </label>
+                <select
                   value={payerId}
-                  onChange={(val) => setPayerId(val)}
+                  onChange={(e) => setPayerId(e.target.value)}
                   disabled={isApproving}
-               />
+                  className={overlayStyles.nativeSelect}
+                >
+                  <option value="">--بانک پرداخت کننده--</option>
+                  {bankAccounts.map((b) => (
+                    <option key={`payer-${b.id}`} value={String(b.id)}>
+                      {`${b.account_name} (${b.currency})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-               <button onClick={() => setShowApproveModal(false)} disabled={isApproving} style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid #d0d5dd', borderRadius: '0.5rem', cursor: 'pointer', color: '#4b5563', fontWeight: 600, fontFamily: 'inherit' }}>
-                 انصراف
-               </button>
-               <button onClick={submitApprove} disabled={isApproving} style={{ padding: '0.5rem 1rem', background: '#059669', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', fontFamily: 'inherit' }}>
-                 {isApproving ? 'در حال ثبت...' : 'تایید قطعی و ثبت'}
-               </button>
+            <div className={overlayStyles.approveActions}>
+              <button
+                onClick={() => setShowApproveModal(false)}
+                disabled={isApproving}
+                className={`${overlayStyles.btn} ${overlayStyles.btnCancel}`}
+                type="button"
+              >
+                انصراف
+              </button>
+              <button
+                onClick={submitApprove}
+                disabled={isApproving || !payerId || !receiverId}
+                className={`${overlayStyles.btn} ${overlayStyles.btnApprove}`}
+                type="button"
+              >
+                {isApproving ? "در حال ثبت..." : "تایید قطعی و ثبت"}
+              </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className={tableStyles.btnGroup}>

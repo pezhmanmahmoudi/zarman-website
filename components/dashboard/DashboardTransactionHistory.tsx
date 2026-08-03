@@ -3,11 +3,22 @@ import { History, Trash2, ChevronLeft, ChevronRight, Tag, Star } from "lucide-re
 import { formatToman } from "@/app/[locale]/dashboard/dashboard.utils";
 import styles from "@/styles/dashboard/DashboardTransactionHistory.module.css";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
+import { useLocale } from "@/context/LocaleContext";
 
 const PAGE_SIZE = 10;
 
 export function DashboardTransactionHistory({ transactions, onDeleteTransaction }: any) {
   const [page, setPage] = useState(1);
+  const locale = useLocale();
+  const isEn = locale === "en";
+
+  const formatEquivalent = (num: number) => {
+    if (!num) return "—";
+    if (isEn) {
+      return `${Number(num).toLocaleString("en-US", { maximumFractionDigits: 0 })} Toman`;
+    }
+    return formatToman(num);
+  };
 
   const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
   const paginated = transactions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -25,7 +36,7 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
     <article className={cardStyles.panelCard}>
       <div className={`${cardStyles.panelHeader} ${styles.headerWrap}`}>
         <h2 className={`${cardStyles.panelTitle} ${styles.tableTitle}`}>
-          <History size={24} /> سوابق مالی و تراکنش‌ها
+          <History size={24} /> {isEn ? "Financial & Transaction History" : "سوابق مالی و تراکنش‌ها"}
         </h2>
       </div>
       
@@ -33,21 +44,21 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
         <table className={styles.historyTable}>
           <thead>
             <tr>
-              <th>کد مرجع</th>
-              <th>تاریخ ثبت</th>
-              <th>نوع تراکنش</th>
-              <th>مبلغ ارزی (AUD)</th>
-              <th>معادل (تومان)</th>
-              <th>گیرنده</th>
-              <th>تخفیف</th>
-              <th>وضعیت</th>
-              <th>حذف</th>
+              <th>{isEn ? "Reference Code" : "کد مرجع"}</th>
+              <th>{isEn ? "Submitted On" : "تاریخ ثبت"}</th>
+              <th>{isEn ? "Transaction Type" : "نوع تراکنش"}</th>
+              <th>{isEn ? "Amount (AUD)" : "مبلغ ارزی (AUD)"}</th>
+              <th>{isEn ? "Equivalent (Toman)" : "معادل (تومان)"}</th>
+              <th>{isEn ? "Recipient" : "گیرنده"}</th>
+              <th>{isEn ? "Discount" : "تخفیف"}</th>
+              <th>{isEn ? "Status" : "وضعیت"}</th>
+              <th>{isEn ? "Delete" : "حذف"}</th>
             </tr>
           </thead>
           <tbody>
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={9} className={styles.emptyTable}>هیچ سابقه تراکنشی یافت نشد.</td>
+                <td colSpan={9} className={styles.emptyTable}>{isEn ? "No transaction history found." : "هیچ سابقه تراکنشی یافت نشد."}</td>
               </tr>
             )}
             {paginated.map((tx: any) => {
@@ -68,13 +79,13 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
                 
                 <td>
                   <span className={displayType === "buy_aud" ? styles.txTypeBuy : styles.txTypeSell}>
-                    {displayType === "buy_aud" ? "خرید دلار" : "فروش دلار"}
+                    {displayType === "buy_aud" ? (isEn ? "Buy AUD" : "خرید دلار") : (isEn ? "Sell AUD" : "فروش دلار")}
                   </span>
                 </td>
                 
                 <td dir="ltr" className={styles.tableMoney}>${Number(tx.amount_aud).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 
-                <td className={styles.tableToman}>{formatToman(tx.equivalent_toman)}</td>
+                <td className={styles.tableToman}>{formatEquivalent(Number(tx.equivalent_toman))}</td>
 
                 <td className={styles.recipientCell}>
                   {recipientName(tx) ?? <span className={styles.noAction}>—</span>}
@@ -88,7 +99,7 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
                       {tx.promo_code && (
                         <span className={styles.promoRow}>
                           <Tag size={10} />
-                          <span className={styles.discountType}>پرومو</span>
+                          <span className={styles.discountType}>{isEn ? "Promo" : "پرومو"}</span>
                           {Number(tx.discount_amount ?? 0) > 0 && (
                             <span className={styles.discountAmt}>{formatToman(Number(tx.discount_amount))}</span>
                           )}
@@ -97,7 +108,7 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
                       {Number(tx.loyalty_discount ?? 0) > 0 && (
                         <span className={styles.loyaltyRow}>
                           <Star size={10} />
-                          <span className={styles.discountType}>وفاداری</span>
+                          <span className={styles.discountType}>{isEn ? "Loyalty" : "وفاداری"}</span>
                           <span className={styles.discountAmt}>{formatToman(Number(tx.loyalty_discount))}</span>
                         </span>
                       )}
@@ -111,8 +122,8 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
                     tx.status === "rejected" ? styles.statusRejected :
                     styles.statusPending
                   }>
-                    {tx.status === "approved" ? "تایید شده" :
-                     tx.status === "rejected" ? "رد شده" : "در حال بررسی"}
+                    {tx.status === "approved" ? (isEn ? "Approved" : "تایید شده") :
+                     tx.status === "rejected" ? (isEn ? "Rejected" : "رد شده") : (isEn ? "Under Review" : "در حال بررسی")}
                   </span>
                 </td>
                 
@@ -121,7 +132,7 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
                     <button 
                       onClick={() => onDeleteTransaction(tx.id)} 
                       className={styles.deleteBtn} 
-                      title="لغو و حذف درخواست"
+                      title={isEn ? "Cancel and delete request" : "لغو و حذف درخواست"}
                     >
                       <Trash2 size={18} />
                     </button>
@@ -143,7 +154,7 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
             className={styles.pageBtn}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            aria-label="صفحه قبل"
+            aria-label={isEn ? "Previous page" : "صفحه قبل"}
           >
             <ChevronRight size={18} />
           </button>
@@ -154,7 +165,7 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
             className={styles.pageBtn}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            aria-label="صفحه بعد"
+            aria-label={isEn ? "Next page" : "صفحه بعد"}
           >
             <ChevronLeft size={18} />
           </button>

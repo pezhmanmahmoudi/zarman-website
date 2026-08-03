@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useTransition } from "react";
-import { ArrowLeftRight, Plus, Tag, Star, Pencil, Trash2, Save, X } from "lucide-react";
+import { ArrowLeftRight, Plus, Tag, Star, Pencil, Trash2, X } from "lucide-react";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 import formStyles from "@/styles/admin/AdminForms.module.css";
@@ -68,6 +68,11 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
     });
   }, [recipients]);
 
+  const editingTx = useMemo(
+    () => transactions.find((tx: Transactions[number]) => String(tx.id) === editingId) ?? null,
+    [transactions, editingId],
+  );
+
   const [form, setForm] = useState({
     recipientId: "",
     type: "buy_aud",
@@ -98,6 +103,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
   const startEditRow = (tx: Transactions[number]) => {
     const rec = normalizeRecipient((tx as any).recipients);
     setStatus(null);
+    setOpenAdd(false);
     setEditingId(String(tx.id));
     // Extract date-only (YYYY-MM-DD) from created_at for the date picker
     const createdAtDate = tx.created_at ? new Date(tx.created_at) : new Date();
@@ -259,6 +265,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
             className={openAdd ? formStyles.btnSecondary : formStyles.btnPrimary}
             onClick={() => {
               setStatus(null);
+              setEditingId(null);
               setOpenAdd((v) => !v);
             }}
           >
@@ -273,6 +280,98 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
           <span className={`${formStyles.saveStatus} ${status.type === "success" ? formStyles.saveStatusSuccess : formStyles.saveStatusError}`}>
             {status.text}
           </span>
+        </div>
+      )}
+
+      {editingId && editingTx && (
+        <div className={cardStyles.panelBodyForm}>
+          <div className={cardStyles.formInset}>
+            <div className={formStyles.fieldRow}>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Reference Code</label>
+                <input
+                  className={formStyles.input}
+                  value={editForm.referenceCode}
+                  onChange={(e) => setEditField("referenceCode", e.target.value.toUpperCase())}
+                  placeholder="ZE12345"
+                />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Date</label>
+                <CustomDatePicker
+                  value={editForm.createdAt}
+                  onChange={(val) => setEditField("createdAt", val)}
+                  placeholder="dd/mm/yyyy"
+                />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Type</label>
+                <SelectBox
+                  className={formStyles.input}
+                  labeledOptions={[
+                    { value: "buy_aud", label: "Buy AUD" },
+                    { value: "sell_aud", label: "Sell AUD" },
+                  ]}
+                  value={editForm.type}
+                  onChange={(val) => setEditField("type", val)}
+                />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Recipient</label>
+                <SelectBox
+                  className={formStyles.input}
+                  labeledOptions={[
+                    { value: "", label: "Select recipient" },
+                    { value: "__intl_payment__", label: "International Payment" },
+                    { value: "__payment_link__", label: "Payment Link" },
+                    ...recipientOptions.map((r: RecipientOption) => ({ value: r.id, label: r.label })),
+                  ]}
+                  value={editForm.recipientId}
+                  onChange={(val) => setEditField("recipientId", val)}
+                />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>AUD Amount</label>
+                <input type="number" step="0.01" className={formStyles.input} value={editForm.amountAud} onChange={(e) => setEditField("amountAud", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Equivalent Toman</label>
+                <input type="number" step="1" className={formStyles.input} value={editForm.equivalentToman} onChange={(e) => setEditField("equivalentToman", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Source of Funds</label>
+                <input className={formStyles.input} value={editForm.sourceOfFunds} onChange={(e) => setEditField("sourceOfFunds", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Reason for Transfer</label>
+                <input className={formStyles.input} value={editForm.reasonForTransfer} onChange={(e) => setEditField("reasonForTransfer", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label}>Status</label>
+                <SelectBox
+                  className={formStyles.input}
+                  labeledOptions={[
+                    { value: "pending", label: "Pending" },
+                    { value: "approved", label: "Approved" },
+                    { value: "rejected", label: "Rejected" },
+                    { value: "archived", label: "Archived" },
+                    { value: "cancelled", label: "Cancelled" },
+                  ]}
+                  value={editForm.status}
+                  onChange={(val) => setEditField("status", val)}
+                />
+              </div>
+            </div>
+
+            <div className={formStyles.formActions}>
+              <button type="button" className={formStyles.btnPrimary} onClick={saveEditedRow} disabled={isPending}>
+                {isPending ? "Saving..." : "Save Changes"}
+              </button>
+              <button type="button" className={formStyles.btnSecondary} onClick={cancelEditRow} disabled={isPending}>
+                Cancel Editing
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -387,114 +486,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
                       : tableStyles.rowTransparent
                   }
                 >
-                  {editingId === String(tx.id) ? (
-                    <>
-                      <td className={`${tableStyles.cellMono} ${tableStyles.cellSmall}`}>
-                        <input
-                        className={`${formStyles.input} ${formStyles.inputCompactRef}`}
-                          value={editForm.referenceCode}
-                          onChange={(e) => setEditField("referenceCode", e.target.value.toUpperCase())}
-                          placeholder="ZE12345"
-                        />
-                      </td>
-                      <td className={`${tableStyles.cellMono} ${tableStyles.cellSmall} ${tableStyles.cellDim}`}>
-                        <div className={formStyles.datePickerCompact}>
-                          <CustomDatePicker
-                            value={editForm.createdAt}
-                            onChange={(val) => setEditField("createdAt", val)}
-                          />
-                        </div>
-                      </td>
-                      <td>
-                        <SelectBox
-                          className={`${formStyles.input} ${formStyles.inputCompact}`}
-                          labeledOptions={[
-                            { value: "buy_aud", label: "Buy AUD" },
-                            { value: "sell_aud", label: "Sell AUD" },
-                          ]}
-                          value={editForm.type}
-                          onChange={(val) => setEditField("type", val)}
-                        />
-                      </td>
-                      <td>
-                        <input type="number" step="0.01" className={`${formStyles.input} ${formStyles.inputCompact}`} value={editForm.amountAud} onChange={(e) => setEditField("amountAud", e.target.value)} />
-                      </td>
-                      <td>
-                        <input type="number" step="1" className={`${formStyles.input} ${formStyles.inputCompact}`} value={editForm.equivalentToman} onChange={(e) => setEditField("equivalentToman", e.target.value)} />
-                      </td>
-                      <td>
-                        <SelectBox
-                          className={`${formStyles.input} ${formStyles.selectCompact}`}
-                          labeledOptions={[
-                            { value: "", label: "Select recipient" },
-                            { value: "__intl_payment__", label: "International Payment" },
-                            { value: "__payment_link__", label: "Payment Link" },
-                            ...recipientOptions.map((r: RecipientOption) => ({ value: r.id, label: r.label })),
-                          ]}
-                          value={editForm.recipientId}
-                          onChange={(val) => setEditField("recipientId", val)}
-                        />
-                      </td>
-                      <td>
-                        <span className={tableStyles.cellEmpty}>—</span>
-                      </td>
-                      <td>
-                        <input className={`${formStyles.input} ${formStyles.inputCompactMd}`} value={editForm.sourceOfFunds} onChange={(e) => setEditField("sourceOfFunds", e.target.value)} />
-                      </td>
-                      <td>
-                        <input className={`${formStyles.input} ${formStyles.inputCompactMd}`} value={editForm.reasonForTransfer} onChange={(e) => setEditField("reasonForTransfer", e.target.value)} />
-                      </td>
-                      <td>
-                        <SelectBox
-                          className={`${formStyles.input} ${formStyles.selectCompactStatus}`}
-                          labeledOptions={[
-                            { value: "pending", label: "Pending" },
-                            { value: "approved", label: "Approved" },
-                            { value: "rejected", label: "Rejected" },
-                            { value: "archived", label: "Archived" },
-                            { value: "cancelled", label: "Cancelled" },
-                          ]}
-                          value={editForm.status}
-                          onChange={(val) => setEditField("status", val)}
-                        />
-                      </td>
-                      <td>
-                        <div className={tableStyles.cellActionGroup}>
-                          <button
-                            type="button"
-                            className={`${formStyles.btnPrimary} ${formStyles.btnIconOnly}`}
-                            title="Save"
-                            aria-label="Save"
-                            onClick={saveEditedRow}
-                            disabled={isPending}
-                          >
-                            <Save size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            className={`${formStyles.btnSecondary} ${formStyles.btnIconOnly}`}
-                            title="Cancel"
-                            aria-label="Cancel"
-                            onClick={cancelEditRow}
-                            disabled={isPending}
-                          >
-                            <X size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            className={`${formStyles.btnDanger} ${formStyles.btnIconOnly}`}
-                            title="Delete"
-                            aria-label="Delete"
-                            onClick={() => deleteRow(String(tx.id))}
-                            disabled={isPending}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </>
-                  ) : (
-                    <>
+                  <>
                   <td className={`${tableStyles.cellMono} ${tableStyles.cellSmall}`}>
                     {(tx as any).reference_code || <span className={tableStyles.cellEmpty}>—</span>}
                   </td>
@@ -578,6 +570,18 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
                       >
                         <Pencil size={14} />
                       </button>
+                      {editingId === String(tx.id) && (
+                        <button
+                          type="button"
+                          className={`${formStyles.btnSecondary} ${formStyles.btnIconOnly}`}
+                          title="Cancel edit"
+                          aria-label="Cancel edit"
+                          onClick={cancelEditRow}
+                          disabled={isPending}
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         className={`${formStyles.btnDanger} ${formStyles.btnIconOnly}`}
@@ -597,8 +601,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
                       )}
                     </div>
                   </td>
-                    </>
-                  )}
+                  </>
                 </tr>
               ))
             )}

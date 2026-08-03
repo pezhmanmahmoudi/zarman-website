@@ -3,7 +3,7 @@
 .treasuryPage {
   direction: rtl;
   text-align: right;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -46,7 +46,7 @@
   padding-top: 0.75rem;
   border-top: 1px solid var(--border-soft, #eaecf0);
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .recUpdatedAtLabel {
@@ -83,7 +83,7 @@
   gap: 0.5rem;
   margin-bottom: 0.75rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .forecastIcon {
@@ -175,7 +175,7 @@
   font-size: 0.8125rem;
   color: var(--text-dim, #6b7280);
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   margin-bottom: 1rem;
 }
 
@@ -183,7 +183,7 @@
   font-size: 0.75rem;
   color: var(--text-dim, #6b7280);
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   font-style: italic;
 }
 .reconSectionCard {
@@ -322,7 +322,7 @@
   border-radius: 0.75rem;
   border: 1px solid transparent;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .alertItemCritical {
@@ -389,7 +389,7 @@
   border-radius: 1rem;
   padding: 1.5rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   box-shadow: var(--shadow-card);
   position: relative;
   overflow: hidden;
@@ -533,7 +533,7 @@
   align-items: center;
   gap: 1.25rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .healthScoreCircle {
@@ -583,7 +583,7 @@
   font-size: 0.8125rem;
   font-weight: 700;
   margin-bottom: 0.375rem;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .catExcellent { background: rgba(16, 185, 129, 0.12); color: #059669; }
@@ -597,7 +597,7 @@
   line-height: 1.5;
   direction: rtl;
   text-align: right;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .healthBreakdown {
@@ -611,7 +611,7 @@
   align-items: center;
   gap: 0.75rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .breakdownLabel {
@@ -656,7 +656,7 @@
   padding: 1.25rem 1.5rem;
   box-shadow: var(--shadow-sm);
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .forecastLabel {
@@ -739,7 +739,7 @@
   border-collapse: collapse;
   font-size: 0.8125rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .inlineTable th {
@@ -806,7 +806,7 @@
   font-weight: 800;
   color: var(--text-main, #111827);
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .btnAddNew {
@@ -822,7 +822,7 @@
   font-weight: 700;
   cursor: pointer;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
@@ -856,7 +856,7 @@
   font-weight: 700;
   cursor: pointer;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
@@ -900,7 +900,7 @@
   cursor: pointer;
   list-style: none;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   background: var(--bg-soft, #f4f6f8);
   user-select: none;
 }
@@ -962,7 +962,7 @@
   width: 100%;
   border-collapse: collapse;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .listTable th {
@@ -1073,7 +1073,7 @@
   background: var(--bg-soft, #f4f6f8);
   border-radius: 0.75rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .formRow {
@@ -1110,7 +1110,7 @@
   background: var(--bg-card, #fff);
   color: #111827;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   width: 100%;
   line-height: 1.45;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
@@ -1150,7 +1150,7 @@
   font-size: 0.86rem;
   font-weight: 700;
   cursor: pointer;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   transition: background 0.15s, transform 0.1s;
 }
 
@@ -1167,7 +1167,7 @@
   font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   transition: background 0.15s, border-color 0.15s;
 }
 
@@ -1205,7 +1205,7 @@
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   transition: background 0.15s;
 }
 
@@ -1221,7 +1221,7 @@
   border-radius: 0.55rem;
   padding: 0.5rem 0.65rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1235,7 +1235,7 @@
   padding: 1rem 1.25rem;
   margin-bottom: 1rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .balanceUpdateTitle {
@@ -1258,7 +1258,7 @@
   color: var(--text-dim, #6b7280);
   font-size: 0.8125rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1268,7 +1268,7 @@
 .sectionHeaderFA {
   direction: rtl;
   text-align: right;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   margin-bottom: 1.25rem;
 }
 
@@ -1295,7 +1295,7 @@
   font-size: 0.7rem;
   color: var(--text-dim, #6b7280);
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   margin-top: 2px;
   display: block;
   line-height: 1.4;
@@ -1321,7 +1321,7 @@
   cursor: pointer;
   list-style: none;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   user-select: none;
 }
 
@@ -1363,7 +1363,7 @@
   font-size: 0.8rem;
   color: #92400e;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   line-height: 1.5;
   display: flex;
   align-items: flex-start;
@@ -1437,7 +1437,7 @@
   padding: 1.25rem 1.5rem;
   box-shadow: var(--shadow-sm);
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   margin-bottom: 1.25rem;
 }
 
@@ -1526,7 +1526,7 @@
   gap: 0.625rem;
   grid-column: span 2;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 @media (max-width: 640px) {
@@ -1604,7 +1604,7 @@
   padding: 0.375rem 0.625rem;
   border-radius: 0.375rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   user-select: none;
   transition: background 0.15s;
 }
@@ -1654,7 +1654,7 @@
   align-items: flex-start;
   text-align: right;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .detailCardLabel {
@@ -1698,7 +1698,7 @@
   align-items: center;
   gap: 1.25rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   flex-wrap: wrap;
 }
 
@@ -1788,7 +1788,7 @@
   cursor: pointer;
   list-style: none;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   background: var(--bg-soft, #f4f6f8);
   user-select: none;
   border-radius: calc(1rem - 1px) calc(1rem - 1px) 0 0;
@@ -1831,7 +1831,7 @@
   cursor: pointer;
   list-style: none;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   user-select: none;
 }
 
@@ -1864,7 +1864,7 @@
   flex-direction: column;
   gap: 0.5rem;
   direction: rtl;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }
 
 .reconAccountTitle {
@@ -2012,7 +2012,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   transition: background 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
@@ -2039,7 +2039,7 @@
   font-size: 0.73rem;
   font-weight: 600;
   cursor: pointer;
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   transition: background 0.15s, color 0.15s;
   white-space: nowrap;
 }
@@ -2069,7 +2069,7 @@
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-soft, #4b5563);
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   margin-bottom: 0.25rem;
 }
 
@@ -2089,5 +2089,5 @@
   font-weight: 700;
   background: rgba(67, 56, 202, 0.08);
   color: var(--accent, #4338ca);
-  font-family: "IRANSansX", "Peyda", var(--font-fa-content, "Tahoma"), sans-serif;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
 }

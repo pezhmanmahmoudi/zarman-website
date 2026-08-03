@@ -38,10 +38,11 @@ const TOAST_CLASS: Record<ToastType, string> = {
 
 export function AdminToast({ visible, type, message, onClose }: AdminToastProps) {
   if (!visible) return null;
+  const isFa = /[\u0600-\u06FF]/.test(message);
 
   return (
     <div className={styles.container} role="status" aria-live="polite">
-      <div className={`${styles.toast} ${TOAST_CLASS[type]}`}>
+      <div className={`${styles.toast} ${TOAST_CLASS[type]} ${isFa ? styles.toastFa : ""}`} dir={isFa ? "rtl" : "ltr"}>
         <span className={styles.icon}>{TOAST_ICON[type]}</span>
         <span className={styles.message}>{message}</span>
         <button

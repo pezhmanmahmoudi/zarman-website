@@ -1,5 +1,5 @@
 import React from "react";
-import { Coins, Calendar } from "lucide-react";
+import { Coins, Calendar, HandCoins, Wallet } from "lucide-react";
 import { fmtIRT } from "@/lib/accounting-engine";
 import { FA, trendBadgeCls, trendFA, fmtMonths } from "@/lib/treasury-utils";
 import type { TreasurySnapshot } from "@/lib/treasury-engine";
@@ -8,8 +8,18 @@ import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import s from "@/styles/admin/Treasury.module.css";
 
-export default function LiquidityAccounts({ treasury: t, strategy }: { treasury: TreasurySnapshot; strategy: StrategyOutput }) {
+export default function LiquidityAccounts({
+  treasury: t,
+  strategy,
+  accounting,
+}: {
+  treasury: TreasurySnapshot;
+  strategy: StrategyOutput;
+  accounting: { ownerLoanBalanceIRT: number };
+}) {
   const { trendAnalysis: trend } = strategy;
+  const ownerLoanLiability = Number(accounting?.ownerLoanBalanceIRT ?? 0);
+  const netAvailableCash = t.totalIranLiquidityIRT - ownerLoanLiability;
 
   return (
     <section>
@@ -35,13 +45,45 @@ export default function LiquidityAccounts({ treasury: t, strategy }: { treasury:
               </span>
             </div>
             <div className={s.liquidityHeroTitle}>
-              <Tooltip text="کل پول نقدِ ریالی در حساب‌های فیزیکی بانکی (بدون در نظر گرفتن حساب‌های مجازی و تعهدی مشتریان).">{FA.totalLiquidity}</Tooltip>
+              <Tooltip text="کل پول نقدِ ریالی در حساب های فیزیکی بانکی (بدون در نظر گرفتن حساب های مجازی و تعهدی مشتریان).">{FA.totalLiquidity}</Tooltip>
             </div>
           </div>
         </div>
       </div>
 
       <div className={`${cardStyles.statsGrid} ${s.statsGridTopMd}`}>
+        <div className={cardStyles.statCardCompact}>
+          <div className={`${cardStyles.statIconCompact} ${ownerLoanLiability > 0 ? cardStyles.statIconWarning : cardStyles.statIconSuccess}`}>
+            <HandCoins size={20} />
+          </div>
+          <div className={cardStyles.statInfo}>
+            <span className={`${cardStyles.statValue} ${ownerLoanLiability > 0 ? s.valAmber : s.valPositive}`}>
+              {fmtIRT(ownerLoanLiability)}
+            </span>
+            <span className={cardStyles.statLabel}>
+              <Tooltip text="این مبلغ بدهی کسب وکار به مالک است (Owner Loan Payable). عدد مثبت یعنی باید به مالک بازپرداخت شود.">
+                بدهی به مالک (قابل پرداخت)
+              </Tooltip>
+            </span>
+          </div>
+        </div>
+
+        <div className={cardStyles.statCardCompact}>
+          <div className={`${cardStyles.statIconCompact} ${netAvailableCash >= 0 ? cardStyles.statIconSuccess : cardStyles.statIconDanger}`}>
+            <Wallet size={20} />
+          </div>
+          <div className={cardStyles.statInfo}>
+            <span className={`${cardStyles.statValue} ${netAvailableCash >= 0 ? s.valPositive : s.valNegative}`}>
+              {fmtIRT(netAvailableCash)}
+            </span>
+            <span className={cardStyles.statLabel}>
+              <Tooltip text="نقدینگی قابل استفاده = کل نقدینگی ایران - بدهی به مالک. این شاخص تصویر محافظه کارانه تری از قدرت نقدی واقعی می دهد.">
+                نقدینگی قابل استفاده (خالص)
+              </Tooltip>
+            </span>
+          </div>
+        </div>
+
         <div className={cardStyles.statCardCompact}>
           <div className={`${cardStyles.statIconCompact} ${
             t.liquidRunwayMonths === null ? cardStyles.statIconInfo
@@ -59,7 +101,7 @@ export default function LiquidityAccounts({ treasury: t, strategy }: { treasury:
               {fmtMonths(t.liquidRunwayMonths)}
             </span>
             <span className={cardStyles.statLabel}>
-              <Tooltip text="تعداد ماه‌هایی که صرافی می‌تواند فقط با اتکا به نقدینگی ریالیِ فعلی، تمامی هزینه‌های جاری خود را پرداخت کند.">
+              <Tooltip text="تعداد ماه هایی که صرافی می تواند فقط با اتکا به نقدینگی ریالی فعلی، تمامی هزینه های جاری خود را پرداخت کند.">
                 {FA.cashRunwayLiquid}
               </Tooltip>
             </span>
@@ -73,7 +115,7 @@ export default function LiquidityAccounts({ treasury: t, strategy }: { treasury:
           <div className={`${s.detailsGrid} ${s.detailsGridTwo}`}>
             <div className={s.detailCard}>
               <span className={s.detailCardLabel}>
-                <Tooltip text="پوشش هزینه‌ها فقط بر اساس موجودی نقد ریالی">{FA.cashRunwayLiquid}</Tooltip>
+                <Tooltip text="پوشش هزینه ها فقط بر اساس موجودی نقد ریالی">{FA.cashRunwayLiquid}</Tooltip>
               </span>
               <span className={`${s.detailCardValue} ${
                 t.liquidRunwayMonths !== null && t.liquidRunwayMonths < t.settings.cash_runway_target_months ? s.valAmber : s.valNeutral
@@ -81,7 +123,7 @@ export default function LiquidityAccounts({ treasury: t, strategy }: { treasury:
             </div>
             <div className={s.detailCard}>
               <span className={s.detailCardLabel}>
-                <Tooltip text="تعداد ماه‌های دوام صرافی در صورتِ نقد شدنِ کل دلارهای انبار (نقدینگی ریالی + فروش کل موجودی).">{FA.cashRunwayTotal}</Tooltip>
+                <Tooltip text="تعداد ماه های دوام صرافی در صورت نقد شدن کل دلارهای انبار (نقدینگی ریالی + فروش کل موجودی).">{FA.cashRunwayTotal}</Tooltip>
               </span>
               <span className={`${s.detailCardValue} ${s.valPositive}`}>{fmtMonths(t.totalRunwayMonths)}</span>
             </div>

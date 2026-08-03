@@ -129,18 +129,18 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
   const isEditMode = Boolean(editingId);
 
   return (
-    <details className={s.formDetails} open>
+    <details className={s.formDetails}>
       <summary className={s.formSummary}>
         <ChevronDown size={16} className={s.formSummaryChevron} />
-        <span className={s.formSummaryTitle}>سرمایه مالک (Owner Capital)</span>
-        <span className={s.formSummaryHint}>ثبت سرمایه‌گذاری، برداشت و بازپرداخت سرمایه مالک برای محاسبه دقیق ارزش کسب‌وکار.</span>
+        <span className={s.formSummaryTitle}>بدهی/تسویه با مالک (Owner Loan Liability)</span>
+        <span className={s.formSummaryHint}>ثبت تزریق مالک و بازپرداخت‌ها برای نمایش دقیق بدهی قابل‌پرداخت به مالک.</span>
       </summary>
 
       <div className={s.formWrapper}>
         <div className={s.formHeader}>
           {!showForm && (
             <button className={s.btnAddNew} onClick={() => setShowForm(true)} disabled={isPending}>
-              <PlusCircle size={16} /> ثبت تراکنش مالک
+              <PlusCircle size={16} /> ثبت بدهی/تسویه مالک
             </button>
           )}
         </div>
@@ -178,7 +178,7 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
           <div className={s.formRow}>
             <div className={s.formGroup}>
               <label className={s.formLabel}>
-                <Tooltip text="صندوقی که موجودی آن تحت تاثیر این تراکنش قرار می‌گیرد">کشوی واریز/برداشت</Tooltip>
+                <Tooltip text="حسابی که مانده آن تحت تاثیر این رویداد بدهی/تسویه قرار می‌گیرد">حساب درگیر</Tooltip>
               </label>
               <SelectBox
                 dir="rtl"
@@ -191,15 +191,15 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>
-                <Tooltip text="تزریق: ورود پول از بیرون به صرافی. برداشت: خروج پول به نفع مالک">نوع عملیات</Tooltip>
+                <Tooltip text="تزریق مالک: بدهی کسب‌وکار به مالک را بیشتر می‌کند. بازپرداخت: بدهی به مالک را کمتر می‌کند.">نوع عملیات</Tooltip>
               </label>
               <SelectBox
                 dir="rtl"
                 value={form.loan_type}
                 onChange={(val) => field("loan_type", val)}
                 labeledOptions={[
-                  { value: "injection", label: "تزریق سرمایه (ورود)" },
-                  { value: "repayment", label: "برداشت شخصی (خروج)" },
+                  { value: "injection", label: "تزریق مالک (افزایش بدهی)" },
+                  { value: "repayment", label: "بازپرداخت به مالک (کاهش بدهی)" },
                 ]}
                 disabled={isPending}
               />
@@ -251,7 +251,7 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
                   <td>{L.date}</td>
                   <td>
                     <span className={L.loan_type === "injection" ? s.badgeSuccess : s.badgeWarning}>
-                      {L.loan_type === "injection" ? "تزریق" : "برداشت"}
+                      {L.loan_type === "injection" ? "تزریق مالک" : "بازپرداخت"}
                     </span>
                   </td>
                   <td dir="ltr" style={{ textAlign: "right" }}>

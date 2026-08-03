@@ -42,7 +42,9 @@ export default function CapitalAndForms({
               {fmtIRT(a.ownerLoanBalanceIRT)}
             </span>
             <span className={cardStyles.statLabel}>
-              <Tooltip text="تراز خالصِ بدهی سیستم به مالک (مجموع تزریق‌های سرمایه منهای برداشت‌های شخصی مالک).">{FA.loanBalance}</Tooltip>
+              <Tooltip text="این عدد بدهی قابل پرداخت کسب‌وکار به مالک را نشان می‌دهد. عدد مثبت یعنی هنوز باید به مالک بازپرداخت شود.">
+                بدهی به مالک (Owner Loan Payable)
+              </Tooltip>
             </span>
           </div>
         </div>

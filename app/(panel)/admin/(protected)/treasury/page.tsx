@@ -65,7 +65,7 @@ export default async function TreasuryPage() {
           <MarketInventory treasury={treasury} strategy={strategy} />
           <hr className={s.sectionDivider} />
 
-          <LiquidityAccounts treasury={treasury} strategy={strategy} />
+          <LiquidityAccounts treasury={treasury} strategy={strategy} accounting={accounting} />
           <hr className={s.sectionDivider} />
 
           <ReconciliationGrid accounting={accounting} />

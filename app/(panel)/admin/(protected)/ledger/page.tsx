@@ -28,6 +28,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
   const currentPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
   const filterType = params.type;
   const filterSearch = params.search;
+  const filterAccount = params.account;
 
   // Date Filtering Configuration
   const now = new Date();
@@ -62,11 +63,12 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
   }
 
   // 1. Fetch Standard Baseline
-  const { pageLedgerRows, total } = await getLedgerData(currentPage, PAGE_SIZE, {
+  const { pageLedgerRows, total, allLedgerRows } = await getLedgerData(currentPage, PAGE_SIZE, {
     start: startDate,
     end: endDate,
     type: filterType,
     search: filterSearch,
+    account: filterAccount,
   });
   const { accounting, treasury, bankAccounts } = await getTreasuryFullData();
 
@@ -79,7 +81,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
 
   const { data: allHistory } = await db
     .from("ledger")
-    .select("id, type, entry_type, amount_aud, amount_toman, fee_aud, date_gregorian, sender, recipient, created_at")
+    .select("id, type, entry_type, amount_aud, amount_toman, fee_aud, date_gregorian, sender, recipient, created_at, payer_account_id, receiver_account_id")
     .order("date_gregorian", { ascending: true })
     .order("created_at", { ascending: true });
 
@@ -139,12 +141,13 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
     // B. Period Aggregations
     const typeMatch = !filterType ||
       (filterType === "transfer" ? isTransfer : filterType === et || (isTrade && type === filterType));
+    const accountMatch = !filterAccount || row.payer_account_id === filterAccount || row.receiver_account_id === filterAccount;
     const normalizedSearch = filterSearch?.toLocaleLowerCase();
     const searchMatch = !normalizedSearch ||
       (row.sender || "").toLocaleLowerCase().includes(normalizedSearch) ||
       (row.recipient || "").toLocaleLowerCase().includes(normalizedSearch);
 
-    if (dateInPeriod && typeMatch && searchMatch) {
+    if (dateInPeriod && typeMatch && searchMatch && accountMatch) {
       if (isValidTrade) {
         count += 1;
         periodFeesAud += feeAud;
@@ -198,7 +201,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
       <div className={shellStyles.pageContent}>
 
         {/* Filters */}
-        <LedgerToolbar currentParams={params} />
+        <LedgerToolbar currentParams={params} bankAccounts={bankAccounts || []} exportRows={allLedgerRows as LedgerRow[]} />
 
         <LedgerBusinessSnapshot
           operatingProfit={accounting.operatingProfit}
