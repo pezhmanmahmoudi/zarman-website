@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { revalidateTag } from "next/cache";
 import { getRatesSnapshot } from "@/lib/rates";
-import { calcExecutionRateFromSettlement } from "@/lib/pricing";
+import { calcExecutionRateFromSettlement, toCompanyTradeType } from "@/lib/pricing";
 import {
   calcIranBankTransferFee,
   getIranBankTransferFeeError,
@@ -1154,12 +1154,14 @@ export async function createAssistedCustomerOnboarding(payload: any) {
   let transactionId: string | number | null = null;
   if (payload.transaction?.create && (Number(payload.transaction.amount_aud) > 0 || Number(payload.transaction.equivalent_toman) > 0)) {
     const tx = payload.transaction;
+    const requestedType = tx.type === "sell_aud" ? "sell_aud" : "buy_aud";
+    const companyType = toCompanyTradeType(requestedType);
     const referenceCode = await generateAdminReferenceCode(db);
     const txStatus = tx.status || "pending";
 
     const txInsert: Record<string, unknown> = {
       user_id:              userId,
-      type:                 tx.type || "buy_aud",
+      type:                 companyType,
       amount_aud:           Number(tx.amount_aud) || 0,
       equivalent_toman:     Number(tx.equivalent_toman) || 0,
       applied_rate:         tx.applied_rate ? Number(tx.applied_rate) : null,
@@ -1199,7 +1201,7 @@ export async function createAssistedCustomerOnboarding(payload: any) {
         const appliedFee   = Number(rateRes.data?.applied_fee   ?? 30);
         const feeAud = audAmt > 0 && audAmt < feeThreshold ? appliedFee : 0;
         const rate = resolveTradeExecutionRate(
-          String(tx.type || "buy_aud") as "buy_aud" | "sell_aud",
+          companyType,
           audAmt,
           tomanAmt,
           feeAud,
@@ -1214,7 +1216,7 @@ export async function createAssistedCustomerOnboarding(payload: any) {
           transaction_id:  String(transactionId),
           date_gregorian:  dateGregorian,
           date_jalali:     dateJalali,
-          type:            tx.type || "buy_aud",
+          type:            companyType,
           entry_type:      "trade",
           exchange_rate:   rate,
           amount_aud:      audAmt,

@@ -19,6 +19,7 @@ import {
   generateStrategyOutput,
   type StrategyOutput,
 } from "@/lib/strategy-engine";
+import { sortBankAccountsByPriority } from "@/lib/bank-account-ordering";
 
 // ── Private helpers ────────────────────────────────────────────────────────
 
@@ -128,8 +129,9 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
 
   // ۱. مپ کردن ساختار کشوها برای پردازش در موتور حسابداری
   const allAccounts = accountsRes.data ?? [];
+  const orderedAccounts = sortBankAccountsByPriority(allAccounts);
 
-  const accountsMeta: AccountMeta[] = allAccounts.map((a: any) => ({
+  const accountsMeta: AccountMeta[] = orderedAccounts.map((a: any) => ({
     id: String(a.id),
     name: String(a.account_name),
     currency: a.currency as "AUD" | "IRT",

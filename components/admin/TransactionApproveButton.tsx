@@ -16,6 +16,7 @@ import {
   getIranBankTransferFeeError,
   type IranBankTransferMethod,
 } from "@/lib/iran-bank-transfer-fees";
+import { sortBankAccountsByPriority, type BankAccountLike } from "@/lib/bank-account-ordering";
 
 export function TransactionApproveButton({
   transactionId,
@@ -76,8 +77,24 @@ export function TransactionApproveButton({
   const payerLabelFA = payerCurrency === "IRT" ? "حساب پرداخت‌کننده ایران" : "حساب پرداخت‌کننده استرالیا";
   const receiverLabelFA = receiverCurrency === "IRT" ? "حساب دریافت‌کننده ایران" : "حساب دریافت‌کننده استرالیا";
 
-  const payerAccounts = bankAccounts.filter((account) => account.currency === payerCurrency);
-  const receiverAccounts = bankAccounts.filter((account) => account.currency === receiverCurrency);
+  const normalizedBankAccounts: BankAccountLike[] = bankAccounts
+    .filter((account): account is { id: string; account_name: string; currency: "AUD" | "IRT" } =>
+      typeof account?.id === "string" &&
+      typeof account?.account_name === "string" &&
+      (account.currency === "AUD" || account.currency === "IRT")
+    )
+    .map((account) => ({
+      id: account.id,
+      account_name: account.account_name,
+      currency: account.currency,
+    }));
+
+  const payerAccounts = sortBankAccountsByPriority(
+    normalizedBankAccounts.filter((account) => account.currency === payerCurrency)
+  );
+  const receiverAccounts = sortBankAccountsByPriority(
+    normalizedBankAccounts.filter((account) => account.currency === receiverCurrency)
+  );
   const feeEligible = payerCurrency === "IRT";
 
   // ارسال تراکنش و ثبت در لجر به صورت دوطرفه

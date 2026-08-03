@@ -6,6 +6,10 @@ import { Check, Download, Search } from "lucide-react";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { SelectBox } from "../../ui/SelectBox/SelectBox";
 import styles from "@/styles/admin/LedgerToolbar.module.css";
+import {
+  filterBankAccountsByLedgerType,
+  sortBankAccountsByPriority,
+} from "@/lib/bank-account-ordering";
 
 interface LedgerToolbarProps {
   currentParams: Record<string, string | undefined>;
@@ -62,12 +66,11 @@ export default function LedgerToolbar({ currentParams, bankAccounts, exportRows 
   const accountOptions = useMemo(
     () => [
       { label: "همه حساب‌ها", value: "all" },
-      ...bankAccounts
-        .slice()
-        .sort((a, b) => a.account_name.localeCompare(b.account_name))
-        .map((acc) => ({ label: `${acc.account_name} (${acc.currency})`, value: acc.id })),
+      ...sortBankAccountsByPriority(
+        filterBankAccountsByLedgerType(bankAccounts, currentParams.type),
+      ).map((acc) => ({ label: `${acc.account_name} (${acc.currency})`, value: acc.id })),
     ],
-    [bankAccounts],
+    [bankAccounts, currentParams.type],
   );
 
   // Local state for custom dates to prevent auto-fetching before confirmation

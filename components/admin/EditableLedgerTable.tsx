@@ -8,6 +8,7 @@ import tableStyles from "@/styles/admin/AdminTable.module.css";
 import s from "@/styles/admin/LedgerTable.module.css";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
+import { filterBankAccountsByLedgerType, sortBankAccountsByPriority } from "@/lib/bank-account-ordering";
 
 // -- Persian strings ----------------
 const T = {
@@ -323,6 +324,31 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
     return acc ? `${acc.account_name}` : "—";
   };
 
+  const getBankAccountOptions = (transactionType: string) => {
+    const filtered = filterBankAccountsByLedgerType(bankAccounts, transactionType);
+    return sortBankAccountsByPriority(filtered).map((account) => ({
+      value: account.id,
+      label: account.account_name,
+    }));
+  };
+
+  const getLedgerAccountOptions = (transactionType: string, side: "payer" | "receiver") => {
+    const sideAccounts = transactionType === "buy_aud"
+      ? (side === "payer"
+          ? sortBankAccountsByPriority(bankAccounts.filter((account) => account.currency === "IRT"))
+          : sortBankAccountsByPriority(bankAccounts.filter((account) => account.currency === "AUD")))
+      : transactionType === "sell_aud"
+        ? (side === "payer"
+            ? sortBankAccountsByPriority(bankAccounts.filter((account) => account.currency === "AUD"))
+            : sortBankAccountsByPriority(bankAccounts.filter((account) => account.currency === "IRT")))
+      : sortBankAccountsByPriority(filterBankAccountsByLedgerType(bankAccounts, transactionType));
+
+    return sideAccounts.map((account) => ({
+      value: account.id,
+      label: account.account_name,
+    }));
+  };
+
   const openAdd = () => { setAdd(emptyAdd()); setEdit(null); setDelId(null); };
 
   const kbE = (e: React.KeyboardEvent) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEdit(null); };
@@ -415,7 +441,25 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                       { value: "transfer", label: T.transfer },
                     ]}
                     value={add.type}
-                    onChange={(val) => aSet("type", val as any)}
+                    onChange={(val) => {
+                      const nextType = val as any;
+                      aSet("type", nextType);
+                      if (nextType === "buy_aud") {
+                        if (add.payer_account_id && bankAccounts.find((account) => account.id === add.payer_account_id)?.currency !== "IRT") {
+                          aSet("payer_account_id", "");
+                        }
+                        if (add.receiver_account_id && bankAccounts.find((account) => account.id === add.receiver_account_id)?.currency !== "AUD") {
+                          aSet("receiver_account_id", "");
+                        }
+                      } else if (nextType === "sell_aud") {
+                        if (add.payer_account_id && bankAccounts.find((account) => account.id === add.payer_account_id)?.currency !== "AUD") {
+                          aSet("payer_account_id", "");
+                        }
+                        if (add.receiver_account_id && bankAccounts.find((account) => account.id === add.receiver_account_id)?.currency !== "IRT") {
+                          aSet("receiver_account_id", "");
+                        }
+                      }
+                    }}
                   />
                 </td>
                 <td className={s.tdCenter}>
@@ -429,20 +473,20 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                     <SelectBox
                       className={s.selectType}
                       labeledOptions={[
-                        { value: "", label: "حساب پرداخت کننده..." },
-                        ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                        { value: "", label: "حساب دریافت کننده..." },
+                        ...getLedgerAccountOptions(add.type, "receiver"),
                       ]}
-                      value={add.payer_account_id}
-                      onChange={(val) => aSet("payer_account_id", val)}
+                      value={add.receiver_account_id}
+                      onChange={(val) => aSet("receiver_account_id", val)}
                     />
                     <SelectBox
                       className={s.selectType}
                       labeledOptions={[
-                        { value: "", label: "حساب دریافت کننده..." },
-                        ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                        { value: "", label: "حساب پرداخت کننده..." },
+                        ...getLedgerAccountOptions(add.type, "payer"),
                       ]}
-                      value={add.receiver_account_id}
-                      onChange={(val) => aSet("receiver_account_id", val)}
+                      value={add.payer_account_id}
+                      onChange={(val) => aSet("payer_account_id", val)}
                     />
                   </div>
                 </td>
@@ -505,7 +549,25 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                           { value: "transfer", label: T.transfer },
                         ]}
                         value={edit.type}
-                        onChange={(val) => eSet("type", val as any)}
+                        onChange={(val) => {
+                          const nextType = val as any;
+                          eSet("type", nextType);
+                          if (nextType === "buy_aud") {
+                            if (edit.payer_account_id && bankAccounts.find((account) => account.id === edit.payer_account_id)?.currency !== "IRT") {
+                              eSet("payer_account_id", "");
+                            }
+                            if (edit.receiver_account_id && bankAccounts.find((account) => account.id === edit.receiver_account_id)?.currency !== "AUD") {
+                              eSet("receiver_account_id", "");
+                            }
+                          } else if (nextType === "sell_aud") {
+                            if (edit.payer_account_id && bankAccounts.find((account) => account.id === edit.payer_account_id)?.currency !== "AUD") {
+                              eSet("payer_account_id", "");
+                            }
+                            if (edit.receiver_account_id && bankAccounts.find((account) => account.id === edit.receiver_account_id)?.currency !== "IRT") {
+                              eSet("receiver_account_id", "");
+                            }
+                          }
+                        }}
                       />
                     ) : (
                       <span
@@ -544,27 +606,27 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                          <SelectBox
                            className={s.selectType}
                            labeledOptions={[
-                             { value: "", label: "حساب پرداخت کننده..." },
-                             ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
-                           ]}
-                           value={edit.payer_account_id}
-                           onChange={(val) => eSet("payer_account_id", val)}
-                         />
-                         <SelectBox
-                           className={s.selectType}
-                           labeledOptions={[
                              { value: "", label: "حساب دریافت کننده..." },
-                             ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                             ...getLedgerAccountOptions(edit.type, "receiver"),
                            ]}
                            value={edit.receiver_account_id}
                            onChange={(val) => eSet("receiver_account_id", val)}
                          />
+                         <SelectBox
+                           className={s.selectType}
+                           labeledOptions={[
+                             { value: "", label: "حساب پرداخت کننده..." },
+                             ...getLedgerAccountOptions(edit.type, "payer"),
+                           ]}
+                           value={edit.payer_account_id}
+                           onChange={(val) => eSet("payer_account_id", val)}
+                         />
                        </div>
                     ) : (
                       <div className={s.displayStack}>
-                         <span className={s.displayTextAccent}>{getAccountName(row.payer_account_id)}</span>
-                         <ArrowRight size={10} color="var(--border-med)" style={{ transform: "rotate(90deg)" }} />
                          <span className={s.displayTextAccent}>{getAccountName(row.receiver_account_id)}</span>
+                         <ArrowRight size={10} color="var(--border-med)" style={{ transform: "rotate(90deg)" }} />
+                         <span className={s.displayTextAccent}>{getAccountName(row.payer_account_id)}</span>
                       </div>
                     )}
                   </td>
@@ -621,7 +683,25 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                     { value: "transfer", label: T.transfer },
                   ]}
                   value={add.type}
-                  onChange={(val) => aSet("type", val as any)}
+                  onChange={(val) => {
+                    const nextType = val as any;
+                    aSet("type", nextType);
+                    if (nextType === "buy_aud") {
+                      if (add.payer_account_id && bankAccounts.find((account) => account.id === add.payer_account_id)?.currency !== "IRT") {
+                        aSet("payer_account_id", "");
+                      }
+                      if (add.receiver_account_id && bankAccounts.find((account) => account.id === add.receiver_account_id)?.currency !== "AUD") {
+                        aSet("receiver_account_id", "");
+                      }
+                    } else if (nextType === "sell_aud") {
+                      if (add.payer_account_id && bankAccounts.find((account) => account.id === add.payer_account_id)?.currency !== "AUD") {
+                        aSet("payer_account_id", "");
+                      }
+                      if (add.receiver_account_id && bankAccounts.find((account) => account.id === add.receiver_account_id)?.currency !== "IRT") {
+                        aSet("receiver_account_id", "");
+                      }
+                    }
+                  }}
                 />
 
                 <label className={s.mobileFieldLabel}>{T.colCustomers}</label>
@@ -635,20 +715,20 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                   <SelectBox
                     className={s.selectType}
                     labeledOptions={[
-                      { value: "", label: "حساب پرداخت کننده..." },
-                      ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                      { value: "", label: "حساب دریافت کننده..." },
+                      ...getLedgerAccountOptions(add.type, "receiver"),
                     ]}
-                    value={add.payer_account_id}
-                    onChange={(val) => aSet("payer_account_id", val)}
+                    value={add.receiver_account_id}
+                    onChange={(val) => aSet("receiver_account_id", val)}
                   />
                   <SelectBox
                     className={s.selectType}
                     labeledOptions={[
-                      { value: "", label: "حساب دریافت کننده..." },
-                      ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                      { value: "", label: "حساب پرداخت کننده..." },
+                      ...getLedgerAccountOptions(add.type, "payer"),
                     ]}
-                    value={add.receiver_account_id}
-                    onChange={(val) => aSet("receiver_account_id", val)}
+                    value={add.payer_account_id}
+                    onChange={(val) => aSet("payer_account_id", val)}
                   />
                 </div>
 
@@ -720,7 +800,25 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                         { value: "transfer", label: T.transfer },
                       ]}
                       value={edit.type}
-                      onChange={(val) => eSet("type", val as any)}
+                      onChange={(val) => {
+                        const nextType = val as any;
+                        eSet("type", nextType);
+                        if (nextType === "buy_aud") {
+                          if (edit.payer_account_id && bankAccounts.find((account) => account.id === edit.payer_account_id)?.currency !== "IRT") {
+                            eSet("payer_account_id", "");
+                          }
+                          if (edit.receiver_account_id && bankAccounts.find((account) => account.id === edit.receiver_account_id)?.currency !== "AUD") {
+                            eSet("receiver_account_id", "");
+                          }
+                        } else if (nextType === "sell_aud") {
+                          if (edit.payer_account_id && bankAccounts.find((account) => account.id === edit.payer_account_id)?.currency !== "AUD") {
+                            eSet("payer_account_id", "");
+                          }
+                          if (edit.receiver_account_id && bankAccounts.find((account) => account.id === edit.receiver_account_id)?.currency !== "IRT") {
+                            eSet("receiver_account_id", "");
+                          }
+                        }
+                      }}
                     />
 
                     <label className={s.mobileFieldLabel}>{T.colCustomers}</label>
@@ -734,20 +832,20 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                       <SelectBox
                         className={s.selectType}
                         labeledOptions={[
-                          { value: "", label: "حساب پرداخت کننده..." },
-                          ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                          { value: "", label: "حساب دریافت کننده..." },
+                          ...getLedgerAccountOptions(edit.type, "receiver"),
                         ]}
-                        value={edit.payer_account_id}
-                        onChange={(val) => eSet("payer_account_id", val)}
+                        value={edit.receiver_account_id}
+                        onChange={(val) => eSet("receiver_account_id", val)}
                       />
                       <SelectBox
                         className={s.selectType}
                         labeledOptions={[
-                          { value: "", label: "حساب دریافت کننده..." },
-                          ...bankAccounts.map(b => ({ value: b.id, label: b.account_name })),
+                          { value: "", label: "حساب پرداخت کننده..." },
+                          ...getLedgerAccountOptions(edit.type, "payer"),
                         ]}
-                        value={edit.receiver_account_id}
-                        onChange={(val) => eSet("receiver_account_id", val)}
+                        value={edit.payer_account_id}
+                        onChange={(val) => eSet("payer_account_id", val)}
                       />
                     </div>
 
