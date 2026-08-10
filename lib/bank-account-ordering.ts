@@ -4,20 +4,20 @@ export type BankAccountLike = {
 	currency: "AUD" | "IRT";
 };
 
-const IRT_PRIORITY = ["Blue B", "Melli", "Customer credit"];
-const AUD_PRIORITY = ["ST Bussiness", "Revolout", "Cash", "Customer credit", "St. Joint"];
+const IRT_PRIORITY = ["Blue B", "Melli", "Customer Credit_AUD"];
+const AUD_PRIORITY = ["ST Bussiness", "Revolout", "Cash", "Customer Credit_AUD", "St. Joint"];
 
 const IRT_PRIORITY_ALIASES: Record<string, string[]> = {
 	"Blue B": ["blue b", "blu b", "blueb", "blub", "blue bank"],
 	"Melli": ["melli", "bank melli", "melli b", "melli_b"],
-	"Customer credit": ["customer credit", "customer_credit", "customercredit"],
+	"Customer Credit_AUD": ["customer credit", "customer_credit", "customercredit", "customer_credit_aud"],
 };
 
 const AUD_PRIORITY_ALIASES: Record<string, string[]> = {
 	"ST Bussiness": ["st bussiness", "st business", "st. bussiness", "st. business", "stbusiness"],
 	"Revolout": ["revolout", "revolut", "revolut bank"],
 	"Cash": ["cash"],
-	"Customer credit": ["customer credit", "customer_credit", "customercredit"],
+	"Customer Credit_AUD": ["customer credit", "customer_credit", "customercredit", "customer_credit_aud"],
 	"St. Joint": ["st joint", "st. joint", "st_joint", "joint"],
 };
 
