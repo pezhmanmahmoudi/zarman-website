@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createSupabaseServerActionClient } from "@/lib/supabase-server";
+import { createSupabaseServerComponentClient } from "@/lib/supabase-server";
 import { getAdminStats } from "@/app/actions/admin.actions";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
@@ -24,7 +24,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabaseServer = await createSupabaseServerActionClient();
+  const supabaseServer = await createSupabaseServerComponentClient();
   const {
     data: { user },
   } = await supabaseServer.auth.getUser();

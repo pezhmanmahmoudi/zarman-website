@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import {
-  generateIftiDraOutgoingWorkbook,
+  generateIftiDraIncomingWorkbook,
   type IftiSourceRecord,
-} from "@/lib/reporting/ifti-dra-outgoing";
+} from "@/lib/reporting/ifti-dra-incoming";
 
 const PRIVILEGED_ROLES = new Set(["admin", "supabase_admin", "service_role"]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -43,12 +43,12 @@ function buildFileName(records: IftiSourceRecord[]) {
     .sort((a, b) => a.getTime() - b.getTime());
 
   if (dates.length === 0) {
-    return `AML.Report.AustracOutgoing ${new Date().toISOString().slice(0, 10)}.xlsx`;
+    return `AML.Report.AustracIncoming ${new Date().toISOString().slice(0, 10)}.xlsx`;
   }
 
   const start = dates[0].toISOString().slice(0, 10);
   const end = dates[dates.length - 1].toISOString().slice(0, 10);
-  return `AML.Report.AustracOutgoing ${start} to ${end}.xlsx`;
+  return `AML.Report.AustracIncoming ${start} to ${end}.xlsx`;
 }
 
 export async function POST(req: NextRequest) {
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     .from("transactions")
     .select(`
       id, user_id, recipient_id, type, amount_aud, equivalent_toman, status, created_at, approved_at,
-      reference_code, reason_for_transfer, source_of_funds,
+      reference_code, reason_for_transfer, source_of_funds, payment_link,
       profiles(
         first_name, last_name, email, customer_code, mobile_number, dob, country,
         address, city, state, postcode, document_type, license_number, card_number,
@@ -112,14 +112,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "No matching transactions were found." }, { status: 404 });
   }
 
-  // IFTI-DRA Outgoing covers buy_aud transactions only (AUD exits Australia → paid overseas).
-  // sell_aud = Zarman sells AUD to customer = money enters Australia = AUSTRAC incoming (different report).
   const nonApproved = orderedRows.filter((row) => (row.status ?? "").toLowerCase() !== "approved");
   if (nonApproved.length > 0) {
     return NextResponse.json(
       {
-        message: "Only approved transactions can be exported to AUSTRAC IFDA.",
+        message: "Only approved transactions can be exported to AUSTRAC IFTI.",
         invalidTransactionIds: nonApproved.map((tx) => tx.id),
+      },
+      { status: 400 },
+    );
+  }
+
+  // IFTI-DRA Incoming covers sell_aud transactions only (money enters Australia).
+  const nonIncoming = orderedRows.filter((row) => String(row.type).toLowerCase() !== "sell_aud");
+  if (nonIncoming.length > 0) {
+    return NextResponse.json(
+      {
+        message: "Incoming report accepts Sell AUD transactions only.",
+        invalidTransactionIds: nonIncoming.map((tx) => tx.id),
       },
       { status: 400 },
     );
@@ -127,9 +137,9 @@ export async function POST(req: NextRequest) {
 
   let workbookBuffer: Buffer;
   try {
-    workbookBuffer = await generateIftiDraOutgoingWorkbook(orderedRows);
+    workbookBuffer = await generateIftiDraIncomingWorkbook(orderedRows);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to generate IFDA workbook.";
+    const message = error instanceof Error ? error.message : "Failed to generate IFTI workbook.";
     return NextResponse.json({ message }, { status: 500 });
   }
 

@@ -20,6 +20,19 @@ function createSupabaseSsrClient(cookieHandlers: {
   });
 }
 
+export async function createSupabaseServerComponentClient() {
+  const cookieStore = await cookies();
+
+  return createSupabaseSsrClient({
+    getAll() {
+      return cookieStore.getAll();
+    },
+    setAll() {
+      // Server Components cannot mutate cookies in Next.js.
+    },
+  });
+}
+
 export async function createSupabaseServerActionClient() {
   const cookieStore = await cookies();
 

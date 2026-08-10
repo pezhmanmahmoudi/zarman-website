@@ -176,13 +176,19 @@ function RecipientCell({
 }
 
 function parseFileName(contentDisposition: string | null): string {
-  if (!contentDisposition) return "AML.Report.AustracOutgoing.xlsx";
+  if (!contentDisposition) return "AML.Report.AustracIFTI.xlsx";
   const utfMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
   if (utfMatch?.[1]) return decodeURIComponent(utfMatch[1]);
 
   const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
   if (plainMatch?.[1]) return plainMatch[1];
-  return "AML.Report.AustracOutgoing.xlsx";
+  return "AML.Report.AustracIFTI.xlsx";
+}
+
+function getIftiReportKind(type: string | null | undefined): "outgoing" | "incoming" | null {
+  if (type === "buy_aud") return "outgoing";
+  if (type === "sell_aud") return "incoming";
+  return null;
 }
 
 function TxTable({
@@ -194,6 +200,7 @@ function TxTable({
   onToggleAll,
   selectionAction,
   defaultSelectionAction,
+  selectedExportType,
 }: {
   rows: TransactionRow[];
   isPending: boolean;
@@ -203,6 +210,7 @@ function TxTable({
   onToggleAll: (ids: string[], checked: boolean) => void;
   selectionAction: SelectionAction | null;
   defaultSelectionAction: SelectionAction;
+  selectedExportType: string | null;
 }) {
   const getRowAction = (row: TransactionRow): SelectionAction | null => {
     const status = (row.status ?? "").toLowerCase();
@@ -212,8 +220,15 @@ function TxTable({
   };
   const activeAction = selectionAction ?? defaultSelectionAction;
   const eligibleIds = useMemo(
-    () => rows.filter((row) => !isPending && getRowAction(row) === activeAction).map((row) => String(row.id)),
-    [activeAction, isPending, rows],
+    () => rows
+      .filter((row) => {
+        if (isPending) return false;
+        if (getRowAction(row) !== activeAction) return false;
+        if (activeAction !== "export") return true;
+        return !selectedExportType || row.type === selectedExportType;
+      })
+      .map((row) => String(row.id)),
+    [activeAction, isPending, rows, selectedExportType],
   );
 
   const allChecked = eligibleIds.length > 0 && eligibleIds.every((id) => selectedIds.has(id));
@@ -250,7 +265,10 @@ function TxTable({
             const customerCode = profile?.customer_code;
             const rowId = String(tx.id);
             const rowAction = getRowAction(tx);
-            const isSelectable = !isPending && rowAction !== null && (!selectionAction || rowAction === selectionAction);
+            const isSelectable = !isPending
+              && rowAction !== null
+              && (!selectionAction || rowAction === selectionAction)
+              && (rowAction !== "export" || !selectedExportType || tx.type === selectedExportType);
 
             return (
               <tr key={rowId} className={isPending ? tableStyles.rowTintWarning : tableStyles.rowTransparent}>
@@ -381,6 +399,14 @@ export function TransactionsManager({
     : (selectedRows[0].status ?? "").toLowerCase() === "approved"
       ? "export"
       : "delete";
+  const selectedExportType = selectionAction === "export" && selectedRows.length > 0 ? selectedRows[0].type : null;
+  const selectedKinds = selectionAction === "export"
+    ? new Set(selectedRows.map((row) => getIftiReportKind(row.type)))
+    : new Set<"outgoing" | "incoming" | null>();
+  const hasMixedExportKinds = selectionAction === "export" && selectedKinds.size > 1;
+  const reportKind = selectionAction === "export" && !hasMixedExportKinds
+    ? getIftiReportKind(selectedExportType)
+    : null;
   const defaultSelectionAction: SelectionAction =
     historyStatus === "rejected" || historyStatus === "archived" ? "delete" : "export";
 
@@ -435,18 +461,27 @@ export function TransactionsManager({
       return;
     }
 
+    if (hasMixedExportKinds || !reportKind) {
+      setExportMessage({ type: "error", text: "Select approved rows from one transfer type only (Buy AUD or Sell AUD)." });
+      return;
+    }
+
     try {
       setIsExporting(true);
       setExportMessage(null);
 
-      const response = await fetch("/api/admin/reports/ifti-dra-outgoing", {
+      const endpoint = reportKind === "incoming"
+        ? "/api/admin/reports/ifti-dra-incoming"
+        : "/api/admin/reports/ifti-dra-outgoing";
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transactionIds: Array.from(selectedIds) }),
       });
 
       if (!response.ok) {
-        let message = "Failed to generate IFDA report.";
+        let message = "Failed to generate IFTI report.";
         try {
           const json = (await response.json()) as { message?: string };
           if (json.message) message = json.message;
@@ -470,7 +505,8 @@ export function TransactionsManager({
       a.remove();
       URL.revokeObjectURL(objectUrl);
 
-      setExportMessage({ type: "success", text: `IFDA report generated for ${selectedIds.size} transaction(s).` });
+      const label = reportKind === "incoming" ? "incoming" : "outgoing";
+      setExportMessage({ type: "success", text: `IFTI ${label} report generated for ${selectedIds.size} transaction(s).` });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected export error.";
       setExportMessage({ type: "error", text: message });
@@ -551,6 +587,7 @@ export function TransactionsManager({
               onToggleAll={toggleAll}
               selectionAction={selectionAction}
               defaultSelectionAction={defaultSelectionAction}
+              selectedExportType={selectedExportType}
             />
           )}
         </div>
@@ -638,7 +675,13 @@ export function TransactionsManager({
             <div className={tableStyles.bulkActionBar} role="status">
               <div>
                 <strong>{selectedCount} selected</strong>
-                <span>{selectionAction === "delete" ? "Rejected/archived records" : "Approved records for AUSTRAC IFDA"}</span>
+                <span>
+                  {selectionAction === "delete"
+                    ? "Rejected/archived records"
+                    : reportKind === "incoming"
+                      ? "Approved Sell AUD records for AUSTRAC IFTI-DRA IN"
+                      : "Approved Buy AUD records for AUSTRAC IFTI-DRA OUT"}
+                </span>
               </div>
               {exportMessage && (
                 <span className={exportMessage.type === "error" ? tableStyles.bulkMessageError : tableStyles.bulkMessageSuccess}>
@@ -649,7 +692,7 @@ export function TransactionsManager({
                 {selectionAction === "export" && selectedCount > 0 && (
                   <button type="button" onClick={downloadBulkReport} disabled={isExporting} className={`${tableStyles.btnAction} ${tableStyles.btnApprove}`}>
                     <Download size={14} />
-                    {isExporting ? "Generating..." : "Export IFDA (.xlsx)"}
+                    {isExporting ? "Generating..." : "Export IFTI (.xlsx)"}
                   </button>
                 )}
                 {selectionAction === "delete" && selectedCount > 0 && (
@@ -682,6 +725,7 @@ export function TransactionsManager({
                 onToggleAll={toggleAll}
                 selectionAction={selectionAction}
                 defaultSelectionAction={defaultSelectionAction}
+                selectedExportType={selectedExportType}
               />
               <AdminPagination currentPage={currentPage} totalCount={total} pageSize={pageSize} />
             </>
