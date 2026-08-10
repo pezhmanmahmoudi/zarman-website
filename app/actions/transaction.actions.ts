@@ -8,7 +8,6 @@ import {
   calcEquivalentTomanForRequestType,
   calcExecutionRateFromSettlementForRequestType,
   calcLoyaltyDiscount,
-  toCompanyTradeType,
 } from "@/lib/pricing";
 import type { PromoCodeData } from "@/lib/pricing";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
@@ -199,13 +198,11 @@ export async function processTransactionSecurely({
     // ۶. ثبت در دیتابیس
     const referenceCode = await generateReferenceCode();
 
-    const companyTradeType = toCompanyTradeType(txType);
-
     const { error: insertError } = await supabaseAdmin
       .from("transactions")
       .insert([{
         user_id: authenticatedUserId,
-        type: companyTradeType,
+        type: txType,
         amount_aud: rawAmount,
         equivalent_toman: equivalentToman,
         applied_rate: appliedRate,

@@ -38,7 +38,7 @@ function parseTransactionIds(body: unknown) {
 
 function buildFileName(records: IftiSourceRecord[]) {
   const dates = records
-    .map((r) => new Date(r.approved_at || r.created_at))
+    .map((r) => new Date(r.created_at))
     .filter((d) => !Number.isNaN(d.getTime()))
     .sort((a, b) => a.getTime() - b.getTime());
 
