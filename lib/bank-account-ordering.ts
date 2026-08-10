@@ -4,12 +4,13 @@ export type BankAccountLike = {
 	currency: "AUD" | "IRT";
 };
 
-const IRT_PRIORITY = ["Blue B", "Melli"];
+const IRT_PRIORITY = ["Blue B", "Melli", "Customer credit"];
 const AUD_PRIORITY = ["ST Bussiness", "Revolout", "Cash", "Customer credit", "St. Joint"];
 
 const IRT_PRIORITY_ALIASES: Record<string, string[]> = {
 	"Blue B": ["blue b", "blu b", "blueb", "blub", "blue bank"],
 	"Melli": ["melli", "bank melli", "melli b", "melli_b"],
+	"Customer credit": ["customer credit", "customer_credit", "customercredit"],
 };
 
 const AUD_PRIORITY_ALIASES: Record<string, string[]> = {
