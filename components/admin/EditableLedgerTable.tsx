@@ -10,6 +10,10 @@ import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { filterBankAccountsByLedgerType, sortBankAccountsByPriority } from "@/lib/bank-account-ordering";
 
+function isCustomerCreditAccount(accountName: string) {
+  return accountName.trim().toLowerCase() === "customer credit_aud";
+}
+
 // -- Persian strings ----------------
 const T = {
   buy:        "خرید",
@@ -335,12 +339,12 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
   const getLedgerAccountOptions = (transactionType: string, side: "payer" | "receiver") => {
     const sideAccounts = transactionType === "buy_aud"
       ? (side === "payer"
-          ? sortBankAccountsByPriority(bankAccounts.filter((account) => account.currency === "IRT"))
+          ? sortBankAccountsByPriority(filterBankAccountsByLedgerType(bankAccounts, "buy_aud"))
           : sortBankAccountsByPriority(bankAccounts.filter((account) => account.currency === "AUD")))
       : transactionType === "sell_aud"
         ? (side === "payer"
             ? sortBankAccountsByPriority(bankAccounts.filter((account) => account.currency === "AUD"))
-            : sortBankAccountsByPriority(bankAccounts.filter((account) => account.currency === "IRT")))
+            : sortBankAccountsByPriority(bankAccounts.filter((account) => account.currency === "IRT" || isCustomerCreditAccount(account.account_name))))
       : sortBankAccountsByPriority(filterBankAccountsByLedgerType(bankAccounts, transactionType));
 
     return sideAccounts.map((account) => ({

@@ -25,6 +25,10 @@ function normalizeName(value: string) {
 	return value.trim().toLowerCase();
 }
 
+function isCustomerCreditAccount(account: BankAccountLike) {
+	return normalizeName(account.account_name) === "customer credit_aud";
+}
+
 function priorityRank(account: BankAccountLike) {
 	const normalized = normalizeName(account.account_name);
 	const priorityList = account.currency === "IRT" ? IRT_PRIORITY : AUD_PRIORITY;
@@ -58,7 +62,7 @@ export function filterBankAccountsByLedgerType<T extends BankAccountLike>(
 	transactionType?: string,
 ): T[] {
 	if (transactionType === "buy_aud") {
-		return accounts.filter((account) => account.currency === "IRT");
+		return accounts.filter((account) => account.currency === "IRT" || isCustomerCreditAccount(account));
 	}
 
 	if (transactionType === "sell_aud") {
