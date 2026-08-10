@@ -20,6 +20,10 @@ interface Recipient {
   account_number?: string | null;
   account_name?: string | null;
   residential_address?: string | null;
+  residential_city?: string | null;
+  residential_state?: string | null;
+  residential_postcode?: string | null;
+  residential_country?: string | null;
   recipient_email?: string | null;
   recipient_phone?: string | null;
   // IRT fields
@@ -28,6 +32,10 @@ interface Recipient {
   shaba_number?: string | null;
   irt_account_number?: string | null;
   irt_address?: string | null;
+  irt_city?: string | null;
+  irt_state?: string | null;
+  irt_postcode?: string | null;
+  irt_country?: string | null;
   irt_phone?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -57,6 +65,52 @@ function Field({ label, value, mono }: { label: string; value?: string | null; m
   );
 }
 
+function composeAddress(parts: Array<string | null | undefined>) {
+  return parts.map((p) => String(p ?? "").trim()).filter(Boolean).join(", ");
+}
+
+function splitLegacyAddress(raw: string): {
+  street: string;
+  city: string;
+  state: string;
+  postcode: string;
+  country: string;
+} {
+  const normalized = String(raw ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) return { street: "", city: "", state: "", postcode: "", country: "" };
+
+  const countryMatch = normalized.match(/\b(australia|iran|islamic republic of iran)\b/i);
+  const country = countryMatch?.[1] ?? "";
+  const postcodeMatch = normalized.match(/\b(\d{4})\b(?!.*\b\d{4}\b)/);
+  const postcode = postcodeMatch?.[1] ?? "";
+  const stateMatch = normalized.match(/\b(NSW|VIC|QLD|SA|WA|TAS|ACT|NT)\b/i);
+  const state = stateMatch?.[1]?.toUpperCase() ?? "";
+
+  let working = normalized;
+  if (country) working = working.replace(new RegExp(`\\b${country}\\b`, "i"), "").trim();
+  if (postcode) working = working.replace(new RegExp(`\\b${postcode}\\b`), "").trim();
+  if (state) working = working.replace(new RegExp(`\\b${state}\\b`, "i"), "").trim();
+  working = working.replace(/\s*,\s*/g, ", ").replace(/^,|,$/g, "").trim();
+
+  let city = "";
+  let street = "";
+  if (working.includes(",")) {
+    const parts = working.split(",").map((p) => p.trim()).filter(Boolean);
+    city = parts.length > 0 ? parts[parts.length - 1] : "";
+    street = parts.length > 1 ? parts.slice(0, -1).join(", ") : "";
+  } else {
+    const words = working.split(" ").filter(Boolean);
+    if (words.length >= 3) {
+      city = words.slice(-2).join(" ");
+      street = words.slice(0, -2).join(" ");
+    } else {
+      street = working;
+    }
+  }
+
+  return { street: street.trim(), city: city.trim(), state, postcode, country };
+}
+
 export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: UserRecipientsPanelProps) {
   const [isPending, startTransition] = useTransition();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -70,6 +124,10 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
     account_number: "",
     account_name: "",
     residential_address: "",
+    residential_city: "",
+    residential_state: "",
+    residential_postcode: "",
+    residential_country: "",
     recipient_email: "",
     recipient_phone: "",
     bank_type: "other",
@@ -78,6 +136,10 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
     irt_account_number: "",
     full_name: "",
     irt_address: "",
+    irt_city: "",
+    irt_state: "",
+    irt_postcode: "",
+    irt_country: "",
     irt_phone: "",
   });
   const [editForm, setEditForm] = useState({
@@ -87,6 +149,10 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
     account_number: "",
     account_name: "",
     residential_address: "",
+    residential_city: "",
+    residential_state: "",
+    residential_postcode: "",
+    residential_country: "",
     recipient_email: "",
     recipient_phone: "",
     bank_type: "other",
@@ -95,6 +161,10 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
     irt_account_number: "",
     full_name: "",
     irt_address: "",
+    irt_city: "",
+    irt_state: "",
+    irt_postcode: "",
+    irt_country: "",
     irt_phone: "",
   });
 
@@ -138,6 +208,10 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
       account_number: "",
       account_name: "",
       residential_address: "",
+      residential_city: "",
+      residential_state: "",
+      residential_postcode: "",
+      residential_country: "",
       recipient_email: "",
       recipient_phone: "",
       bank_type: "other",
@@ -146,6 +220,10 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
       irt_account_number: "",
       full_name: "",
       irt_address: "",
+      irt_city: "",
+      irt_state: "",
+      irt_postcode: "",
+      irt_country: "",
       irt_phone: "",
     });
   };
@@ -166,7 +244,17 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
         bsb: form.bsb || undefined,
         account_number: form.account_number || undefined,
         account_name: form.account_name || undefined,
-        residential_address: form.residential_address || undefined,
+        residential_address: composeAddress([
+          form.residential_address,
+          form.residential_city,
+          form.residential_state,
+          form.residential_postcode,
+          form.residential_country,
+        ]) || undefined,
+        residential_city: form.residential_city || undefined,
+        residential_state: form.residential_state || undefined,
+        residential_postcode: form.residential_postcode || undefined,
+        residential_country: form.residential_country || undefined,
         recipient_email: form.recipient_email || undefined,
         recipient_phone: form.recipient_phone || undefined,
         bank_type: form.bank_type as "bank_melli" | "other",
@@ -174,7 +262,17 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
         shaba_number: form.shaba_number || undefined,
         irt_account_number: form.irt_account_number || undefined,
         full_name: form.full_name || undefined,
-        irt_address: form.irt_address || undefined,
+        irt_address: composeAddress([
+          form.irt_address,
+          form.irt_city,
+          form.irt_state,
+          form.irt_postcode,
+          form.irt_country,
+        ]) || undefined,
+        irt_city: form.irt_city || undefined,
+        irt_state: form.irt_state || undefined,
+        irt_postcode: form.irt_postcode || undefined,
+        irt_country: form.irt_country || undefined,
         irt_phone: form.irt_phone || undefined,
       });
 
@@ -193,13 +291,19 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
   const startEdit = (recipient: Recipient) => {
     setStatus(null);
     setEditingRecipientId(recipient.id);
+    const parsedResidential = splitLegacyAddress(recipient.residential_address || "");
+    const parsedIrt = splitLegacyAddress(recipient.irt_address || "");
     setEditForm({
       direction: recipient.direction === "irt" ? "irt" : "aud",
       bank_name: recipient.bank_name || "",
       bsb: recipient.bsb || "",
       account_number: recipient.account_number || "",
       account_name: recipient.account_name || "",
-      residential_address: recipient.residential_address || "",
+      residential_address: recipient.residential_address || parsedResidential.street || "",
+      residential_city: recipient.residential_city || parsedResidential.city || "",
+      residential_state: recipient.residential_state || parsedResidential.state || "",
+      residential_postcode: recipient.residential_postcode || parsedResidential.postcode || "",
+      residential_country: recipient.residential_country || parsedResidential.country || "",
       recipient_email: recipient.recipient_email || "",
       recipient_phone: recipient.recipient_phone || "",
       bank_type: recipient.bank_type === "bank_melli" ? "bank_melli" : "other",
@@ -207,7 +311,11 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
       shaba_number: recipient.shaba_number || "",
       irt_account_number: recipient.irt_account_number || "",
       full_name: recipient.full_name || "",
-      irt_address: recipient.irt_address || "",
+      irt_address: recipient.irt_address || parsedIrt.street || "",
+      irt_city: recipient.irt_city || parsedIrt.city || "",
+      irt_state: recipient.irt_state || parsedIrt.state || "",
+      irt_postcode: recipient.irt_postcode || parsedIrt.postcode || "",
+      irt_country: recipient.irt_country || parsedIrt.country || "",
       irt_phone: recipient.irt_phone || "",
     });
   };
@@ -233,7 +341,17 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
         bsb: editForm.bsb || undefined,
         account_number: editForm.account_number || undefined,
         account_name: editForm.account_name || undefined,
-        residential_address: editForm.residential_address || undefined,
+        residential_address: composeAddress([
+          editForm.residential_address,
+          editForm.residential_city,
+          editForm.residential_state,
+          editForm.residential_postcode,
+          editForm.residential_country,
+        ]) || undefined,
+        residential_city: editForm.residential_city || undefined,
+        residential_state: editForm.residential_state || undefined,
+        residential_postcode: editForm.residential_postcode || undefined,
+        residential_country: editForm.residential_country || undefined,
         recipient_email: editForm.recipient_email || undefined,
         recipient_phone: editForm.recipient_phone || undefined,
         bank_type: editForm.bank_type as "bank_melli" | "other",
@@ -241,7 +359,17 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
         shaba_number: editForm.shaba_number || undefined,
         irt_account_number: editForm.irt_account_number || undefined,
         full_name: editForm.full_name || undefined,
-        irt_address: editForm.irt_address || undefined,
+        irt_address: composeAddress([
+          editForm.irt_address,
+          editForm.irt_city,
+          editForm.irt_state,
+          editForm.irt_postcode,
+          editForm.irt_country,
+        ]) || undefined,
+        irt_city: editForm.irt_city || undefined,
+        irt_state: editForm.irt_state || undefined,
+        irt_postcode: editForm.irt_postcode || undefined,
+        irt_country: editForm.irt_country || undefined,
         irt_phone: editForm.irt_phone || undefined,
       });
 
@@ -332,8 +460,24 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                     <input className={formStyles.input} value={form.recipient_phone} onChange={(e) => setField("recipient_phone", e.target.value)} />
                   </div>
                   <div className={formStyles.fieldGroup}>
-                    <label className={formStyles.label}>Full Address</label>
+                    <label className={formStyles.label}>Street Address</label>
                     <input className={formStyles.input} value={form.residential_address} onChange={(e) => setField("residential_address", e.target.value)} />
+                  </div>
+                  <div className={formStyles.fieldGroup}>
+                    <label className={formStyles.label}>City</label>
+                    <input className={formStyles.input} value={form.residential_city} onChange={(e) => setField("residential_city", e.target.value)} />
+                  </div>
+                  <div className={formStyles.fieldGroup}>
+                    <label className={formStyles.label}>State</label>
+                    <input className={formStyles.input} value={form.residential_state} onChange={(e) => setField("residential_state", e.target.value)} />
+                  </div>
+                  <div className={formStyles.fieldGroup}>
+                    <label className={formStyles.label}>Postcode</label>
+                    <input className={formStyles.input} value={form.residential_postcode} onChange={(e) => setField("residential_postcode", e.target.value)} />
+                  </div>
+                  <div className={formStyles.fieldGroup}>
+                    <label className={formStyles.label}>Country</label>
+                    <input className={formStyles.input} value={form.residential_country} onChange={(e) => setField("residential_country", e.target.value)} />
                   </div>
                 </>
               ) : (
@@ -355,8 +499,24 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                     <input className={formStyles.input} value={form.irt_phone} onChange={(e) => setField("irt_phone", e.target.value)} />
                   </div>
                   <div className={formStyles.fieldGroup}>
-                    <label className={formStyles.label}>Full Address</label>
+                    <label className={formStyles.label}>Street Address</label>
                     <input className={formStyles.input} value={form.irt_address} onChange={(e) => setField("irt_address", e.target.value)} />
+                  </div>
+                  <div className={formStyles.fieldGroup}>
+                    <label className={formStyles.label}>City</label>
+                    <input className={formStyles.input} value={form.irt_city} onChange={(e) => setField("irt_city", e.target.value)} />
+                  </div>
+                  <div className={formStyles.fieldGroup}>
+                    <label className={formStyles.label}>State/Province</label>
+                    <input className={formStyles.input} value={form.irt_state} onChange={(e) => setField("irt_state", e.target.value)} />
+                  </div>
+                  <div className={formStyles.fieldGroup}>
+                    <label className={formStyles.label}>Postcode</label>
+                    <input className={formStyles.input} value={form.irt_postcode} onChange={(e) => setField("irt_postcode", e.target.value)} />
+                  </div>
+                  <div className={formStyles.fieldGroup}>
+                    <label className={formStyles.label}>Country</label>
+                    <input className={formStyles.input} value={form.irt_country} onChange={(e) => setField("irt_country", e.target.value)} />
                   </div>
                 </>
               )}
@@ -486,8 +646,24 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                           <input className={formStyles.input} value={editForm.recipient_phone} onChange={(e) => setEditField("recipient_phone", e.target.value)} />
                         </div>
                         <div className={formStyles.fieldGroup}>
-                          <label className={formStyles.label}>Full Address</label>
+                          <label className={formStyles.label}>Street Address</label>
                           <input className={formStyles.input} value={editForm.residential_address} onChange={(e) => setEditField("residential_address", e.target.value)} />
+                        </div>
+                        <div className={formStyles.fieldGroup}>
+                          <label className={formStyles.label}>City</label>
+                          <input className={formStyles.input} value={editForm.residential_city} onChange={(e) => setEditField("residential_city", e.target.value)} />
+                        </div>
+                        <div className={formStyles.fieldGroup}>
+                          <label className={formStyles.label}>State</label>
+                          <input className={formStyles.input} value={editForm.residential_state} onChange={(e) => setEditField("residential_state", e.target.value)} />
+                        </div>
+                        <div className={formStyles.fieldGroup}>
+                          <label className={formStyles.label}>Postcode</label>
+                          <input className={formStyles.input} value={editForm.residential_postcode} onChange={(e) => setEditField("residential_postcode", e.target.value)} />
+                        </div>
+                        <div className={formStyles.fieldGroup}>
+                          <label className={formStyles.label}>Country</label>
+                          <input className={formStyles.input} value={editForm.residential_country} onChange={(e) => setEditField("residential_country", e.target.value)} />
                         </div>
                       </>
                     ) : (
@@ -509,8 +685,24 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                           <input className={formStyles.input} value={editForm.irt_phone} onChange={(e) => setEditField("irt_phone", e.target.value)} />
                         </div>
                         <div className={formStyles.fieldGroup}>
-                          <label className={formStyles.label}>Full Address</label>
+                          <label className={formStyles.label}>Street Address</label>
                           <input className={formStyles.input} value={editForm.irt_address} onChange={(e) => setEditField("irt_address", e.target.value)} />
+                        </div>
+                        <div className={formStyles.fieldGroup}>
+                          <label className={formStyles.label}>City</label>
+                          <input className={formStyles.input} value={editForm.irt_city} onChange={(e) => setEditField("irt_city", e.target.value)} />
+                        </div>
+                        <div className={formStyles.fieldGroup}>
+                          <label className={formStyles.label}>State/Province</label>
+                          <input className={formStyles.input} value={editForm.irt_state} onChange={(e) => setEditField("irt_state", e.target.value)} />
+                        </div>
+                        <div className={formStyles.fieldGroup}>
+                          <label className={formStyles.label}>Postcode</label>
+                          <input className={formStyles.input} value={editForm.irt_postcode} onChange={(e) => setEditField("irt_postcode", e.target.value)} />
+                        </div>
+                        <div className={formStyles.fieldGroup}>
+                          <label className={formStyles.label}>Country</label>
+                          <input className={formStyles.input} value={editForm.irt_country} onChange={(e) => setEditField("irt_country", e.target.value)} />
                         </div>
                       </>
                     )}
@@ -526,7 +718,11 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                           <Field label="Account Number"      value={r.account_number} mono />
                           <Field label="Phone"               value={r.recipient_phone} />
                           <Field label="Email"               value={r.recipient_email} />
-                          <Field label="Residential Address" value={r.residential_address} />
+                          <Field label="Street Address"      value={r.residential_address} />
+                          <Field label="City"                value={r.residential_city} />
+                          <Field label="State"               value={r.residential_state} />
+                          <Field label="Postcode"            value={r.residential_postcode} />
+                          <Field label="Country"             value={r.residential_country} />
                         </>
                       ) : (
                         <>
@@ -536,7 +732,11 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                           <Field label="Account Number"      value={r.irt_account_number} mono />
                           <Field label="Shaba (IBAN)"        value={r.shaba_number || null} mono />
                           <Field label="Phone"               value={r.irt_phone} />
-                          <Field label="Address"             value={r.irt_address} />
+                          <Field label="Street Address"      value={r.irt_address} />
+                          <Field label="City"                value={r.irt_city} />
+                          <Field label="State/Province"      value={r.irt_state} />
+                          <Field label="Postcode"            value={r.irt_postcode} />
+                          <Field label="Country"             value={r.irt_country} />
                         </>
                       )}
                     </dl>
