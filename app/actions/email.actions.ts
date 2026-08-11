@@ -177,14 +177,15 @@ export async function sendTransactionReceipt(
   const paymentLinkMatch = (tx.reason_for_transfer ?? "").match(/لینک پرداخت:\s*(\S+)/);
   const paymentLink = (tx as any).payment_link ?? (paymentLinkMatch ? paymentLinkMatch[1] : null);
 
-  // For Buy AUD: customer sends Toman, receives AUD
-  // For Sell AUD: customer sends AUD, receives Toman
-  const isBuyAud = tx.type === "buy_aud";
+  // Transaction type is now stored from company perspective:
+  // - buy_aud: company buys AUD (customer sends AUD, receives Toman)
+  // - sell_aud: company sells AUD (customer sends Toman, receives AUD)
+  const isCompanyBuying = tx.type === "buy_aud";
   const audAmount = Number(tx.final_amount ?? tx.amount_aud ?? 0);
   const tomanAmount = Number(tx.equivalent_toman ?? 0);
 
-  const amountSent = isBuyAud ? formatToman(tomanAmount) : formatAUD(audAmount);
-  const amountReceived = isBuyAud ? formatAUD(audAmount) : formatToman(tomanAmount);
+  const amountSent = isCompanyBuying ? formatAUD(audAmount) : formatToman(tomanAmount);
+  const amountReceived = isCompanyBuying ? formatToman(tomanAmount) : formatAUD(audAmount);
 
   // 4. Render HTML template + PDF attachment in parallel
   const receiptProps = {
