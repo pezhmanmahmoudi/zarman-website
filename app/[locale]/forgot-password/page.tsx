@@ -278,25 +278,23 @@ export default function ForgotPasswordPage() {
                     Verify Code
                   </Button>
                 </div>
+
+                <div className={styles.footerText}>
+                  Didn&apos;t receive the code?{" "}
+                  {resendCooldown > 0 ? (
+                    <span className={styles.resendCooldown}>Resend in {resendCooldown}s</span>
+                  ) : (
+                    <button type="button" onClick={handleResend} className={styles.footerLink} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                      Resend Code
+                    </button>
+                  )}
+                </div>
               </>
             )}
           </div>
         )}
 
       </div>
-
-      {step === 2 && !otpSuccess && (
-        <div className={styles.footerText}>
-          Didn&apos;t receive the code?{" "}
-          {resendCooldown > 0 ? (
-            <span className={styles.resendCooldown}>Resend in {resendCooldown}s</span>
-          ) : (
-            <button type="button" onClick={handleResend} className={styles.footerLink} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-              Resend Code
-            </button>
-          )}
-        </div>
-      )}
 
     </div>
   );
