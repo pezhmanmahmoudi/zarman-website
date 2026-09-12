@@ -5,10 +5,13 @@ import { AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import styles from "@/styles/admin/AdminPageState.module.css";
 
-export default function AdminError({ reset }: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function AdminError() {
+  const reload = () => window.location.reload();
+  const openDashboard = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    window.location.assign("/admin/dashboard");
+  };
+
   return (
     <>
       <div className={shellStyles.topBar}>
@@ -20,8 +23,8 @@ export default function AdminError({ reset }: {
           <h1 id="admin-error-title">This page couldn’t load</h1>
           <p>We couldn’t retrieve the latest information. Try again, or return to the dashboard to continue.</p>
           <div className={styles.errorActions}>
-            <button type="button" onClick={reset}><RefreshCw size={16} aria-hidden="true" /> Try again</button>
-            <Link href="/admin/dashboard"><ArrowLeft size={16} aria-hidden="true" /> Dashboard</Link>
+            <button type="button" onClick={reload}><RefreshCw size={16} aria-hidden="true" /> Try again</button>
+            <Link href="/admin/dashboard" onClick={openDashboard}><ArrowLeft size={16} aria-hidden="true" /> Dashboard</Link>
           </div>
         </section>
       </div>

@@ -143,3 +143,15 @@ test("sidebar keeps full pending counts accessible and exposes a collapsed mobil
   assert.match(html, /aria-label="Open admin navigation" aria-expanded="false" aria-haspopup="dialog"/);
   assert.match(html, /aria-label="Admin navigation"/);
 });
+
+test("admin errors recover stale deployments with a full document navigation", () => {
+  const errorSource = fs.readFileSync(
+    path.join(projectRoot, "app/(panel)/admin/(protected)/error.tsx"),
+    "utf8",
+  );
+  const configSource = fs.readFileSync(path.join(projectRoot, "next.config.ts"), "utf8");
+
+  assert.match(errorSource, /window\.location\.reload\(\)/);
+  assert.match(errorSource, /window\.location\.assign\("\/admin\/dashboard"\)/);
+  assert.match(configSource, /deploymentId:\s*process\.env\.VERCEL_DEPLOYMENT_ID\s*\?\?\s*process\.env\.VERCEL_GIT_COMMIT_SHA/);
+});

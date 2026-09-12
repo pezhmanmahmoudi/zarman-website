@@ -2,6 +2,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Let Next.js detect stale browser tabs after a deployment and force a full navigation.
+  deploymentId: process.env.VERCEL_DEPLOYMENT_ID ?? process.env.VERCEL_GIT_COMMIT_SHA,
   // Empty turbopack config silences the "webpack config but no turbopack config" warning
   // so `next dev` (Turbopack) works alongside the webpack() config used by `next build`.
   turbopack: {},
