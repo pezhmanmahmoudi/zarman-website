@@ -23,32 +23,32 @@ export default function TrustStrip() {
       id: "competitive-rates",
       title: isEn ? "Personalised Rate" : "نرخ شخصی سازی شده",
       text: isEn
-        ? "Your rate grows with you at Zarman. Every transaction brings you one step closer to a better rate."
-        : "در زرمان نرخ با شما رشد می کند. هر تراکنش، یک قدم به نرخ بهتر نزدیک تر.",
+        ? "Review the rate offered for your account, transfer amount and direction before confirming a transaction."
+        : "پیش از تأیید تراکنش، نرخ پیشنهادی متناسب با حساب کاربری، مبلغ و جهت حواله را بررسی کنید.",
       icon: TrendingUp,
     },
     {
       id: "fast-settlement",
-      title: isEn ? "Fast Settlement" : "پرداخت و تسویه سریع",
+      title: isEn ? "Transfer Tracking" : "پیگیری انتقال و تسویه",
       text: isEn
-        ? "Submit your request and leave the rest to us. Settlement in the shortest time possible."
-        : "درخواست بدهید مابقی با ماست، تسویه در کمترین زمان ممکن.",
+        ? "Follow your request through the account dashboard. Settlement timing depends on verification, receipt of funds and banking availability."
+        : "وضعیت درخواست را در داشبورد حساب کاربری پیگیری کنید. زمان تسویه به احراز هویت، دریافت وجه و شرایط بانکی بستگی دارد.",
       icon: Zap,
     },
     {
-      id: "support-24-7",
-      title: isEn ? "Always By Your Side" : "همیشه در کنار شما",
+      id: "transfer-support",
+      title: isEn ? "Support for Your Transfer" : "پشتیبانی در مراحل حواله",
       text: isEn
-        ? "The Zarman team is never idle, even on holidays. Have a question? We're here, every day, every hour."
-        : "تیم زرمان حتی در تعطیلات هم بیکار نیست. سوال دارید؟ ما اینجاییم، هر روز و هر ساعت.",
+        ? "Contact our team through WhatsApp for help with registration, documents and transfer updates."
+        : "برای راهنمایی ثبت‌نام، مدارک و پیگیری حواله از طریق واتس‌اپ با تیم زرمان در ارتباط باشید.",
       icon: Headset,
     },
     {
       id: "max-security",
-      title: isEn ? "Peace of Mind, Safest Choice" : "خیالتان راحت، امن‌ترین انتخاب",
+      title: isEn ? "Identity and Privacy" : "احراز هویت و حریم خصوصی",
       text: isEn
-        ? "Your privacy and financial security are our red lines. We are with you from start to finish."
-        : "حفظ حریم خصوصی و امنیت سرمایه شما خط قرمز ماست. با شماییم از ابتدا تا انتها.",
+        ? "Identity checks form part of the transfer process. Our privacy policy explains how personal information is collected and used."
+        : "بررسی هویت بخشی از فرایند حواله است. نحوه جمع‌آوری و استفاده از اطلاعات شخصی در سیاست حریم خصوصی توضیح داده شده است.",
       icon: ShieldCheck,
     },
   ];
@@ -58,6 +58,7 @@ export default function TrustStrip() {
     () => {
       const el = sectionRef.current;
       if (!el) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
       const tl = gsap.timeline({
         defaults: { ease: "power3.out", duration: 0.8 },
@@ -70,7 +71,7 @@ export default function TrustStrip() {
       // انیمیشن اول برای هدر سکشن
       tl.fromTo(
         `.${styles.header} > *`, 
-        { autoAlpha: 0, y: 20 }, 
+        { autoAlpha: 0, y: 20 },
         { autoAlpha: 1, y: 0, stagger: 0.2 }
       )
       // انیمیشن دوم برای تک‌تک کارت‌ها با وقفه کوچک و استگر
@@ -96,8 +97,8 @@ export default function TrustStrip() {
           <p className={styles.eyebrow}>{isEn ? "Why Zarman?" : "چرا زرمان!\u061f"}</p>
           <h2 id="trust-strip-title" className={styles.title}>
             {isEn
-              ? "Fast transfers, maximum security, best rates"
-              : "انتقال پول در کمترین زمان، حداکثر امنیت و بهترین قیمت"}
+              ? "Clear rates, transfer tracking and support"
+              : "نرخ مشخص، پیگیری حواله و پشتیبانی"}
           </h2>
         </div>
 
@@ -107,7 +108,7 @@ export default function TrustStrip() {
             return (
               <article key={item.id} className={styles.card}>
                 {/* بخش آیکون‌ها: پریمیوم، متمرکز و منظم */}
-                <div className={styles.iconWrapper}>
+                <div className={styles.iconWrapper} aria-hidden="true">
                   {/* آیکون بزرگتر شد و در مرکز قرار گرفت */}
                   <Icon size={28} strokeWidth={1.5} className={styles.icon} />
                 </div>

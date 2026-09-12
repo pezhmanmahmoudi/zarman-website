@@ -17,6 +17,7 @@ type BankAccount = {
 };
 
 type Props = {
+  defaultOpen?: boolean;
   bankAccounts: BankAccount[];
 };
 
@@ -27,7 +28,7 @@ const EMPTY = {
   country: "Iran" as "Iran" | "Australia",
 };
 
-export default function BankAccountManager({ bankAccounts }: Props) {
+export default function BankAccountManager({ bankAccounts, defaultOpen = false }: Props) {
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -88,7 +89,7 @@ export default function BankAccountManager({ bankAccounts }: Props) {
   const isEditMode = Boolean(editingId);
 
   return (
-    <details className={s.formDetails}>
+    <details className={s.formDetails} open={defaultOpen}>
       <summary className={s.formSummary}>
         <ChevronDown size={16} className={s.formSummaryChevron} />
         <span className={s.formSummaryTitle}>مدیریت حساب‌های بانکی</span>

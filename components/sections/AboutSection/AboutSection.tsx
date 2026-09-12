@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
 import styles from "./About.module.css";
 import Button from "@/components/ui/Button/Button";
-import { WHATSAPP_NUMBER, WHATSAPP_MESSAGE_TRANSFER_HELP, buildWhatsAppUrl } from "@/lib/constants/contact";
+import { WHATSAPP_MESSAGE_TRANSFER_HELP, buildWhatsAppUrl } from "@/lib/constants/contact";
 
 const AboutGlobe = dynamic(() => import("./AboutGlobe"), {
   ssr: false,
@@ -30,15 +31,15 @@ export default function About() {
   const { locale } = useParams<{ locale: string }>();
   const isEn = locale === "en";
 
-  const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_TRANSFER_HELP)}`;
-  const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
-
-  useEffect(() => {
-    setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_TRANSFER_HELP));
-  }, []);
+  const whatsappUrl = buildWhatsAppUrl(isEn
+    ? "Hello, I found Zarman online and would like help with a money transfer."
+    : WHATSAPP_MESSAGE_TRANSFER_HELP);
 
   return (
     <section id="about" className={styles.about} aria-label={isEn ? "About Zarman" : "درباره زرمان"}>
+      <noscript>
+        <style>{`#about .${styles.contentArea} > * { opacity: 1 !important; visibility: visible !important; transform: none !important; }`}</style>
+      </noscript>
       <section className={styles.section}>
         <div className={styles.card}>
           <div className={styles.cardSurface}>
@@ -75,20 +76,15 @@ export default function About() {
                >
                   {isEn ? (
                     <>
-                      “Zarman Exchange” is an Iranian-Australian financial startup founded to provide secure, fast, and reliable financial transfer services between Iran and Australia. We understand the challenges of money transfers on this corridor firsthand, and we strive to create a simpler, more transparent, and more trustworthy experience for our community.
+                      Zarman Exchange is an Iranian-Australian platform for remittance requests between Australia and Iran. View Australian dollar to toman rates, submit your request and follow its progress, with support in Persian and English.
                       <br /><br />
-                      Zarman is licensed for financial and currency services in Australia under registration number 100907570 and operates under Anti-Money Laundering and Counter-Terrorism Financing (AML/CTF) legislation.
+                      The service is operated by ZARMAN EXCHANGE PTY LTD (ABN 70 692 742 957). Requests are subject to identity verification and transaction review. <Link href="/en/about">Read our business and registration information.</Link>
                     </>
                   ) : (
                     <>
-                      «صرافی  زرمان» یک استارتاپ مالی ایرانی–استرالیایی است که با هدف ارائه خدمات 
-                      امن، سریع و قابل‌اعتماد برای نقل‌ و انتقالات مالی میان ایران و استرالیا 
-                      شکل گرفته است. ما با چالش‌ها و دغدغه‌های انتقال پول در این مسیر به‌خوبی 
-                      آشنا هستیم و تلاش می‌کنیم تجربه‌ای ساده‌تر، شفاف‌تر و مطمئن‌تر را برای 
-                      هموطنان عزیز فراهم کنیم. 
+                      صرافی زرمان یک پلتفرم ایرانی–استرالیایی برای ثبت درخواست حواله بین استرالیا و ایران است. نرخ دلار استرالیا به تومان را ببینید، درخواست خود را ثبت کنید و با پشتیبانی فارسی و انگلیسی، مراحل آن را پیگیری کنید.
                       <br /><br />
-                      زرمان با اخذ مجوز رسمی خدمات مالی و ارزی در استرالیا به شماره 100907570
-                      و تحت نظارت قوانین مبارزه با پول‌شویی و تأمین مالی تروریسم فعالیت می‌کند.
+                      این خدمات توسط شرکت ZARMAN EXCHANGE PTY LTD با شماره ABN 70 692 742 957 ارائه می‌شود. انجام درخواست‌ها منوط به احراز هویت و بررسی تراکنش است. <Link href="/fa/about">اطلاعات شرکت و ثبت ارائه‌دهنده حواله را بخوانید.</Link>
                     </>
                   )}
               </motion.p>

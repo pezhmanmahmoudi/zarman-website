@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "صرافی زرمان | راه حل هوشمند برای تبادل ارز",
-    short_name: "Zarmanex",
-    description: "پلتفرمی نوین برای تبادل دلار استرالیا (AUD) و تومان (IRT) با نرخ‌های پویا، تسویه فوری و پایبندی کامل به استانداردهای قانونی در استرالیا.",
+    short_name: "زرمان",
+    description: "خدمات حواله بین ایران و استرالیا، نرخ دلار استرالیا به تومان و پشتیبانی فارسی و انگلیسی در صرافی زرمان.",
     start_url: "/fa",
     scope: "/",
     display: "standalone",

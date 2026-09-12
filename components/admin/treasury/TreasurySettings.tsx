@@ -9,7 +9,7 @@ import s from "@/styles/admin/Treasury.module.css";
 export default function TreasurySettings({ settings }: { settings: TreasurySettingsRow }) {
   return (
     <section>
-      <details className={s.settingsDetails}>
+      <details className={s.settingsDetails} open>
         <summary className={s.settingsSummary}>
           <Settings size={16} className={s.settingsIcon} />
           <span className={s.settingsSummaryTitle}>

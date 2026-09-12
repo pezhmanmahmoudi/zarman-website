@@ -1,4 +1,5 @@
-﻿import React from "react";
+import React from "react";
+import { parseAdminPage, parseAdminPageSize } from "@/lib/admin-pagination";
 import {
   getPendingTransactionsWithDetails,
   getTransactionHistoryWithDetails,
@@ -29,9 +30,8 @@ export default async function TransactionsPage({
   }>;
 }) {
   const params = await searchParams;
-  const currentPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
-  const requestedPageSize = parseInt(params.pageSize ?? "10", 10);
-  const pageSize = [10, 25, 50].includes(requestedPageSize) ? requestedPageSize : 10;
+  const currentPage = parseAdminPage(params.page);
+  const pageSize = parseAdminPageSize(params.pageSize);
   const normalizedStatus = (params.status ?? "all").toLowerCase();
   const historyStatus: HistoryStatusFilter =
     normalizedStatus === "approved" ||

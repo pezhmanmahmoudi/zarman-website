@@ -53,7 +53,7 @@ export default function LedgerBusinessSnapshot(props: LedgerBusinessSnapshotProp
           </span>
           <div className={styles.headingCopy}>
             <div className={styles.headingTitleRow}>
-              <h1 id="ledger-snapshot-title">نمای مدیریتی دفتر کل</h1>
+              <h2 id="ledger-snapshot-title">نمای مدیریتی دفتر کل</h2>
               <span className={styles.headingBadge}>خلاصه کسب‌وکار</span>
             </div>
             <p>تصویر یکپارچه سودآوری، نقدینگی و موجودی بر اساس داده‌های دفتر کل</p>

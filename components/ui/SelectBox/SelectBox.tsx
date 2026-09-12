@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useLayoutEffect, useId } from "react";
+import React, { useState, useRef, useEffect, useId, useSyncExternalStore } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import styles from "./SelectBox.module.css";
+import { useAnchoredPopover } from "../useAnchoredPopover";
 
 export type OptionGroup = { label: string; options: string[] };
 export type LabeledOption = { label: string; value: string };
@@ -21,7 +22,10 @@ export type SelectBoxProps = {
 };
 
 const DROPDOWN_MAX_HEIGHT = 260;
-const DROPDOWN_GAP = 8;
+const subscribePlatform = () => () => {};
+const isIOSPlatform = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  || typeof HTMLElement.prototype.showPopover !== "function";
 
 export function SelectBox({
   options = [],
@@ -36,45 +40,38 @@ export function SelectBox({
   variant = "default",
 }: SelectBoxProps) {
   const [open, setOpen] = useState(false);
-  const [openUpward, setOpenUpward] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const isIOS = useSyncExternalStore(subscribePlatform, isIOSPlatform, () => false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const id = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const typeaheadRef = useRef({ text: "", time: 0 });
 
-  // تشخیص سیستم‌عامل iOS برای استفاده از سلکتور نیتیو (Native)
+  useAnchoredPopover({
+    open: open && !disabled && !isIOS,
+    anchorRef: wrapperRef,
+    popoverRef,
+    matchWidth: variant !== "ghost",
+    align: dir === "rtl" ? "end" : "start",
+    maxHeight: DROPDOWN_MAX_HEIGHT,
+    onClose: reason => {
+      setOpen(false);
+      if (reason === "escape") triggerRef.current?.focus();
+    },
+  });
+
   useEffect(() => {
-    setIsIOS(
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-    );
-  }, []);
-
-  // محاسبه هوشمند جهت باز شدن دراپ‌باکس (بالا یا پایین)
-  useLayoutEffect(() => {
-    if (!open || !wrapperRef.current) return;
-    const rect = wrapperRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    setOpenUpward(spaceBelow < DROPDOWN_MAX_HEIGHT + DROPDOWN_GAP);
-  }, [open]);
-
-  // بستن دراپ‌باکس با کلیک بیرون از محوطه
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  // اسکرول خودکار به گزینه انتخاب شده
-  useEffect(() => {
-    if (open && listRef.current && value) {
-      const selected = listRef.current.querySelector("[data-selected='true']") as HTMLElement | null;
-      selected?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (!open || !listRef.current) return;
+    const active = listRef.current.querySelector<HTMLElement>("[data-active='true']");
+    if (!active) return;
+    const list = listRef.current;
+    if (active.offsetTop < list.scrollTop) list.scrollTop = active.offsetTop;
+    else if (active.offsetTop + active.offsetHeight > list.scrollTop + list.clientHeight) {
+      list.scrollTop = active.offsetTop + active.offsetHeight - list.clientHeight;
     }
-  }, [open, value]);
+  }, [open, activeIndex]);
 
   const allOptions = groups
     ? groups.flatMap((g) => g.options)
@@ -94,14 +91,48 @@ export function SelectBox({
     return label;
   };
 
+  const openList = () => {
+    setActiveIndex(Math.max(0, allOptions.indexOf(value)));
+    setOpen(true);
+  };
+  const choose = (index: number) => {
+    const option = allOptions[index];
+    if (option !== undefined) onChange(option);
+    setOpen(false);
+  };
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return;
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); }
-    if (e.key === "Escape") setOpen(false);
-    if (!open) return;
-    const idx = allOptions.indexOf(value);
-    if (e.key === "ArrowDown") { e.preventDefault(); onChange(allOptions[Math.min(idx + 1, allOptions.length - 1)]); }
-    if (e.key === "ArrowUp")   { e.preventDefault(); onChange(allOptions[Math.max(idx - 1, 0)]); }
+    if (e.key === "Escape" && open) {
+      e.preventDefault();
+      e.stopPropagation();
+      setOpen(false);
+      return;
+    }
+    if (e.key === "Tab") { setOpen(false); return; }
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (open) choose(activeIndex);
+      else openList();
+      return;
+    }
+    if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
+      e.preventDefault();
+      if (!allOptions.length) return;
+      const current = open ? activeIndex : allOptions.indexOf(value);
+      setOpen(true);
+      if (e.key === "Home") setActiveIndex(0);
+      else if (e.key === "End") setActiveIndex(allOptions.length - 1);
+      else setActiveIndex(Math.max(0, Math.min(allOptions.length - 1, current + (e.key === "ArrowDown" ? 1 : -1))));
+      return;
+    }
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const now = Date.now();
+      const text = (now - typeaheadRef.current.time > 600 ? "" : typeaheadRef.current.text) + e.key.toLocaleLowerCase();
+      typeaheadRef.current = { text, time: now };
+      const labels = labeledOptions ? labeledOptions.map(option => option.label) : allOptions;
+      const match = labels.findIndex(label => label.toLocaleLowerCase().startsWith(text));
+      if (match !== -1) { setOpen(true); setActiveIndex(match); }
+    }
   };
 
   const wrapperClasses = [styles.wrapper, open ? styles.wrapperOpen : ""].filter(Boolean).join(" ");
@@ -117,23 +148,23 @@ export function SelectBox({
   const dropdownClasses = [
     styles.dropdown,
     variant === "ghost" ? styles.dropdownGhost : "",
-    openUpward ? styles.dropdownUp : styles.dropdownDown,
+
   ].join(" ");
 
   const renderOptionItem = (val: string, label: string) => {
     const isSelected = val === value;
+    const index = allOptions.indexOf(val);
     return (
       <li
         key={val}
+        id={`${id}-option-${index}`}
         role="option"
         aria-selected={isSelected}
         data-selected={isSelected}
-        className={`${styles.option} ${isSelected ? styles.optionSelected : ""}`}
-        onMouseDown={(e) => {
-          e.preventDefault();
-          onChange(val);
-          setOpen(false);
-        }}
+        data-active={index === activeIndex}
+        className={`${styles.option} ${isSelected ? styles.optionSelected : ""} ${index === activeIndex ? styles.optionActive : ""}`}
+        onPointerDown={event => { if (event.pointerType === "mouse") event.preventDefault(); }}
+        onClick={() => choose(index)}
       >
         <span
           className={`${styles.optionLabel} ${getTextAlignClass(label)}`}
@@ -188,14 +219,20 @@ export function SelectBox({
   // رندر دسکتاپ و سایر دستگاه‌ها
   return (
     <div ref={wrapperRef} className={wrapperClasses} data-dir={dir}>
-      <div
+      <button
+        ref={triggerRef}
+        type="button"
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-controls={id}
+        aria-controls={open ? id : undefined}
+        aria-label={placeholder}
+        aria-activedescendant={open && activeIndex >= 0 ? `${id}-option-${activeIndex}` : undefined}
+        disabled={disabled}
         tabIndex={disabled ? -1 : 0}
         className={triggerClasses}
-        onClick={() => !disabled && setOpen((o) => !o)}
+        onClick={() => open ? setOpen(false) : openList()}
+        onBlur={event => { if (event.relatedTarget && !wrapperRef.current?.contains(event.relatedTarget as Node)) setOpen(false); }}
         onKeyDown={handleKeyDown}
       >
         {!disabled && <ChevronDown size={16} strokeWidth={2.5} className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`} />}
@@ -205,10 +242,10 @@ export function SelectBox({
         >
           {displayLabel || placeholder}
         </span>
-      </div>
+      </button>
 
-      {open && (
-        <div className={dropdownClasses}>
+      {open && !disabled && (
+        <div ref={popoverRef} popover="manual" className={dropdownClasses}>
           <ul id={id} ref={listRef} role="listbox" className={styles.list}>
             {groups
               ? groups.map((group) => (

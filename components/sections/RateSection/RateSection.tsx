@@ -23,6 +23,7 @@ export default function RateSection() {
   // انیمیشن نرم برای ظاهر شدن (Reveal) المان‌ها هنگام اسکرول
   useGSAP(
     () => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const el = sectionRef.current;
       if (!el) return;
 
@@ -59,7 +60,7 @@ export default function RateSection() {
     >
       <div className={styles.container}>
         <div className={styles.header}>
-          <p className={styles.eyebrow}>{isEn ? "Live Rate & Calculator" : "نرخ لحظه‌ای و محاسبه‌گر"}</p>
+          <p className={styles.eyebrow}>{isEn ? "Exchange Rates & Calculator" : "نرخ ارز و محاسبه‌گر حواله"}</p>
 
           <h2 id="rate-section-title" className={styles.title}>
             {isEn ? "Calculate Instantly, Stay Transparent" : "محاسبه سریع، شفافیت در روند"}
@@ -67,8 +68,8 @@ export default function RateSection() {
 
           <p className={styles.subtitle}>
             {isEn
-              ? "Calculate your send and receive amounts at live rates. View the rate chart to make an informed decision."
-              : "مبلغ ارسالی و دریافتی خود را با نرخ‌ لحظه ای محاسبه کنید. و با مشاهده نمودار تغییرات، تصمیمی آگاهانه بگیرید."}
+              ? "Estimate your send and receive amounts using the latest published rates. The chart shows historical rate changes."
+              : "مبلغ ارسالی و دریافتی خود را با آخرین نرخ منتشرشده برآورد کنید و تغییرات نرخ را در نمودار تاریخی ببینید."}
           </p>
         </div>
 

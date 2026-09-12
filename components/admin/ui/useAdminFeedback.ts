@@ -29,7 +29,7 @@
  *     // ...your buttons...
  *   </>
  */
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { ConfirmVariant, AdminConfirmDialogProps } from "./AdminConfirmDialog";
 import type { ToastType, AdminToastProps } from "./AdminToast";
 
@@ -68,6 +68,7 @@ export function useAdminFeedback(): UseAdminFeedbackReturn {
 
   // Keep a stable ref to onConfirm so it doesn't cause re-renders
   const onConfirmRef = useRef<ConfirmOptions["onConfirm"] | null>(null);
+  const confirmingRef = useRef(false);
 
   const confirm = useCallback((opts: ConfirmOptions) => {
     onConfirmRef.current = opts.onConfirm;
@@ -75,11 +76,16 @@ export function useAdminFeedback(): UseAdminFeedbackReturn {
   }, []);
 
   const handleDialogConfirm = useCallback(async () => {
-    if (!onConfirmRef.current) return;
+    if (!onConfirmRef.current || confirmingRef.current) return;
+    confirmingRef.current = true;
     setDialogLoading(true);
     try {
       await onConfirmRef.current();
+    } catch {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      setToastOpts({ type: "error", message: "The action could not be completed. Please try again." });
     } finally {
+      confirmingRef.current = false;
       setDialogLoading(false);
       setDialogOpts(null);
     }
@@ -93,6 +99,7 @@ export function useAdminFeedback(): UseAdminFeedbackReturn {
   // ── Toast state ──────────────────────────────────────────────────────────
   const [toastOpts, setToastOpts] = useState<ToastOptions | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
   const showToast = useCallback((opts: ToastOptions) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);

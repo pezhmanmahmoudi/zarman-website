@@ -1,6 +1,7 @@
 /* LanguageSwitcher — pill variant (used in desktop/mobile headers) */
 
 .pill {
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -55,6 +56,7 @@
 /* menu-item variant (used in mobile drawer) */
 
 .menuItem {
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -85,4 +87,5 @@
 
 .menuCode {
   font-size: 0.85rem;
+  font-family: var(--font-primary);
 }

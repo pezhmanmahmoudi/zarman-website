@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Check, X, Plus, Trash2, ArrowRight } from "lucide-react";
+import { Pencil, Check, X, Plus, Trash2, ArrowRight, Eye } from "lucide-react";
 import { updateLedgerEntry, addManualLedgerEntry, deleteLedgerEntry } from "@/app/actions/admin.actions";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 import s from "@/styles/admin/LedgerTable.module.css";
@@ -525,6 +525,7 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                       </>
                     ) : (
                       <div className={s.btnRow}>
+                        <button type="button" className={s.btnEdit} data-ledger-details={row.id} aria-label={`View details for ledger entry ${row.id}`} title="View details" disabled={busy}><Eye size={14} /></button>
                         {isEditable ? <button className={s.btnEdit} onClick={() => startEdit(row)} disabled={busy}><Pencil size={11} />{T.edit}</button> : null}
                       </div>
                     )}
@@ -665,13 +666,10 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
             <section className={`${s.mobileCard} ${s.mobileCardAdd}`}>
               <header className={s.mobileCardHeader}>
                 <h3 className={s.mobileCardTitle}>{T.addRow}</h3>
-                <div className={s.btnRow}>
-                  <button className={s.btnSave} onClick={saveAdd} disabled={isPending}><Check size={12} />{T.save}</button>
-                  <button className={s.btnCancel} onClick={() => setAdd(null)}><X size={13} /></button>
-                </div>
+                <span className={s.mobileEditingBadge}>New entry</span>
               </header>
 
-              <div className={s.mobileFieldGrid}>
+              <fieldset className={s.mobileFieldGrid} disabled={isPending} aria-label="New ledger entry">
                 <label className={s.mobileFieldLabel}>{T.colDate}</label>
                 <div>
                   <CustomDatePicker value={add.date} onChange={(val) => aSet("date", val)} />
@@ -747,8 +745,12 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
 
                 <label className={s.mobileFieldLabel}>{T.colFee}</label>
                 <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.mobileInputWide}`} value={add.fee} onChange={e => aSet("fee", e.target.value)} placeholder="0" onKeyDown={kbA} />
-              </div>
+              </fieldset>
               <ErrLine msg={add.err} />
+              <div className={s.mobileEditFooter}>
+                <button type="button" className={s.btnCancel} disabled={isPending} onClick={() => setAdd(null)}>Cancel</button>
+                <button type="button" className={s.btnSave} disabled={isPending} onClick={saveAdd}><Check size={18} />{isPending ? "Saving…" : "Save entry"}</button>
+              </div>
             </section>
           )}
 
@@ -770,25 +772,25 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                   </div>
 
                   {isE ? (
-                    <div className={s.btnRow}>
-                      <button className={s.btnSave} onClick={saveEdit} disabled={isPending}><Check size={12} />{T.save}</button>
-                      <button className={s.btnCancel} onClick={() => setEdit(null)}><X size={13} /></button>
-                    </div>
+                    <span className={s.mobileEditingBadge}>Editing entry</span>
                   ) : isDel ? (
                     <div className={s.btnRow}>
                       <button className={s.btnConfirmDel} onClick={() => doDelete(row.id)} disabled={isPending}><Check size={11} /></button>
                       <button className={s.btnCancel} onClick={() => setDelId(null)}><X size={12} /></button>
                     </div>
-                  ) : isEditable ? (
+                  ) : (
                     <div className={s.btnRow}>
+                      <button type="button" className={s.btnEdit} data-ledger-details={row.id} aria-label={`View details for ledger entry ${row.id}`} title="View details" disabled={busy}><Eye size={14} /></button>
+                      {isEditable && <>
                       <button className={s.btnEdit} onClick={() => startEdit(row)} disabled={busy}><Pencil size={11} />{T.edit}</button>
                       <button className={s.btnDel} onClick={() => { setDelId(row.id); setEdit(null); setAdd(null); }} disabled={busy}><Trash2 size={13} /></button>
+                      </>}
                     </div>
-                  ) : null}
+                  )}
                 </header>
 
                 {isE && edit ? (
-                  <div className={s.mobileFieldGrid}>
+                  <fieldset className={s.mobileFieldGrid} disabled={isPending} aria-label="Edit ledger entry">
                     <label className={s.mobileFieldLabel}>{T.colDate}</label>
                     <div>
                       <CustomDatePicker value={edit.date} onChange={(val) => eSet("date", val)} />
@@ -864,7 +866,7 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
 
                     <label className={s.mobileFieldLabel}>{T.colFee}</label>
                     <input type="text" inputMode="decimal" className={`${s.inputNum} ${s.mobileInputWide}`} value={edit.fee} onChange={e => eSet("fee", e.target.value)} onKeyDown={kbE} />
-                  </div>
+                  </fieldset>
                 ) : (
                   <dl className={s.mobileSummaryGrid}>
                     <dt>{T.colCustomers}</dt>
@@ -883,6 +885,10 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
                 )}
 
                 {isE && <ErrLine msg={edit?.err || null} />}
+                {isE && <div className={s.mobileEditFooter}>
+                  <button type="button" className={s.btnCancel} disabled={isPending} onClick={() => setEdit(null)}>Cancel</button>
+                  <button type="button" className={s.btnSave} disabled={isPending} onClick={saveEdit}><Check size={18} />{isPending ? "Saving…" : "Save changes"}</button>
+                </div>}
                 {isDel && <p className={s.delConfirmLabel}>{T.delConfirm}</p>}
               </section>
             );

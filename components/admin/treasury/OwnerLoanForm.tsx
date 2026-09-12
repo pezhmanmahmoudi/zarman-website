@@ -22,6 +22,7 @@ type OwnerLoanRow = {
 };
 
 type Props = { 
+  defaultOpen?: boolean;
   loans: OwnerLoanRow[];
   bankAccounts: { id: string; account_name: string; currency: string }[];
 };
@@ -37,7 +38,7 @@ const EMPTY = {
   notes: "",
 };
 
-export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
+export default function OwnerLoanForm({ loans, bankAccounts, defaultOpen = false }: Props) {
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -129,7 +130,7 @@ export default function OwnerLoanForm({ loans, bankAccounts }: Props) {
   const isEditMode = Boolean(editingId);
 
   return (
-    <details className={s.formDetails}>
+    <details className={s.formDetails} open={defaultOpen}>
       <summary className={s.formSummary}>
         <ChevronDown size={16} className={s.formSummaryChevron} />
         <span className={s.formSummaryTitle}>بدهی/تسویه با مالک (Owner Loan Liability)</span>

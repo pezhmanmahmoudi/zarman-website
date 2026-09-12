@@ -1,16 +1,17 @@
 .wrapper {
+  min-width: 0;
   position: relative;
   width: 100%;
   user-select: none;
   font-family: inherit;
 }
 
-.wrapperOpen {
-  z-index: 200000;
-}
+.wrapperOpen { isolation: auto; }
 
 /* ── Trigger Base ──────────────────────────────────── */
 .trigger {
+  font-family: inherit;
+  text-align: inherit;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -18,7 +19,7 @@
   width: 100%;
   border-radius: 0.5rem; /* شعاع استاندارد مدرن */
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
   box-sizing: border-box;
 }
 
@@ -58,6 +59,7 @@
 }
 
 .triggerValue {
+  min-width: 0;
   flex: 1;
   font-size: var(--select-font-size, 0.95rem);
   font-weight: 500;
@@ -97,17 +99,14 @@
 
 /* ── Dropdown Panel (The Magic Happens Here) ────────── */
 .dropdown {
-  position: absolute;
-  left: 0;
-  right: 0;
-  z-index: 2147483000;
+  position: fixed;
+  margin: 0;
+  color: var(--text-main, inherit);
   
   /* استفاده از متغیر تم با بک‌گراند اختصاصی دراپ‌باکس */
   background: var(--bg-dropdown, var(--bg-card, #ffffff)); 
   
   /* افکت شیشه‌ای برای خوانایی روی پس‌زمینه‌های شلوغ */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 
   /* حاشیه بسیار ظریف برای جدا شدن از پس‌زمینه (درخواستی شما) */
   border: 1px solid rgba(148, 163, 184, 0.25); 
@@ -153,8 +152,10 @@
 
 /* ── Options List ── */
 .list {
-  max-height: 240px;
+  position: relative;
+  max-height: min(240px, calc(var(--popover-available-height, 260px) - 10px));
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0;
   margin: 0;
   list-style: none;
@@ -181,6 +182,8 @@
 
 .optionLabel {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .groupHeader {
@@ -228,3 +231,7 @@
   z-index: 10;
   font-size: 16px;
 }
+.optionActive:not(.optionSelected) { background: var(--bg-soft, #f1f5f9); outline: 1px solid var(--border-med, #cbd5e1); outline-offset: -1px; }
+.trigger:focus-visible { outline: 2px solid var(--accent, #4f46e5); outline-offset: 2px; }
+.wrapper:has(.nativeOverlay:focus-visible) .trigger { outline: 2px solid var(--accent, #4f46e5); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .trigger, .chevron, .dropdown, .option { animation: none; transition: none; } }

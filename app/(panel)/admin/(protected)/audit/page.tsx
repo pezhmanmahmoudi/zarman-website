@@ -2,23 +2,23 @@ import React from "react";
 import { ClipboardList } from "lucide-react";
 import { getAuditLogs } from "@/app/actions/admin.actions";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import { parseAdminPage, parseAdminPageSize } from "@/lib/admin-pagination";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 
 export const metadata = { title: "Audit Logs | Zarman Admin" };
 
-const PAGE_SIZE = 10;
-
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; pageSize?: string }>;
 }) {
   const params = await searchParams;
-  const currentPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const currentPage = parseAdminPage(params.page);
+  const pageSize = parseAdminPageSize(params.pageSize);
 
-  const { data: logs, total } = await getAuditLogs(currentPage, PAGE_SIZE);
+  const { data: logs, total } = await getAuditLogs(currentPage, pageSize);
 
   return (
     <>
@@ -48,7 +48,7 @@ export default async function AuditPage({
               <div className={cardStyles.emptyStateIcon}>
                 <ClipboardList size={24} />
               </div>
-              <div className={cardStyles.emptyStateText}>No audit log entries yet.</div>
+              <div className={cardStyles.emptyStateText}>{total > 0 ? "No audit entries on this page. Choose another page below." : "No audit log entries yet."}</div>
             </div>
           ) : (
             <>
@@ -126,13 +126,9 @@ export default async function AuditPage({
                   </tbody>
                 </table>
               </div>
-              <AdminPagination
-                currentPage={currentPage}
-                totalCount={total}
-                pageSize={PAGE_SIZE}
-              />
             </>
           )}
+          <AdminPagination currentPage={currentPage} totalCount={total} pageSize={pageSize} />
         </div>
       </div>
     </>

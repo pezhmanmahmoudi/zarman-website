@@ -16,7 +16,7 @@ export default function Footer() {
         
         {/* بخش بالایی: برند و معرفی (وسط‌چین) */}
         <div className={styles.brandSection}>
-          <Link href="#hero" aria-label={isEn ? "Back to top" : "بازگشت به بالای صفحه"} className={styles.logoLink}>
+          <Link href={`/${locale}`} aria-label={isEn ? "Zarman Exchange home" : "صفحه اصلی صرافی زرمان"} className={styles.logoLink}>
             <Image
               src="/images/logo-white-text-and-ring.svg"
               alt={isEn ? "Zarman logo" : "لوگوی زرمان"}
@@ -41,18 +41,20 @@ export default function Footer() {
           
           {/* ستون اول: دسترسی سریع */}
           <div className={styles.linkCol}>
-            <h4 className={styles.colTitle}>{isEn ? "Quick Access" : "دسترسی سریع"}</h4>
+            <h2 className={styles.colTitle}>{isEn ? "Quick Access" : "دسترسی سریع"}</h2>
             <ul className={styles.linkList}>
-              <li><Link href="#rates">{isEn ? "Rate Calculator" : "ماشین‌حساب نرخ"}</Link></li>
-              <li><Link href="#services">{isEn ? "Our Services" : "خدمات ما"}</Link></li>
-              <li><Link href="#how-it-works">{isEn ? "How It Works" : "نحوه انتقال"}</Link></li>
-              <li><Link href="#faq">{isEn ? "FAQ" : "سوالات متداول"}</Link></li>
+              <li><Link href={`/${locale}#rates`}>{isEn ? "Rate Calculator" : "ماشین‌حساب نرخ"}</Link></li>
+              <li><Link href={`/${locale}/services`}>{isEn ? "Our Services" : "خدمات ما"}</Link></li>
+              <li><Link href={`/${locale}/about`}>{isEn ? "About Zarman" : "درباره زرمان"}</Link></li>
+              <li><Link href={`/${locale}/blog`}>{isEn ? "Transfer Guides" : "راهنما و مقالات حواله"}</Link></li>
+              <li><Link href={`/${locale}#how-it-works`}>{isEn ? "How It Works" : "نحوه انتقال"}</Link></li>
+              <li><Link href={`/${locale}#faq`}>{isEn ? "FAQ" : "سوالات متداول"}</Link></li>
             </ul>
           </div>
 
           {/* ستون دوم: قوانین و مقررات */}
           <div className={styles.linkCol}>
-            <h4 className={styles.colTitle}>{isEn ? "Legal" : "قوانین و مقررات"}</h4>
+            <h2 className={styles.colTitle}>{isEn ? "Legal" : "قوانین و مقررات"}</h2>
             <ul className={styles.linkList}>
               <li><Link href={`/${locale}/legal/terms`}>{isEn ? "Terms of Use" : "شرایط و ضوابط استفاده"}</Link></li>
               <li><Link href={`/${locale}/legal/privacy-policy`}>{isEn ? "Privacy Policy" : "حریم خصوصی"}</Link></li>
@@ -62,13 +64,13 @@ export default function Footer() {
 
           {/* ستون سوم: ارتباط با ما */}
           <div className={styles.linkCol}>
-            <h4 className={styles.colTitle}>{isEn ? "Contact" : "ارتباط با ما"}</h4>
+            <h2 className={styles.colTitle}>{isEn ? "Contact" : "ارتباط با ما"}</h2>
             <ul className={styles.linkList}>
               <li className={styles.contactItem} dir="ltr">
                 <span className={styles.contactIcon}>
-                  <Image src="/globe.svg" alt="website" width={16} height={16} className={styles.contactSvgIcon} />
+                  <Image src="/globe.svg" alt="" width={16} height={16} className={styles.contactSvgIcon} />
                 </span>
-                www.zarman.com.au
+                <Link href={`/${locale}`}>www.zarman.com.au</Link>
               </li>
               <li className={styles.contactItem} dir="ltr">
                 <span className={styles.contactIcon}>
@@ -77,10 +79,10 @@ export default function Footer() {
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.29 6.29l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
                   </svg>
                 </span>
-                +61 497 851 631
+                <a href="tel:+61497851631">+61 497 851 631</a>
               </li>
               <li className={styles.contactItem} dir="ltr">
-                info@zarman.com.au
+                <a href="mailto:info@zarman.com.au">info@zarman.com.au</a>
               </li>
             </ul>
           </div>
@@ -92,8 +94,8 @@ export default function Footer() {
           <strong>{isEn ? "Legal Information" : "اطلاعات حقوقی"}</strong>
           <p>
             {isEn
-              ? "Zarman operates under the legal entity Zarman Exchange Pty Ltd. As a licensed financial institution, we are registered with AUSTRAC under IND100907570. Company registration identifiers: ABN 70 692 742 957 and ACN 692 742 957."
-              : "پلتفرم مالی زرمان تحت مالکیت حقوقی Zarman Exchange Pty Ltd فعالیت می‌کند. ما به‌عنوان یک موسسه مالی مجاز، با کد IND100907570 در سازمان اطلاعات مالی استرالیا (AUSTRAC) به ثبت رسیده‌ایم. شماره‌های ثبت تجاری و مالیاتی شرکت عبارتند از: ABN 70 692 742 957 و ACN 692 742 957."}
+              ? "Zarman is operated by Zarman Exchange Pty Ltd, registered with AUSTRAC under IND100907570. Company identifiers: ABN 70 692 742 957 and ACN 692 742 957. AUSTRAC registration does not constitute an endorsement or a guarantee of a provider's services."
+              : "زرمان توسط شرکت Zarman Exchange Pty Ltd اداره می‌شود و با شناسه IND100907570 در AUSTRAC ثبت شده است. شناسه‌های شرکت: ABN 70 692 742 957 و ACN 692 742 957. ثبت در AUSTRAC به معنای تأیید یا تضمین خدمات ارائه‌دهنده نیست."}
           </p>
           <p>
             {isEn
@@ -110,7 +112,7 @@ export default function Footer() {
               {<span className={styles.poweredBy}> {isEn ? "Designed by Zarman Team" : "Designed by Zarman Team"}</span> }
             </p>
             
-            <p dir="rtl" className={styles.copyrightFa}>
+            <p dir={isEn ? "ltr" : "rtl"} className={styles.copyrightFa}>
               {isEn
                 ? "All intellectual and material rights of this website are reserved for Zarman Platform."
                 : "کلیه حقوق مادی و معنوی این وب‌سایت محفوظ و متعلق به پلتفرم زرمان می‌باشد."}

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+import { cache } from "react";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { revalidateTag } from "next/cache";
 import { getRatesSnapshot } from "@/lib/rates";
@@ -157,7 +158,8 @@ function sanitizeSearchQuery(query: string) {
     .trim()
     .slice(0, MAX_SEARCH_QUERY_LENGTH)
     .replace(/[%_,()]/g, " ")
-    .replace(/\s+/g, " ");
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function trimToNullable(value: unknown, maxLength = 255): string | null {
@@ -190,7 +192,7 @@ export async function requireAdmin(
 
   const { error: capabilityError } = await db
     .from("audit_logs")
-    .select("id", { head: true, count: "exact" })
+    .select("id", { head: true })
     .limit(1);
 
   if (capabilityError) {
@@ -203,11 +205,13 @@ export async function requireAdmin(
   return data.user;
 }
 
-async function getAuthorizedServerClient() {
+// Share read authorization only within the current Server Component request.
+// React invalidates this cache for every request; writes still call requireAdmin.
+const getAuthorizedServerClient = cache(async () => {
   const db = await createSupabaseServerActionClient();
   await requireAdmin(db);
   return db;
-}
+});
 
 // ---------------------------------------------------------------------------
 // Internal: write a structured audit log entry using the service role client
@@ -257,10 +261,10 @@ async function writeAuditLog({
 // ===========================================================================
 // ADMIN STATS (dashboard overview)
 // ===========================================================================
-export async function getAdminStats() {
+const getPendingAdminCounts = cache(async () => {
   const db = await getAuthorizedServerClient();
 
-  const [pendingKyc, pendingTx, pendingFeedback, totalUsers, totalTx] =
+  const [pendingKyc, pendingTx, pendingFeedback] =
     await Promise.all([
       db
         .from("profiles")
@@ -274,19 +278,39 @@ export async function getAdminStats() {
         .from("testimonials")
         .select("id", { count: "exact", head: true })
         .eq("status", "pending"),
-      db
-        .from("profiles")
-        .select("id", { count: "exact", head: true }),
-      db
-        .from("transactions")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "approved"),
     ]);
+
+  const error = pendingKyc.error ?? pendingTx.error ?? pendingFeedback.error;
+  if (error) throw new Error(error.message);
 
   return {
     pendingKycCount: pendingKyc.count ?? 0,
     pendingTxCount: pendingTx.count ?? 0,
     pendingFeedbackCount: pendingFeedback.count ?? 0,
+  };
+});
+
+// The navigation only needs pending queues, not the full dashboard totals.
+export async function getAdminNavigationCounts() {
+  return getPendingAdminCounts();
+}
+
+export async function getAdminStats() {
+  const db = await getAuthorizedServerClient();
+  const [pending, totalUsers, totalTx] = await Promise.all([
+    getPendingAdminCounts(),
+    db.from("profiles").select("id", { count: "exact", head: true }),
+    db
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "approved"),
+  ]);
+
+  const error = totalUsers.error ?? totalTx.error;
+  if (error) throw new Error(error.message);
+
+  return {
+    ...pending,
     totalUsersCount: totalUsers.count ?? 0,
     approvedTxCount: totalTx.count ?? 0,
   };
@@ -1914,104 +1938,103 @@ export async function getTransactionHistoryStatusCounts() {
 // ===========================================================================
 // LEDGER — all approved transactions for P&L tracking (MULTI-POCKET EDITION)
 // ===========================================================================
-export async function getLedgerData(
-  page = 1,
-  pageSize = 20,
-  filters: { start?: string; end?: string; type?: string; search?: string; account?: string } = {},
+export type AdminLedgerFilters = {
+  start?: string;
+  end?: string;
+  type?: string;
+  search?: string;
+  account?: string;
+};
+
+function createLedgerReadQuery(
+  db: ReturnType<typeof makeServiceRoleClient>,
+  filters: AdminLedgerFilters,
+  count?: "exact",
 ) {
-  const ssrClient = await createSupabaseServerActionClient();
-  await requireAdmin(ssrClient);
-  const db = makeServiceRoleClient();
-
-  const safePage = clampInt(page, 1, MAX_AUDIT_PAGE, 1);
-  const safeSize = clampInt(pageSize, 1, 100, 20);
-  const offset   = (safePage - 1) * safeSize;
-
-  let countQuery = db.from("ledger").select("id", { count: "exact", head: true });
-  let pageQuery = db
-    .from("ledger")
-      .select(`
-        id, transaction_id, date_gregorian, date_jalali, type, entry_type, 
-        exchange_rate, amount_aud, amount_toman, sender, recipient, fee_aud, 
-        notes, created_at, payer_account_id, receiver_account_id
-      `);
-
-  let exportQuery = db
-    .from("ledger")
-      .select(`
-        id, transaction_id, date_gregorian, date_jalali, type, entry_type, 
-        exchange_rate, amount_aud, amount_toman, sender, recipient, fee_aud, 
-        notes, created_at, payer_account_id, receiver_account_id
-      `);
+  let query = db.from("ledger").select(`
+    id, transaction_id, date_gregorian, date_jalali, type, entry_type,
+    exchange_rate, amount_aud, amount_toman, sender, recipient, fee_aud,
+    notes, created_at, payer_account_id, receiver_account_id
+  `, { count });
 
   const validDate = /^\d{4}-\d{2}-\d{2}$/;
   if (filters.start && validDate.test(filters.start)) {
-    countQuery = countQuery.gte("date_gregorian", filters.start);
-    pageQuery = pageQuery.gte("date_gregorian", filters.start);
-    exportQuery = exportQuery.gte("date_gregorian", filters.start);
+    query = query.gte("date_gregorian", filters.start);
   }
   if (filters.end && validDate.test(filters.end)) {
-    countQuery = countQuery.lte("date_gregorian", filters.end);
-    pageQuery = pageQuery.lte("date_gregorian", filters.end);
-    exportQuery = exportQuery.lte("date_gregorian", filters.end);
+    query = query.lte("date_gregorian", filters.end);
   }
   if (filters.type === "transfer") {
-    countQuery = countQuery.eq("entry_type", "transfer");
-    pageQuery = pageQuery.eq("entry_type", "transfer");
-    exportQuery = exportQuery.eq("entry_type", "transfer");
+    query = query.eq("entry_type", "transfer");
   } else if (filters.type === "buy_aud" || filters.type === "sell_aud") {
-    countQuery = countQuery.eq("type", filters.type).or("entry_type.eq.trade,entry_type.is.null");
-    pageQuery = pageQuery.eq("type", filters.type).or("entry_type.eq.trade,entry_type.is.null");
-    exportQuery = exportQuery.eq("type", filters.type).or("entry_type.eq.trade,entry_type.is.null");
+    query = query.eq("type", filters.type).or("entry_type.eq.trade,entry_type.is.null");
   } else if (["expense", "owner_loan", "adjustment"].includes(filters.type ?? "")) {
-    countQuery = countQuery.eq("entry_type", filters.type!);
-    pageQuery = pageQuery.eq("entry_type", filters.type!);
-    exportQuery = exportQuery.eq("entry_type", filters.type!);
+    query = query.eq("entry_type", filters.type!);
   }
 
   if (filters.account) {
     const accountExpr = `payer_account_id.eq.${filters.account},receiver_account_id.eq.${filters.account}`;
-    countQuery = countQuery.or(accountExpr);
-    pageQuery = pageQuery.or(accountExpr);
-    exportQuery = exportQuery.or(accountExpr);
+    query = query.or(accountExpr);
   }
 
   const search = sanitizeSearchQuery(filters.search ?? "");
   if (search) {
     const expression = `sender.ilike.%${search}%,recipient.ilike.%${search}%`;
-    countQuery = countQuery.or(expression);
-    pageQuery = pageQuery.or(expression);
-    exportQuery = exportQuery.or(expression);
+    query = query.or(expression);
   }
 
-  const [countRes, pageRes, exportRes, rateRes] = await Promise.all([
-    countQuery,
-    pageQuery
-      .order("date_gregorian", { ascending: false })
-      .order("created_at", { ascending: false })
-      .range(offset, offset + safeSize - 1),
-    exportQuery
-      .order("date_gregorian", { ascending: false })
-      .order("created_at", { ascending: false }),
-    // Current market rate
-    db
-      .from("rates_history")
-      .select("buy_aud")
-      .order("date", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  return query
+    .order("date_gregorian", { ascending: false })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
+}
 
-  if (countRes.error) throw new Error(countRes.error.message);
-  if (pageRes.error) throw new Error(pageRes.error.message);
-  if (exportRes.error) throw new Error(exportRes.error.message);
+export async function getLedgerData(
+  page = 1,
+  pageSize = 20,
+  filters: AdminLedgerFilters = {},
+) {
+  await getAuthorizedServerClient();
+  const db = makeServiceRoleClient();
+  const safePage = clampInt(page, 1, MAX_AUDIT_PAGE, 1);
+  const safeSize = clampInt(pageSize, 1, 100, 20);
+  const offset = (safePage - 1) * safeSize;
+
+  // Fetch only the visible page; CSV data is requested when the user exports.
+  const { data, count, error } = await createLedgerReadQuery(db, filters, "exact")
+    .range(offset, offset + safeSize - 1);
+
+  if (error) throw new Error(error.message);
 
   return {
-    allLedgerRows:  exportRes.data ?? [],
-    pageLedgerRows: pageRes.data ?? [],
-    total:          countRes.count ?? 0,
-    currentBuyRate: Number(rateRes.data?.buy_aud ?? 0),
+    pageLedgerRows: data ?? [],
+    total: count ?? 0,
   };
+}
+
+export async function getLedgerExportRows(filters: AdminLedgerFilters = {}) {
+  await getAuthorizedServerClient();
+  const db = makeServiceRoleClient();
+  const batchSize = 500;
+  const rows: NonNullable<Awaited<ReturnType<typeof createLedgerReadQuery>>["data"]> = [];
+  let total: number | null = null;
+
+  // Explicit ranges avoid silently truncating the CSV at the API row limit.
+  for (let offset = 0; ; ) {
+    const { data, count, error } = await createLedgerReadQuery(db, filters, offset === 0 ? "exact" : undefined)
+      .range(offset, offset + batchSize - 1);
+    if (error) throw new Error(error.message);
+    if (offset === 0) total = count;
+    if (!data?.length) {
+      if (total !== null && rows.length < total) {
+        throw new Error("The ledger changed during export. Please try again.");
+      }
+      return rows;
+    }
+    rows.push(...(data ?? []));
+    offset += data.length;
+    if (total !== null ? rows.length >= total : data.length < batchSize) return rows;
+  }
 }
 
 // ===========================================================================

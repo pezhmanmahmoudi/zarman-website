@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { motion, Variants } from "framer-motion";
+import { motion, useInView, useReducedMotion, Variants } from "framer-motion";
 import styles from "./ServiceSection.module.css";
 
 // کامپوننت شبکه مرکزی
@@ -11,15 +12,23 @@ const ServicesNetworkCore = dynamic(() => import("./NetworkGlobe"), {
   ssr: false,
   loading: () => (
     <div
-      role="status"
-      aria-live="polite"
       className="w-full h-full"
       style={{ backgroundColor: "#080B12" }}
-    >
-      <span className="sr-only">در حال بارگذاری گلوب شبکه</span>
-    </div>
+    />
   ),
 });
+
+function ServiceGlobe() {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { margin: "200px" });
+  const reducedMotion = useReducedMotion();
+
+  return (
+    <div ref={ref} style={{ width: "100%", height: "100%" }} aria-hidden="true">
+      {inView && !reducedMotion ? <ServicesNetworkCore /> : null}
+    </div>
+  );
+}
 
 /* ===== Minimal premium SVG icons ===== */
 function GraduationIcon() {
@@ -60,6 +69,7 @@ function ReceiptIcon() {
 }
 
 type ServiceItem = {
+  slug: string;
   title: string;
   text: string;
   Icon: React.ComponentType;
@@ -67,46 +77,54 @@ type ServiceItem = {
 
 const SERVICES_FA: ServiceItem[] = [
   {
+    slug: "student-remittance",
     title: "تسهیلات ارزی در مسیر مهاجرت تحصیلی",
-    text: "تمرکز خود را روی تحصیل بگذارید و دغدغه‌های مالی را به ما بسپارید. انجام کلیه امور ارزی دانشجویان شامل پرداخت شهریه (Tuition Fee)، هزینه‌های ویزا، اقامت و بیمه (OSHC) با بهترین نرخ و بدون هیچ‌گونه کارمزد.",
+    text: "پرداخت شهریه دانشگاه (Tuition Fee)، هزینه ویزا، اقامت و بیمه دانشجویی (OSHC) در استرالیا. نرخ تبدیل، هزینه‌ها و زمان تخمینی پرداخت را پیش از تأیید حواله با تیم زرمان بررسی کنید.",
     Icon: GraduationIcon,
   },
   {
+    slug: "healthcare-professional-payments",
     title: "خدمات ارزی و پرداخت‌های کادر درمان",
-    text: "صفر تا صد پرداخت‌های مسیر مهاجرت و رجیستری کادر درمان در استرالیا را به زرمان بسپارید. انجام سریع و بدون کارمزد هزینه‌ آزمون‌های پزشکی (AMC, PESCI)، دندان‌پزشکی (ADC)، پرستاری (NCLEX, OSCE)، آزمون زبان (OET) و تمامی هزینه‌های سازمان‌ (AHPRA).",
+    text: "پرداخت هزینه آزمون‌ها و ثبت‌نام کادر درمان در استرالیا، از جمله AMC، PESCI، ADC، NCLEX، OSCE، OET و AHPRA. امکان انجام هر پرداخت و مهلت آن پیش از پذیرش درخواست بررسی می‌شود.",
     Icon: StethoscopeIcon,
   },
   {
-    title: "انتقال امن سرمایه و دارایی‌های خانوادگی",
-    text: "دغدغه جابه‌جایی مبالغ بالا را فراموش کنید. ما بستری امن و سریع برای انتقال سرمایه‌های شخصی، فروش ملک و دارایی‌های خانوادگی شما فراهم کرده‌ایم تا ارزش سرمایه‌تان در مسیر ایران و استرالیا حفظ شود.",
+    slug: "capital-and-asset-transfer",
+    title: "انتقال سرمایه و دارایی‌های خانوادگی",
+    text: "هماهنگی انتقال سرمایه شخصی، عواید فروش ملک و دارایی‌های خانوادگی بین ایران و استرالیا. نرخ، زمان و مدارک مورد نیاز بر اساس مبلغ و شرایط هر حواله بررسی می‌شود.",
     Icon: BankIcon,
   },
   {
+  slug: "business-payment-infrastructure",
   title: "زیرساخت پرداخت‌های تجاری ",
-  text: "تسهیل مبادلات تجاری و مدیریت نقدینگی فرامرزی با تمرکز بر سرعت در انتقال. ",
+  text: "هماهنگی پرداخت‌های تجاری بین ایران و استرالیا با بررسی مشخصات طرفین، مدارک معامله و شرایط هر درخواست.",
     Icon: ReceiptIcon,
   },
 ];
 
 const SERVICES_EN: ServiceItem[] = [
   {
+    slug: "student-remittance",
     title: "Currency Services for Student Migration",
-    text: "Focus on your studies while we handle your financial transfers. We cover tuition fee payments, visa costs, accommodation, and OSHC insurance at competitive rates with no hidden fees.",
+    text: "Arrange Australian university tuition, visa, accommodation and OSHC insurance payments. Review the exchange rate, costs and estimated payment time with Zarman before confirming your transfer.",
     Icon: GraduationIcon,
   },
   {
+    slug: "healthcare-professional-payments",
     title: "Currency Services for Healthcare Professionals",
-    text: "End-to-end payments for healthcare migration and registration in Australia, including AMC, PESCI, ADC, NCLEX, OSCE, OET, and AHPRA-related costs, processed quickly and transparently.",
+    text: "Arrange payments for Australian healthcare exams and registration, including AMC, PESCI, ADC, NCLEX, OSCE, OET and AHPRA. Payment availability and deadlines are reviewed before a request is accepted.",
     Icon: StethoscopeIcon,
   },
   {
-    title: "Secure Transfer of Personal and Family Assets",
-    text: "Move large amounts with confidence. We provide a secure and fast channel for transferring personal capital, property sale proceeds, and family assets between Iran and Australia.",
+    slug: "capital-and-asset-transfer",
+    title: "Transfer of Personal and Family Assets",
+    text: "Coordinate transfers of personal capital, property sale proceeds and family assets between Iran and Australia. Rates, timing and supporting documents depend on the amount and circumstances of each transfer.",
     Icon: BankIcon,
   },
   {
+    slug: "business-payment-infrastructure",
     title: "Commercial Payment Infrastructure",
-    text: "Simplify cross-border business transactions and liquidity management with reliable execution and fast settlement.",
+    text: "Coordinate business payments between Iran and Australia, subject to review of the parties, transaction documents and the circumstances of each request.",
     Icon: ReceiptIcon,
   },
 ];
@@ -115,6 +133,7 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 
 /* Animations */
 const highlightAnim = {
+  "data-service-reveal": "",
   initial: { opacity: 0, y: 15, filter: "blur(8px)" },
   whileInView: { opacity: 1, y: 0, filter: "blur(0px)" },
 };
@@ -136,6 +155,9 @@ export default function Services() {
   const SERVICES = isEn ? SERVICES_EN : SERVICES_FA;
   return (
     <section id="services" className={styles.section} aria-labelledby="services-title">
+      <noscript>
+        <style>{`#services [data-service-reveal] { opacity: 1 !important; visibility: visible !important; transform: none !important; filter: none !important; }`}</style>
+      </noscript>
       <div className={styles.bgGrid} aria-hidden="true" />
       <div className={styles.bgVignette} aria-hidden="true" />
 
@@ -184,7 +206,7 @@ export default function Services() {
               <div className={styles.pulseInner} />
               <div className={styles.pulseOuter} />
               <div className={styles.netWrap}>
-                <ServicesNetworkCore />
+                <ServiceGlobe />
               </div>
             </div>
           </div>
@@ -201,6 +223,7 @@ export default function Services() {
                 <motion.article
                   key={s.title}
                   className={`${styles.item} ${posClass}`}
+                  data-service-reveal=""
                   variants={cardVariants}
                   initial="hidden"
                   whileInView="visible"
@@ -210,7 +233,7 @@ export default function Services() {
                   <div className={styles.iconOrb} aria-hidden="true">
                     <Icon />
                   </div>
-                  <h3 className={styles.itemTitle}>{s.title}</h3>
+                  <h3 className={styles.itemTitle}><Link href={`/${locale}/services/${s.slug}`} className={styles.serviceLink}>{s.title}</Link></h3>
                   <p className={styles.itemText}>{s.text}</p>
                 </motion.article>
               );
@@ -225,7 +248,7 @@ export default function Services() {
                 <div className={styles.mobilePulseInner} />
                 <div className={styles.mobilePulseOuter} />
                 <div className={styles.mobileCore}>
-                  <ServicesNetworkCore />
+                  <ServiceGlobe />
                 </div>
               </div>
 
@@ -239,14 +262,14 @@ export default function Services() {
                 {isEn ? "Our Specialised Services" : "خدمات ویژه ما"}
               </motion.p>
               
-              <motion.h3
+              <motion.h2
                 className={styles.mobileTitle}
                 {...highlightAnim}
                 viewport={{ once: true }}
                 transition={{ duration: 0.78, ease: EASE, delay: 0.1 }}
               >
                 {isEn ? "Zarman Financial Ecosystem" : "اکوسیستم مالی زرمان"}
-              </motion.h3>
+              </motion.h2>
 
               <motion.p
                 className={styles.mobileText}
@@ -267,6 +290,7 @@ export default function Services() {
                   <motion.div
                     key={s.title}
                     className={styles.mobileRow}
+                    data-service-reveal=""
                     variants={cardVariants}
                     initial="hidden"
                     whileInView="visible"
@@ -277,14 +301,19 @@ export default function Services() {
                       <Icon />
                     </div>
                     <div className={styles.mobileCopy}>
-                      <div className={styles.mobileRowTitle}>{s.title}</div>
-                      <div className={styles.mobileRowText}>{s.text}</div>
+                      <h3 className={styles.mobileRowTitle}><Link href={`/${locale}/services/${s.slug}`} className={styles.serviceLink}>{s.title}</Link></h3>
+                      <p className={styles.mobileRowText}>{s.text}</p>
                     </div>
                   </motion.div>
                 );
               })}
             </div>
           </div>
+        </div>
+        <div className={styles.allServices}>
+          <Link href={`/${locale}/services`} className={styles.serviceLink}>
+            {isEn ? "Explore all transfer services" : "مشاهده همه خدمات حواله زرمان"}
+          </Link>
         </div>
       </div>
     </section>

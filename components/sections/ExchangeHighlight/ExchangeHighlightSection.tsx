@@ -17,33 +17,33 @@ const HIGHLIGHTS_FA = [
     id: "highlight-1",
     number: "01",
     Icon: TrendingUp,
-    stat: "بهترین نرخ",
+    stat: "نرخ شخصی‌سازی‌شده",
     label: "دلار استرالیا",
-    body: "با بهره‌گیری از الگوریتم «نرخ وفاداری»، با افزایش حجم تراکنش‌های شما، کارمزدها به صورت هوشمند کاهش یافته و بهترین نرخ دلار استرالیا برای شما اعمال می‌شود.",
+    body: "نرخ اختصاصی شما بر اساس سابقه و حجم تراکنش‌ها و تنظیمات جاری برنامه وفاداری محاسبه می‌شود. نرخ و کارمزد درخواست خود را پیش از تأیید در پنل بررسی کنید.",
   },
   {
     id: "highlight-2",
     number: "02",
     Icon: ShieldCheck,
-    stat: "مجوز رسمی",
-    label: "صرافی قانونی استرالیا",
-    body: "امنیت سرمایه شما مرز اولویت‌های ماست. زرمان به عنوان یک نهاد مالی رسمی و ثبت‌شده نزد سازمان AUSTRAC استرالیا، تمامی الزامات قانونی را ایفا می‌کند.",
+    stat: "اطلاعات ثبتی",
+    label: "Zarman Exchange Pty Ltd",
+    body: "زرمان تحت نام حقوقی ZARMAN EXCHANGE PTY LTD با شماره ABN 70 692 742 957 فعالیت می‌کند. اطلاعات شرکت و وضعیت ثبت ارائه‌دهنده حواله را در سامانه‌های رسمی بررسی کنید.",
   },
   {
     id: "highlight-3",
     number: "03",
     Icon: ArrowLeftRight,
-    stat: "حواله مطمئن",
+    stat: "پیگیری حواله",
     label: "دلار استرالیا به ایران",
-    body: "به کمک زیرساخت تسویه آفست (Offset Settlement)، محدودیت‌های انتقال بانکی را پشت سر بگذارید. زرمان مسیری سریع و با ضمانت کامل قانونی هموار کرده است.",
+    body: "درخواست حواله، اطلاعات گیرنده و مراحل احراز هویت را در پنل مدیریت کنید. پس از بررسی درخواست و تأیید دریافت وجه، وضعیت انتقال و تسویه از همان‌جا قابل پیگیری است.",
   },
   {
     id: "highlight-4",
     number: "04",
     Icon: Calculator,
-    stat: "قیمت لحظه‌ای",
+    stat: "آخرین نرخ منتشرشده",
     label: "دلار استرالیا به تومان",
-    body: "نوسانات بازار را به صورت زنده رصد کنید. پلتفرم ما در روزهای مختلف، نرخ‌های ویژه‌ای را آزاد می‌کند که فرصت شکار بهترین قیمت را فراهم خواهد کرد.",
+    body: "نرخ خرید و فروش دلار استرالیا و تاریخ به‌روزرسانی را روی سایت ببینید. ماشین‌حساب، مبلغ تبدیل را با نرخ نمایش‌داده‌شده برآورد می‌کند؛ نرخ نهایی هنگام درخواست ممکن است متفاوت باشد.",
   },
 ];
 
@@ -52,33 +52,33 @@ const HIGHLIGHTS_EN = [
     id: "highlight-1",
     number: "01",
     Icon: TrendingUp,
-    stat: "Best Rate",
+    stat: "Personalised Rate",
     label: "Australian Dollar",
-    body: "With our loyalty-rate engine, larger transaction volumes unlock smarter pricing and lower effective costs, helping you secure the best AUD rates.",
+    body: "Your personalised rate reflects your transaction history and volume and the current loyalty program settings. Review the rate and fees for your request in your dashboard before confirming.",
   },
   {
     id: "highlight-2",
     number: "02",
     Icon: ShieldCheck,
-    stat: "Officially Licensed",
-    label: "Australian Compliant Exchange",
-    body: "Your capital security is our first priority. Zarman is a registered financial entity under AUSTRAC and operates in full legal compliance.",
+    stat: "Business Details",
+    label: "Zarman Exchange Pty Ltd",
+    body: "Zarman operates as ZARMAN EXCHANGE PTY LTD, ABN 70 692 742 957. Check company information and remittance provider registration using the official government registers.",
   },
   {
     id: "highlight-3",
     number: "03",
     Icon: ArrowLeftRight,
-    stat: "Reliable Remittance",
+    stat: "Track Your Transfer",
     label: "Australia to Iran",
-    body: "Using Offset Settlement infrastructure, we bypass direct-banking constraints and provide a faster route with strong legal assurance.",
+    body: "Manage your request, recipient details and identity verification in your dashboard. After review and confirmation of funds, you can follow transfer and settlement progress in the same place.",
   },
   {
     id: "highlight-4",
     number: "04",
     Icon: Calculator,
-    stat: "Live Pricing",
+    stat: "Latest Published Rates",
     label: "AUD to Toman",
-    body: "Track market movement in real time. Our platform surfaces high-opportunity windows to help you secure stronger execution rates.",
+    body: "Check the buying and selling rates and their update date. The calculator estimates your conversion using the displayed rate; the final rate for your request may differ.",
   },
 ];
 
@@ -90,6 +90,7 @@ export default function ExchangeHighlightSection() {
 
   useGSAP(
     () => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const el = sectionRef.current;
       if (!el) return;
 
@@ -126,7 +127,7 @@ export default function ExchangeHighlightSection() {
         <div className={styles.header}>
           <p className={styles.eyebrow}>{isEn ? "Why Zarman?" : "چرا زرمان؟"}</p>
           <h2 id="highlight-title" className={styles.title}>
-            {isEn ? "Best AUD Rates" : "بهترین نرخ دلار استرالیا"}
+            {isEn ? "AUD Exchange and Remittance" : "تبدیل دلار استرالیا و حواله"}
             <br />
             <span className={styles.titleAccent}>
               {isEn ? "For the Iranian Community in Australia" : "برای جامعه ایرانی در استرالیا"}
@@ -134,8 +135,8 @@ export default function ExchangeHighlightSection() {
           </h2>
           <p className={styles.subtitle}>
             {isEn
-              ? "Buy and sell AUD at competitive rates in a lawful, transparent, and modern financial platform."
-              : "خرید و فروش دلار استرالیا با بهترین نرخ، به صورت قانونی و کاملاً شفاف در بستری مدرن."}
+              ? "Review your exchange rate, fees and transfer status in one place, with support in Persian and English."
+              : "نرخ تبدیل، کارمزد و وضعیت حواله خود را در یک پنل و با پشتیبانی فارسی و انگلیسی بررسی کنید."}
           </p>
         </div>
 

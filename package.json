@@ -7,7 +7,11 @@
     "dev:turbopack": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:seo": "node scripts/validate-seo.mjs",
+    "test:converter": "node scripts/test-public-converter.cjs",
+    "test:bank-fees": "node --test scripts/test-bank-fees.mjs",
+    "test:admin": "node --test scripts/test-admin-reads.mjs scripts/test-admin-overlays.mjs scripts/test-admin-layout.cjs scripts/test-admin-editing.cjs scripts/test-admin-pagination.cjs scripts/test-treasury-workspace.cjs scripts/test-ledger-workspace.cjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -42,6 +46,7 @@
     "three-stdlib": "^2.36.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^20",
     "@types/react": "^19",

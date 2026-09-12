@@ -12,8 +12,8 @@
  *   const { confirm, dialogProps } = useAdminFeedback();
  *   <AdminConfirmDialog {...dialogProps} />
  */
-import React, { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
+import React, { useId, useRef } from "react";
+import { AdminDialog } from "./AdminDialog";
 import { Check, X, Archive, AlertTriangle, HelpCircle, Loader2 } from "lucide-react";
 import styles from "@/styles/admin/AdminDialog.module.css";
 
@@ -66,71 +66,39 @@ export function AdminConfirmDialog({
 }: AdminConfirmDialogProps) {
   const isFa = /[\u0600-\u06FF]/.test(`${title} ${message} ${confirmLabel}`);
 
-  // Lock body scroll while dialog is open
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, [open]);
+  const titleId = useId();
+  const messageId = useId();
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
-  // Keyboard: Escape closes, Tab traps inside dialog
-  const dialogRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { onCancel(); return; }
-      if (e.key === "Tab" && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          "button:not([disabled])"
-        );
-        if (!focusable.length) return;
-        const first = focusable[0];
-        const last  = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault(); last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault(); first.focus();
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKey);
-    // Auto-focus the cancel button for safe default
-    setTimeout(() => dialogRef.current?.querySelector<HTMLElement>(`.${styles.btnCancel}`)?.focus(), 0);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [open, onCancel]);
-
-  if (!open) return null;
-
-  const content = (
-    <div
-      className={styles.overlay}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="admin-dialog-title"
-      onClick={(e) => {
-        // Close on backdrop click
-        if (e.target === e.currentTarget && !loading) onCancel();
-      }}
+  return (
+    <AdminDialog
+      open={open}
+      onClose={onCancel}
+      dismissible={!loading}
+      labelledBy={titleId}
+      describedBy={messageId}
+      initialFocusRef={cancelRef}
+      className={`${styles.dialog} ${isFa ? styles.dialogFa : ""}`}
+      dir={isFa ? "rtl" : "ltr"}
     >
-      <div ref={dialogRef} className={`${styles.dialog} ${isFa ? styles.dialogFa : ""}`} dir={isFa ? "rtl" : "ltr"}>
         <div className={`${styles.iconWrap} ${VARIANT_ICON_CLASS[variant]}`}>
           {VARIANT_ICON[variant]}
         </div>
 
-        <h2 id="admin-dialog-title" className={styles.title}>
+        <h2 id={titleId} className={styles.title}>
           {title}
         </h2>
-        <p className={styles.message}>{message}</p>
+        <p id={messageId} className={styles.message}>{message}</p>
 
         <div className={styles.actions}>
           <button
             type="button"
+            ref={cancelRef}
             className={styles.btnCancel}
             onClick={onCancel}
             disabled={loading}
           >
-            Cancel
+            {isFa ? "انصراف" : "Cancel"}
           </button>
           <button
             type="button"
@@ -142,9 +110,6 @@ export function AdminConfirmDialog({
             {confirmLabel}
           </button>
         </div>
-      </div>
-    </div>
+    </AdminDialog>
   );
-
-  return createPortal(content, document.body);
 }

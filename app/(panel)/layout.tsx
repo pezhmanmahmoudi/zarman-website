@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google";
 import type { Metadata } from "next";
 import "@/app/globals.css";
+import themeStyles from "@/styles/admin/AdminTheme.module.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -27,7 +28,7 @@ export default function PanelRootLayout({
 }) {
   return (
     <html lang="en" dir="ltr" data-scroll-behavior="smooth">
-      <body className={`${inter.variable} min-h-screen antialiased`}>
+      <body className={`${inter.variable} ${themeStyles.theme} min-h-screen antialiased`}>
         {children}
       </body>
     </html>

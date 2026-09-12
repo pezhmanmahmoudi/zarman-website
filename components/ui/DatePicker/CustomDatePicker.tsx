@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useId } from "react";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { SelectBox } from "../SelectBox/SelectBox";
 import s from "./DatePicker.module.css";
+import { useAnchoredPopover } from "../useAnchoredPopover";
 
 type CustomDatePickerProps = {
   value: string; // Format: "YYYY-MM-DD"
@@ -15,8 +16,13 @@ type CustomDatePickerProps = {
 
 const parseIsoDate = (raw: string) => {
   if (!raw) return null;
-  const parsed = new Date(raw);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const parsed = new Date(year, month, day);
+  return parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day ? parsed : null;
 };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -31,7 +37,6 @@ const yearOptions = YEARS.map(y => y.toString());
 
 export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm/yyyy", disabled = false, className }: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [openUpward, setOpenUpward] = useState(false);
   
   const [viewDate, setViewDate] = useState(() => {
     return parseIsoDate(value) ?? new Date();
@@ -39,27 +44,25 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
-      
-      // رفع باگ: بررسی اینکه آیا عنصر کلیک شده هنوز در دام (DOM) وجود دارد یا خیر.
-      // اگر عنصر حذف شده باشد (مثل کلیک روی گزینه‌های سلکت‌باکس)، تقویم نباید بسته شود.
-      if (document.contains(target) && containerRef.current && !containerRef.current.contains(target)) {
-        setIsOpen(false);
-      }
-    }
-    
-    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  useEffect(() => {
-    const parsed = parseIsoDate(value);
-    if (parsed) {
-      setViewDate(parsed);
-    }
-  }, [value]);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const calendarId = useId();
+  useAnchoredPopover({
+    open: isOpen && !disabled,
+    anchorRef: containerRef,
+    popoverRef,
+    align: "end",
+    maxHeight: 420,
+    onClose: reason => {
+      setIsOpen(false);
+      if (reason === "escape") triggerRef.current?.focus();
+    },
+  });
+  const toggleCalendar = () => {
+    if (disabled) return;
+    if (!isOpen) setViewDate(parseIsoDate(value) ?? new Date());
+    setIsOpen(open => !open);
+  };
 
   const currentYear = viewDate.getFullYear();
   const currentMonth = viewDate.getMonth();
@@ -99,6 +102,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
 
   const handleOk = () => {
     setIsOpen(false);
+    triggerRef.current?.focus();
   };
 
   const renderDays = () => {
@@ -121,6 +125,9 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
           key={`day-${dayNumber}`}
           type="button"
           onClick={() => handleSelectDate(dayNumber)}
+          aria-pressed={isSelected}
+          aria-label={`${dayNumber} ${MONTHS[currentMonth]} ${currentYear}`}
+          aria-current={isToday ? "date" : undefined}
           className={`${s.dayBtn} ${isSelected ? s.daySelected : ""} ${isToday ? s.dayToday : ""}`}
         >
           {dayNumber}
@@ -132,31 +139,33 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
   };
 
   return (
-    <div className={s.container} ref={containerRef}>
-      <div className={`${s.inputWrapper}${className ? " " + className : ""}`} onClick={() => {
-        if (disabled) return;
-        if (!isOpen) {
-          const rect = containerRef.current?.getBoundingClientRect();
-          if (rect) {
-            const spaceBelow = window.innerHeight - rect.bottom;
-            setOpenUpward(spaceBelow < 340);
-          }
-        }
-        setIsOpen((o) => !o);
-      }}>
-        <input
-          type="text"
-          readOnly
-          value={value}
-          placeholder={placeholder}
+    <div className={s.container} ref={containerRef} onBlur={event => {
+      if (event.relatedTarget && !containerRef.current?.contains(event.relatedTarget as Node)) setIsOpen(false);
+    }}>
+      <div className={`${s.inputWrapper}${className ? " " + className : ""}`}>
+        <button
+          ref={triggerRef}
+          type="button"
           disabled={disabled}
           className={`${s.input} ${isOpen ? s.inputActive : ""}`}
-        />
-        <CalendarIcon size={18} className={s.icon} />
+          aria-label={value ? `Date: ${value}` : placeholder}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+          aria-controls={isOpen ? calendarId : undefined}
+          onClick={toggleCalendar}
+          onKeyDown={event => {
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              if (!isOpen) { setViewDate(parseIsoDate(value) ?? new Date()); setIsOpen(true); }
+              requestAnimationFrame(() => popoverRef.current?.querySelector<HTMLElement>("button")?.focus());
+            }
+          }}
+        >{value || placeholder}</button>
+        <CalendarIcon size={18} className={s.icon} aria-hidden="true" />
       </div>
 
-      {isOpen && (
-        <div className={`${s.popover} ${openUpward ? s.popoverUp : ""}`}>
+      {isOpen && !disabled && (
+        <div id={calendarId} ref={popoverRef} popover="manual" role="dialog" aria-label="Choose date" className={s.popover}>
           <div className={s.header}>
             <button type="button" onClick={handlePrevMonth} className={s.navBtn} title="Previous Month">
               <ChevronLeft size={18} />
@@ -165,12 +174,16 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
             <div className={s.selectors}>
               <SelectBox 
                 variant="ghost"
+                placeholder="Month"
+                dir="ltr"
                 labeledOptions={monthOptions}
                 value={currentMonth.toString()}
                 onChange={handleMonthChange}
               />
               <SelectBox 
                 variant="ghost"
+                placeholder="Year"
+                dir="ltr"
                 options={yearOptions}
                 value={currentYear.toString()}
                 onChange={handleYearChange}

@@ -6,8 +6,9 @@
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
   width: 100%;
+  min-width: 0;
 }
 
 .criticalAlertBadge {
@@ -161,6 +162,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 .settingsIcon {
   color: var(--text-soft, #4b5563);
@@ -187,7 +189,11 @@
   font-style: italic;
 }
 .reconSectionCard {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-soft, #e2e8f0);
+  border-radius: 1rem;
+  min-width: 0;
 }
 
 .reconSummaryDesc {
@@ -195,8 +201,8 @@
   color: var(--text-dim, #6b7280);
 }
 
-.reconBodyAuto {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+.reconBody.reconBodyAuto {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
   gap: 1rem;
   margin-top: 1rem;
 }
@@ -216,6 +222,8 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: .5rem;
 }
 
 .reconTitleMeta {
@@ -223,6 +231,8 @@
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .reconTitleMetaAccent {
@@ -251,6 +261,8 @@
   font-family: var(--font-en-stack, "Inter", sans-serif);
   text-align: right;
   direction: ltr;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 
 .reconBalanceAccent {
@@ -263,6 +275,8 @@
   margin-top: 0.5rem;
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .5rem;
 }
 
 .reconMono {
@@ -374,9 +388,9 @@
 
 .strategyPanel {
   display: grid;
-  grid-template-columns: 3fr 2fr;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   gap: 1.25rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
 }
 
 @media (max-width: 900px) {
@@ -387,12 +401,14 @@
   background: var(--bg-card, #fff);
   border: 2px solid var(--border-soft, #eaecf0);
   border-radius: 1rem;
-  padding: 1.5rem;
+  padding: 1.25rem;
   direction: rtl;
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   box-shadow: var(--shadow-card);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  min-width: 0;
+  border-width: 1px;
 }
 
 .recommendationCard::before {
@@ -521,11 +537,12 @@
   background: var(--bg-card, #fff);
   border: 1px solid var(--border-soft, #eaecf0);
   border-radius: 1rem;
-  padding: 1.5rem;
+  padding: 1.25rem;
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  min-width: 0;
 }
 
 .healthScoreRow {
@@ -574,7 +591,7 @@
   margin-top: 1px;
 }
 
-.healthScoreInfo { flex: 1; }
+.healthScoreInfo { flex: 1; min-width: 0; }
 
 .healthCategoryBadge {
   display: inline-block;
@@ -657,6 +674,7 @@
   box-shadow: var(--shadow-sm);
   direction: rtl;
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+  min-width: 0;
 }
 
 .forecastLabel {
@@ -704,7 +722,8 @@
 .sectionDivider {
   border: none;
   border-top: 1px solid var(--border-soft, #eaecf0);
-  margin: 2rem 0 1.5rem;
+  margin: 0;
+  width: 100%;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -789,6 +808,7 @@
   border-radius: 1rem;
   padding: 1.1rem 1.25rem 1.25rem;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
 }
 
 .formHeader {
@@ -889,7 +909,8 @@
   border-radius: 1rem;
   background: var(--bg-card, #fff);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  overflow: visible;
+  min-width: 0;
 }
 
 .formSummary {
@@ -903,6 +924,8 @@
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   background: var(--bg-soft, #f4f6f8);
   user-select: none;
+  flex-wrap: wrap;
+  border-radius: inherit;
 }
 
 .formSummary::-webkit-details-marker { display: none; }
@@ -916,6 +939,7 @@
   font-weight: 800;
   color: var(--text-main, #111827);
   margin-left: auto;
+  min-width: 0;
 }
 
 .formSummaryHint {
@@ -941,21 +965,26 @@
 
 .formContainer {
   --field-h: 2.625rem;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  background: var(--bg-soft, #f8fafc);
   border: 1px solid var(--border-soft, #eaecf0);
   border-radius: 0.9rem;
   padding: 1rem 1rem 1.05rem;
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+  min-width: 0;
 }
 
 .listContainer {
   margin-top: 1rem;
   border: 1px solid var(--border-soft, #eaecf0);
   border-radius: 0.85rem;
-  overflow: hidden;
+  overflow: auto;
   background: var(--bg-card, #fff);
+  min-width: 0;
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
 }
 
 .listTable {
@@ -963,6 +992,7 @@
   border-collapse: collapse;
   direction: rtl;
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+  min-width: 620px;
 }
 
 .listTable th {
@@ -1087,8 +1117,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  flex: 1;
-  min-width: 170px;
+  flex: 1 1 170px;
+  min-width: 0;
 }
 
 .formLabel {
@@ -1114,6 +1144,7 @@
   width: 100%;
   line-height: 1.45;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  min-width: 0;
 }
 
 .formInput::placeholder {
@@ -1139,6 +1170,7 @@
   gap: 0.65rem;
   justify-content: flex-start;
   margin-top: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .btnSubmit {
@@ -1456,7 +1488,7 @@
 
 .rateAdjGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.875rem;
   margin-bottom: 0.875rem;
 }
@@ -1472,6 +1504,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .rateAdjLabel {
@@ -1527,6 +1560,7 @@
   grid-column: span 2;
   direction: rtl;
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+  min-width: 0;
 }
 
 @media (max-width: 640px) {
@@ -1546,6 +1580,7 @@
   letter-spacing: -0.03em;
   font-family: var(--font-en-stack, "Inter", sans-serif);
   line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .inventoryHeroLabel {
@@ -1709,11 +1744,11 @@
   display: flex;
   align-items: center;
   gap: 0.875rem;
-  flex: 1;
-  min-width: 200px;
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
-.liquidityHeroInfo { flex: 1; }
+.liquidityHeroInfo { flex: 1; min-width: 0; }
 
 .liquidityHeroValue {
   font-size: 1.5rem;
@@ -1721,6 +1756,7 @@
   letter-spacing: -0.03em;
   font-family: var(--font-en-stack, "Inter", sans-serif);
   line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .liquidityHeroTitle {
@@ -1778,6 +1814,8 @@
   border: 1px solid var(--border-soft, #eaecf0);
   border-radius: 1rem;
   overflow: visible;
+  min-width: 0;
+  background: var(--bg-card, #fff);
 }
 
 .settingsSummary {
@@ -1793,7 +1831,8 @@
   user-select: none;
   border-radius: calc(1rem - 1px) calc(1rem - 1px) 0 0;
   position: relative;
-  z-index: 2;
+  z-index: auto;
+  flex-wrap: wrap;
 }
 
 .settingsSummary::-webkit-details-marker { display: none; }
@@ -1804,12 +1843,14 @@
   font-weight: 700;
   color: var(--text-main, #111827);
   flex: 1;
+  min-width: 0;
 }
 
 .settingsBody {
   padding: 1.25rem 1.375rem;
   position: relative;
-  z-index: 1;
+  z-index: auto;
+  min-width: 0;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1833,6 +1874,7 @@
   direction: rtl;
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
   user-select: none;
+  flex-wrap: wrap;
 }
 
 .reconSummary::-webkit-details-marker { display: none; }
@@ -1840,14 +1882,15 @@
 .reconSummaryTitle {
   font-size: 0.875rem;
   font-weight: 700;
-  color: var(--text-dim, #6b7280);
+  color: var(--text-main, #172033);
   flex: 1;
+  min-width: 0;
 }
 
 .reconBody {
   padding: 1.25rem 1.375rem;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.875rem;
   border-top: 1px dashed var(--border-soft, #eaecf0);
 }
@@ -1865,6 +1908,7 @@
   gap: 0.5rem;
   direction: rtl;
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+  min-width: 0;
 }
 
 .reconAccountTitle {
@@ -1933,18 +1977,17 @@
   .inlineTable { font-size: 0.75rem; }
   .inlineTable th,
   .inlineTable td { padding: 0.5rem 0.625rem; }
-
-  .sectionDivider { margin: 1.5rem 0 1rem; }
 }
 
 
 .splitLayout {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
-  gap: 1.5rem;
+  gap: 1.25rem;
   align-items: start;
   margin-top: 1.5rem;
   width: 100%;
+  min-width: 0;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2077,7 +2120,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  min-width: 140px;
+  min-width: 0;
+  flex: 1 1 140px;
 }
 
 .recurringFreqBadge {
@@ -2090,4 +2134,59 @@
   background: rgba(67, 56, 202, 0.08);
   color: var(--accent, #4338ca);
   font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+}
+/* Let cards and form controls shrink with their own workspace column. */
+.treasuryPage > *,
+.strategyPanel > *,
+.splitLayout > *,
+.detailsGrid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.reconTitleMeta svg,
+.formSummaryChevron,
+.settingsSummary > svg {
+  flex-shrink: 0;
+}
+
+.formDetails[open] > .formSummary {
+  border-radius: calc(1rem - 1px) calc(1rem - 1px) 0 0;
+  border-bottom: 1px solid var(--border-soft, #e2e8f0);
+}
+
+.formDetails > .formWrapper {
+  border-radius: 0 0 calc(1rem - 1px) calc(1rem - 1px);
+}
+
+.formSummary:focus-visible,
+.settingsSummary:focus-visible,
+.warnBannerSummary:focus-visible,
+.btnAddNew:focus-visible,
+.btnListToggle:focus-visible,
+.btnSubmit:focus-visible,
+.btnCancel:focus-visible,
+.btnIconEdit:focus-visible,
+.btnIconDanger:focus-visible {
+  outline: 3px solid rgba(79, 70, 229, .25);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .formWrapper,
+  .settingsBody,
+  .reconBody { padding: 1rem; }
+  .formSummary,
+  .settingsSummary,
+  .reconSummary { padding: .85rem 1rem; }
+  .formActionsRow > button { flex: 1 1 auto; }
+  .healthScoreRow { gap: .75rem; }
+  .breakdownLabel { width: 90px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confidenceFill,
+  .breakdownFill,
+  .formSummaryChevron,
+  .btnSubmit { transition: none; }
 }

@@ -22,7 +22,14 @@ const nextConfig: NextConfig = {
   },
   transpilePackages: [],
   async headers() {
+    const noindexHeaders = [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }];
     return [
+      ...(process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production'
+        ? [{ source: '/:path*', headers: noindexHeaders }]
+        : []),
+      ...['/admin/:path*', '/api/:path*', ...['fa', 'en'].flatMap((locale) =>
+        ['dashboard', 'login', 'forgot-password', 'reset-password', 'auth'].map((path) => `/${locale}/${path}/:path*`)
+      )].map((source) => ({ source, headers: noindexHeaders })),
       {
         source: '/(.*)',
         headers: [

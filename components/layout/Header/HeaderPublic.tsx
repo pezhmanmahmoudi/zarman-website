@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import Button from "@/components/ui/Button/Button";
-import { getPublicNavItems } from "@/data/navigation";
+import { getCrawlablePublicNavItems } from "./public-navigation";
 import { useLocale } from "@/context/LocaleContext";
 import { useT } from "@/hooks/useT";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher/LanguageSwitcher";
@@ -19,8 +19,7 @@ export default function HeaderPublic({
   const pathname = usePathname();
   const locale = useLocale();
   const t = useT();
-  const isHome = pathname === `/${locale}` || pathname === "/";
-  const navItems = getPublicNavItems(locale);
+  const navItems = getCrawlablePublicNavItems(locale);
 
   return (
     <header className={className} role="banner">
@@ -29,10 +28,10 @@ export default function HeaderPublic({
       </a>
 
       <div className="h-inner">
-        <div className="h-logo-wrap" aria-label="Zarman Exchange">
+        <Link href={`/${locale}`} className="h-logo-wrap" aria-label={locale === "fa" ? "صفحه اصلی صرافی زرمان" : "Zarman Exchange home"}>
           <Image
             src="/images/logo-no-text-light.svg"
-            alt="Zarman Exchange"
+            alt={locale === "fa" ? "صرافی زرمان" : "Zarman Exchange"}
             className="h-logo-img"
             width={200}
             height={60}
@@ -40,17 +39,17 @@ export default function HeaderPublic({
             priority
             unoptimized
           />
-        </div>
+        </Link>
 
         <nav className="h-nav" aria-label={t.header.mainNav}>
           {navItems.map((item) => {
-            const isCurrentHome = item.href === "#hero" && isHome;
+            const isCurrentPage = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className="h-link"
-                aria-current={isCurrentHome ? "page" : undefined}
+                aria-current={isCurrentPage ? "page" : undefined}
               >
                 {item.label}
               </Link>

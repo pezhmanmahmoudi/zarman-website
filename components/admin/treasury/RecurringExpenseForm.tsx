@@ -16,6 +16,7 @@ import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 
 type Props = {
+  defaultOpen?: boolean;
   recurringExpenses: any[];
   bankAccounts: { id: string; account_name: string; currency: string }[];
 };
@@ -71,7 +72,7 @@ function dueBadge(nextDue: string, isActive: boolean) {
   return <span className={s.badgeFuture}>{diff} روز دیگر</span>;
 }
 
-export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }: Props) {
+export default function RecurringExpenseForm({ recurringExpenses, bankAccounts, defaultOpen = false }: Props) {
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY });
@@ -200,7 +201,7 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts }
   const filteredAccounts = bankAccounts.filter(acc => acc.currency === form.currency);
 
   return (
-    <details className={s.formDetails}>
+    <details className={s.formDetails} open={defaultOpen}>
       <summary className={s.formSummary}>
         <ChevronDown size={16} className={s.formSummaryChevron} />
         <span className={s.formSummaryTitle}>{FA.secRecurring}</span>

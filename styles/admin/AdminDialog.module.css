@@ -6,33 +6,20 @@
  */
 
 /* ── Backdrop ─────────────────────────────────────────────────────────────── */
-.overlay {
+.dialog {
   --dialog-bg:          #ffffff;
   --dialog-border:      #eaecf0;
   --dialog-text-main:   #111827;
   --dialog-text-soft:   #4b5563;
   --dialog-bg-soft:     #f4f6f8;
   --dialog-border-med:  #d0d5dd;
-  --dialog-success:     #10b981;
-  --dialog-danger:      #ef4444;
-  --dialog-warning:     #f59e0b;
+  --dialog-success:     #047857;
+  --dialog-danger:      #b91c1c;
+  --dialog-warning:     #b45309;
   --dialog-accent:      #4338ca;
   --dialog-accent-hov:  #3730a3;
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 120020;
-  padding: 1.25rem;
-  /* Prevent inherited RTL from shifting the flex alignment off-centre */
-  direction: ltr;
 }
 
-/* ── Dialog card ──────────────────────────────────────────────────────────── */
 .dialog {
   background: var(--dialog-bg);
   border: 1px solid var(--dialog-border);
@@ -140,36 +127,30 @@
 
 /* Confirm — variants */
 .btnConfirmApprove { background: var(--dialog-success); }
-.btnConfirmApprove:hover:not(:disabled) { background: #059669; }
+.btnConfirmApprove:hover:not(:disabled) { background: #065f46; }
 
 .btnConfirmReject  { background: var(--dialog-danger); }
-.btnConfirmReject:hover:not(:disabled)  { background: #dc2626; }
+.btnConfirmReject:hover:not(:disabled)  { background: #991b1b; }
 
 .btnConfirmArchive { background: var(--dialog-warning); }
-.btnConfirmArchive:hover:not(:disabled) { background: #d97706; }
+.btnConfirmArchive:hover:not(:disabled) { background: #92400e; }
 
 .btnConfirmDanger  { background: var(--dialog-danger); }
-.btnConfirmDanger:hover:not(:disabled)  { background: #dc2626; }
+.btnConfirmDanger:hover:not(:disabled)  { background: #991b1b; }
 
 .btnConfirmDefault { background: var(--dialog-accent); }
 .btnConfirmDefault:hover:not(:disabled) { background: var(--dialog-accent-hov); }
 
 /* ── Mobile: bottom-sheet ─────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .overlay {
-    align-items: flex-end;
-    padding: 0;
-  }
-
   .dialog {
     width: 100%;
     max-width: 100%;
-    border-radius: 1.5rem 1.5rem 0 0;
+    border-radius: 1rem;
     padding: 1.75rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     /* Re-declare explicitly — mobile override must not lose the base rule */
-    direction: ltr;
-    text-align: left;
+
   }
 
   @keyframes slideUp {
@@ -203,3 +184,6 @@
     margin: 0 auto 1.5rem;
   }
 }
+
+.dialog { overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .dialog { animation: none; } }

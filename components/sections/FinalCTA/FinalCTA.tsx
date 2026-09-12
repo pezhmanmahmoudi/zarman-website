@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import styles from "./FinalCTA.module.css";
 import Button from "@/components/ui/Button/Button";
 import {
-  WHATSAPP_NUMBER,
   buildWhatsAppUrl,
   WHATSAPP_MESSAGE_SIGNUP_HELP,
 } from "@/lib/constants/contact";
@@ -13,12 +11,9 @@ import {
 export default function FinalCTA() {
   const { locale } = useParams<{ locale: string }>();
   const isEn = locale === "en";
-  const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_SIGNUP_HELP)}`;
-  const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
-
-  useEffect(() => {
-    setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP));
-  }, []);
+  const whatsappUrl = buildWhatsAppUrl(isEn
+    ? "Hello, I would like help registering and requesting a transfer with Zarman Exchange."
+    : WHATSAPP_MESSAGE_SIGNUP_HELP);
 
   return (
     <section id="contact" className={styles.section} aria-label={isEn ? "Final sign up" : "ثبت نام نهایی"}>

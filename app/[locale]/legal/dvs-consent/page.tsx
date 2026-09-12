@@ -1,28 +1,28 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { getPageMetadata } from "@/lib/seo";
+import { permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import styles from "@/styles/Legal.module.css";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getPageMetadata({
+  locale: "en",
+  path: "/legal/dvs-consent",
   title: "Identity Verification Consent",
-  description:
-    "Consent for identity verification checks for Zarman Exchange services.",
-  alternates: {
-    canonical: "/en/legal/dvs-consent",
-  },
-};
+  description: "Consent for identity verification checks for Zarman Exchange services.",
+  alternatePaths: { en: "/legal/dvs-consent" },
+});
 
 export default async function DVSConsentPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  if (locale === "fa") redirect("/en/legal/dvs-consent");
+  if (locale === "fa") permanentRedirect("/en/legal/dvs-consent");
   return (
-    <div className={styles.pageWrapper}>
+    <div className={styles.pageWrapper} lang="en" dir="ltr">
       <div className={styles.container}>
 
         <div className={styles.topNav}>
-          <Link href="/" className={styles.backHome} aria-label="Back to Website">
+          <Link href="/en" className={styles.backHome} aria-label="Back to Website">
             <ArrowLeft size={18} strokeWidth={2.5} />
           </Link>
         </div>

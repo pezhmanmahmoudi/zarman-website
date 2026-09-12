@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef } from "react";
 import { useParams } from "next/navigation";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -9,7 +9,6 @@ import styles from "./HowItWorks.module.css";
 import Button from "@/components/ui/Button/Button";
 import { UserPlus, ShieldCheck, CreditCard, Send } from "lucide-react";
 import {
-  WHATSAPP_NUMBER,
   buildWhatsAppUrl,
   WHATSAPP_MESSAGE_SIGNUP_HELP,
 } from "@/lib/constants/contact";
@@ -23,14 +22,14 @@ const stepsFa = [
     id: "step-1",
     number: "01",
     title: "ثبت درخواست تراکنش",
-    text: "برای دریافت بهترین نرخ تبدیل، پیشنهاد می‌شود وارد حساب کاربری خود شده و مبلغ مورد نظر را در داشبورد وارد کنید. پس از مشاهده نرخ لحظه‌ای، درخواست تراکنش را ثبت نمایید. همچنین امکان ثبت درخواست مستقیم از طریق واتس‌اپ نیز فراهم است.",
+    text: "وارد حساب کاربری شوید و مبلغ و جهت حواله را در داشبورد وارد کنید. نرخ پیشنهادی و شرایط پرداخت را بررسی و سپس درخواست تراکنش را ثبت نمایید. برای راهنمایی می‌توانید از طریق واتس‌اپ با زرمان تماس بگیرید.",
     icon: UserPlus,
   },
   {
     id: "step-2",
     number: "02",
     title: "احراز هویت (KYC)",
-    text: "مطابق با قوانین مالی استرالیا، پیش از انجام تراکنش، احراز هویت شما توسط زرمان الزامی است. این فرآیند ساده شامل ارسال مدرک شناسایی معتبر و تاییدیه محل سکونت می‌باشد.",
+    text: "زرمان پیش از پردازش حواله هویت شما را بررسی می‌کند. مدرک شناسایی معتبر و اطلاعات درخواستی را ارسال کنید؛ بسته به شرایط تراکنش ممکن است مدارک بیشتری لازم باشد.",
     icon: ShieldCheck,
   },
   {
@@ -44,7 +43,7 @@ const stepsFa = [
     id: "step-4",
     number: "04",
     title: "انتقال و تسویه نهایی",
-    text: "به محض تایید دریافت وجه در حساب ما، فرآیند انتقال به حساب مقصد با بالاترین سرعت انجام پذیرفته و رسید رسمی تراکنش به ایمیل شما ارسال می‌گردد.",
+    text: "پس از تأیید دریافت وجه و تکمیل بررسی‌های لازم، حواله برای تسویه پردازش می‌شود. زمان نهایی به شرایط بانکی و مشخصات تراکنش بستگی دارد. وضعیت و رسید تراکنش را در حساب کاربری پیگیری کنید.",
     icon: Send,
   },
 ];
@@ -54,14 +53,14 @@ const stepsEn = [
     id: "step-1",
     number: "01",
     title: "Submit a Transaction Request",
-    text: "For the best rate, sign in to your account and enter the amount in your dashboard. After viewing the live rate, submit your transaction request. You can also request directly via WhatsApp.",
+    text: "Sign in and enter your transfer amount and direction in the dashboard. Review the offered rate and payment conditions before submitting a transaction request. Contact Zarman through WhatsApp if you need help.",
     icon: UserPlus,
   },
   {
     id: "step-2",
     number: "02",
     title: "Identity Verification (KYC)",
-    text: "In compliance with Australian financial regulations, identity verification is required before any transaction. This simple process involves submitting a valid ID document and proof of residence.",
+    text: "Zarman verifies your identity before processing a transfer. Provide a valid identity document and the requested details; additional documents may be needed depending on the transaction.",
     icon: ShieldCheck,
   },
   {
@@ -75,7 +74,7 @@ const stepsEn = [
     id: "step-4",
     number: "04",
     title: "Transfer & Final Settlement",
-    text: "As soon as we confirm receipt of funds, the transfer to the destination account is processed at the highest speed, and an official transaction receipt is sent to your email.",
+    text: "After receipt of funds is confirmed and required checks are complete, the transfer is processed for settlement. Timing depends on banking availability and transaction details. Follow the status and receipt in your account.",
     icon: Send,
   },
 ];
@@ -86,17 +85,15 @@ export default function HowItWorks() {
   const isEn = locale === "en";
   const steps = isEn ? stepsEn : stepsFa;
 
-  const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_SIGNUP_HELP)}`;
-  const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
-
-  useEffect(() => {
-    setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP));
-  }, []);
+  const whatsappUrl = buildWhatsAppUrl(isEn
+    ? "Hello, I found Zarman's website and need help with registration and a money transfer."
+    : WHATSAPP_MESSAGE_SIGNUP_HELP);
 
   useGSAP(
     () => {
       const el = sectionRef.current;
       if (!el) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
       const tl = gsap.timeline({
         defaults: { ease: "power3.out", duration: 0.8 },
@@ -156,7 +153,7 @@ export default function HowItWorks() {
                   {step.number}
                 </span>
 
-                <div className={styles.iconWrapper}>
+                <div className={styles.iconWrapper} aria-hidden="true">
                   <Icon size={28} strokeWidth={1.5} className={styles.icon} />
                 </div>
 

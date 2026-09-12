@@ -10,6 +10,7 @@ export async function proxy(request: NextRequest) {
   // Fast path — static assets, API routes, and files with extensions.
   if (
     pathname.startsWith('/_next') ||
+    pathname.startsWith('/_vercel/') ||
     pathname.startsWith('/api') ||
     pathname === '/favicon.ico' ||
     pathname.includes('.')
@@ -22,9 +23,9 @@ export async function proxy(request: NextRequest) {
   // Supabase getUser() network call entirely, eliminating ~200-400ms
   // of latency for the vast majority of visitors.
   const isDashboardPath = locales.some((l) =>
-    pathname.startsWith(`/${l}/dashboard`)
+    pathname === `/${l}/dashboard` || pathname.startsWith(`/${l}/dashboard/`)
   )
-  const isAdminPath = pathname.startsWith('/admin')
+  const isAdminPath = pathname === '/admin' || pathname.startsWith('/admin/')
   const needsAuthCheck = isDashboardPath || isAdminPath
 
   // ------------------------------------------------------------------
@@ -36,12 +37,10 @@ export async function proxy(request: NextRequest) {
     )
 
     if (!pathnameHasLocale) {
-      if (pathname === '/') {
-        return NextResponse.redirect(new URL(`/${defaultLocale}`, request.url))
-      }
-      return NextResponse.redirect(
-        new URL(`/${defaultLocale}${pathname}`, request.url)
-      )
+      const destination = request.nextUrl.clone()
+      destination.pathname = pathname === '/' ? `/${defaultLocale}` : `/${defaultLocale}${pathname}`
+      // Locale-less URLs have one permanent destination; preserve campaign queries.
+      return NextResponse.redirect(destination, 308)
     }
 
     return NextResponse.next()
@@ -108,6 +107,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - images, Earth, manifest... (static public)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|images|fonts|Earth|manifest.*|.*\\.css$).*)',
+    '/((?!api|_vercel/|_next/static|_next/image|favicon.ico|images|fonts|Earth|manifest.*|.*\\.css$).*)',
   ],
 }

@@ -1,0 +1,62 @@
+.theme {
+  --bg-app: #f5f7fb;
+  --bg-sidebar: #fff;
+  --bg-card: #fff;
+  --bg-soft: #f1f4f9;
+  --bg-hover: #f8faff;
+  --text-main: #172238;
+  --text-soft: #526078;
+  --text-dim: #65738a;
+  --border-soft: #e3e8f0;
+  --border-med: #cbd3e1;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-rgb: 79, 70, 229;
+  --success: #087f5b;
+  --success-rgb: 8, 127, 91;
+  --warning: #a86208;
+  --warning-rgb: 168, 98, 8;
+  --danger: #c43246;
+  --danger-rgb: 196, 50, 70;
+  --info: #2563a6;
+  --info-rgb: 37, 99, 166;
+  --color-text-primary: var(--text-main);
+  --color-text-secondary: var(--text-soft);
+  --color-text-tertiary: var(--text-dim);
+  --shadow-sm: 0 1px 2px rgb(20 35 60 / 4%);
+  --shadow-card: 0 2px 8px rgb(20 35 60 / 3%);
+  --font-en-stack: var(--font-en, 'Inter'), system-ui, -apple-system, sans-serif;
+  --font-fa-stack: 'IRANSansX', 'Peyda', system-ui, sans-serif;
+  --font-fa-content: var(--font-fa-stack);
+  --font-primary: var(--font-en-stack);
+  background: var(--bg-app);
+  color: var(--text-main);
+  font-family: var(--font-en-stack);
+  font-size: .875rem;
+  line-height: 1.5;
+  color-scheme: light;
+}
+
+/* Portals inherit the admin theme independently of public-site resets. */
+:global(html[dir='ltr']) .theme {
+  --font-fa-stack: 'IRANSansX', 'Peyda', system-ui, sans-serif;
+  --font-fa-content: var(--font-fa-stack);
+  --font-primary: var(--font-en-stack);
+}
+.theme *, .theme *::before, .theme *::after { box-sizing: border-box; }
+.theme :where(button, input, select, textarea) { font-family: inherit; }
+.theme :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #818cf8;
+  outline-offset: 3px;
+}
+.theme :where([dir='rtl'], [lang='fa']) { font-family: var(--font-fa-stack); }
+.theme :where(button):disabled { cursor: not-allowed; }
+.theme :where(svg) { flex-shrink: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .theme *, .theme *::before, .theme *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

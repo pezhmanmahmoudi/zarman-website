@@ -1,27 +1,28 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { getPageMetadata } from "@/lib/seo";
+import { permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import styles from "@/styles/Legal.module.css";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getPageMetadata({
+  locale: "en",
+  path: "/legal/terms",
   title: "Terms and Conditions",
-  description: "Terms and conditions for using Zarman Exchange services.",
-  alternates: {
-    canonical: "/en/legal/terms",
-  },
-};
+  description: "Read the terms and conditions for using Zarman Exchange services.",
+  alternatePaths: { en: "/legal/terms" },
+});
 
 export default async function TermsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  if (locale === "fa") redirect("/en/legal/terms");
+  if (locale === "fa") permanentRedirect("/en/legal/terms");
   return (
-    <div className={styles.pageWrapper}>
+    <div className={styles.pageWrapper} lang="en" dir="ltr">
       <div className={styles.container}>
 
         <div className={styles.topNav}>
-          <Link href="/" className={styles.backHome} aria-label="Back to Website">
+          <Link href="/en" className={styles.backHome} aria-label="Back to Website">
             <ArrowLeft size={18} strokeWidth={2.5} />
           </Link>
         </div>

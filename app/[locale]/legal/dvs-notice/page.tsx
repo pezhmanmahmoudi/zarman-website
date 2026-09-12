@@ -1,28 +1,28 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { getPageMetadata } from "@/lib/seo";
+import { permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import styles from "@/styles/Legal.module.css";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getPageMetadata({
+  locale: "en",
+  path: "/legal/dvs-notice",
   title: "Identity Verification Collection Notice",
-  description:
-    "Collection notice for identity verification via the Document Verification Service.",
-  alternates: {
-    canonical: "/en/legal/dvs-notice",
-  },
-};
+  description: "Collection notice for identity verification through the Document Verification Service.",
+  alternatePaths: { en: "/legal/dvs-notice" },
+});
 
 export default async function DVSNoticePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  if (locale === "fa") redirect("/en/legal/dvs-notice");
+  if (locale === "fa") permanentRedirect("/en/legal/dvs-notice");
   return (
-    <div className={styles.pageWrapper}>
+    <div className={styles.pageWrapper} lang="en" dir="ltr">
       <div className={styles.container}>
 
         <div className={styles.topNav}>
-          <Link href="/" className={styles.backHome} aria-label="Back to Website">
+          <Link href="/en" className={styles.backHome} aria-label="Back to Website">
             <ArrowLeft size={18} strokeWidth={2.5} />
           </Link>
         </div>

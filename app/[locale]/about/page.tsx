@@ -1,49 +1,41 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
-import styles from "@/styles/About.module.css";
+import ContentNavigation from "@/components/layout/ContentNavigation";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  ExternalLink,
+  Globe2,
+  GraduationCap,
+  Landmark,
+  ShieldCheck,
+  Stethoscope,
+  type LucideIcon,
+} from "lucide-react";
+import styles from "@/styles/AboutEditorial.module.css";
 import Button from "@/components/ui/Button/Button";
+import { services } from "@/data/services";
 
-const PRODUCTION_URL = "https://zarman.com.au";
-const SOCIAL_IMAGE = `${PRODUCTION_URL}/images/layout-logo.png`;
+import { SITE_URL as PRODUCTION_URL, getPageMetadata, organizationId, websiteId, serializeJsonLd } from "@/lib/seo";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}): Promise<Metadata> {
+const SERVICE_ICONS: Record<string, LucideIcon> = {
+  "student-remittance": GraduationCap,
+  "healthcare-professional-payments": Stethoscope,
+  "capital-and-asset-transfer": Landmark,
+  "business-payment-infrastructure": Building2,
+};
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
   const isEn = locale === "en";
-
-  return {
-    title: isEn
-      ? "Zarman Exchange | Personalized Exchange Rates"
-      : "صرافی زرمان | زرمان اکسچنج | نرخ شخصی سازی شده حواله دلار استرالیا",
-    description: isEn
-      ? "Zarman Exchange is an AUSTRAC-registered remittance dealer (ABN 70 692 742 957) specialising in AUD to IRT transfers. Learn about our compliance framework, mission, and team."
-      : "صرافی زرمان یک استارتاپ مالی ایرانی–استرالیایی ثبت‌شده نزد AUSTRAC (ABN: 70 692 742 957) است. درباره چارچوب انطباق قانونی، مأموریت و تیم ما بیشتر بدانید.",
-    alternates: {
-      canonical: `${PRODUCTION_URL}/${locale}/about`,
-      languages: {
-        "en-AU": `${PRODUCTION_URL}/en/about`,
-        "fa-IR": `${PRODUCTION_URL}/fa/about`,
-        "x-default": `${PRODUCTION_URL}/fa/about`,
-      },
-    },
-    openGraph: {
-      title: isEn
-        ? "Zarman Exchange | Personalized Exchange Rates"
-        : "صرافی زرمان | زرمان اکسچنج | نرخ شخصی سازی شده حواله دلار استرالیا",
-      description: isEn
-        ? "AUSTRAC-registered AUD to IRT remittance. ABN 70 692 742 957. Enterprise-grade compliance and transparent pricing."
-        : "صرافی مجاز ثبت‌شده نزد AUSTRAC برای حواله دلار استرالیا. ABN: 70 692 742 957.",
-      url: `${PRODUCTION_URL}/${locale}/about`,
-      type: "website",
-      images: [{ url: SOCIAL_IMAGE, width: 1200, height: 630 }],
-    },
-    robots: { index: true, follow: true },
-  };
+  return getPageMetadata({
+    locale,
+    path: "/about",
+    title: isEn ? "About Us & Company Details" : "درباره ما و اطلاعات شرکت",
+    description: isEn ? "Learn about Zarman Exchange, our Australia–Iran remittance services, company details, identity verification and how to contact our team." : "با صرافی زرمان، خدمات حواله بین ایران و استرالیا، اطلاعات شرکت، فرآیند احراز هویت و راه‌های ارتباط با تیم پشتیبانی آشنا شوید.",
+  });
 }
 
 export default async function AboutPage({
@@ -53,7 +45,33 @@ export default async function AboutPage({
 }) {
   const { locale } = await params;
   const isEn = locale === "en";
-  const BackIcon = isEn ? ArrowLeft : ArrowRight;
+  const localeServices = services.filter((service) => service.locale === locale);
+  const ServiceArrow = isEn ? ArrowRight : ArrowLeft;
+  const serviceCards = localeServices.map((service, index) => {
+    const Icon = SERVICE_ICONS[service.slug] ?? Building2;
+    const number = (index + 1).toLocaleString(isEn ? "en-AU" : "fa-IR", {
+      minimumIntegerDigits: 2,
+    });
+
+    return (
+      <article key={service.slug}>
+        <Link href={`/${locale}/services/${service.slug}`} className={styles.serviceItem}>
+          <span className={styles.serviceTopline} aria-hidden="true">
+            <span className={styles.serviceIcon}>
+              <Icon size={20} strokeWidth={1.8} />
+            </span>
+            <span className={styles.serviceNumber}>{number}</span>
+          </span>
+          <h3>{service.title}</h3>
+          <p>{service.description}</p>
+          <span className={styles.serviceAction}>
+            {isEn ? "Explore service" : "مشاهده جزئیات"}
+            <ServiceArrow size={15} strokeWidth={2.4} aria-hidden="true" />
+          </span>
+        </Link>
+      </article>
+    );
+  });
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
@@ -80,11 +98,13 @@ export default async function AboutPage({
     "@id": `${PRODUCTION_URL}/${locale}/about`,
     name: isEn ? "About Zarman Exchange" : "درباره صرافی زرمان",
     url: `${PRODUCTION_URL}/${locale}/about`,
+    inLanguage: isEn ? "en-AU" : "fa",
+    isPartOf: { "@id": websiteId },
     description: isEn
       ? "About Zarman Exchange Pty Ltd — AUSTRAC registered remittance dealer specialising in AUD to IRT transfers."
       : "درباره شرکت زرمان اکسچنج — صرافی ثبت‌شده نزد AUSTRAC برای انتقال دلار استرالیا به تومان.",
     mainEntity: {
-      "@id": `${PRODUCTION_URL}/#organization`,
+      "@id": organizationId,
     },
   };
 
@@ -93,208 +113,257 @@ export default async function AboutPage({
       <script
         type="application/ld+json"
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
       />
       <script
         type="application/ld+json"
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(orgSchema) }}
       />
 
       <div className={styles.pageWrapper}>
-        <div className={styles.container}>
-          <div className={styles.topNav}>
-            <Link href={`/${locale}`} className={styles.backHome} aria-label={isEn ? "Back to home" : "بازگشت به خانه"}>
-              <BackIcon size={18} strokeWidth={2.5} />
-            </Link>
-          </div>
+        <div className={styles.backgroundGrid} aria-hidden="true" />
+        <div className={styles.shell}>
+          <ContentNavigation locale={locale} currentPath="/about" />
 
-          <div className={styles.logoContainer}>
-            <Image
-              src="/images/logo-no-text-light.svg"
-              alt="Zarman Exchange"
-              width={80}
-              height={80}
-              priority
-              className={styles.logoImage}
-            />
-          </div>
+          <header className={styles.hero}>
+            <div className={styles.brandLine}>
+              <Image
+                src="/images/logo-no-text-light.svg"
+                alt=""
+                width={48}
+                height={48}
+                priority
+                className={styles.logoImage}
+              />
+              <div>
+                <span>{isEn ? "Zarman Exchange" : "صرافی زرمان"}</span>
+                <small>{isEn ? "Company profile" : "معرفی شرکت"}</small>
+              </div>
+            </div>
 
-          <header className={styles.header}>
-            <h1 className={`${styles.title} ${isEn ? styles.titleEn : ''}`}>
-              {isEn ? "About Zarman Exchange" : "درباره صرافی زرمان"}
-            </h1>
-            <p className={`${styles.subtitle} ${isEn ? styles.subtitleEn : ''}`}>
-              {isEn
-                ? "AUSTRAC Registered Remittance Dealer · ABN 70 692 742 957"
-                : "صرافی ثبت‌شده نزد AUSTRAC · شماره ABN: 70 692 742 957"}
-            </p>
+            <div className={styles.heroGrid}>
+              <div>
+                <span className={styles.eyebrow}>
+                  {isEn ? "About Zarman" : "درباره زرمان"}
+                </span>
+                <h1 className={`${styles.title} ${isEn ? styles.titleEn : ""}`}>
+                  {isEn ? "A clearer way to arrange cross-border payments" : "مسیر روشن‌تر برای حواله میان ایران و استرالیا"}
+                </h1>
+              </div>
+              <p className={`${styles.introduction} ${isEn ? styles.introductionEn : ""}`}>
+                {isEn
+                  ? "Zarman helps customers prepare and coordinate eligible transfers between Australia and Iran, with clear information about documents, quoted costs, verification and settlement steps."
+                  : "زرمان به مشتریان کمک می‌کند حواله‌های قابل پشتیبانی میان استرالیا و ایران را با آگاهی از مدارک، نرخ اعلامی، احراز هویت و مراحل تسویه هماهنگ کنند."}
+              </p>
+            </div>
+
+            <div className={styles.factGrid}>
+              <div className={styles.factItem}>
+                <Building2 size={19} strokeWidth={1.8} aria-hidden="true" />
+                <span>
+                  <small>{isEn ? "Legal entity" : "نام حقوقی"}</small>
+                  <strong>Zarman Exchange Pty Ltd</strong>
+                </span>
+              </div>
+              <div className={styles.factItem}>
+                <ShieldCheck size={19} strokeWidth={1.8} aria-hidden="true" />
+                <span>
+                  <small>{isEn ? "Registration reference" : "مرجع ثبت"}</small>
+                  <strong>{isEn ? "AUSTRAC register" : "سامانه AUSTRAC"}</strong>
+                </span>
+              </div>
+              <div className={styles.factItem}>
+                <Globe2 size={19} strokeWidth={1.8} aria-hidden="true" />
+                <span>
+                  <small>{isEn ? "Transfer corridor" : "مسیر حواله"}</small>
+                  <strong>{isEn ? "Australia and Iran" : "استرالیا و ایران"}</strong>
+                </span>
+              </div>
+            </div>
           </header>
 
-          <div className={`${styles.content} ${isEn ? styles.contentEn : ''}`}>
-            {isEn ? (
-              <>
+          <div className={styles.bodyLayout}>
+            <aside className={styles.companyPanel} aria-label={isEn ? "Company details" : "اطلاعات شرکت"}>
+              <span className={styles.panelLabel}>{isEn ? "Company details" : "اطلاعات شرکت"}</span>
+              <dl>
+                <div>
+                  <dt>{isEn ? "Company" : "شرکت"}</dt>
+                  <dd>Zarman Exchange Pty Ltd</dd>
+                </div>
+                <div>
+                  <dt>ABN</dt>
+                  <dd>70 692 742 957</dd>
+                </div>
+                <div>
+                  <dt>{isEn ? "AUSTRAC registration" : "شماره ثبت AUSTRAC"}</dt>
+                  <dd>100907570</dd>
+                </div>
+                <div>
+                  <dt>{isEn ? "Country" : "کشور"}</dt>
+                  <dd>{isEn ? "Australia" : "استرالیا"}</dd>
+                </div>
+              </dl>
+              <Button
+                href="https://online.apps.austrac.gov.au/rsr/"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="secondary"
+                size="md"
+                rightIcon={<ExternalLink size={16} />}
+                className={styles.verifyBtn}
+              >
+                {isEn ? "Verify registration" : "بررسی ثبت رسمی"}
+              </Button>
+            </aside>
+
+            <div className={`${styles.content} ${isEn ? styles.contentEn : ""}`}>
+              {isEn ? (
+                <>
+                <section className={styles.contentSection}>
+                  <span className={styles.sectionLabel}>Our company</span>
                 <h2>Who We Are</h2>
                 <p>
-                  <strong>Zarman Exchange Pty Ltd</strong> is an Iranian-Australian fintech startup focused on providing fast, transparent, and compliant international remittance services between Australia and Iran. We understand the challenges of cross-border money transfers in this corridor and have built a platform that makes the process straightforward, honest, and secure.
+                  <strong>Zarman Exchange Pty Ltd</strong> is an Australian-Iranian financial services company focused on coordinating remittances between Australia and Iran. We help individuals, families and businesses understand the information, documents and payment steps involved before they proceed.
                 </p>
                 <p>
-                  Our team brings together expertise in financial technology, compliance, and customer service to deliver an experience that puts our clients first. Every transaction is handled with care, backed by enterprise-grade infrastructure and full regulatory compliance.
+                  Our team combines financial technology, compliance operations and customer support. Each request is considered on its own circumstances, and customers receive the relevant requirements and quote before confirming a transfer.
                 </p>
+                </section>
 
+                <section className={`${styles.contentSection} ${styles.missionSection}`}>
+                  <span className={styles.sectionLabel}>How we work</span>
                 <h2>Our Mission</h2>
                 <p>
-                  To be the most trusted bridge for financial transfers between Australia and Iran — offering competitive, volume-based personalised rates, instant settlement, and complete transparency at every step.
+                  Our mission is to make cross-border payments easier to understand and manage. We aim to provide clear quotes, practical guidance and responsive support from the initial enquiry through to settlement.
                 </p>
+                </section>
 
+                <section className={styles.contentSection}>
+                  <span className={styles.sectionLabel}>Registration and compliance</span>
                 <h2>Regulatory Credentials &amp; Compliance</h2>
                 <p>
-                  Zarman Exchange operates under the strict oversight of the Australian Transaction Reports and Analysis Centre (<strong>AUSTRAC</strong>), Australia's financial intelligence agency and AML/CTF regulator. We are fully compliant with the <em>Anti-Money Laundering and Counter-Terrorism Financing Act 2006</em> (AML/CTF Act).
+                  Use the legal name, ABN and registration reference shown on this page to check Zarman in the official <strong>AUSTRAC</strong> Remittance Sector Register. Registration does not endorse an individual rate or guarantee a transfer outcome. Availability remains subject to the parties, purpose, documents and requirements that apply to each request.
                 </p>
+                </section>
 
-                <div className={styles.credentialCard}>
-                  <div className={styles.credentialRow}>
-                    <span className={styles.credentialLabel}>Company</span>
-                    <span className={styles.credentialValue}>Zarman Exchange Pty Ltd</span>
-                  </div>
-                  <div className={styles.credentialRow}>
-                    <span className={styles.credentialLabel}>ABN</span>
-                    <span className={styles.credentialValue}>70 692 742 957</span>
-                  </div>
-                  <div className={styles.credentialRow}>
-                    <span className={styles.credentialLabel}>AUSTRAC Reg.</span>
-                    <span className={styles.credentialValue}>100907570 — Registered Remittance Dealer</span>
-                  </div>
-                  <div className={styles.credentialRow}>
-                    <span className={styles.credentialLabel}>Country</span>
-                    <span className={styles.credentialValue}>Australia</span>
-                  </div>
-                  <div className={styles.verifyBtnWrapper}>
-                    <Button
-                      href="https://online.apps.austrac.gov.au/rsr/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      variant="primary"
-                      size="md"
-                      rightIcon={<ExternalLink size={16} />}
-                      className={styles.verifyBtn}
-                    >
-                      Verify on AUSTRAC Register
-                    </Button>
-                  </div>
+                <section className={styles.contentSection}>
+                  <span className={styles.sectionLabel}>Services by purpose</span>
+                <h2>Support for Common Payment Needs</h2>
+                <p>
+                  Our services cover common education, professional, personal and business payment needs. Choose a service to review its intended use, typical information requirements and next steps.
+                </p>
+                <div className={styles.serviceList}>
+                  {serviceCards}
                 </div>
+                <Link href="/en/services" className={styles.allServicesLink}>
+                  View all transfer services
+                  <ArrowRight size={16} strokeWidth={2.4} aria-hidden="true" />
+                </Link>
+                </section>
 
-                <h2>What We Offer</h2>
-                <h3>AUD to IRT Remittance</h3>
-                <p>
-                  We specialise in transferring Australian Dollars (AUD) to Iranian Toman (IRT) with dynamic, volume-based exchange rates. The more you transact, the better your rate — our Loyalty Rate system rewards regular clients with progressively improved pricing.
-                </p>
-                <h3>Personalised Exchange Rates</h3>
-                <p>
-                  Unlike fixed-rate services, our pricing is tailored to each client's transaction volume and history. Your personalised rate is always shown before you confirm — no hidden fees, no surprises.
-                </p>
-                <h3>Fast Settlement</h3>
-                <p>
-                  Once your identity is verified and payment is received, transfers are processed at the highest possible speed. An official transaction receipt is sent to your email upon completion.
-                </p>
-
+                <section className={styles.contentSection}>
+                  <span className={styles.sectionLabel}>Customer verification</span>
                 <h2>Identity Verification (KYC)</h2>
                 <p>
-                  As required by AUSTRAC regulations, all clients must complete a Know Your Customer (KYC) identity verification before conducting transactions. This process is simple: submit a valid government-issued ID and we will confirm your identity promptly. This protects both you and the integrity of the financial system.
+                  Identity verification helps us understand who is making a transfer and why. Complete the checks requested during onboarding and provide updated or additional information when needed. Requirements can vary with the customer, recipient, source of funds, payment purpose and transaction history.
                 </p>
+                <p><Link href="/en/legal/dvs-notice">Read our identity verification collection notice</Link> to understand how verification information is handled.</p>
+                </section>
 
+                <section className={`${styles.contentSection} ${styles.contactSection}`}>
+                  <span className={styles.sectionLabel}>Talk to our team</span>
                 <h2>Contact Us</h2>
                 <p>
-                  For enquiries, reach us via WhatsApp or register online to speak with our team directly.
+                  Tell us the amount, transfer direction, payment purpose and any relevant deadline. After an initial review, our team can explain whether the request can be supported, what information is required and what happens next.
+                </p>
+                <p>
+                  Before sending funds, review the final quote, applicable fees and expected settlement timing. You can also <Link href="/en/services">explore our transfer services</Link> or read our <Link href="/en/blog">rate and transfer guides</Link>.
+                </p>
+                <p>
+                  <Link href="/en/legal/privacy-policy">Privacy policy</Link> · <Link href="/en/legal/dvs-notice">Identity verification collection notice</Link> · <Link href="/en/legal/terms">Terms and conditions</Link>
                 </p>
                 <div className={styles.actionWrapper}>
                   <Button href="/en/register" variant="primary" size="lg">
-                    Register for a personalised rate
+                    Create an account
                   </Button>
                 </div>
+                </section>
               </>
             ) : (
               <>
-                <h2>ما کی هستیم</h2>
+                <section className={styles.contentSection}>
+                  <span className={styles.sectionLabel}>معرفی شرکت</span>
+                <h2>زرمان در یک نگاه</h2>
                 <p>
-                  <strong>شرکت زرمان اکسچنج (Zarman Exchange Pty Ltd)</strong> یک استارتاپ مالی ایرانی–استرالیایی است که با هدف ارائه خدمات سریع، شفاف و قانون‌مند برای نقل‌وانتقالات مالی بین‌المللی میان استرالیا و ایران شکل گرفته است. ما چالش‌های این مسیر را از نزدیک می‌شناسیم و پلتفرمی ساخته‌ایم که این فرآیند را ساده، شفاف و ایمن می‌کند.
+                  <strong>شرکت زرمان اکسچنج (Zarman Exchange Pty Ltd)</strong> یک مجموعه مالی ایرانی–استرالیایی با تمرکز بر هماهنگی حواله میان استرالیا و ایران است. ما به اشخاص، خانواده‌ها و کسب‌وکارها کمک می‌کنیم پیش از اقدام، اطلاعات موردنیاز، مدارک و مراحل پرداخت را بشناسند.
                 </p>
                 <p>
-                  تیم ما ترکیبی از متخصصان فناوری مالی، انطباق قانونی و خدمات مشتری است که هدف مشترکی دارند: قرار دادن مشتری در اولویت. هر تراکنش با دقت و پشتیبانی کامل قانونی انجام می‌شود.
+                  تیم زرمان تجربه فناوری مالی، عملیات انطباق و پشتیبانی مشتری را کنار هم قرار می‌دهد. هر درخواست بر اساس شرایط همان تراکنش بررسی می‌شود و پیش از تأیید، الزامات مربوط و نرخ پیشنهادی در اختیار مشتری قرار می‌گیرد.
                 </p>
+                </section>
 
+                <section className={`${styles.contentSection} ${styles.missionSection}`}>
+                  <span className={styles.sectionLabel}>شیوه کار ما</span>
                 <h2>مأموریت ما</h2>
                 <p>
-                  باشیم معتمدترین پل مالی میان استرالیا و ایران — با نرخ‌های رقابتی و شخصی‌سازی‌شده بر اساس حجم تراکنش، تسویه فوری و شفافیت کامل در هر مرحله.
+                  مأموریت ما ساده‌تر و قابل‌فهم‌تر کردن پرداخت‌های برون‌مرزی است. تلاش می‌کنیم از نخستین استعلام تا تسویه، نرخ و هزینه‌ها را روشن اعلام کنیم، راهنمایی عملی ارائه دهیم و پاسخ‌گو بمانیم.
                 </p>
+                </section>
 
-                <h2>مجوزها و انطباق قانونی</h2>
+                <section className={styles.contentSection}>
+                  <span className={styles.sectionLabel}>ثبت و انطباق</span>
+                <h2>اطلاعات ثبت شرکت و الزامات حواله</h2>
                 <p>
-                  زرمان اکسچنج تحت نظارت دقیق سازمان اطلاعات مالی استرالیا (<strong>AUSTRAC</strong>) فعالیت می‌کند و با قانون مبارزه با پول‌شویی و تأمین مالی تروریسم ۲۰۰۶ (AML/CTF Act) کاملاً منطبق است.
+                  با نام حقوقی، شماره ABN و شناسه ثبت درج‌شده در این صفحه می‌توانید وضعیت زرمان را در سامانه رسمی ارائه‌دهندگان حواله <strong>AUSTRAC</strong> بررسی کنید. ثبت در این سامانه به معنای تأیید یک نرخ مشخص یا تضمین نتیجه حواله نیست. امکان انجام هر درخواست به طرفین، هدف پرداخت، مدارک و الزامات قابل‌اعمال بستگی دارد.
                 </p>
+                </section>
 
-                <div className={styles.credentialCard}>
-                  <div className={styles.credentialRow}>
-                    <span className={styles.credentialLabel}>شرکت</span>
-                    <span className={styles.credentialValue}>Zarman Exchange Pty Ltd</span>
-                  </div>
-                  <div className={styles.credentialRow}>
-                    <span className={styles.credentialLabel}>ABN</span>
-                    <span className={styles.credentialValue}>70 692 742 957</span>
-                  </div>
-                  <div className={styles.credentialRow}>
-                    <span className={styles.credentialLabel}>مجوز AUSTRAC</span>
-                    <span className={styles.credentialValue}>100907570 — Registered Remittance Dealer</span>
-                  </div>
-                  <div className={styles.credentialRow}>
-                    <span className={styles.credentialLabel}>کشور</span>
-                    <span className={styles.credentialValue}>استرالیا</span>
-                  </div>
-                  <div className={styles.verifyBtnWrapper}>
-                    <Button
-                      href="https://online.apps.austrac.gov.au/rsr/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      variant="primary"
-                      size="md"
-                      rightIcon={<ExternalLink size={16} />}
-                      className={styles.verifyBtn}
-                    >
-                      تأیید در سامانه رسمی AUSTRAC
-                    </Button>
-                  </div>
+                <section className={styles.contentSection}>
+                  <span className={styles.sectionLabel}>خدمات بر اساس نیاز</span>
+                <h2>پشتیبانی از پرداخت‌های رایج</h2>
+                <p>
+                  خدمات زرمان نیازهای متداول تحصیلی، حرفه‌ای، شخصی و تجاری را پوشش می‌دهد. هر خدمت را انتخاب کنید تا کاربرد، اطلاعات معمول موردنیاز و مراحل بعدی آن را ببینید.
+                </p>
+                <div className={styles.serviceList}>
+                  {serviceCards}
                 </div>
+                <Link href="/fa/services" className={styles.allServicesLink}>
+                  مشاهده همه خدمات حواله
+                  <ArrowLeft size={16} strokeWidth={2.4} aria-hidden="true" />
+                </Link>
+                </section>
 
-                <h2>خدمات ما</h2>
-                <h3>حواله دلار استرالیا به تومان</h3>
-                <p>
-                  تخصص ما انتقال دلار استرالیا (AUD) به تومان ایران (IRT) با نرخ‌های پویا و حجم‌محور است. هرچه بیشتر تراکنش کنید، نرخ بهتری دریافت می‌کنید — سیستم نرخ وفاداری ما به مشتریان ثابت پاداش می‌دهد.
-                </p>
-                <h3>نرخ شخصی‌سازی‌شده</h3>
-                <p>
-                  برخلاف سرویس‌های نرخ ثابت، قیمت‌گذاری ما بر اساس حجم و سابقه تراکنش هر مشتری تنظیم می‌شود. نرخ اختصاصی شما همیشه قبل از تأیید سفارش نمایش داده می‌شود — بدون هزینه پنهان، بدون سورپرایز.
-                </p>
-                <h3>تسویه سریع</h3>
-                <p>
-                  پس از تأیید هویت و دریافت وجه، انتقال با بالاترین سرعت ممکن انجام می‌شود. رسید رسمی تراکنش به ایمیل شما ارسال می‌گردد.
-                </p>
-
+                <section className={styles.contentSection}>
+                  <span className={styles.sectionLabel}>شناخت و بررسی مشتری</span>
                 <h2>احراز هویت (KYC)</h2>
                 <p>
-                  بر اساس الزامات AUSTRAC، تمام مشتریان قبل از انجام تراکنش باید فرآیند احراز هویت (KYC) را تکمیل کنند. این فرآیند ساده است: یک مدرک شناسایی معتبر صادرشده توسط دولت ارائه دهید تا هویت شما سریعاً تأیید شود. این اقدام هم از شما و هم از سلامت سیستم مالی محافظت می‌کند.
+                  احراز هویت به ما کمک می‌کند هویت فرستنده و هدف پرداخت را بررسی کنیم. در مرحله ثبت‌نام، اطلاعات و مدارک درخواست‌شده را ارائه دهید. بسته به مشتری، گیرنده، منبع وجه، هدف پرداخت و سابقه تراکنش ممکن است اطلاعات تکمیلی یا به‌روز نیز لازم باشد.
                 </p>
+                <p>برای آشنایی با نحوه استفاده از اطلاعات، <Link href="/en/legal/dvs-notice" hrefLang="en">اطلاعیه جمع‌آوری اطلاعات احراز هویت (انگلیسی)</Link> را بخوانید.</p>
+                </section>
 
+                <section className={`${styles.contentSection} ${styles.contactSection}`}>
+                  <span className={styles.sectionLabel}>گفت‌وگو با تیم زرمان</span>
                 <h2>تماس با ما</h2>
                 <p>
-                  برای استعلام از طریق واتساپ با ما در تماس باشید یا آنلاین ثبت‌نام کنید تا مستقیماً با تیم ما صحبت کنید.
+                  مبلغ، مسیر انتقال، هدف پرداخت و مهلت موردنظر را با تیم ما در میان بگذارید. پس از بررسی اولیه، امکان انجام درخواست، اطلاعات لازم و مراحل بعدی به شما اعلام می‌شود.
+                </p>
+                <p>
+                  پیش از واریز وجه، نرخ نهایی، هزینه‌های قابل‌اعمال و زمان مورد انتظار تسویه را بررسی کنید. همچنین می‌توانید <Link href="/fa/services">خدمات حواله زرمان</Link> و <Link href="/fa/blog">راهنمای نرخ ارز و انتقال پول</Link> را ببینید.
+                </p>
+                <p>
+                  <Link href="/en/legal/privacy-policy" hrefLang="en">حریم خصوصی (انگلیسی)</Link> · <Link href="/en/legal/dvs-notice" hrefLang="en">اطلاعیه احراز هویت (انگلیسی)</Link> · <Link href="/en/legal/terms" hrefLang="en">شرایط استفاده (انگلیسی)</Link>
                 </p>
                 <div className={styles.actionWrapper}>
                   <Button href="/fa/register" variant="primary" size="lg">
-                    ثبت‌نام برای دریافت نرخ شخصی
+                    ایجاد حساب کاربری
                   </Button>
                 </div>
+                </section>
               </>
             )}
+            </div>
           </div>
         </div>
       </div>

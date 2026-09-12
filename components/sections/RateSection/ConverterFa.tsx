@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import styles from "./ConverterFa.module.css";
 import Button from "@/components/ui/Button/Button";
@@ -9,6 +9,7 @@ import { useRates } from "@/context/RateContext";
 import { useFinanceConfig } from "@/context/FinanceConfigContext";
 import { buildWhatsAppUrl } from "@/lib/constants/contact";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import { calcAppliedFee } from "@/lib/pricing";
 
 
 type Currency = "AUD" | "IRT";
@@ -19,13 +20,21 @@ function toFaDigits(input: string) {
 
 function faToEnDigits(input: string) {
   const fa = "۰۱۲۳۴۵۶۷۸۹";
-  return input.replace(/[۰-۹]/g, (d) => String(fa.indexOf(d)));
+  const ar = "٠١٢٣٤٥٦٧٨٩";
+  return input.replace(/[۰-۹٠-٩]/g, (d) => String(fa.includes(d) ? fa.indexOf(d) : ar.indexOf(d)));
+}
+
+function normalizeAmount(value: string): string | null {
+  const normalized = faToEnDigits(value)
+    .replace(/[،,٬\s]/g, "")
+    .replace(/٫/g, ".");
+  // Reject ambiguous or malformed amounts instead of silently multiplying them.
+  return /^\d*(?:\.\d{0,2})?$/.test(normalized) ? normalized : null;
 }
 
 function getRawNumber(value: string) {
-  let v = faToEnDigits(value);
-  v = v.replace(/،/g, "").replace(/,/g, "").replace(/\D/g, "");
-  const n = Number(v);
+  const normalized = normalizeAmount(value);
+  const n = normalized === null ? 0 : Number(normalized);
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -62,48 +71,30 @@ export default function ConverterFa() {
 
   const amountNum = getRawNumber(amountText);
 
-  // بررسی اعمال کارمزد
-  let isFeeApplied = false;
-  if (amountNum > 0 && safeRate > 0) {
-    if (from === "AUD") {
-      isFeeApplied = amountNum < financeConfig.fee_threshold;
-    } else {
-      const rawAud = amountNum / safeRate;
-      isFeeApplied = rawAud > 0 && rawAud < financeConfig.fee_threshold;
-    }
-  }
-
-  const resultText = useMemo(() => {
-    if (amountNum === 0 || safeRate === 0) return "";
-
-    let finalValue = 0;
-
-    if (from === "AUD") {
-      const feeInAud = isFeeApplied ? financeConfig.applied_fee : 0;
-      const netAud = Math.max(0, amountNum - feeInAud);
-      finalValue = netAud * safeRate;
-    } else {
-      const rawAud = amountNum / safeRate;
-      const feeInAud = isFeeApplied ? 15 : 0;
-      finalValue = Math.max(0, rawAud - feeInAud);
-    }
-
-    return formatNumberByLocale(finalValue, isEn, to === "IRT");
-  }, [amountNum, from, safeRate, to, isFeeApplied, isEn]);
+  // Use the configured fee in both directions and recalculate when it changes.
+  const rawAud = safeRate > 0 ? (from === "AUD" ? amountNum : amountNum / safeRate) : 0;
+  const feeInAud = calcAppliedFee(rawAud, financeConfig);
+  const isFeeApplied = feeInAud > 0;
+  const netAud = Math.max(0, rawAud - feeInAud);
+  const finalValue = from === "AUD" ? netAud * safeRate : netAud;
+  const resultText = amountNum > 0 && safeRate > 0
+    ? formatNumberByLocale(finalValue, isEn, to === "IRT")
+    : "";
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (val === "") {
+    const normalized = normalizeAmount(e.target.value);
+    if (normalized === null) return;
+    if (normalized === "") {
       setAmountText("");
       return;
     }
-    const raw = getRawNumber(val);
-    if (isEn) {
-      const opts = from === "IRT" ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
-      setAmountText(raw.toLocaleString("en-AU", opts));
-    } else {
-      setAmountText(formatNumberFa(raw, from === "IRT"));
-    }
+    const [whole, fraction] = normalized.split(".");
+    const wholeNumber = Number(whole || "0");
+    if (!Number.isSafeInteger(wholeNumber)) return;
+    const groupedWhole = wholeNumber.toLocaleString("en-AU", { maximumFractionDigits: 0 });
+    // Preserve a trailing separator and zeros so users can type amounts like 10.50.
+    const formatted = groupedWhole + (fraction === undefined ? "" : `.${fraction}`);
+    setAmountText(isEn ? formatted : toFaDigits(formatted).replace(/,/g, "،").replace(/\./g, "٫"));
   };
 
   const handleWhatsApp = () => {
@@ -139,14 +130,16 @@ export default function ConverterFa() {
       <div className={styles.header}>
         <div className={styles.titleWrapper}>
           <h2 className={styles.mainTitle}>{isEn ? "Currency Exchange Calculator" : "ماشین‌حساب تبدیل ارز"}</h2>
-          <p className={styles.subTitle}>{isEn ? "Online live rate calculator" : "محاسبه آنلاین و لحظه‌ای نرخ حواله"}</p>
+          <p className={styles.subTitle}>{isEn ? "Estimate using the latest published rate" : "برآورد مبلغ با آخرین نرخ منتشرشده"}</p>
         </div>
         
         <div className={styles.rateInfo}>
           <span className={styles.pulse}></span>
           <span>
-            {isLoading || safeRate === 0
+            {isLoading
               ? (isEn ? "Loading rate..." : "در حال دریافت نرخ...")
+              : safeRate === 0
+                ? (isEn ? "Rate unavailable. Please contact support." : "نرخ در دسترس نیست؛ با پشتیبانی تماس بگیرید.")
               : isEn
                 ? `Current rate: 1 AUD = ${safeRate.toLocaleString("en-AU")} Toman`
                 : `نرخ فعلی: ۱ دلار استرالیا = ${formatNumberFa(safeRate, true)} تومان`}
@@ -156,16 +149,17 @@ export default function ConverterFa() {
 
       <div className={styles.converterBody}>
         <div className={styles.inputBox}>
-          <label className={styles.label}>{isEn ? "You send" : "شما ارسال می‌کنید"}</label>
+          <label htmlFor="converter-send-amount" className={styles.label}>{isEn ? "You send" : "شما ارسال می‌کنید"}</label>
           <div className={styles.fieldGroup}>
             <input
+              id="converter-send-amount"
               type="text"
               value={amountText}
               onChange={handleInputChange}
               dir="ltr"
               className={styles.faInput}
               placeholder={isEn ? "0" : "۰"}
-              suppressHydrationWarning
+              inputMode="decimal"
             />
             <div className={styles.divider}></div>
             <div className={styles.selectWrapper}>
@@ -173,7 +167,7 @@ export default function ConverterFa() {
                 value={from}
                 onChange={(val) => setFrom(val as Currency)}
                 labeledOptions={CURRENCY_OPTIONS}
-                dir="rtl"
+                dir={isEn ? "ltr" : "rtl"}
                 variant="ghost"
                 className={styles.currencySelectBox}
               />
@@ -189,25 +183,25 @@ export default function ConverterFa() {
 
         <div className={styles.inputBox}>
           <div className={styles.labelRow}>
-            <label className={styles.label}>{isEn ? "Recipient receives" : "گیرنده دریافت می‌کند"}</label>
+            <label htmlFor="converter-receive-amount" className={styles.label}>{isEn ? "Estimated recipient amount" : "برآورد مبلغ دریافتی"}</label>
             {isFeeApplied && (
               <span className={styles.feeWarning}>
                 <AlertTriangle size={14} />
                 {isEn
-                  ? `This transaction has a ${financeConfig.applied_fee} AUD fee`
-                  : `این تراکنش دارای کارمزد ${formatNumberByLocale(financeConfig.applied_fee, false)} دلار است`}
+                  ? `Includes a ${feeInAud} AUD fee`
+                  : `با احتساب ${formatNumberByLocale(feeInAud, false)} دلار کارمزد`}
               </span>
             )}
           </div>
           <div className={`${styles.fieldGroup} ${styles.locked}`}>
             <input
+              id="converter-receive-amount"
               type="text"
               value={safeRate === 0 ? "—" : resultText}
               readOnly
               dir="ltr"
               className={styles.faInput}
               placeholder={isEn ? "0" : "۰"}
-              suppressHydrationWarning
             />
             <div className={styles.divider}></div>
             <div className={styles.selectWrapper}>
@@ -215,7 +209,7 @@ export default function ConverterFa() {
                 value={to}
                 onChange={() => {}}
                 labeledOptions={CURRENCY_OPTIONS}
-                dir="rtl"
+                dir={isEn ? "ltr" : "rtl"}
                 variant="ghost"
                 disabled
                 className={styles.currencySelectBox}
@@ -226,6 +220,10 @@ export default function ConverterFa() {
       </div>
 
       <div className={styles.notesContainer}>
+        <div className={styles.noteItem}>
+          <Info size={16} strokeWidth={2} />
+          <span>{isEn ? "This is an estimate. Review your final rate, fees and recipient amount before confirming a request." : "این مبلغ برآورد است. نرخ نهایی، کارمزد و مبلغ دریافتی را پیش از تأیید درخواست بررسی کنید."}</span>
+        </div>
         <div className={styles.noteItem}>
           <Info size={16} strokeWidth={2} />
           <span>

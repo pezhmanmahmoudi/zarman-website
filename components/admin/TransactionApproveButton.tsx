@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import React, { useId, useState } from "react";
+import { AdminDialog } from "./ui/AdminDialog";
 import { useRouter } from "next/navigation";
 import { Check, X, Archive } from "lucide-react";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
@@ -38,31 +38,10 @@ export function TransactionApproveButton({
   const [receiverId, setReceiverId] = useState("");
   const [transferMethod, setTransferMethod] = useState<IranBankTransferMethod>("free");
   const [isApproving, setIsApproving] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setMounted(true), 0);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!showApproveModal) return;
-
-    const prevOverflow = document.body.style.overflow;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isApproving) {
-        setShowApproveModal(false);
-      }
-    };
-
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [showApproveModal, isApproving]);
+  const titleId = useId();
+  const receiverFieldId = useId();
+  const payerFieldId = useId();
+  const methodFieldId = useId();
 
   // باز کردن مودال تایید چندکشویی
   const handleApproveClick = () => {
@@ -112,23 +91,29 @@ export function TransactionApproveButton({
       }
     }
 
+    if (isApproving) return;
     setIsApproving(true);
-    // ارسال به اکشن سرور
-    const result = await approveTransaction(
-      transactionId, 
-      payerId || undefined, 
-      receiverId || undefined,
-      feeEligible ? transferMethod : "free"
-    );
-    setIsApproving(false);
+    try {
+      // ارسال به اکشن سرور
+      const result = await approveTransaction(
+        transactionId,
+        payerId || undefined,
+        receiverId || undefined,
+        feeEligible ? transferMethod : "free"
+      );
 
-    if (result.error) {
-      showToast({ type: "error", message: result.error });
-    } else {
-      showToast({ type: "success", message: "تراکنش با موفقیت تایید و در دفتر کل ثبت شد." });
-      setShowApproveModal(false);
-      setTransferMethod("free");
-      router.refresh();
+      if (result.error) {
+        showToast({ type: "error", message: result.error });
+      } else {
+        showToast({ type: "success", message: "تراکنش با موفقیت تایید و در دفتر کل ثبت شد." });
+        setShowApproveModal(false);
+        setTransferMethod("free");
+        router.refresh();
+      }
+    } catch {
+      showToast({ type: "error", message: "The approval could not be completed. Please try again." });
+    } finally {
+      setIsApproving(false);
     }
   };
 
@@ -169,21 +154,16 @@ export function TransactionApproveButton({
       <AdminConfirmDialog {...dialogProps} />
       <AdminToast {...toastProps} />
 
-      {mounted && showApproveModal && createPortal(
-        <div
-          className={overlayStyles.overlay}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="approve-transaction-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !isApproving) {
-              setShowApproveModal(false);
-            }
-          }}
-        >
-          <div className={overlayStyles.approveCard}>
+      <AdminDialog
+        open={showApproveModal}
+        onClose={() => setShowApproveModal(false)}
+        dismissible={!isApproving}
+        labelledBy={titleId}
+        className={overlayStyles.approveCard}
+        dir="rtl"
+      >
             <div className={overlayStyles.approveHeader}>
-              <h3 id="approve-transaction-title" className={overlayStyles.approveTitle}>
+              <h3 id={titleId} className={overlayStyles.approveTitle}>
                 <Check size={18} color="#059669" /> تایید نهایی تراکنش
               </h3>
               <p className={overlayStyles.approveHint}>
@@ -193,10 +173,12 @@ export function TransactionApproveButton({
 
             <div className={overlayStyles.approveBody}>
               <div className={overlayStyles.field}>
-                <label className={overlayStyles.label}>
+                <label htmlFor={receiverFieldId} className={overlayStyles.label}>
                   {receiverLabelFA}
                 </label>
                 <select
+                  id={receiverFieldId}
+                  data-autofocus
                   value={receiverId}
                   onChange={(e) => setReceiverId(e.target.value)}
                   disabled={isApproving}
@@ -212,10 +194,11 @@ export function TransactionApproveButton({
               </div>
 
               <div className={overlayStyles.field}>
-                <label className={overlayStyles.label}>
+                <label htmlFor={payerFieldId} className={overlayStyles.label}>
                   {payerLabelFA}
                 </label>
                 <select
+                  id={payerFieldId}
                   value={payerId}
                   onChange={(e) => setPayerId(e.target.value)}
                   disabled={isApproving}
@@ -233,10 +216,11 @@ export function TransactionApproveButton({
               {feeEligible && (
                 <>
                   <div className={overlayStyles.field}>
-                    <label className={overlayStyles.label}>
+                    <label htmlFor={methodFieldId} className={overlayStyles.label}>
                       روش انتقال بانکی
                     </label>
                     <select
+                      id={methodFieldId}
                       value={transferMethod}
                       onChange={(e) => setTransferMethod(e.target.value as IranBankTransferMethod)}
                       disabled={isApproving}
@@ -289,10 +273,7 @@ export function TransactionApproveButton({
                 {isApproving ? "در حال ثبت..." : "تایید قطعی و ثبت"}
               </button>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      </AdminDialog>
 
       <div className={tableStyles.btnGroup}>
         <button type="button" onClick={handleApproveClick}

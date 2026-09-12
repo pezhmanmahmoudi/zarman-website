@@ -36,26 +36,26 @@ export const STRIP_MESSAGES: StripMessage[] = [
   },
   {
     id: 2,
-    fa: "نرخ لحظه‌ای و شفاف؛ قبل از پرداخت، نرخ نهایی خود را مشاهده کنید.",
-    en: "Transparent live rates — always see your final rate before confirming.",
+    fa: "پیش از تأیید حواله، نرخ، کارمزد و مبلغ نهایی را بررسی کنید.",
+    en: "Check your quoted rate, fee and final amount before confirming a transfer.",
     icon: "check",
   },
   {
     id: 3,
-    fa: "انتقال‌های بین‌المللی دانشجویان و کادر درمان با بهترین نرخ و بدون کارمزد.",
-    en: "International payments for students & healthcare professionals with no transfer fee.",
+    fa: "درباره هزینه و شرایط پرداخت‌های دانشجویی و کادر درمان از پشتیبانی بپرسید.",
+    en: "Ask our team about fees and availability for student and healthcare payments.",
     icon: "percent",
   },
   {
     id: 4,
-    fa: "به ازای هر ۵,۰۰۰ دلار، نرخ اختصاصی بهتری از سیستم وفاداری دریافت کنید.",
-    en: "Unlock better exchange rates every AUD 5,000 through our Loyalty Program.",
+    fa: "شرایط فعلی نرخ وفاداری و تخفیف احتمالی را در پنل خود بررسی کنید.",
+    en: "Check your dashboard for current loyalty pricing and any available discount.",
     icon: "star",
   },
   {
     id: 5,
-    fa: "احراز هویت تنها چند دقیقه زمان می‌برد و مطابق قوانین AUSTRAC می‌باشد.",
-    en: "Fast online identity verification, fully compliant with AUSTRAC regulations.",
+    fa: "برای شروع حواله، اطلاعات و مدارک درخواستی احراز هویت را تکمیل کنید.",
+    en: "Complete the requested identity details and documents before making a transfer.",
     icon: "lock",
   },
   {
@@ -66,8 +66,8 @@ export const STRIP_MESSAGES: StripMessage[] = [
   },
   {
     id: 7,
-    fa: "حواله‌های استرالیا و ایران با سیستم امن Offset Settlement انجام می‌شود.",
-    en: "Australia–Iran transfers are completed through our secure Offset Settlement system.",
+    fa: "پیش از واریز وجه، جزئیات حساب و شرایط تسویه درخواست خود را تأیید کنید.",
+    en: "Confirm the payment details and settlement arrangements before sending funds.",
     icon: "users",
   },
   {

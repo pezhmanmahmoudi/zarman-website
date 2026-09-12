@@ -8,9 +8,9 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
 
-import { getPublicNavItems } from "@/data/navigation";
+import { getCrawlablePublicNavItems } from "./public-navigation";
+import { useHydrated } from "./useHydrated";
 import {
-  WHATSAPP_NUMBER,
   buildWhatsAppUrl,
   WHATSAPP_MESSAGE_SIGNUP_HELP,
 } from "@/lib/constants/contact";
@@ -44,41 +44,63 @@ export default function MobHeader({
   const locale = useLocale();
   const isEn = locale === "en";
   const t = useT();
-  const defaultNavItems = getPublicNavItems(locale);
+  const defaultNavItems = getCrawlablePublicNavItems(locale);
   const items = useMemo(() => navItems ?? defaultNavItems, [navItems, defaultNavItems]);
 
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHydrated();
   const [open, setOpen] = useState(false);
 
-  // ۱. مقدار اولیه امن برای رندر سرور (جلوگیری از Hydration Error)
-  const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_SIGNUP_HELP)}`;
-  const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
+  const whatsappUrl = buildWhatsAppUrl(isEn
+    ? "Hello, I found Zarman's website and need help with registration and a money transfer."
+    : WHATSAPP_MESSAGE_SIGNUP_HELP);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    setMounted(true);
-    // ۲. آپدیت شدن لینک پس از لود صفحه در مرورگر
-    setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_SIGNUP_HELP));
-  }, []);
+    if (!mounted || !open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const drawer = drawerRef.current;
+    const toggleButton = toggleRef.current;
+    const focusable = () => Array.from(drawer?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex="0"]') ?? []);
+    focusable()[0]?.focus();
 
-  useEffect(() => {
-    if (!mounted) return;
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    const desktop = window.matchMedia("(min-width: 1025px)");
+    const closeOnDesktop = () => { if (desktop.matches) setOpen(false); };
+    document.addEventListener("keydown", handleKeyDown);
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      desktop.removeEventListener("change", closeOnDesktop);
+      toggleButton?.focus();
+    };
   }, [open, mounted]);
 
   // Header initial load animation
   useGSAP(
     () => {
-      if (!isReady || !rootRef.current) return;
+      if (!isReady || !mounted || !rootRef.current) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       gsap.fromTo(
         rootRef.current,
         { y: -100, autoAlpha: 0 },
@@ -98,6 +120,12 @@ export default function MobHeader({
       const animatedItems = linksRef.current ? Array.from(linksRef.current.children) : [];
       const tl = gsap.timeline();
       const hiddenX = isEn ? "-100%" : "100%";
+
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.set(overlay, { display: open ? "block" : "none", opacity: open ? 1 : 0 });
+        gsap.set(drawer, { x: open ? "0%" : hiddenX });
+        return;
+      }
 
       if (open) {
         gsap.set(overlay, { display: "block" });
@@ -127,17 +155,19 @@ export default function MobHeader({
   const toggle = () => setOpen((prev) => !prev);
   const close = () => setOpen(false);
 
-  if (!mounted || !isReady) return null;
-
-  return createPortal(
+  const header = (
     <>
       <div ref={rootRef} className={`${styles.headerPill} ${open ? styles.headerPillActive : ""}`}>
+        <a className="h-skip" href="#main-content">{t.nav.skipToContent}</a>
         <div className={`${styles.headerContent} ${isEn ? styles.headerContentLtr : styles.headerContentRtl}`}>
           <button
+            ref={toggleRef}
             type="button"
             className={`${styles.burger} ${open ? styles.burgerActive : ""}`}
             onClick={toggle}
             aria-label={open ? t.header.closeMenu : t.header.openMenu}
+            aria-expanded={open}
+            aria-controls="mobile-navigation"
           >
             <span className={styles.burgerLine}></span>
             <span className={styles.burgerLine}></span>
@@ -146,7 +176,7 @@ export default function MobHeader({
           <Link href={`/${locale}`} className={styles.logoContainer} onClick={close} aria-label={brandAriaLabel}>
             <Image 
               src={logoSrc} 
-              alt="Zarman Logo" 
+              alt={isEn ? "Zarman Exchange" : "صرافی زرمان"}
               width={110} 
               height={32} 
               style={{ height: '45px', width: 'auto' }}
@@ -170,10 +200,11 @@ export default function MobHeader({
 
       <div ref={overlayRef} className={styles.menuOverlay} onClick={close} aria-hidden="true" />
 
-      <div ref={drawerRef} className={`${styles.menuDrawer} ${isEn ? styles.menuDrawerLtr : styles.menuDrawerRtl}`} role="dialog" aria-modal="true">
+      <div id="mobile-navigation" ref={drawerRef} className={`${styles.menuDrawer} ${isEn ? styles.menuDrawerLtr : styles.menuDrawerRtl}`} role="dialog" aria-modal={open ? true : undefined} aria-label={t.header.mainNav} aria-hidden={!open} inert={!open} dir={isEn ? "ltr" : "rtl"}>
         <div className={styles.menuInner}>
           <div className={styles.menuHeader}>
             <span className={styles.menuLabel}>{locale === "fa" ? "فهرست دسترسی" : "Navigation"}</span>
+            <button type="button" className={styles.closeButton} onClick={close} aria-label={t.header.closeMenu}>×</button>
           </div>
 
           <nav className={styles.navLinks} aria-label={t.header.mainNav}>
@@ -181,7 +212,7 @@ export default function MobHeader({
               {items.map((item) => (
                 <Link key={item.href} href={item.href} className={styles.bigLink} onClick={close}>
                   <span className={styles.linkText}>{item.label}</span>
-                  <span className={styles.linkArrow}>{locale === "fa" ? "←" : "→"}</span>
+                  <span className={styles.linkArrow} aria-hidden="true">{locale === "fa" ? "←" : "→"}</span>
                 </Link>
               ))}
             </div>
@@ -213,7 +244,7 @@ export default function MobHeader({
             <div className={styles.divider} />
 
             <div className={styles.mobileActions}>
-              <LanguageSwitcher variant="menu-item" />
+              <LanguageSwitcher variant="menu-item" onNavigate={close} />
             </div>
 
             <div className={styles.menuFooter}>
@@ -225,7 +256,8 @@ export default function MobHeader({
           </nav>
         </div>
       </div>
-    </>,
-    document.body
+    </>
   );
+
+  return mounted ? createPortal(header, document.body) : header;
 }

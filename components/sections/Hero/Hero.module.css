@@ -1,8 +1,7 @@
 /* Hero.module.css - Zarman Premium Standard */
 
-/* NOTE: Only decorative elements (eyebrow label, rate widget) use GSAP entrance
-   animations. Semantic content (H1, subtitle, CTAs) is always visible so that
-   Google's Web Rendering Service snapshots the full page text. */
+/* Preserve the original staggered entrance. A scoped noscript override keeps
+   the content readable without JavaScript; reduced motion skips the entrance. */
 
 .hero {
   position: relative;
@@ -16,11 +15,37 @@
   direction: inherit;
 }
 
+/* Match the original pre-animation state and anti-flicker timing. */
+.eyebrow,
+.title,
+.subtitle,
+.actions > *,
+.meta > span,
+.stripContainer,
+.rateWidget {
+  visibility: hidden;
+  opacity: 0;
+  animation: forceReveal 0.1s 2.5s forwards;
+}
+
+@keyframes forceReveal {
+  to { visibility: visible; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eyebrow, .title, .subtitle, .actions > *, .meta > span,
+  .stripContainer, .rateWidget {
+    visibility: visible;
+    opacity: 1;
+    animation: none;
+  }
+}
+
 /* Background Architecture */
 .bgBase {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 0%, rgba(17, 22, 34, 0.8) 0%, transparent 70%); 
+  background: radial-gradient(circle at 50% 0%, rgba(17, 22, 34, 0.8) 0%, transparent 70%);
   z-index: 0;
 }
 
@@ -150,11 +175,11 @@
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   position: relative;
-  z-index: 20; 
+  z-index: 20;
 }
 
 .titleAccent {
-  color: var(--color-accent-secondary); 
+  color: var(--color-accent-secondary);
 }
 
 .titleAccentEn {
@@ -193,7 +218,7 @@
 }
 
 .uluruEnText {
-  font-family: var(--font-en), sans-serif !important; 
+  font-family: var(--font-en), sans-serif !important;
   font-weight: 500;
   letter-spacing: 0.5px;
 }
@@ -210,21 +235,21 @@
   padding: 0.85rem 1rem;
   border: 1px solid rgba(148, 163, 184, 0.32);
   box-shadow: 0 20px 50px rgba(3, 7, 18, 0.62), 0 0 0 1px rgba(59, 130, 246, 0.07) inset;
-  
+
   position: absolute;
   z-index: 999;
   top: calc(100% + 14px);
   inset-inline-start: 0;
   inset-inline-end: auto;
   transform: none;
-  
+
   font-family: var(--font-primary);
   font-size: 0.97rem;
   font-weight: 500;
   line-height: 1.72;
   letter-spacing: 0.004em;
   white-space: normal;
-  
+
   opacity: 0;
   transition: opacity 0.24s ease, transform 0.24s ease;
 }
@@ -286,7 +311,7 @@
   margin: 0 0 var(--space-8);
   font-family: var(--font-primary);
   color: var(--color-text-secondary);
-  font-size: var(--text-body-sm); 
+  font-size: var(--text-body-sm);
   line-height: var(--leading-relaxed);
   max-width: 90%;
   position: relative;
@@ -383,12 +408,12 @@
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
   font-weight: var(--font-weight-bold);
-  color: #10b981; 
+  color: #10b981;
 }
 
 .splitCard {
   display: flex;
-  flex-direction: row; 
+  flex-direction: row;
   background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border-ghost);
   border-radius: var(--radius-xl);
@@ -410,7 +435,7 @@
 .logoSection {
   width: 150px;
   background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(0,0,0,0.2) 100%);
-  border-left: 1px solid var(--color-border-ghost); 
+  border-left: 1px solid var(--color-border-ghost);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -457,7 +482,7 @@
 }
 
 .currency {
-  font-size: var(--text-body-sm); 
+  font-size: var(--text-body-sm);
   font-weight: var(--font-weight-regular);
   color: var(--color-text-tertiary);
   margin-inline-start: var(--space-2);
@@ -488,7 +513,7 @@
 }
 
 .clockIcon {
-  color: #94A3B8; 
+  color: #94A3B8;
   stroke-width: 1.5px;
   flex-shrink: 0;
 }
@@ -497,7 +522,7 @@
   font-family: var(--font-primary);
   font-size: var(--text-caption);
   font-weight: 500;
-  color: #94A3B8; 
+  color: #94A3B8;
   white-space: nowrap;
 }
 
@@ -507,7 +532,7 @@
   font-weight: 500;
   color: #10b981;
   letter-spacing: 0.5px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4); 
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
 @keyframes fadeInStrip {
@@ -518,12 +543,12 @@
 /* Responsive Overrides */
 @media (max-width: 1024px) {
   .hero {
-    min-height: auto; 
+    min-height: auto;
   }
   .container {
-    padding-top: 130px; 
+    padding-top: 130px;
   }
-  
+
   .layout {
     grid-template-columns: 1fr;
     gap: var(--space-12);
@@ -533,10 +558,10 @@
     max-width: 100%;
     order: 1;
   }
-  
+
   .stripContainer {
     order: 2; /* در تبلت و موبایل این کانتینر در ردیف دوم قرار می‌گیرد */
-    margin-top: 0; 
+    margin-top: 0;
   }
 
   .visual {
@@ -552,7 +577,7 @@
     width: min(320px, calc(100vw - 40px));
     top: calc(100% + 12px);
   }
-  
+
   .infoIcon {
     transform: translateY(-0.22em);
   }
@@ -567,19 +592,19 @@
     margin-bottom: 0; /* در حالت دسکتاپ --space-6 بود، در موبایل صفرش می‌کنیم */
   }
   .stripContainer {
-    margin: 0 0 var(--space-4) 0; 
+    margin: 0 0 var(--space-4) 0;
   }
   .hero {
     min-height: auto;
   }
   .container {
-   margin: 0 0 var(--space-4) 0; 
+   margin: 0 0 var(--space-4) 0;
   }
   .eyebrow {
-    margin-bottom: 24px; 
+    margin-bottom: 24px;
   }
   .splitCard {
-    flex-direction: column; 
+    flex-direction: column;
   }
   .logoSection {
     width: 100%;
@@ -602,7 +627,7 @@
     width: min(290px, calc(100vw - 28px));
     top: calc(100% + 10px);
   }
-  
+
 :global([dir="ltr"]) .tooltipText {
     right: 0 !important;
     left: auto !important;
@@ -631,38 +656,12 @@
 
   /* حذف کلمات متا در موبایل و تنظیم فاصله جایگزین (Message Strip) */
   .meta {
-    display: none; 
+    display: none;
   }
 
 
-  
+
   .stripContainer {
     margin: var(--space-4) 0 var(--space-8) 0;
-  }
-}
-
-
-
-/* ====================================================
-   SEO & ANTI-FLICKER (FOUC) FAILSAFE
-   ==================================================== */
-.eyebrow,
-.title,
-.subtitle,
-.actions > *,
-.meta > span,
-.stripContainer,
-.rateWidget {
-  visibility: hidden;
-  opacity: 0;
-  
-  /* ترفند نجات: اگر JS لود نشد، بعد از ۲.۵ ثانیه به صورت خودکار المان‌ها مرئی می‌شوند */
-  animation: forceReveal 0.1s 2.5s forwards;
-}
-
-@keyframes forceReveal {
-  to {
-    visibility: visible;
-    opacity: 1;
   }
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 
@@ -16,7 +15,7 @@ export default function LedgerCharts({ dailyData, typeDistribution }: LedgerChar
   if (dailyData.length === 0) return null;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem", marginBottom: "1.5rem" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))", gap: "1.5rem", marginBottom: "1.5rem", minWidth: 0 }}>
       
       {/* Area Chart: Daily Volume */}
       <div className={cardStyles.panel} style={{ padding: "1.5rem" }}>

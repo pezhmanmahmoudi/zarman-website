@@ -30,7 +30,7 @@ export default async function AccountStatementPage({ searchParams }: {
         <Link className={styles.backLink} href={`/admin/reports?preset=custom&start=${statement.period.start}&end=${statement.period.end}`}><MoveLeft size={15}/> Reports</Link>
       </div>
       <div className={shellStyles.pageContent}>
-        <main className={styles.reports}>
+        <div className={styles.reports}>
           <form className={styles.statementFilters} action="/admin/reports/accounts">
             <label>Bank account<select name="account" defaultValue={statement.selectedAccount ?? ""}>{statement.accounts.map((account) => <option key={account.id} value={account.id}>{account.name} ({account.currency})</option>)}</select></label>
             <label>From<input type="date" name="start" defaultValue={statement.period.start}/></label>
@@ -39,11 +39,11 @@ export default async function AccountStatementPage({ searchParams }: {
           </form>
           <section className={styles.panel}>
             <div className={styles.panelHeader}><div><h2>{selected?.name ?? "Account"}</h2><p>{statement.period.label} · {statement.total.toLocaleString("en-AU")} movements</p></div></div>
-            <div className={styles.tableWrap}><table><thead><tr><th>Date</th><th>Description</th><th>Debit</th><th>Credit</th><th>Running Balance</th></tr></thead><tbody>{statement.rows.map((row) => <tr key={row.ledgerId}><td><Link href={`/admin/ledger?start=${row.date}&end=${row.date}`}>{row.date}</Link></td><td><Link href={`/admin/ledger?search=${encodeURIComponent(row.description)}`}>{row.description}</Link></td><td className={styles.negative}>{row.debit ? row.debit.toLocaleString("en-AU", { maximumFractionDigits: 2 }) : "-"}</td><td>{row.credit ? row.credit.toLocaleString("en-AU", { maximumFractionDigits: 2 }) : "-"}</td><td><strong>{row.balance.toLocaleString("en-AU", { maximumFractionDigits: 2 })}</strong></td></tr>)}</tbody></table></div>
+            <div className={styles.tableWrap} role="region" aria-label="Account movements" tabIndex={0}><table><thead><tr><th>Date</th><th>Description</th><th>Debit</th><th>Credit</th><th>Running Balance</th></tr></thead><tbody>{statement.rows.map((row) => <tr key={row.ledgerId}><td><Link href={`/admin/ledger?start=${row.date}&end=${row.date}`}>{row.date}</Link></td><td><Link href={`/admin/ledger?search=${encodeURIComponent(row.description)}`}>{row.description}</Link></td><td className={styles.negative}>{row.debit ? row.debit.toLocaleString("en-AU", { maximumFractionDigits: 2 }) : "-"}</td><td>{row.credit ? row.credit.toLocaleString("en-AU", { maximumFractionDigits: 2 }) : "-"}</td><td><strong>{row.balance.toLocaleString("en-AU", { maximumFractionDigits: 2 })}</strong></td></tr>)}</tbody></table></div>
             {!statement.rows.length && <div className={styles.chartEmpty}>No account movements in this period</div>}
-            <AdminPagination currentPage={statement.page} totalCount={statement.total} pageSize={PAGE_SIZE}/>
+            <AdminPagination currentPage={statement.page} totalCount={statement.total} pageSize={PAGE_SIZE} allowPageSizeChange={false}/>
           </section>
-        </main>
+        </div>
       </div>
     </>
   );

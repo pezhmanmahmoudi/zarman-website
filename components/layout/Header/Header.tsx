@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useHydrated } from "./useHydrated";
 
 import HeaderPublic from "./HeaderPublic";
 import HeaderAuth from "./HeaderAuth";
@@ -19,41 +19,20 @@ export default function Header({
   isAuthenticated = false,
   isReady = true,
 }: HeaderProps) {
-  const [mounted, setMounted] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const mounted = useHydrated();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
-    const checkMobile = () => {
-      // تغییر استراتژیک: 1024px باعث می‌شود در آیپد (عمودی) منوی موبایل لود شود
-      // و مشکل رفتن لوگو داخل منو برای همیشه حل شود.
-      setIsMobile(window.innerWidth <= 1024);
-    };
-
-    checkMobile();
-
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, [mounted]);
-
-  if (!mounted) return null;
-
-  // رندر هدر موبایل/تبلت
-  if (isMobile) {
-    return <MobHeader isAuthenticated={isAuthenticated} isReady={isReady} />;
-  }
-
-  // رندر هدر دسکتاپ
+  // Keep navigation in the initial HTML; CSS selects the viewport layout.
+  // Portals preserve the existing stacking behavior after hydration.
   const headerNode = isAuthenticated ? (
-    <HeaderAuth className="h-header" />
+    <HeaderAuth className="h-desktop" />
   ) : (
-    <HeaderPublic className="h-header" />
+    <HeaderPublic className="h-header h-desktop" />
   );
 
-  return createPortal(headerNode, document.body);
+  return (
+    <>
+      {mounted ? createPortal(headerNode, document.body) : headerNode}
+      <MobHeader isAuthenticated={isAuthenticated} isReady={isReady} />
+    </>
+  );
 }

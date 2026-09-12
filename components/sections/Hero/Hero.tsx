@@ -1,16 +1,15 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
-import { Info, Clock } from "lucide-react"; 
+import { Info, Clock } from "lucide-react";
 import styles from "./Hero.module.css";
 import { useRates } from "@/context/RateContext";
 import {
-  WHATSAPP_NUMBER, 
   buildWhatsAppUrl,
   WHATSAPP_MESSAGE_TRANSFER_HELP,
 } from "@/lib/constants/contact";
@@ -22,89 +21,93 @@ export default function Hero() {
   const isEn = locale === "en";
   const { currentRates, isLoading } = useRates();
 
-  const serverSafeUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE_TRANSFER_HELP)}`;
-  const [whatsappUrl, setWhatsappUrl] = useState(serverSafeUrl);
-  
-  // متغیر mounted را همچنان برای جلوگیری از Hydration Error نگه می‌داریم، 
-  // اما دیگر آن را به GSAP پاس نمی‌دهیم.
-  const [mounted, setMounted] = useState(false);
+  const whatsappUrl = buildWhatsAppUrl(isEn
+    ? "Hello, I found Zarman online and would like help with a money transfer."
+    : WHATSAPP_MESSAGE_TRANSFER_HELP);
 
   const formattedLastUpdated = (() => {
     if (!currentRates.lastUpdated) return null;
     try {
       const d = new Date(currentRates.lastUpdated);
       if (isNaN(d.getTime())) return null;
-      
+
       // فقط استخراج و نمایش تاریخ
-      return d.toLocaleDateString("en-GB", {
+      return d.toLocaleDateString(isEn ? "en-AU" : "fa-IR", {
         day: "numeric",
         month: "long",
-        year: "numeric"
+        year: "numeric",
+        timeZone: "Australia/Sydney",
       });
-      
+
     } catch {
       return null;
     }
   })();
 
-  useEffect(() => {
-    setMounted(true);
-    setWhatsappUrl(buildWhatsAppUrl(WHATSAPP_MESSAGE_TRANSFER_HELP));
-  }, []);
-
   useGSAP(
     () => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       // استفاده از autoAlpha به جای opacity برای کنترل هوشمند رندر در مرورگر
       const tl = gsap.timeline({ defaults: { ease: "power3.out", duration: 0.8 } });
 
-      tl.fromTo(`.${styles.eyebrow}`, 
-          { autoAlpha: 0, y: 20 }, 
+      tl.fromTo(`.${styles.eyebrow}`,
+          { autoAlpha: 0, y: 20 },
           { autoAlpha: 1, y: 0 }
         )
-        .fromTo(`.${styles.title}`, 
-          { autoAlpha: 0, y: 25 }, 
-          { autoAlpha: 1, y: 0 }, 
+        .fromTo(`.${styles.title}`,
+          { autoAlpha: 0, y: 25 },
+          { autoAlpha: 1, y: 0 },
           "-=0.6"
         )
-        .fromTo(`.${styles.subtitle}`, 
-          { autoAlpha: 0, y: 20 }, 
-          { autoAlpha: 1, y: 0 }, 
+        .fromTo(`.${styles.subtitle}`,
+          { autoAlpha: 0, y: 20 },
+          { autoAlpha: 1, y: 0 },
           "-=0.6"
         )
-        .fromTo(`.${styles.actions} > *`, 
-          { autoAlpha: 0, y: 15 }, 
-          { autoAlpha: 1, y: 0, stagger: 0.15 }, 
+        .fromTo(`.${styles.actions} > *`,
+          { autoAlpha: 0, y: 15 },
+          { autoAlpha: 1, y: 0, stagger: 0.15 },
           "-=0.6"
         )
-        .fromTo(`.${styles.stripContainer}`, 
-          { autoAlpha: 0, y: 15 }, 
-          { autoAlpha: 1, y: 0 }, 
+        .fromTo(`.${styles.stripContainer}`,
+          { autoAlpha: 0, y: 15 },
+          { autoAlpha: 1, y: 0 },
           "-=0.6"
         )
-        .fromTo(`.${styles.rateWidget}`, 
-          { autoAlpha: 0, x: -20, scale: 0.96 }, 
-          { autoAlpha: 1, x: 0, scale: 1, duration: 1.2 }, 
+        .fromTo(`.${styles.rateWidget}`,
+          { autoAlpha: 0, x: -20, scale: 0.96 },
+          { autoAlpha: 1, x: 0, scale: 1, duration: 1.2 },
           "-=0.5"
         )
-        .fromTo(`.${styles.meta} > span`, 
-          { autoAlpha: 0, y: 10 }, 
+        .fromTo(`.${styles.meta} > span`,
+          { autoAlpha: 0, y: 10 },
           { autoAlpha: 1, y: 0, stagger: 0.08 },
           "-=0.6"
         );
     },
-    { scope: heroRef } 
+    { scope: heroRef }
   );
 
   return (
     <section id="hero" ref={heroRef} className={styles.hero} aria-label={isEn ? "Zarman Exchange" : "معرفی زرمان"}>
+      <noscript><style>{`
+        .${styles.hero} .${styles.eyebrow}, .${styles.hero} .${styles.title},
+        .${styles.hero} .${styles.subtitle}, .${styles.hero} .${styles.actions} > *,
+        .${styles.hero} .${styles.meta} > span, .${styles.hero} .${styles.stripContainer},
+        .${styles.hero} .${styles.rateWidget} {
+          visibility: visible !important; opacity: 1 !important; animation: none !important;
+        }
+      `}</style></noscript>
       <div className={styles.bgBase} aria-hidden="true" />
       <div className={styles.bgGlow} aria-hidden="true" />
 
       <div className={styles.container}>
         <div className={styles.layout}>
-          
+
           <div className={styles.content}>
-            <h1 className={styles.eyebrow}>{isEn ? "Zarman Exchange" : "صرافی زرمان"}</h1>
+            <h1 className={styles.eyebrow}>
+              {isEn ? "Zarman Exchange" : "صرافی زرمان"}
+            </h1>
             {isEn ? (
               <h2 className={styles.title}>
                 From{' '}
@@ -145,10 +148,10 @@ export default function Hero() {
             )}
             <p className={styles.subtitle}>
               {isEn
-                ? "We focus on speed, transparency, and round-the-clock support to make your financial transfer requests easier and more straightforward."
-                : "ما تلاش می‌کنیم با تمرکز بر سرعت، شفافیت و پشتیبانی همیشگی، تجربه ثبت و پیگیری درخواست‌های مالی را برای شما آسان‌تر و روشن‌تر کنیم."}
+                ? "Check Australian dollar to Iranian toman rates, calculate your transfer and track your remittance request between Australia and Iran, with support in English and Persian."
+                : "نرخ خرید و فروش دلار استرالیا به تومان را ببینید، مبلغ حواله را محاسبه کنید و درخواست انتقال پول بین استرالیا و ایران را با پشتیبانی فارسی ثبت و پیگیری کنید."}
             </p>
-            
+
             <div className={styles.actions}>
               <Button href={`/${locale}/register`} variant="primary" size="lg" className={styles.btn}>
                 {isEn ? "Get Started" : "شروع ثبت‌نام"}
@@ -182,13 +185,13 @@ export default function Hero() {
           </div>
 
           <div className={styles.visual}>
-            <div className={styles.rateWidget} aria-label={isEn ? "Live exchange rate" : "نرخ لحظه‌ای ارز"}>
+            <div className={styles.rateWidget} aria-label={isEn ? "Latest exchange rates" : "آخرین نرخ ارز"}>
               <div className={styles.widgetHeader}>
                 <span className={styles.pulseDot}></span>
                 <span className={styles.status}>
                   {isLoading
                     ? (isEn ? "Loading..." : "در حال دریافت...")
-                    : (isEn ? "Live AUD Rate" : "نرخ لحظه‌ای دلار")}
+                    : (isEn ? "Latest AUD Rates" : "آخرین نرخ دلار استرالیا")}
                 </span>
               </div>
 
@@ -242,7 +245,7 @@ export default function Hero() {
                 <div className={styles.lastUpdated} aria-live="polite">
                   <Clock size={13} className={styles.clockIcon} />
                   <span className={styles.lastUpdatedLabel}>{isEn ? "Last updated:" : "آخرین به‌روزرسانی:"}</span>
-                  <span className={styles.lastUpdatedTime} dir="ltr">{formattedLastUpdated}</span>
+                  <time className={styles.lastUpdatedTime} dateTime={currentRates.lastUpdated ?? undefined} dir={isEn ? "ltr" : "rtl"}>{formattedLastUpdated}</time>
                 </div>
               )}
             </div>

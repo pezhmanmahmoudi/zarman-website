@@ -6,8 +6,10 @@
 
 /* ── Scroll wrapper ────────────────────────────────────────── */
 .tableWrap {
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
-  overflow-y: clip; /* clip avoids the spec-invalid visible+auto combination */
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: var(--border-med, #e2e8f0) transparent;
@@ -293,6 +295,7 @@
 
 /* .pagination / .paginationBtn kept for backward-compat with any direct users */
 .pagination {
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -543,6 +546,8 @@
 .paginationSummary,
 .paginationPages,
 .pageSizeControl {
+  flex-wrap: wrap;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -632,6 +637,10 @@
 }
 
 .historyTabs {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
   display: flex;
   align-items: stretch;
   gap: 0;

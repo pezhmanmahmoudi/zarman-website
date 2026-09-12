@@ -3,6 +3,7 @@ import { CreditCard, Briefcase } from "lucide-react";
 import { fmtIRT } from "@/lib/accounting-engine";
 import { FA } from "@/lib/treasury-utils";
 import BankAccountManager from "@/components/admin/treasury/BankAccountManager";
+import BankTransferFees from "@/components/admin/treasury/BankTransferFees";
 import ExpenseForm from "@/components/admin/treasury/ExpenseForm";
 import OwnerLoanForm from "@/components/admin/treasury/OwnerLoanForm";
 import RecurringExpenseForm from "@/components/admin/treasury/RecurringExpenseForm";
@@ -65,6 +66,8 @@ export default function CapitalAndForms({
       </div>
 
       <BankAccountManager bankAccounts={bankAccounts} />
+
+      <BankTransferFees />
 
       <div className={s.splitLayout}>
         <ExpenseForm expenses={expenses} bankAccounts={bankAccounts} />

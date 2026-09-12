@@ -4,13 +4,12 @@ import { MessageSquare, Star, Clock, Archive } from "lucide-react";
 import { getFeedbackQueue, getFeedbackHistory } from "@/app/actions/admin.actions";
 import { FeedbackModerateButtons } from "@/components/admin/FeedbackModerateButtons";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import { parseAdminPage, parseAdminPageSize } from "@/lib/admin-pagination";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 
 export const metadata = { title: "Feedback Moderation | Zarman Admin" };
-
-const PAGE_SIZE = 10;
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "approved")
@@ -53,14 +52,15 @@ function StarRating({ rating }: { rating: number }) {
 export default async function FeedbackPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; pageSize?: string }>;
 }) {
   const params = await searchParams;
-  const currentPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const currentPage = parseAdminPage(params.page);
+  const pageSize = parseAdminPageSize(params.pageSize);
 
   const [pending, { data: moderated, total }] = await Promise.all([
     getFeedbackQueue(),
-    getFeedbackHistory(currentPage, PAGE_SIZE),
+    getFeedbackHistory(currentPage, pageSize),
   ]);
 
   return (
@@ -120,7 +120,7 @@ export default async function FeedbackPage({
                 </thead>
                 <tbody>
                   {pending.map((f) => {
-                    const profile = f.profiles as any;
+                    const profile = Array.isArray(f.profiles) ? f.profiles[0] : f.profiles;
                     const name = profile
                       ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
                       : "—";
@@ -149,7 +149,7 @@ export default async function FeedbackPage({
                         </td>
                         <td className={tableStyles.cellMax320}>
                           <div className={`${tableStyles.cellRtl} ${tableStyles.quotePending}`}>
-                            "{f.message}"
+                            &ldquo;{f.message}&rdquo;
                           </div>
                         </td>
                         <td>
@@ -177,7 +177,7 @@ export default async function FeedbackPage({
           </div>
           {moderated.length === 0 ? (
             <div className={`${cardStyles.emptyState} ${cardStyles.emptyStateCompact} ${cardStyles.emptyStateWithTopBorder}`}>
-              <div className={`${cardStyles.emptyStateText} ${cardStyles.emptyStateDim}`}>No moderated feedback yet.</div>
+              <div className={`${cardStyles.emptyStateText} ${cardStyles.emptyStateDim}`}>{total > 0 ? "No feedback on this page. Choose another page below." : "No moderated feedback yet."}</div>
             </div>
           ) : (
             <>
@@ -195,7 +195,7 @@ export default async function FeedbackPage({
                   </thead>
                   <tbody>
                     {moderated.map((f) => {
-                      const profile = f.profiles as any;
+                      const profile = Array.isArray(f.profiles) ? f.profiles[0] : f.profiles;
                       const name = profile
                         ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
                         : "—";
@@ -239,13 +239,9 @@ export default async function FeedbackPage({
                   </tbody>
                 </table>
               </div>
-              <AdminPagination
-                currentPage={currentPage}
-                totalCount={total}
-                pageSize={PAGE_SIZE}
-              />
             </>
           )}
+          <AdminPagination currentPage={currentPage} totalCount={total} pageSize={pageSize} />
         </div>
       </div>
     </>

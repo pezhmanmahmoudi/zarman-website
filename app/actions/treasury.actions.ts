@@ -98,10 +98,11 @@ export type TreasuryPageData = {
  * دریافت پویای کل اطلاعات خزانه‌داری صرافی زرمان بر مبنای دفتر کل دوطرفه (Multi-Pocket)
  */
 export async function getTreasuryFullData(): Promise<TreasuryPageData> {
+  await requireAdmin();
   const db = makeServiceRoleClient();
 
   // واکشی همزمان تمام داده‌های مالی زنده
-  const [ledgerRes, expenseRes, loanRes, settingsRes, rateRes, accountsRes] = await Promise.all([
+  const [ledgerRes, expenseRes, loanRes, settingsRes, rateRes, accountsRes, feePostingRes] = await Promise.all([
     db
       .from("ledger")
       .select("*")
@@ -113,6 +114,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     db.from("treasury_settings").select("*").eq("id", 1).maybeSingle(),
     db.from("rates_history").select("buy_aud").order("date", { ascending: false }).limit(1).maybeSingle(),
     db.from("bank_accounts").select("*"),
+    db.from("bank_fee_monthly_postings").select("fee_month, expense_id"),
   ]);
 
   // هزینه‌های دوره‌ای را جداگانه واکشی می‌کنیم تا در صورت عدم وجود جدول، صفحه خراب نشود
@@ -228,7 +230,10 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     treasury,
     strategy,
     ownerLoans: loanRes.data ?? [],
-    expenses: expenseRes.data ?? [],
+    expenses: (expenseRes.data ?? []).map((expense) => ({
+      ...expense,
+      bank_fee_month: feePostingRes.data?.find((posting) => posting.expense_id === expense.id)?.fee_month ?? null,
+    })),
     recurringExpenses: recurringRes.data ?? [],
     bankAccounts: allAccounts.filter((a: any) => a.is_active),
     settings,
@@ -479,7 +484,8 @@ export async function updateExpense(payload: {
     })
     .eq("id", payload.id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: error.message.includes("BANK_FEE_MANAGED_EXPENSE")
+    ? "این هزینه را از بخش کارمزد انتقال‌های بانکی ویرایش کنید." : error.message };
 
   await writeAuditLog({
     actorId: admin.id,
@@ -505,7 +511,8 @@ export async function deleteExpense(id: string): Promise<{ success: true } | { e
   const db = makeServiceRoleClient();
   const { data: before } = await db.from("expenses").select("title, amount, currency").eq("id", id).single();
   const { error } = await db.from("expenses").delete().eq("id", id);
-  if (error) return { error: error.message };
+  if (error) return { error: error.message.includes("BANK_FEE_MANAGED_EXPENSE")
+    ? "برای اصلاح یا صفر کردن این هزینه، از بخش کارمزد انتقال‌های بانکی استفاده کنید." : error.message };
 
   await writeAuditLog({
     actorId: admin.id,
@@ -727,34 +734,11 @@ export async function postRecurringExpense(
 }
 
 /**
- * Post one month of accrued bank transfer fees as consolidated operating expenses.
+ * Retained for older clients; posting now requires an explicit account review.
  */
-export async function postMonthlyBankTransferFees(feeMonth?: string): Promise<{ success: true; posted: number } | { error: string }> {
-  const admin = await requireAdmin();
-  const db = makeServiceRoleClient();
-
-  const monthStart = feeMonth
-    ? `${feeMonth.slice(0, 7)}-01`
-    : `${new Date().toISOString().slice(0, 7)}-01`;
-
-  const { data, error } = await db.rpc("post_monthly_bank_transfer_fees", {
-    p_fee_month: monthStart,
-  });
-
-  if (error) return { error: error.message };
-
-  const posted = Array.isArray(data) ? data.length : 0;
-
-  await writeAuditLog({
-    actorId: admin.id,
-    actorEmail: admin.email ?? "",
-    action: "BANK_TRANSFER_FEES_POSTED",
-    targetType: "bank_transfer_fee_accruals",
-    newValue: { feeMonth: monthStart, posted },
-  }).catch(() => {});
-
-  revalidatePath("/admin/treasury");
-  return { success: true, posted };
+export async function postMonthlyBankTransferFees(): Promise<{ error: string }> {
+  await requireAdmin();
+  return { error: "ماه، حساب‌ها و مبلغ واقعی را در بخش کارمزد انتقال‌های بانکی بررسی و ثبت کنید." };
 }
 
 /**

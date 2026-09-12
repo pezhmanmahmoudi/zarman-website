@@ -1,510 +1,81 @@
-/**
- * AdminShell.module.css
- * Premium Light Theme with SVG Logo Integration
- */
-
 .adminShell {
-  --bg-app:           #fbfcfd; 
-  --bg-sidebar:       #ffffff;
-  --bg-card:          #ffffff;
-  --bg-soft:          #f4f6f8;
-  --text-main:        #111827;
-  --text-soft:        #4b5563;
-  --text-dim:         #6b7280;
-  --border-soft:      #eaecf0;
-  --border-med:       #d0d5dd;
-  --accent:           #4338ca;
-  --accent-hover:     #3730a3;
-
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-card: 0 4px 6px -2px rgba(16, 24, 40, 0.03), 0 12px 16px -4px rgba(16, 24, 40, 0.08);
-
-  --sidebar-width: 280px;
-
-  --font-en-stack: var(--font-en, 'Inter'), system-ui, -apple-system, sans-serif;
-  --font-fa-stack: 'IRANSansX', 'Peyda', system-ui, -apple-system, sans-serif;
-
+  --sidebar-width: 248px;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   height: 100vh;
   height: 100dvh;
-  overflow: hidden; 
+  overflow: hidden;
   direction: ltr;
-  font-family: var(--font-en-stack);
-  background-color: var(--bg-app);
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
-}
-
-.adminShell *,
-.adminShell *::before,
-.adminShell *::after {
-  box-sizing: border-box;
-}
-
-/* Apply IRANSansX to Farsi/RTL text in admin UI controls and labels. */
-.adminShell :where([dir="rtl"], .fa-text, [lang="fa"], [lang^="fa-"]) {
-  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif) !important;
-}
-
-.adminShell :where([dir="rtl"], .fa-text, [lang="fa"], [lang^="fa-"]) :is(input, textarea, select, button, label, option) {
-  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif) !important;
-}
-
-.adminShell :where([dir="rtl"], .fa-text, [lang="fa"], [lang^="fa-"]) :is(input, textarea)::placeholder {
-  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif) !important;
-}
-
-/* ── Sidebar ── */
-.sidebar {
-  background: var(--bg-sidebar);
-  border-right: 1px solid var(--border-soft);
-  height: 100%;
-  min-height: 0; /* 🌟 کلید طلایی برای لپ‌تاپ: جلوگیری از خروج سایدبار از Grid */
-  display: flex;
-  flex-direction: column;
-  z-index: 200; 
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.sidebarHeader {
-  position: relative;
-  padding: 2rem 1rem 1.5rem;
-  border-bottom: 1px solid var(--border-soft);
-  flex-shrink: 0; 
-}
-
-.closeSidebarBtn {
-  display: none;
-}
-
-.mobileMenuBtn {
-  display: none;
-}
-
-.sidebarBrand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  gap: 0.75rem;
-  transition: opacity 0.2s;
-}
-
-.sidebarBrand:hover {
-  opacity: 0.8;
-}
-
-.brandIconWrapper {
-  width: 56px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-soft);
-  border-radius: 1rem;
-}
-
-.brandText {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.brandName {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--text-main);
-  letter-spacing: -0.02em;
-}
-
-.brandSub {
-  font-size: 0.6875rem;
-  color: var(--text-dim);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-weight: 600;
-  margin-top: 2px;
-}
-
-/* 🌟 ناحیه اسکرول ضدگلوله 🌟 */
-.sidebarScrollArea {
-  flex: 1 1 auto; /* اجازه رشد و جمع شدن می‌دهد */
-  height: 0; /* اجبار به محاسبه ارتفاع بر اساس کانتینر پدر، نه محتوای درون خودش */
-  min-height: 0; 
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 1.5rem 1rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-med) transparent;
-}
-
-.sidebarScrollArea::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sidebarScrollArea::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebarScrollArea::-webkit-scrollbar-thumb {
-  background: var(--border-med);
-  border-radius: 4px;
-}
-
-.navSection {
-  display: block;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  color: var(--text-dim);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0 0.75rem 0.75rem;
-}
-
-.navSectionSpaced {
-  margin-top: 1.5rem;
-}
-
-.navItem {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  border-radius: 0.75rem;
-  color: var(--text-soft);
-  text-decoration: none;
-  cursor: pointer;
-  width: 100%;
-  transition: all 0.2s ease;
-  margin: 0.25rem 0;
-}
-
-.navIconWrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-dim);
-  transition: color 0.2s;
-}
-
-.navLabel {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.navItem:hover {
-  background: var(--bg-soft);
-  color: var(--text-main);
-}
-
-.navItem:hover .navIconWrapper {
-  color: var(--text-main);
-}
-
-.navItemActive {
-  background: rgba(67, 56, 202, 0.06);
-  color: var(--accent);
-}
-
-.navItemActive .navIconWrapper {
-  color: var(--accent);
-}
-
-.navItemActive .navLabel {
-  font-weight: 600;
-}
-
-.navBadge {
-  margin-left: auto;
-  background: rgba(var(--danger-rgb), 0.1);
-  color: var(--danger);
-  font-size: 0.75rem;
-  font-weight: 700;
-  border-radius: 100px;
-  min-width: 24px;
-  height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 6px;
-}
-
-.navBadgeWarning {
-  background: rgba(245, 158, 11, 0.15);
-  color: #b45309;
-}
-
-/* ── User Footer Card ── */
-.sidebarFooter {
-  padding: 1.25rem 1rem;
-  border-top: 1px solid var(--border-soft);
-  background: var(--bg-sidebar);
-  margin-top: auto; 
-  flex-shrink: 0; /* جلوگیری قطعی از پنهان شدن فوتر */
-}
-
-.adminProfileCard {
-  background: var(--bg-soft);
-  border: 1px solid var(--border-soft);
-  border-radius: 1rem;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.adminProfileHeader {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-width: 0; 
-}
-
-.adminAvatar {
-  width: 36px;
-  height: 36px;
-  background: rgba(67, 56, 202, 0.1);
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.adminAvatarIcon {
-  color: var(--accent);
-}
-
-.adminInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow: hidden;
-  flex: 1; 
-  min-width: 0;
-}
-
-.adminRole {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-main);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.adminEmail {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.logoutBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.625rem;
-  border-radius: 0.5rem;
-  background: #ffffff;
-  border: 1px solid #fca5a5;
-  color: #dc2626; 
-  font-size: 0.8125rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  width: 100%;
-}
-
-.logoutBtn:hover {
-  background: #fef2f2;
-  border-color: #fca5a5;
-  color: #b91c1c;
-}
-
-/* ── Main Area ── */
-.mainArea {
-  min-width: 0; 
-  display: flex;
-  flex-direction: column;
   background: var(--bg-app);
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden; 
-  position: relative;
-}
-
-.pageContent > * {
-  flex-shrink: 0 !important;
-}
-
-.topBar {
-  position: -webkit-sticky; 
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border-soft);
-  padding: 0 2rem;
-  height: 72px; 
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-shrink: 0; 
-  width: 100%;
-}
-
-.pageTitle {
-  font-size: 1.25rem !important; 
-  font-weight: 700;
   color: var(--text-main);
-  letter-spacing: -0.01em;
-  margin: 0;
-  line-height: 1.2;
+  font-family: var(--font-en-stack);
 }
-
-.topBarActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
+.skipLink { position: fixed; top: -100px; left: 1rem; z-index: 500; padding: .75rem 1rem; background: var(--accent); color: #fff; border-radius: .5rem; }
+.skipLink:focus { top: 1rem; }
+.sidebar, .mobileSidebar { background: #111c31; color: #d0d8e8; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.sidebar { border-right: 1px solid #233049; }
+.sidebarHeader { padding: 1.5rem 1.25rem 1.25rem; flex-shrink: 0; }
+.sidebarBrand { display: flex; align-items: center; gap: .75rem; text-decoration: none; }
+.brandIconWrapper { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid #354460; border-radius: 12px; background: #21304b; }
+.brandText { display: flex; flex-direction: column; gap: 1px; }
+.brandName { font-size: 1.125rem; font-weight: 700; letter-spacing: -.04em; color: #fff; }
+.brandSub { font-size: .6875rem; color: #9aaac3; }
+.workspaceLabel { display: flex; align-items: center; gap: .5rem; margin-top: 1.5rem; padding: .625rem .75rem; font-size: .6875rem; font-weight: 500; border: 1px solid #2c3a53; border-radius: .5rem; color: #c0cce0; }
+.workspaceLabel svg { color: #a5b4fc; }
+.sidebarScrollArea { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: .125rem .75rem 1.25rem; scrollbar-width: thin; scrollbar-color: #40516e transparent; }
+.navGroup + .navGroup { margin-top: 1.5rem; }
+.navSection { display: block; padding: 0 .75rem .5rem; font-size: .625rem; font-weight: 600; color: #93a4be; letter-spacing: .1em; text-transform: uppercase; }
+.navItem { display: flex; align-items: center; gap: .6875rem; min-height: 42px; padding: .625rem .75rem; border: 1px solid transparent; border-radius: .5rem; color: #b8c5db; text-decoration: none; margin: 3px 0; transition: background-color .15s, color .15s, border-color .15s; }
+.navIconWrapper { display: flex; color: #8e9fbc; }
+.navLabel { font-size: .8125rem; font-weight: 500; }
+.navItem:hover { background: #1b2942; color: #fff; }
+.navItemActive, .navItemActive:hover { background: #303a76; border-color: #495497; color: #fff; }
+.navItemActive .navIconWrapper { color: #c7d2fe; }
+.navBadge { margin-left: auto; display: grid; place-items: center; min-width: 23px; height: 21px; padding: 0 5px; border-radius: 5px; font-size: .625rem; font-weight: 700; background: #35405d; color: #e3e9f5; font-variant-numeric: tabular-nums; }
+.sidebarFooter { flex-shrink: 0; padding: 1rem; border-top: 1px solid #2a3650; }
+.siteLink { display: flex; align-items: center; gap: .6rem; color: #aebcd3; font-size: .75rem; text-decoration: none; padding: 0 .25rem 1rem; }
+.siteLink:hover { color: #fff; }
+.adminProfileHeader { display: flex; gap: .625rem; align-items: center; min-width: 0; }
+.adminAvatar { width: 34px; height: 34px; border-radius: 50%; background: #2e3c58; color: #c7d2fe; display: grid; place-items: center; flex-shrink: 0; }
+.adminInfo { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 2px; }
+.adminRole { font-size: .75rem; font-weight: 600; color: #e8edf6; }
+.adminEmail { font-size: .625rem; color: #9dacc5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logoutBtn { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; color: #aebcd3; border: 1px solid #35445e; border-radius: .5rem; background: transparent; cursor: pointer; }
+.logoutBtn:hover { background: #26344e; color: #fff; }
+.logoutBtn:disabled { opacity: .5; }
+.logoutError { color: #fecaca; font-size: .6875rem; margin: .625rem 0 0; }
+.mainArea { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; overflow: hidden; position: relative; }
+.mainArea:focus { outline: none; }
+.topBar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; padding: 1rem 2rem; min-height: 68px; flex-shrink: 0; border-bottom: 1px solid var(--border-soft); background: #fff; min-width: 0; }
+.topBar > * { min-width: 0; }
+.pageTitle { font-size: .9375rem; font-weight: 650; color: var(--text-main); letter-spacing: -.02em; margin: 0; line-height: 1.4; overflow-wrap: anywhere; }
+.topBarActions { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; min-width: 0; }
+.pageContent { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: stretch; gap: 1.5rem; padding: 2rem; padding-bottom: max(2rem, env(safe-area-inset-bottom)); overflow: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--border-med) transparent; scroll-padding-block: 1.5rem; }
+.pageContent > * { flex-shrink: 0; min-width: 0; max-width: 100%; }
+.pageContentNarrow > * { width: 100%; max-width: 1120px; margin-inline: auto; }
+.loadingState { display: flex; justify-content: center; align-items: center; gap: .75rem; min-height: 180px; padding: 2rem; color: var(--text-soft); font-size: .875rem; }
+.closeSidebarBtn, .mobileMenuBtn { display: none; }
+.mobileSidebar {
+  --admin-drawer-width: min(296px, calc(100vw - 40px));
+  --admin-dialog-background: #111c31;
+  padding: 0;
+  border-radius: 0;
 }
-
-.pageContent {
-  min-width: 0; 
-  padding: 2rem;
-  padding-bottom: 5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto; 
-  overflow-x: hidden; 
-  -webkit-overflow-scrolling: touch; 
+@media (max-width: 1200px) {
+  .adminShell { --sidebar-width: 224px; }
+  .topBar { padding-inline: 1.5rem; }
+  .pageContent { padding: 1.5rem; }
 }
-
-/* ── Mobile Responsive ── */
 @media (max-width: 900px) {
-  .adminShell { 
-    grid-template-columns: minmax(0, 1fr); 
-  }
-  
-  .sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
-    width: var(--sidebar-width);
-    transform: translateX(-100%);
-    z-index: 100000; 
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.1);
-  }
-
-  .sidebarHeader {
-    position: relative; 
-    padding-top: 1.5rem;
-  }
-  
-  .sidebarOpen { 
-    transform: translateX(0); 
-  }
-  
-  .mobileBackdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.4);
-    backdrop-filter: blur(2px);
-    z-index: 99999; 
-    display: block;
-  }
-  
-  .closeSidebarBtn {
-    display: flex; 
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: var(--bg-soft);
-    border: 1px solid var(--border-soft);
-    border-radius: 0.5rem;
-    width: 36px;
-    height: 36px;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-dim);
-    cursor: pointer;
-    z-index: 100001; 
-  }
-  
-  .closeSidebarBtn:hover {
-    background: var(--border-soft);
-    color: var(--text-main);
-  }
-
-  .mobileMenuBtn {
-    display: flex;
-    position: fixed;
-    top: 10px;
-    left: 12px;
-    z-index: 150;
-    background: #ffffff;
-    border: 1.5px solid var(--border-med);
-    border-radius: 0.625rem;
-    color: var(--text-main);
-    width: 44px;
-    height: 44px;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow:
-      0 1px 3px rgba(16, 24, 40, 0.1),
-      0 4px 12px rgba(16, 24, 40, 0.06);
-    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
-  }
-
-  .mobileMenuBtn:hover {
-    background: var(--bg-soft);
-    border-color: var(--accent);
-    box-shadow: 0 2px 8px rgba(67, 56, 202, 0.15);
-  }
-
-  .mobileMenuBtn:active {
-    transform: scale(0.93);
-    background: var(--bg-soft);
-  }
-
-  .topBar { 
-      padding: 0 1rem 0 4.5rem; 
-      flex-direction: row; 
-      flex-wrap: nowrap;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 0.5rem;
-      height: 64px; 
-      min-height: auto;
-    } 
-  
-  .pageTitle { 
-    font-size: 1rem !important; 
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-    flex-shrink: 1; 
-    margin: 0;
-  }
-
-  .topBar .topBarActions {
-    flex-shrink: 0;
-  }
-
-  .topBar .topBarActions span {
-    font-size: 0.6875rem;
-    padding: 0.2rem 0.55rem;
-  }
-  
-  .pageContent { padding: 1rem; }
+  .adminShell { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { display: none; }
+  .topBar { padding: .875rem 1rem .875rem 4.5rem; min-height: 64px; }
+  .pageContent { padding: 1rem; gap: 1.25rem; }
+  .mobileMenuBtn { display: grid; place-items: center; position: fixed; top: 10px; left: 12px; width: 44px; height: 44px; border: 1px solid var(--border-soft); border-radius: .625rem; background: #fff; color: var(--text-main); z-index: 30; cursor: pointer; }
+  .closeSidebarBtn { display: grid; place-items: center; width: 32px; height: 32px; margin-left: auto; border: 1px solid #35445e; border-radius: .5rem; background: transparent; color: #cbd5e1; cursor: pointer; }
+  .mobileSidebar .sidebarHeader { padding-top: 1.25rem; }
+}
+@media (pointer: coarse) {
+  .navItem { min-height: 44px; }
+  .logoutBtn, .closeSidebarBtn { min-width: 44px; min-height: 44px; }
 }

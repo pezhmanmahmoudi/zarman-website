@@ -55,7 +55,7 @@
   background-color: var(--color-bg-surface-hover);
 }
 
-.isOpen {
+.faqItem[open]:not([data-expanded="false"]) {
   /* 👈 استفاده از متغیر سیستم برای حفظ یکپارچگی رنگ */
   border-color: rgba(var(--accent-rgb), 0.4);
   box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -72,6 +72,14 @@
   cursor: pointer;
   text-align: right;
   color: var(--color-text-primary);
+  list-style: none;
+}
+
+.questionBtn::-webkit-details-marker { display: none; }
+
+.questionBtn:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: -4px;
 }
 
 :global([dir="ltr"]) .questionBtn {
@@ -104,20 +112,21 @@
   transition: color var(--transition-fast);
 }
 
-.isOpen .icon {
+.faqItem[open]:not([data-expanded="false"]) .icon {
   color: var(--color-accent-primary);
 }
 
-/* تکنیک مدرن CSS Grid برای انیمیشن ارتفاع آکاردئون */
+.icon::before { content: "+"; }
+.faqItem[open]:not([data-expanded="false"]) .icon::before { content: "−"; }
+
 .answerWrapper {
-  display: grid;
-  grid-template-rows: 0fr;
-  /* 👈 هاردکد زمان حذف شد تا فقط از متغیر ترانزیشن استفاده کند */
-  transition: grid-template-rows var(--transition-normal);
+  overflow: hidden;
 }
 
-.isOpen .answerWrapper {
-  grid-template-rows: 1fr;
+.answerLink {
+  color: var(--color-accent-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .answerInner {
@@ -139,4 +148,11 @@
   /* 👈 تغییرات دستی سایز فونت در موبایل پاک شد. توکن‌ها خودشان این کار را می‌کنند. */
   .questionBtn { padding: var(--space-4); }
   .answerText { padding: 0 var(--space-4) var(--space-4); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faqItem,
+  .icon {
+    transition: none;
+  }
 }

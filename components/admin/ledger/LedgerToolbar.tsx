@@ -1,102 +1,69 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Check, Download, Search } from "lucide-react";
+import { Check, Download, Search, SlidersHorizontal, X, LoaderCircle } from "lucide-react";
+import { getLedgerExportRows, type AdminLedgerFilters } from "@/app/actions/admin.actions";
+import { AdminToast } from "@/components/admin/ui/AdminToast";
+import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { SelectBox } from "../../ui/SelectBox/SelectBox";
 import styles from "@/styles/admin/LedgerToolbar.module.css";
-import {
-  filterBankAccountsByLedgerType,
-  sortBankAccountsByPriority,
-} from "@/lib/bank-account-ordering";
+import { sortBankAccountsByPriority } from "@/lib/bank-account-ordering";
 
 interface LedgerToolbarProps {
   currentParams: Record<string, string | undefined>;
   bankAccounts: Array<{ id: string; account_name: string; currency: "AUD" | "IRT" }>;
-  exportRows: Array<{
-    id: string;
-    date_gregorian: string;
-    date_jalali: string;
-    type: string;
-    entry_type?: string;
-    exchange_rate: number | string;
-    amount_aud: number | string;
-    amount_toman: number | string;
-    sender: string | null;
-    recipient: string | null;
-    fee_aud: number | string;
-    payer_account_id: string | null;
-    receiver_account_id: string | null;
-    notes: string | null;
-  }>;
+  exportFilters: AdminLedgerFilters;
 }
 
 const rangeOptions = [
-  { label: "همه زمان‌ها", value: "all" },
-  { label: "امروز", value: "today" },
-  { label: "این ماه", value: "this-month" },
-  { label: "ماه گذشته", value: "last-month" },
-  { label: "امسال", value: "this-year" },
-  { label: "بازه دلخواه", value: "custom" },
+  { label: "All time", value: "all" }, { label: "Today", value: "today" },
+  { label: "This month", value: "this-month" }, { label: "Last month", value: "last-month" },
+  { label: "This year", value: "this-year" }, { label: "Custom dates", value: "custom" },
 ];
-
 const transactionOptions = [
-  { label: "همه تراکنش‌ها", value: "all" },
-  { label: "خرید دلار", value: "buy_aud" },
-  { label: "فروش دلار", value: "sell_aud" },
-  { label: "انتقال داخلی", value: "transfer" },
-  { label: "هزینه", value: "expense" },
-  { label: "وام مالک", value: "owner_loan" },
-  { label: "اصلاح حساب", value: "adjustment" },
+  { label: "All entry types", value: "all" }, { label: "Buy AUD", value: "buy_aud" },
+  { label: "Sell AUD", value: "sell_aud" }, { label: "Internal transfer", value: "transfer" },
+  { label: "Expense", value: "expense" }, { label: "Owner loan", value: "owner_loan" },
+  { label: "Adjustment", value: "adjustment" },
 ];
 
-export default function LedgerToolbar({ currentParams, bankAccounts, exportRows }: LedgerToolbarProps) {
+export default function LedgerToolbar({ currentParams, bankAccounts, exportFilters }: LedgerToolbarProps) {
   const router = useRouter();
   const pathname = usePathname();
-
-  const accountNameById = useMemo(() => {
-    const map: Record<string, string> = {};
-    bankAccounts.forEach((acc) => {
-      map[acc.id] = `${acc.account_name} (${acc.currency})`;
-    });
-    return map;
-  }, [bankAccounts]);
-
-  const accountOptions = useMemo(
-    () => [
-      { label: "همه حساب‌ها", value: "all" },
-      ...sortBankAccountsByPriority(
-        filterBankAccountsByLedgerType(bankAccounts, currentParams.type),
-      ).map((acc) => ({ label: `${acc.account_name} (${acc.currency})`, value: acc.id })),
-    ],
-    [bankAccounts, currentParams.type],
-  );
-
-  // Local state for custom dates to prevent auto-fetching before confirmation
+  const hasDateFilter = Boolean(currentParams.range && currentParams.range !== "all" || currentParams.start || currentParams.end);
+  const activeFilterCount = [currentParams.type, currentParams.account, currentParams.search, hasDateFilter].filter(Boolean).length;
+  const [filtersOpen, setFiltersOpen] = useState(Boolean(currentParams.type || currentParams.account || hasDateFilter));
+  const [isExporting, setIsExporting] = useState(false);
+  const [navigating, startNavigation] = useTransition();
+  const [searchText, setSearchText] = useState(currentParams.search || "");
   const [customStart, setCustomStart] = useState(currentParams.start || "");
   const [customEnd, setCustomEnd] = useState(currentParams.end || "");
+  const { showToast, toastProps } = useAdminFeedback();
+  const isCustom = currentParams.range === "custom" || (!currentParams.range && Boolean(currentParams.start || currentParams.end));
+  const invalidRange = Boolean(customStart && customEnd && customStart > customEnd);
+  const accountNameById = useMemo(() => Object.fromEntries(bankAccounts.map(account => [account.id, `${account.account_name} (${account.currency})`])), [bankAccounts]);
+  const accountOptions = useMemo(() => [
+    { label: "All bank accounts", value: "all" },
+    ...sortBankAccountsByPriority(bankAccounts).map(account => ({ label: `${account.account_name} (${account.currency})`, value: account.id })),
+  ], [bankAccounts]);
 
-  const createQueryString = useCallback(
-    (updates: Record<string, string | null>) => {
-      const params = new URLSearchParams(currentParams as Record<string, string>);
-      Object.entries(updates).forEach(([name, value]) => {
-        if (value) params.set(name, value);
-        else params.delete(name);
-      });
-      params.delete("page"); // Reset pagination
-      return params.toString();
-    },
-    [currentParams]
-  );
-
-  const isCustom = currentParams.range === "custom";
-
-  const applyCustomDate = () => {
-    router.push(pathname + "?" + createQueryString({ start: customStart, end: customEnd, range: "custom" }));
-  };
-
-  const exportFilteredRows = () => {
+  function navigate(updates: Record<string, string | null>) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(currentParams)) if (value !== undefined) params.set(key, value);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    }
+    params.delete("page");
+    startNavigation(() => router.push(`${pathname}?${params}`, { scroll: false }));
+  }
+  function clearFilters() {
+    setSearchText("");
+    navigate({ type: null, account: null, range: null, start: null, end: null, search: null });
+  }
+  const downloadExportRows = (exportRows: Awaited<ReturnType<typeof getLedgerExportRows>>) => {
     const selectedAccountId = currentParams.account || null;
 
     const toNumber = (value: number | string) => {
@@ -186,94 +153,55 @@ export default function LedgerToolbar({ currentParams, bankAccounts, exportRows 
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <section className={styles.toolbar} dir="rtl" aria-label="فیلترهای دفتر کل">
-      <div className={styles.control}>
-        <span className={styles.controlLabel}>نوع تراکنش</span>
-        <SelectBox
-          labeledOptions={transactionOptions}
-          value={currentParams.type || "all"}
-          onChange={(value: string) => router.push(pathname + "?" + createQueryString({ type: value === "all" ? null : value }))}
-          className={styles.selectTrigger}
-          dir="rtl"
-        />
-      </div>
+  const exportFilteredRows = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const rows = await getLedgerExportRows(exportFilters);
+      downloadExportRows(rows);
+      showToast({ type: "success", message: `${rows.length.toLocaleString()} ledger records exported.` });
+    } catch {
+      showToast({ type: "error", message: "The ledger export couldn't be prepared. Please try again." });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
-      <div className={styles.control}>
-        <span className={styles.controlLabel}>بازه زمانی</span>
-        <SelectBox
-          labeledOptions={rangeOptions}
-          value={currentParams.range || "all"}
-          onChange={(value: string) => {
-            if (value === "custom") {
-              router.push(pathname + "?" + createQueryString({ range: value }));
-              return;
-            }
-            router.push(pathname + "?" + createQueryString({ range: value, start: null, end: null }));
-          }}
-          className={styles.selectTrigger}
-          dir="rtl"
-        />
-      </div>
 
-      <div className={styles.control}>
-        <span className={styles.controlLabel}>حساب بانکی</span>
-        <SelectBox
-          labeledOptions={accountOptions}
-          value={currentParams.account || "all"}
-          onChange={(value: string) => router.push(pathname + "?" + createQueryString({ account: value === "all" ? null : value }))}
-          className={styles.selectTrigger}
-          dir="rtl"
-        />
-      </div>
-
-      <label className={`${styles.control} ${styles.searchControl}`}>
-        <span className={styles.controlLabel}>جستجو در دفتر کل</span>
-        <span className={styles.searchField}>
+  return <section className={styles.toolbar} aria-label="Ledger filters and export" aria-busy={navigating}>
+    <div className={styles.primaryRow}>
+      <form className={styles.searchForm} role="search" aria-label="Search ledger entries" onSubmit={event => { event.preventDefault(); navigate({ search: searchText.trim() || null }); }}>
+        <div className={styles.searchField}>
           <Search size={17} aria-hidden="true" />
-          <input
-            type="search"
-            placeholder="نام مشتری یا کد مرجع"
-            defaultValue={currentParams.search || ""}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                router.push(pathname + "?" + createQueryString({ search: event.currentTarget.value.trim() || null }));
-              }
-            }}
-          />
-        </span>
-      </label>
-
-      <div className={`${styles.control} ${styles.actionsControl}`}>
-        <span className={styles.controlLabel}>خروجی</span>
-        <button type="button" className={styles.exportButton} onClick={exportFilteredRows}>
-          <Download size={16} aria-hidden="true" />
-          خروجی CSV تراکنش‌ها
+          <input type="search" aria-label="Search sender or recipient" placeholder="Search sender or recipient…" value={searchText} onChange={event => setSearchText(event.target.value)} dir="auto" />
+          <button type="submit" disabled={navigating} className={styles.searchSubmit}>Search</button>
+        </div>
+      </form>
+      <div className={styles.primaryActions}>
+        <button type="button" className={`${styles.filterButton} ${filtersOpen ? styles.filterButtonActive : ""}`} aria-expanded={filtersOpen} onClick={() => setFiltersOpen(value => !value)}>
+          <SlidersHorizontal size={15} /> Filters {activeFilterCount > 0 && <span className={styles.filterCount}>{activeFilterCount}</span>}
+        </button>
+        <button type="button" className={styles.exportButton} onClick={exportFilteredRows} disabled={isExporting || navigating} aria-busy={isExporting}>
+          {isExporting ? <LoaderCircle size={15} className={styles.spinner} /> : <Download size={15} />}
+          {isExporting ? "Exporting…" : "Export CSV"}
         </button>
       </div>
-
-      {isCustom && (
-        <div className={styles.customRange}>
-          <span className={styles.customRangeLabel}>انتخاب بازه دلخواه</span>
-          <div className={styles.dateControl}>
-            <span>از تاریخ</span>
-            <CustomDatePicker value={customStart} onChange={setCustomStart} placeholder="تاریخ شروع" className={styles.datePicker} />
-          </div>
-          <div className={styles.dateControl}>
-            <span>تا تاریخ</span>
-            <CustomDatePicker value={customEnd} onChange={setCustomEnd} placeholder="تاریخ پایان" className={styles.datePicker} />
-          </div>
-          <button
-            type="button"
-            className={styles.applyButton}
-            onClick={applyCustomDate}
-            disabled={!customStart || !customEnd}
-          >
-            <Check size={17} aria-hidden="true" />
-            اعمال بازه
-          </button>
-        </div>
-      )}
-    </section>
-  );
+    </div>
+    {filtersOpen && <div className={styles.filterFields}>
+      <div className={styles.control}><span className={styles.controlLabel}>Entry type</span><SelectBox placeholder="Entry type" labeledOptions={transactionOptions} value={currentParams.type || "all"} onChange={value => navigate({ type: value === "all" ? null : value })} className={styles.selectTrigger} disabled={navigating} dir="ltr" /></div>
+      <div className={styles.control}><span className={styles.controlLabel}>Date range</span><SelectBox placeholder="Date range" labeledOptions={rangeOptions} value={currentParams.range || (currentParams.start || currentParams.end ? "custom" : "all")} onChange={value => navigate(value === "custom" ? { range: value } : { range: value, start: null, end: null })} className={styles.selectTrigger} disabled={navigating} dir="ltr" /></div>
+      <div className={styles.control}><span className={styles.controlLabel}>Bank account</span><SelectBox placeholder="Bank account" labeledOptions={accountOptions} value={currentParams.account || "all"} onChange={value => navigate({ account: value === "all" ? null : value })} className={styles.selectTrigger} disabled={navigating} dir="ltr" /></div>
+      {isCustom && <div className={styles.customRange}>
+        <div className={styles.dateControl}><span>From</span><CustomDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" disabled={navigating} /></div>
+        <div className={styles.dateControl}><span>To</span><CustomDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" disabled={navigating} /></div>
+        <button type="button" className={styles.applyButton} onClick={() => navigate({ start: customStart, end: customEnd, range: "custom" })} disabled={!customStart || !customEnd || invalidRange || navigating}><Check size={16} /> Apply dates</button>
+        {invalidRange && <p className={styles.rangeError} role="alert">End date must be on or after the start date.</p>}
+      </div>}
+    </div>}
+    {(activeFilterCount > 0 || navigating) && <div className={styles.activeFilters}>
+      {navigating ? <span role="status"><LoaderCircle size={13} className={styles.spinner} /> Updating entries…</span> : <span>{activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"}{currentParams.search ? ` · “${currentParams.search}”` : ""}</span>}
+      {activeFilterCount > 0 && <button type="button" onClick={clearFilters} disabled={navigating}><X size={13} /> Clear filters</button>}
+    </div>}
+    <AdminToast {...toastProps} />
+  </section>;
 }

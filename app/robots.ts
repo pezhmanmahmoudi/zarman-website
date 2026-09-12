@@ -1,32 +1,16 @@
-import type { MetadataRoute } from "next";
-
-// آدرس تولیدی صرافی زرمان
-const productionUrl = "https://zarman.com.au";
+﻿import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/seo";
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [
-      {
-        userAgent: "*",
-        allow: "/",
-        disallow: [
-          "/fa/dashboard/", // جلوگیری از ایندکس شدن پنل کاربری
-          "/en/dashboard/", // block English dashboard too
-          "/fa/login",
-          "/en/login",
-          "/fa/forgot-password",
-          "/en/forgot-password",
-          "/fa/reset-password",
-          "/en/reset-password",
-          "/fa/auth/",
-          "/en/auth/",
-          "/admin/",        // block admin panel routes
-          "/api/",          // بستن تمام مسیرهای ای‌پی‌آی برای امنیت بیشتر
-        ],
-      },
-    ],
-    // استفاده از روش امن گزینه ۲ برای ساخت آدرس نقشه سایت
-    sitemap: new URL("/sitemap.xml", productionUrl).toString(),
-    host: productionUrl,
+    rules: [{
+      userAgent: "*",
+      allow: "/",
+      // Auth forms stay crawlable so crawlers can read their noindex directive.
+      // Authentication controls access; robots.txt does not secure private data.
+      disallow: ["/fa/dashboard", "/en/dashboard", "/admin", "/api/", "/fa/auth/callback", "/en/auth/callback"],
+    }],
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   };
 }

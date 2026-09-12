@@ -5,8 +5,14 @@
 
 /* ── Container ────────────────────────────────────────────────────────────── */
 .container {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
   position: fixed;
-  top: 1.5rem;
+  inset: max(1.25rem, env(safe-area-inset-top)) auto auto 50%;
+  width: min(420px, calc(100vw - 2rem));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -28,8 +34,9 @@
   border-radius: 0.625rem;
   font-size: 0.875rem;
   font-weight: 500;
-  min-width: 260px;
-  max-width: 380px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border: 1px solid transparent;
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.09),
@@ -51,25 +58,25 @@
 
 /* ── Variants ─────────────────────────────────────────────────────────────── */
 .toastSuccess {
-  background: rgba(16, 185, 129, 0.09);
+  background: #ecfdf5;
   border-color: rgba(16, 185, 129, 0.28);
   color: #064e3b;
 }
 
 .toastError {
-  background: rgba(239, 68, 68, 0.09);
+  background: #fef2f2;
   border-color: rgba(239, 68, 68, 0.28);
   color: #7f1d1d;
 }
 
 .toastWarning {
-  background: rgba(245, 158, 11, 0.09);
+  background: #fffbeb;
   border-color: rgba(245, 158, 11, 0.28);
   color: #78350f;
 }
 
 .toastInfo {
-  background: rgba(59, 130, 246, 0.09);
+  background: #eff6ff;
   border-color: rgba(59, 130, 246, 0.28);
   color: #1e3a8a;
 }
@@ -83,6 +90,8 @@
 
 .message {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   line-height: 1.45;
 }
 
@@ -91,7 +100,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 2px;
+  padding: 8px;
   color: inherit;
   opacity: 0.55;
   line-height: 1;
@@ -101,3 +110,5 @@
   transition: opacity 0.15s;
 }
 .close:hover { opacity: 1; }
+.close:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
+import ContentNavigation from "@/components/layout/ContentNavigation";
 import { services } from "@/data/services";
 import {
   ArrowLeft,
@@ -8,11 +10,12 @@ import {
   Stethoscope,
   Landmark,
   Building2,
+  Globe2,
+  ShieldCheck,
 } from "lucide-react";
 import styles from "@/styles/Services.module.css";
 
-const PRODUCTION_URL = "https://zarman.com.au";
-const SOCIAL_IMAGE = `${PRODUCTION_URL}/images/layout-logo.png`;
+import { SITE_URL as PRODUCTION_URL, getPageMetadata, serializeJsonLd } from "@/lib/seo";
 
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
   "student-remittance": <GraduationCap size={22} strokeWidth={2} />,
@@ -21,41 +24,15 @@ const SERVICE_ICONS: Record<string, React.ReactNode> = {
   "business-payment-infrastructure": <Building2 size={22} strokeWidth={2} />,
 };
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
   const isEn = locale === "en";
-
-  const title = isEn
-    ? "Our Services | AUD/IRT Remittance Solutions | Zarman Exchange"
-    : "خدمات ما | راه‌حل‌های حواله AUD/IRT | صرافی زرمان";
-  const description = isEn
-    ? "Explore Zarman Exchange's full range of AUD/IRT remittance services — student payments, healthcare registration fees, large capital transfers, and business payment infrastructure."
-    : "خدمات کامل صرافی زرمان را کاوش کنید — پرداخت‌های دانشجویی، هزینه‌های رجیستری پزشکی، انتقال سرمایه و زیرساخت پرداخت‌های تجاری.";
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: `${PRODUCTION_URL}/${locale}/services`,
-      languages: {
-        "en-AU": `${PRODUCTION_URL}/en/services`,
-        "fa-IR": `${PRODUCTION_URL}/fa/services`,
-        "x-default": `${PRODUCTION_URL}/fa/services`,
-      },
-    },
-    robots: { index: true, follow: true },
-    openGraph: {
-      title,
-      description,
-      url: `${PRODUCTION_URL}/${locale}/services`,
-      type: "website",
-      images: [{ url: SOCIAL_IMAGE, width: 1200, height: 630 }],
-    },
-  };
+  return getPageMetadata({
+    locale,
+    path: "/services",
+    title: isEn ? "Australia–Iran Money Transfer Services" : "خدمات حواله بین ایران و استرالیا",
+    description: isEn ? "Explore student payments, healthcare registration fees, personal capital transfers and business payments between Australia and Iran with Zarman Exchange." : "خدمات حواله زرمان بین ایران و استرالیا: پرداخت شهریه دانشجویی، هزینه آزمون و رجیستری کادر درمان، انتقال سرمایه و پرداخت‌های تجاری.",
+  });
 }
 
 export default async function ServicesPage({
@@ -67,7 +44,6 @@ export default async function ServicesPage({
   const isEn = locale === "en";
   const localeServices = services.filter((s) => s.locale === locale);
   const ArrowIcon = isEn ? ArrowRight : ArrowLeft;
-  const BackIcon = isEn ? ArrowLeft : ArrowRight;
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
@@ -111,57 +87,99 @@ export default async function ServicesPage({
       <script
         type="application/ld+json"
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
       />
       <script
         type="application/ld+json"
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemListSchema) }}
       />
 
-      <main className={styles.section}>
+      <section className={styles.section} aria-labelledby="services-heading">
         <div className={styles.bgGrid} aria-hidden="true" />
         <div className={styles.bgGlow} aria-hidden="true" />
 
         <div className={styles.container}>
-          <nav className={styles.topNav} aria-label={isEn ? "Back to home" : "بازگشت"}>
-            <Link href={`/${locale}`} className={styles.backHome}>
-              <BackIcon size={16} strokeWidth={2.5} />
-              {isEn ? "Back to home" : "بازگشت به خانه"}
-            </Link>
-          </nav>
+          <ContentNavigation locale={locale} currentPath="/services" />
 
           <header className={styles.header}>
-            <span className={styles.eyebrow}>
-              {isEn ? "What We Offer" : "خدمات ما"}
-            </span>
-            <h1 className={styles.title}>
-              {isEn ? "AUD/IRT Remittance Services" : "خدمات حواله AUD/IRT"}
-            </h1>
-            <p className={styles.subtitle}>
-              {isEn
-                ? "From student tuition to enterprise settlements — every cross-border payment between Australia and Iran, handled with precision and full AUSTRAC compliance."
-                : "از شهریه دانشجویی تا تسویه‌های سازمانی — هر پرداخت فرامرزی بین استرالیا و ایران با دقت و انطباق کامل قانونی انجام می‌شود."}
-            </p>
+            <div className={styles.brandLine}>
+              <Image
+                src="/images/logo-no-text-light.svg"
+                alt=""
+                width={48}
+                height={48}
+                className={styles.logoImage}
+              />
+              <div>
+                <span>{isEn ? "Zarman Exchange" : "صرافی زرمان"}</span>
+                <small>{isEn ? "Transfer services" : "خدمات حواله"}</small>
+              </div>
+            </div>
+
+            <div className={styles.headerGrid}>
+              <div>
+                <span className={styles.eyebrow}>
+                  {isEn ? "What we offer" : "خدمات ما"}
+                </span>
+                <h1 id="services-heading" className={styles.title}>
+                  {isEn ? "Money transfers shaped around real needs" : "خدمات حواله متناسب با نیازهای واقعی"}
+                </h1>
+              </div>
+              <p className={styles.subtitle}>
+                {isEn
+                  ? "Explore payments for study, professional registration, personal capital and business needs. Each request is reviewed for availability, documents and timing."
+                  : "از شهریه دانشجویی تا هزینه رجیستری، انتقال سرمایه و پرداخت‌های تجاری؛ امکان انجام، مدارک و زمان هر درخواست به‌صورت جداگانه بررسی می‌شود."}
+              </p>
+            </div>
+
+            <div className={styles.factGrid}>
+              <div className={styles.factItem}>
+                <Building2 size={19} strokeWidth={1.8} aria-hidden="true" />
+                <span>
+                  <small>{isEn ? "Service range" : "دامنه خدمات"}</small>
+                  <strong>{isEn ? "4 specialised services" : "۴ خدمت تخصصی"}</strong>
+                </span>
+              </div>
+              <div className={styles.factItem}>
+                <Globe2 size={19} strokeWidth={1.8} aria-hidden="true" />
+                <span>
+                  <small>{isEn ? "Transfer corridor" : "مسیر حواله"}</small>
+                  <strong>{isEn ? "Australia and Iran" : "استرالیا و ایران"}</strong>
+                </span>
+              </div>
+              <div className={styles.factItem}>
+                <ShieldCheck size={19} strokeWidth={1.8} aria-hidden="true" />
+                <span>
+                  <small>{isEn ? "Request review" : "بررسی درخواست"}</small>
+                  <strong>{isEn ? "Documents and availability" : "مدارک و امکان انجام"}</strong>
+                </span>
+              </div>
+            </div>
           </header>
 
           <section
             aria-label={isEn ? "Service listings" : "فهرست خدمات"}
             className={styles.grid}
           >
-            {localeServices.map((service) => (
+            {localeServices.map((service, index) => (
               <article key={service.slug}>
                 <Link
                   href={`/${locale}/services/${service.slug}`}
                   className={styles.card}
                 >
-                  <div className={styles.cardIcon} aria-hidden="true">
-                    {SERVICE_ICONS[service.slug]}
+                  <div className={styles.cardTopline} aria-hidden="true">
+                    <span className={styles.cardIcon}>
+                      {SERVICE_ICONS[service.slug]}
+                    </span>
+                    <span className={styles.cardNumber}>
+                      {(index + 1).toLocaleString(isEn ? "en-AU" : "fa-IR", { minimumIntegerDigits: 2 })}
+                    </span>
                   </div>
                   <h2 className={styles.cardTitle}>{service.title}</h2>
                   <p className={styles.cardDescription}>{service.description}</p>
                   <span className={styles.cardLink}>
-                    {isEn ? "Learn more" : "بیشتر بدانید"}
+                    {isEn ? "Explore service" : "مشاهده جزئیات"}
                     <ArrowIcon size={14} />
                   </span>
                 </Link>
@@ -169,24 +187,32 @@ export default async function ServicesPage({
             ))}
           </section>
 
-          <div className={styles.ctaBanner}>
-            <p className={styles.ctaBannerTitle}>
-              {isEn
-                ? "Ready to get a personalised rate?"
-                : "آماده دریافت نرخ شخصی سازی شده هستید؟"}
-            </p>
-            <p className={styles.ctaBannerSubtitle}>
-              {isEn
-                ? "Register in minutes. Zero fees. Enterprise-grade AUSTRAC compliance."
-                : "ثبت‌نام در چند دقیقه. بدون کارمزد. انطباق قانونی سطح سازمانی."}
-            </p>
-            <Link href={`/${locale}/register`} className={styles.ctaButton}>
-              {isEn ? "Get Started" : "شروع ثبت‌نام"}
-              <ArrowIcon size={16} />
-            </Link>
-          </div>
+          <aside className={styles.ctaBanner} aria-label={isEn ? "Start a transfer" : "شروع حواله"}>
+            <div>
+              <span className={styles.ctaEyebrow}>{isEn ? "Next step" : "گام بعدی"}</span>
+              <p className={styles.ctaBannerTitle}>
+                {isEn
+                  ? "Discuss your transfer with our team"
+                  : "درخواست حواله خود را با تیم زرمان بررسی کنید"}
+              </p>
+              <p className={styles.ctaBannerSubtitle}>
+                {isEn
+                  ? "Create an account, complete verification and review your quote before confirming."
+                  : "حساب کاربری بسازید، احراز هویت را تکمیل کنید و پیش از تأیید، نرخ و هزینه‌های اعلام‌شده را بررسی کنید."}
+              </p>
+            </div>
+            <div className={styles.ctaActions}>
+              <Link href={`/${locale}/about`} className={styles.ctaSecondary}>
+                {isEn ? "About Zarman" : "درباره زرمان"}
+              </Link>
+              <Link href={`/${locale}/register`} className={styles.ctaButton}>
+                {isEn ? "Get started" : "شروع ثبت‌نام"}
+                <ArrowIcon size={16} />
+              </Link>
+            </div>
+          </aside>
         </div>
-      </main>
+      </section>
     </>
   );
 }

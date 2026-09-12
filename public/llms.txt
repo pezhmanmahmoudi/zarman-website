@@ -1,39 +1,34 @@
-# Zarman Exchange
+﻿# صرافی زرمان | Zarman Exchange
 
-> Zarman Exchange (Zarman Exchange Pty Ltd, ABN: 70 692 742 957) is an AUSTRAC-registered online remittance and currency exchange platform specialising in AUD to IRT (Iranian Toman) transfers for the Australian-Iranian community.
+> Persian and English information about Zarman Exchange's money transfer services between Australia and Iran. Start with the public pages below for service details, current quotes, company information and policies.
 
-## About
+## فارسی
 
-Zarman Exchange provides secure, fast, and competitively priced international money transfer services from Australia to Iran. The platform offers dynamic, volume-based exchange rates and enterprise-grade compliance under Australian financial regulations.
+- [خانه و محاسبه‌گر نرخ دلار استرالیا به تومان](https://www.zarman.com.au/fa)
+- [خدمات حواله بین ایران و استرالیا](https://www.zarman.com.au/fa/services)
+- [درباره صرافی زرمان و راه‌های تماس](https://www.zarman.com.au/fa/about)
+- [راهنماها و مقالات فارسی](https://www.zarman.com.au/fa/blog)
+- [راهنمای نرخ دلار استرالیا به تومان](https://www.zarman.com.au/fa/blog/rahnamaye-nerkh-aud-irt)
+- [مراحل حواله از استرالیا به ایران](https://www.zarman.com.au/fa/blog/havaleh-az-australia-be-iran)
 
-- Registered with AUSTRAC as a Remittance Dealer
-- ABN: 70 692 742 957
-- Serving the Australian-Iranian community
-- Specialises in AUD ↔ IRT (Australian Dollar to Iranian Toman) exchange
-- Website available in English (en-AU) and Persian (fa-IR)
+## English
 
-## Key Pages
+- [Home and AUD to toman calculator](https://www.zarman.com.au/en)
+- [Services](https://www.zarman.com.au/en/services)
+- [About Zarman and contact details](https://www.zarman.com.au/en/about)
+- [Guides and articles](https://www.zarman.com.au/en/blog)
+- [AUD to toman exchange rate guide](https://www.zarman.com.au/en/blog/aud-to-irt-exchange-rate-guide)
+- [Sending money from Australia to Iran](https://www.zarman.com.au/en/blog/send-money-australia-to-iran)
 
-- Homepage (English): https://zarman.com.au/en
-- Homepage (Persian / فارسی): https://zarman.com.au/fa
-- Services: https://zarman.com.au/en/services
-- About: https://zarman.com.au/en/about
-- Register: https://zarman.com.au/en/register
-- Blog: https://zarman.com.au/en/blog
+## Public policies (English)
 
-## Services
+- [Terms and conditions](https://www.zarman.com.au/en/legal/terms)
+- [Privacy policy](https://www.zarman.com.au/en/legal/privacy-policy)
+- [Identity verification collection notice](https://www.zarman.com.au/en/legal/dvs-notice)
+- [Identity verification consent](https://www.zarman.com.au/en/legal/dvs-consent)
 
-- AUD to IRT international money transfer
-- Real-time currency exchange rates (AUD/IRT)
-- Volume-based personalised exchange rates
-- Secure online remittance platform
-- AUSTRAC-compliant compliance framework
+## Interpretation
 
-## Contact & Social
+Zarman Exchange Pty Ltd is the company named on the About page. Persian is served at /fa and English at /en. AUD means Australian dollar; the website uses IRT for Iranian toman amounts. Quotes, fees, loyalty settings, availability and settlement times depend on the transaction. Check the visible quote and its update time; this file is not a current rate feed.
 
-- Website: https://zarman.com.au
-- LinkedIn: https://www.linkedin.com/company/zarman-exchange
-
-## Sitemap
-
-https://zarman.com.au/sitemap.xml
+- [XML sitemap](https://www.zarman.com.au/sitemap.xml)

@@ -20,9 +20,11 @@ type ExpenseRow = {
   payer_account_id?: string | null;
   status: "paid" | "pending";
   notes?: string | null;
+  bank_fee_month?: string | null;
 };
 
 type Props = { 
+  defaultOpen?: boolean;
   expenses: ExpenseRow[];
   bankAccounts: { id: string; account_name: string; currency: string }[];
 };
@@ -56,7 +58,7 @@ const EMPTY = {
   notes:         "",
 };
 
-export default function ExpenseForm({ expenses, bankAccounts }: Props) {
+export default function ExpenseForm({ expenses, bankAccounts, defaultOpen = false }: Props) {
   const [isPending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -154,7 +156,7 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
   const isEditMode = Boolean(editingId);
 
   return (
-    <details className={s.formDetails}>
+    <details className={s.formDetails} open={defaultOpen}>
       <summary className={s.formSummary}>
         <ChevronDown size={16} className={s.formSummaryChevron} />
         <span className={s.formSummaryTitle}>هزینه‌های عملیاتی</span>
@@ -304,6 +306,12 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
                     </span>
                   </td>
                   <td style={{ textAlign: "left" }}>
+                    {e.bank_fee_month ? (
+                      <a href="#bank-transfer-fees" title={`ویرایش کارمزد ماه ${e.bank_fee_month.slice(0, 7)}`}>
+                        ویرایش کارمزد ماهانه
+                      </a>
+                    ) : (
+                      <>
                     <button
                       className={s.btnIconEdit}
                       onClick={() => startEdit(e)}
@@ -324,6 +332,8 @@ export default function ExpenseForm({ expenses, bankAccounts }: Props) {
                     >
                       <Trash2 size={16} />
                     </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
