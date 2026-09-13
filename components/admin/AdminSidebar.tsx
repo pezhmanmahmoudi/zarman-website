@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, ShieldCheck, ArrowLeftRight, MessageSquare, Settings,
   ClipboardList, Users, LogOut, Menu, X, BookOpen, TrendingUp,
@@ -23,7 +23,6 @@ type AdminSidebarProps = {
 
 export function AdminSidebar({ adminEmail, pendingKyc, pendingTx, pendingFeedback }: AdminSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
@@ -63,8 +62,7 @@ export function AdminSidebar({ adminEmail, pendingKyc, pendingTx, pendingFeedbac
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      router.replace("/admin/login");
-      router.refresh();
+      window.location.assign("/admin/login");
     } catch {
       setLogoutError("Could not sign out. Please try again.");
       setSigningOut(false);

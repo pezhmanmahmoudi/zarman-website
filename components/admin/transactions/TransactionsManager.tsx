@@ -13,6 +13,7 @@ import { EditableAmount } from "@/components/admin/EditableAmount";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
+import { reloadAdminPage } from "@/lib/admin-refresh";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
@@ -530,7 +531,7 @@ export function TransactionsManager({
       const deletedCount = "deletedCount" in result ? result.deletedCount : selectedIds.size;
       clearSelection();
       setExportMessage({ type: "success", text: `${deletedCount} transaction(s) deleted.` });
-      router.refresh();
+      reloadAdminPage(600);
     } catch (error) {
       setExportMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to delete transactions." });
     } finally {

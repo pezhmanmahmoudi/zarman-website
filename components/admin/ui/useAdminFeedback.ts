@@ -18,7 +18,7 @@
  *     onConfirm: async () => {
  *       const result = await approveKyc(userId);
  *       if (result.error) showToast({ type: "error", message: result.error });
- *       else { showToast({ type: "success", message: "KYC approved." }); router.refresh(); }
+ *       else { showToast({ type: "success", message: "KYC approved." }); reloadAdminPage(600); }
  *     },
  *   });
  *

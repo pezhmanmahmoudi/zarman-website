@@ -1,9 +1,9 @@
 ﻿"use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import { updateTransactionReferenceCode } from "@/app/actions/admin.actions";
 import { AdminFieldEditor } from "@/components/admin/ui/AdminFieldEditor";
+import { reloadAdminPage } from "@/lib/admin-refresh";
 
 interface EditableReferenceCodeProps {
   transactionId: string | number;
@@ -12,7 +12,6 @@ interface EditableReferenceCodeProps {
 
 export function EditableReferenceCode({ transactionId, currentCode }: EditableReferenceCodeProps) {
   const [savedCode, setSavedCode] = useState<{ source: string | null; value: string | null } | null>(null);
-  const router = useRouter();
   const displayCode = savedCode?.source === currentCode ? savedCode.value : currentCode;
 
   return (
@@ -29,7 +28,7 @@ export function EditableReferenceCode({ transactionId, currentCode }: EditableRe
         const result = await updateTransactionReferenceCode(transactionId, code);
         if ("error" in result && result.error) throw new Error(result.error);
         setSavedCode({ source: currentCode, value: code || null });
-        router.refresh();
+        reloadAdminPage(600);
       }}
     />
   );

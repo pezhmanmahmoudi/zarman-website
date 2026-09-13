@@ -1,16 +1,15 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
 import { Check, X, Archive } from "lucide-react";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 import { approveKyc, rejectKyc, archiveKyc } from "@/app/actions/admin.actions";
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminToast } from "@/components/admin/ui/AdminToast";
+import { reloadAdminPage } from "@/lib/admin-refresh";
 
 export function KycActionButtons({ userId, currentStatus }: { userId: string; currentStatus?: string }) {
-  const router = useRouter();
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
 
   const handleApprove = () => {
@@ -22,7 +21,7 @@ export function KycActionButtons({ userId, currentStatus }: { userId: string; cu
       onConfirm: async () => {
         const result = await approveKyc(userId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "KYC approved." }); setTimeout(() => router.refresh(), 2000); }
+        else { showToast({ type: "success", message: "KYC approved." }); reloadAdminPage(600); }
       },
     });
   };
@@ -36,7 +35,7 @@ export function KycActionButtons({ userId, currentStatus }: { userId: string; cu
       onConfirm: async () => {
         const result = await rejectKyc(userId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "KYC rejected." }); setTimeout(() => router.refresh(), 2000); }
+        else { showToast({ type: "success", message: "KYC rejected." }); reloadAdminPage(600); }
       },
     });
   };
@@ -50,7 +49,7 @@ export function KycActionButtons({ userId, currentStatus }: { userId: string; cu
       onConfirm: async () => {
         const result = await archiveKyc(userId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "KYC archived." }); setTimeout(() => router.refresh(), 2000); }
+        else { showToast({ type: "success", message: "KYC archived." }); reloadAdminPage(600); }
       },
     });
   };

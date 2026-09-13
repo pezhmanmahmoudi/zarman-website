@@ -2,7 +2,6 @@
 
 import React, { useId, useState } from "react";
 import { AdminDialog } from "./ui/AdminDialog";
-import { useRouter } from "next/navigation";
 import { Check, X, Archive } from "lucide-react";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 import { approveTransaction, rejectTransaction, archiveTransaction } from "@/app/actions/admin.actions";
@@ -17,6 +16,7 @@ import {
   type IranBankTransferMethod,
 } from "@/lib/iran-bank-transfer-fees";
 import { sortBankAccountsByPriority, type BankAccountLike } from "@/lib/bank-account-ordering";
+import { reloadAdminPage } from "@/lib/admin-refresh";
 
 export function TransactionApproveButton({
   transactionId,
@@ -29,7 +29,6 @@ export function TransactionApproveButton({
   transactionType: "buy_aud" | "sell_aud" | string;
   bankAccounts?: { id: string; account_name?: string | null; currency?: string | null }[];
 }) {
-  const router = useRouter();
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
 
   // State برای مدیریت پنجره‌ی انتخاب کشوها
@@ -108,7 +107,7 @@ export function TransactionApproveButton({
         showToast({ type: "success", message: "تراکنش با موفقیت تایید و در دفتر کل ثبت شد." });
         setShowApproveModal(false);
         setTransferMethod("free");
-        router.refresh();
+        reloadAdminPage(600);
       }
     } catch {
       showToast({ type: "error", message: "The approval could not be completed. Please try again." });
@@ -126,7 +125,7 @@ export function TransactionApproveButton({
       onConfirm: async () => {
         const result = await rejectTransaction(transactionId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "Transaction rejected." }); router.refresh(); }
+        else { showToast({ type: "success", message: "Transaction rejected." }); reloadAdminPage(600); }
       },
     });
   };
@@ -140,7 +139,7 @@ export function TransactionApproveButton({
       onConfirm: async () => {
         const result = await archiveTransaction(transactionId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "Transaction archived." }); router.refresh(); }
+        else { showToast({ type: "success", message: "Transaction archived." }); reloadAdminPage(600); }
       },
     });
   };

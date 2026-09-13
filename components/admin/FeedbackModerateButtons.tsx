@@ -1,13 +1,13 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 import { moderateFeedback } from "@/app/actions/admin.actions";
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminToast } from "@/components/admin/ui/AdminToast";
+import { reloadAdminPage } from "@/lib/admin-refresh";
 
 export function FeedbackModerateButtons({
   feedbackId,
@@ -16,7 +16,6 @@ export function FeedbackModerateButtons({
   feedbackId: string | number;
   currentStatus: string;
 }) {
-  const router = useRouter();
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
 
   const handle = (newStatus: "approved" | "rejected") => {
@@ -33,7 +32,7 @@ export function FeedbackModerateButtons({
         if (result.error) showToast({ type: "error", message: result.error });
         else {
           showToast({ type: "success", message: `Feedback ${newStatus}.` });
-          router.refresh();
+          reloadAdminPage(600);
         }
       },
     });

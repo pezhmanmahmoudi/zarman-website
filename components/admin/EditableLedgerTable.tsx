@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import React, { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Pencil, Check, X, Plus, Trash2, ArrowRight, Eye } from "lucide-react";
 import { updateLedgerEntry, addManualLedgerEntry, deleteLedgerEntry } from "@/app/actions/admin.actions";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
@@ -9,6 +8,7 @@ import s from "@/styles/admin/LedgerTable.module.css";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { filterBankAccountsByLedgerType, sortBankAccountsByPriority } from "@/lib/bank-account-ordering";
+import { reloadAdminPage } from "@/lib/admin-refresh";
 
 function isCustomerCreditAccount(accountName: string) {
   return accountName.trim().toLowerCase() === "customer credit_aud";
@@ -160,7 +160,6 @@ const TH_FA: React.CSSProperties = { textAlign: "center", fontFamily: "var(--fon
 const TH_EN: React.CSSProperties = { textAlign: "right",  fontFamily: "var(--font-en-stack)",   direction: "ltr", padding: "0.8rem 0.8rem", whiteSpace: "nowrap" };
 // -- Component --------------------------------------------------------------
 export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
-  const router = useRouter();
   const [isPending, start] = useTransition();
   const [edit,    setEdit]    = useState<EditState | null>(null);
   const [add,     setAdd]     = useState<AddState  | null>(null);
@@ -273,7 +272,7 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
         fee_aud: fee,
       });
       if ("error" in res) setEdit(e => e ? { ...e, err: res.error } : null);
-      else { setEdit(null); router.refresh(); }
+      else { setEdit(null); reloadAdminPage(600); }
     });
   };
 
@@ -311,14 +310,14 @@ export function EditableLedgerTable({ rows, bankAccounts, titleSlot }: Props) {
         feeAud: fee || undefined, dateGregorian: add.date || undefined,
       });
       if ("error" in res) setAdd(a => a ? { ...a, err: res.error } : null);
-      else { setAdd(null); router.refresh(); }
+      else { setAdd(null); reloadAdminPage(600); }
     });
   };
 
   const doDelete = (id: string) => {
     start(async () => {
       await deleteLedgerEntry(id);
-      setDelId(null); router.refresh();
+      setDelId(null); reloadAdminPage(600);
     });
   };
 

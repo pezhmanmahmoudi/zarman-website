@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import React, { useState, useTransition, useOptimistic } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, Trash2, ToggleLeft, ToggleRight, Tag } from "lucide-react";
 import formStyles from "@/styles/admin/AdminForms.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
@@ -17,6 +16,7 @@ import { AdminToast } from "@/components/admin/ui/AdminToast";
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import { reloadAdminPage } from "@/lib/admin-refresh";
 
 // ΓöÇΓöÇΓöÇ Empty creation form state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
@@ -36,7 +36,6 @@ export function PromoCodeManager({
 }: {
   initialCodes: PromoCode[];
 }) {
-  const router = useRouter();
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
 
   const [codes, setCodesOptimistic] = useOptimistic(initialCodes);
@@ -77,7 +76,7 @@ export function PromoCodeManager({
         showToast({ type: "success", message: `Promo code "${code}" created.` });
         setForm(EMPTY_FORM);
         setShowForm(false);
-        router.refresh();
+        reloadAdminPage(600);
       }
     });
   };
@@ -92,7 +91,7 @@ export function PromoCodeManager({
       );
       const result = await updatePromoCode(c.id, { active: next });
       if (result.error) showToast({ type: "error", message: result.error });
-      else router.refresh();
+      else reloadAdminPage(600);
     });
   };
 
@@ -109,7 +108,7 @@ export function PromoCodeManager({
         if (result.error) showToast({ type: "error", message: result.error });
         else {
           showToast({ type: "success", message: `"${c.code}" deleted.` });
-          router.refresh();
+          reloadAdminPage(600);
         }
       },
     });

@@ -1,20 +1,19 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
 import { rejectTransaction } from "@/app/actions/admin.actions";
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminToast } from "@/components/admin/ui/AdminToast";
+import { reloadAdminPage } from "@/lib/admin-refresh";
 
 export function RejectApprovedButton({
   transactionId,
 }: {
   transactionId: string | number;
 }) {
-  const router = useRouter();
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
 
   const handleReject = () => {
@@ -26,7 +25,7 @@ export function RejectApprovedButton({
       onConfirm: async () => {
         const result = await rejectTransaction(transactionId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "Transaction rejected." }); router.refresh(); }
+        else { showToast({ type: "success", message: "Transaction rejected." }); reloadAdminPage(600); }
       },
     });
   };

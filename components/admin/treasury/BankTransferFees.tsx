@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { CheckCircle2, Receipt, RefreshCw } from "lucide-react";
 import {
   getMonthlyBankFeeReview,
@@ -14,6 +13,7 @@ import {
   parseBankFeeAmount,
   type BankFeeMonthReview,
 } from "@/lib/bank-fee-posting";
+import { reloadAdminPage } from "@/lib/admin-refresh";
 import styles from "@/styles/admin/BankTransferFees.module.css";
 
 type AccountDraft = {
@@ -47,7 +47,6 @@ function initialDrafts(review: BankFeeMonthReview): Record<string, AccountDraft>
 }
 
 export default function BankTransferFees() {
-  const router = useRouter();
   const id = useId();
   const [month, setMonth] = useState(() => defaultBankFeeMonth());
   const [review, setReview] = useState<BankFeeMonthReview | null>(null);
@@ -166,7 +165,7 @@ export default function BankTransferFees() {
           Object.entries(previous).map(([accountId, draft]) => [accountId, { ...draft, selected: false }]),
         ));
         setReload((value) => value + 1);
-        router.refresh();
+        reloadAdminPage(600);
       } catch (error) {
         if (activeMonth.current === submittedMonth && submittedSequence === requestSequence.current) {
           setSubmitError(displayError(error));

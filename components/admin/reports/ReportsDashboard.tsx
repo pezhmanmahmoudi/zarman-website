@@ -2,11 +2,11 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Download, RefreshCw } from "lucide-react";
 import { refreshEnterpriseReports } from "@/app/actions/report.actions";
 import type { EnterpriseReportData, ReportDashboard, ReportKpi } from "@/lib/reporting/types";
+import { reloadAdminPage } from "@/lib/admin-refresh";
 import styles from "@/styles/admin/Reports.module.css";
 
 const ReportsCharts = dynamic(() => import("./ReportsCharts"), { ssr: false, loading: () => <div className={styles.chartLoading}>Loading charts...</div> });
@@ -57,14 +57,13 @@ function exportCsv(data: EnterpriseReportData) {
 }
 
 export function ReportsDashboard({ data }: { data: EnterpriseReportData }) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const dashboard = data.dashboard;
   const ledgerHref = `/admin/ledger?start=${dashboard.period.start}&end=${dashboard.period.end}`;
   const refresh = () => startTransition(async () => {
     const result = await refreshEnterpriseReports();
-    if ("error" in result) setMessage(`Error: ${result.error}`); else { setMessage("Reports refreshed."); router.refresh(); }
+    if ("error" in result) setMessage(`Error: ${result.error}`); else { setMessage("Reports refreshed."); reloadAdminPage(600); }
   });
 
   return (

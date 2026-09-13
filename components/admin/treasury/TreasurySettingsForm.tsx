@@ -1,17 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { updateTreasurySettings, type TreasurySettingsRow } from "@/app/actions/treasury.actions";
 import s from "@/styles/admin/Treasury.module.css";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import { reloadAdminPage } from "@/lib/admin-refresh";
 
 type Props = {
   settings: TreasurySettingsRow;
 };
 
 export default function TreasurySettingsForm({ settings }: Props) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
@@ -72,7 +71,7 @@ export default function TreasurySettingsForm({ settings }: Props) {
       }
 
       setOk(true);
-      router.refresh();
+      reloadAdminPage(600);
     });
   }
 

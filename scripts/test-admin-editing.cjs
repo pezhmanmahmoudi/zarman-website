@@ -145,20 +145,20 @@ test("save failure preserves the draft, announces the error, and allows retry or
 
 test("amount editor rejects invalid values before its action and saves the selected currency only", async () => {
   const calls = [];
-  let refreshes = 0;
+  const reloadDelays = [];
   const Field = () => null;
   const mounted = mount("components/admin/EditableAmount.tsx", "EditableAmount", {
     transactionId: "tx-test", field: "equivalent_toman", currentValue: 80125100,
   }, {
-    "next/navigation": { useRouter: () => ({ refresh: () => { refreshes++; } }) },
     "@/app/actions/admin.actions": { updateTransactionAmount: async (...args) => { calls.push(args); return { success: true }; } },
     "@/components/admin/ui/AdminFieldEditor": { AdminFieldEditor: Field },
     "@/lib/admin-amount-input": { parseAdminAmount },
+    "@/lib/admin-refresh": { reloadAdminPage: delay => { reloadDelays.push(delay); } },
   });
   await assert.rejects(mounted.render().props.onSave("506oops"), /positive amount/);
   assert.deepEqual(calls, []);
   await mounted.render().props.onSave("80,000,000");
   assert.deepEqual(calls, [["tx-test", "equivalent_toman", 80000000]]);
-  assert.equal(refreshes, 1);
+  assert.deepEqual(reloadDelays, [600]);
   assert.equal(mounted.render().props.value, "80000000");
 });

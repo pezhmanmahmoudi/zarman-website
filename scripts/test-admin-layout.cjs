@@ -155,3 +155,24 @@ test("admin errors recover stale deployments with a full document navigation", (
   assert.match(errorSource, /window\.location\.assign\("\/admin\/dashboard"\)/);
   assert.match(configSource, /deploymentId:\s*process\.env\.VERCEL_DEPLOYMENT_ID\s*\?\?\s*process\.env\.VERCEL_GIT_COMMIT_SHA/);
 });
+
+test("admin mutations reload a fresh document instead of refreshing the RSC tree", () => {
+  const adminRoot = path.join(projectRoot, "components/admin");
+  const componentFiles = [];
+  const visit = directory => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const filename = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(filename);
+      else if (entry.name.endsWith(".tsx")) componentFiles.push(filename);
+    }
+  };
+  visit(adminRoot);
+
+  const offenders = componentFiles
+    .filter(filename => /router\.refresh\(\)/.test(fs.readFileSync(filename, "utf8")))
+    .map(filename => path.relative(projectRoot, filename));
+  assert.deepEqual(offenders, []);
+
+  const helperSource = fs.readFileSync(path.join(projectRoot, "lib/admin-refresh.ts"), "utf8");
+  assert.match(helperSource, /window\.location\.reload\(\)/);
+});
