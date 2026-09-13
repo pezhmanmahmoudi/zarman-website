@@ -70,7 +70,8 @@ CREATE TABLE owner_loans (
 );
 CREATE TABLE ledger (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), transaction_id uuid REFERENCES transactions(id),
-  date_gregorian date NOT NULL, date_jalali text NOT NULL, type text NOT NULL,
+  date_gregorian date NOT NULL, date_jalali text NOT NULL,
+  type text NOT NULL CONSTRAINT ledger_type_check CHECK(type IN ('buy_aud','sell_aud')),
   entry_type text NOT NULL DEFAULT 'trade', exchange_rate numeric, amount_aud numeric NOT NULL,
   amount_toman numeric NOT NULL, sender text, recipient text, fee_aud numeric DEFAULT 0,
   payer_account_id uuid REFERENCES bank_accounts(id), receiver_account_id uuid REFERENCES bank_accounts(id),

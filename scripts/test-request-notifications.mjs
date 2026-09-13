@@ -164,7 +164,13 @@ test("real SQL outbox preserves order, excludes internal customer events, freeze
   const db = new PGlite();
   try {
     await db.exec(read("scripts/fixtures/customer-requests.sql"));
-    for (const migration of ["20260911_18_customer_requests.sql", "20260911_19_request_notifications.sql", "20260913_23_request_funding_and_receipts.sql", "20260913_24_request_receipt_notifications.sql"]) {
+    for (const migration of [
+      "20260802_09_enterprise_reporting.sql", "20260802_10_ledger_accounting_controls.sql",
+      "20260802_13_standardize_trade_fee_accounting.sql", "20260911_18_customer_requests.sql",
+      "20260911_19_request_notifications.sql", "20260913_23_request_funding_and_receipts.sql",
+      "20260913_24_request_receipt_notifications.sql", "20260913_25_request_fee_accounting.sql",
+      "20260913_26_request_fee_ledger_type.sql",
+    ]) {
       await db.exec(read(`supabase/migrations/${migration}`));
     }
     const user = randomUUID(), quote = randomUUID();

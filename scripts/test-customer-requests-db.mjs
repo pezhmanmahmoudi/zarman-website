@@ -93,7 +93,8 @@ describe('customer request PostgreSQL workflow', { concurrency: false }, () => {
       'supabase/migrations/20260911_19_request_notifications.sql',
       'supabase/migrations/20260913_23_request_funding_and_receipts.sql',
       'supabase/migrations/20260913_24_request_receipt_notifications.sql',
-      'supabase/migrations/20260913_25_request_fee_accounting.sql']) await db.exec(read(file));
+      'supabase/migrations/20260913_25_request_fee_accounting.sql',
+      'supabase/migrations/20260913_26_request_fee_ledger_type.sql']) await db.exec(read(file));
   });
   after(async () => { await db?.close(); });
   beforeEach(async () => {
@@ -291,6 +292,19 @@ describe('customer request PostgreSQL workflow', { concurrency: false }, () => {
     const legacy = await one("INSERT INTO transactions(user_id,type,amount_aud,equivalent_toman) VALUES($1,'buy_aud',100,100000) RETURNING id", [CUSTOMER]);
     await query("UPDATE transactions SET status='approved' WHERE id=$1", [legacy.id]);
     assert.equal((await one('SELECT status FROM transactions WHERE id=$1', [legacy.id])).status, 'approved');
+  });
+
+  test('legacy ledger types remain restricted outside linked request fee adjustments', async () => {
+    for (const entryType of ['trade', 'adjustment']) {
+      await rejects(() => query(
+        "INSERT INTO ledger(date_gregorian,date_jalali,type,entry_type,amount_aud,amount_toman,receiver_account_id) VALUES(current_date,'1405/06/22','transfer',$1,20,20000,$2)",
+        [entryType, AUD]), /ledger_type_check/);
+    }
+    assert.equal(Number((await one('SELECT count(*) AS n FROM ledger')).n), 0);
+    for (const type of ['buy_aud', 'sell_aud']) {
+      await query("INSERT INTO ledger(date_gregorian,date_jalali,type,entry_type,amount_aud,amount_toman) VALUES(current_date,'1405/06/22',$1,'trade',20,20000)", [type]);
+    }
+    assert.equal(Number((await one('SELECT count(*) AS n FROM ledger')).n), 2);
   });
 
   test('optimistic versions and banking reference uniqueness prevent duplicate cash and payout intent', async () => {

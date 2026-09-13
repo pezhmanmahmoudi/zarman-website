@@ -6,7 +6,7 @@ Completion creates `exchange_request_completion_receipts` from the accepted quot
 
 ## Deployment configuration
 
-Apply migrations in repository order, including `_18`, `_19`, `_23`, `_24` and `_25`. `_24` corrects the earlier notification prepare/acknowledgement RPCs and adds immutable completion receipts; `_25` posts priority cash and earned income to accounting. Neither migration application nor application startup sends messages. Keep request and priority settings disabled until the following deployment configuration is in place.
+Apply migrations in repository order, including `_18`, `_19`, `_23`, `_24`, `_25` and `_26`. `_24` corrects the earlier notification prepare/acknowledgement RPCs and adds immutable completion receipts; `_25` posts priority cash and earned income to accounting. `_26` permits those managed priority-fee adjustments under the legacy ledger type check and is required before paid-priority funding can succeed. Neither migration application nor application startup sends messages. Keep request and priority settings disabled until the following deployment configuration is in place.
 
 Set these server environment variables in the actual deployment, never with a `NEXT_PUBLIC_` prefix:
 
