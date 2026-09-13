@@ -3,6 +3,10 @@ export type ServiceTier = "standard" | "priority";
 export type RequestStatus = "submitted" | "under_review" | "action_required" | "awaiting_funds" | "ready" | "processing" | "reconciliation" | "completed" | "cancelled" | "rejected" | "expired";
 export type RequestCommand = "review" | "request_info" | "respond" | "await_funds" | "confirm_funds" | "resume_funded_request" | "start_processing" | "record_uncertain_payout" | "complete" | "cancel" | "reject" | "confirm_refund" | "payment_evidence";
 export type ActionResult<T> = { data: T; error?: never } | { error: string; data?: never };
+export type FundingBankDetails = {
+  account_name?: string; bank_name?: string; bsb?: string;
+  account_number?: string; iban?: string; card_number?: string;
+};
 
 export type RequestSettings = {
   enabled: boolean;
@@ -15,6 +19,7 @@ export type RequestSettings = {
   funding_minutes: number;
   australian_clearance_minutes: number;
   iran_banking_notice: string;
+  iran_banking_notice_fa: string;
   max_amount_aud: number;
   timezone: "Australia/Sydney";
   business_days: number[];
@@ -24,11 +29,15 @@ export type RequestSettings = {
   management_emails: string[];
   payment_instructions_aud: string;
   payment_instructions_irt: string;
+  payment_instructions_aud_fa: string;
+  payment_instructions_irt_fa: string;
+  payment_details_aud: FundingBankDetails;
+  payment_details_irt: FundingBankDetails;
   priority_terms: string;
   priority_terms_fa: string;
 };
 export type SettingsRecord = { version: number; settings: RequestSettings };
-export type PublicRequestSettings = Omit<RequestSettings, "management_emails" | "payment_instructions_aud" | "payment_instructions_irt">;
+export type PublicRequestSettings = Omit<RequestSettings, "management_emails" | "payment_instructions_aud" | "payment_instructions_irt" | "payment_instructions_aud_fa" | "payment_instructions_irt_fa" | "payment_details_aud" | "payment_details_irt">;
 
 export type QuoteInput = {
   rawAmount: number;
@@ -88,6 +97,8 @@ export type ExchangeRequest = {
   funding_status: "unpaid" | "partial" | "confirmed" | "refund_pending" | "refunded";
   funding_received: number;
   payment_instructions: string | null;
+  payment_instructions_fa: string | null;
+  payment_details: FundingBankDetails | null;
   action_required: string | null;
   owner_id: string | null;
   handling_due_at: string | null;
@@ -100,18 +111,25 @@ export type ExchangeRequest = {
   created_at: string;
   updated_at: string;
 };
-export type RequestEvent = { id: string; request_id: string; sequence: number; event_type: string; status: RequestStatus; public_message: string | null; internal_message?: string | null; actor_id: string | null; created_at: string };
+export type RequestEvent = { id: string; request_id: string; sequence: number; event_type: string; status: RequestStatus; public_message: string | null; internal_message?: string | null; actor_id: string | null; created_at: string; send_email?: boolean };
+export type RequestMessage = {
+  id: string; request_id: string; event_id: string; event_sequence: number; sender_id: string;
+  sender_role: "admin" | "customer"; body: string; send_email: boolean; created_at: string;
+};
+export type RequestMessageInput = { requestId: string; expectedVersion: number; commandKey: string; message: string; sendEmail?: boolean };
+export type RequestMessageResult = { message: RequestMessage; request_version: number };
 export type RequestDelivery = { id: string; event_id: string; request_id: string; audience: "customer" | "management"; recipient_email: string; locale: RequestLocale; status: string; attempts: number; last_error: string | null; created_at: string };
 export type RequestReceipt = {
   id: string; request_id: string; original_name: string; content_type: string;
   size_bytes: number; sha256: string; uploaded_by: string; created_at: string; request_version?: number;
 };
-export type RequestDetail = { request: ExchangeRequest; events: RequestEvent[]; receipts: RequestReceipt[]; deliveries?: RequestDelivery[] };
+export type RequestDetail = { request: ExchangeRequest; events: RequestEvent[]; receipts: RequestReceipt[]; messages: RequestMessage[]; deliveries?: RequestDelivery[] };
 export type RequestMutationInput = {
   requestId: string;
   expectedVersion: number;
   commandKey: string;
   action: RequestCommand;
+  sendEmail?: boolean;
   payload?: {
     message?: string;
     payment_reference?: string;

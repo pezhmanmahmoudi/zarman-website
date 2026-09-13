@@ -1,8 +1,9 @@
 import { receiptAmount, requestReceiptRows, type RequestCompletionReceiptSnapshot } from "./receipt";
 import { validNotificationEmail, validatedRequestSiteUrl } from "./notification-config";
+import type { FundingBankDetails } from "./types";
 export { validNotificationEmail, validatedRequestSiteUrl } from "./notification-config";
 
-export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-status-v2";
+export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-status-v3";
 
 export type RequestEmailSnapshot = {
   id: string;
@@ -19,10 +20,13 @@ export type RequestEmailSnapshot = {
   payload_snapshot?: {
     public_message?: string | null;
     payment_instructions?: string | null;
+    payment_instructions_fa?: string | null;
+    payment_details?: FundingBankDetails | null;
     funding_total?: number | string;
     funding_currency?: "AUD" | "IRT";
     australian_clearance_minutes?: number;
     iran_banking_notice?: string;
+    iran_banking_notice_fa?: string;
     handling_due_at?: string | null;
     funds_confirmed_at?: string | null;
     receipt?: RequestCompletionReceiptSnapshot | null;
@@ -54,6 +58,8 @@ const statuses: Record<string, [string, string]> = {
 };
 
 const eventLabels: Record<string, [string, string]> = {
+  admin_message: ["Message from Zarman", "پیام زرمان"],
+  customer_message: ["Customer reply", "پاسخ مشتری"],
   receipt_uploaded: ["Payment receipt received", "رسید پرداخت دریافت شد"],
   payment_evidence: ["Payment evidence received", "مدرک پرداخت دریافت شد"],
   handling_overdue: ["Handling target overdue", "زمان هدف رسیدگی گذشته است"],
@@ -92,36 +98,43 @@ export function renderRequestNotification(
     : `${siteUrl}/${locale}/dashboard/requests/${snapshot.request_id}`;
   const isPriority = snapshot.requested_tier === "priority";
   const fee = Number(snapshot.priority_fee_aud);
-  const service = fa ? (isPriority ? "اولویت‌دار (درخواست‌شده)" : "عادی") : (isPriority ? "Priority (requested)" : "Standard");
+  const service = fa ? (isPriority ? "اولویت‌دار" : "عادی") : (isPriority ? "Priority" : "Standard");
   const occurred = new Date(snapshot.created_at);
   if (!Number.isFinite(occurred.getTime()) || !Number.isFinite(fee) || fee < 0) throw new Error("invalid_milestone_snapshot");
   const time = occurred.toLocaleString(fa ? "fa-IR" : "en-AU", { timeZone: "Australia/Sydney", dateStyle: "medium", timeStyle: "short" });
-  let action = fa ? "برای مشاهده وضعیت فعلی و مراحل بعد، وارد حساب خود شوید." : "Sign in to view the current status and next steps.";
-  if (snapshot.workflow_status === "action_required") action = fa ? "وارد حساب خود شوید و موارد درخواست‌شده را تکمیل کنید." : "Sign in and complete the requested information or action.";
-  if (snapshot.workflow_status === "awaiting_funds") action = fa ? "مبلغ و دستورالعمل واریز را در حساب خود بررسی کنید." : "Review the funding amount and payment instructions in your account.";
-  if (isManagement) action = fa ? "درخواست و اقدامات باز را در صف مدیریت بررسی کنید." : "Review the request and open tasks in the management queue.";
+  const isMessage = ["admin_message", "customer_message"].includes(snapshot.event_type ?? "");
+  let action = fa ? "جزئیات در صفحه درخواست." : "Details are on your request page.";
+  if (snapshot.workflow_status === "action_required" || isMessage) action = fa ? "پاسخ خود را در صفحه درخواست بفرستید." : "Reply on the request page.";
+  if (isManagement) action = fa ? "بررسی و پاسخ در پنل مدیریت." : "Review and respond in the admin workspace.";
   const receipt = snapshot.event_type === "complete" ? snapshot.payload_snapshot?.receipt : null;
   if (snapshot.event_type === "complete" && (!receipt || receipt.request_id !== snapshot.request_id || receipt.reference_code !== snapshot.reference)) throw new Error("completion_receipt_unavailable");
-  const heading = receipt ? (fa ? "رسید نهایی انتقال زرمان" : "Your Zarman transfer receipt") : (fa ? "به‌روزرسانی درخواست زرمان" : "Your Zarman request update");
+  const heading = receipt ? (fa ? "رسید نهایی انتقال زرمان" : "Your Zarman transfer receipt") : status;
   const subject = `${isManagement ? (fa ? "مدیریت | " : "Operations | ") : ""}${reference}: ${status} | Zarman`;
   const lines = [
     `${fa ? "شماره پیگیری" : "Reference"}: ${reference}`,
-    `${fa ? "وضعیت" : "Status"}: ${status}`,
     `${fa ? "زمان به وقت سیدنی" : "Updated (Sydney time)"}: ${time}`,
-    `${fa ? "نوع خدمت" : "Service"}: ${service}`,
-    ...(isPriority ? [`${fa ? "هزینه اضافی پذیرفته‌شده" : "Accepted additional fee"}: AUD ${fee.toFixed(2)}`] : []),
+    ...(!isMessage ? [`${fa ? "نوع خدمت" : "Service"}: ${service}${isPriority ? ` · AUD ${fee.toFixed(2)} ${fa ? "هزینه اضافی" : "additional fee"}` : ""}`] : []),
   ];
   const details = snapshot.payload_snapshot;
   const instructions: string[] = [];
   if (["submitted", "await_funds"].includes(snapshot.event_type ?? "")) {
-    if (!details?.payment_instructions?.trim() || !["AUD", "IRT"].includes(details.funding_currency ?? "") || !Number.isFinite(Number(details.funding_total)) || Number(details.funding_total) <= 0) {
+    const bank = details?.payment_details;
+    const bankLabels: [keyof FundingBankDetails, string, string][] = [
+      ["account_name", "Account name", "نام صاحب حساب"], ["bank_name", "Bank", "بانک"],
+      ["bsb", "BSB", "BSB"], ["account_number", "Account number", "شماره حساب"],
+      ["iban", "IBAN", "شماره شبا"], ["card_number", "Card number", "شماره کارت"],
+    ];
+    const bankLines = bankLabels.flatMap(([key, en, persian]) => bank?.[key]?.trim() ? [`${fa ? persian : en}: ${bank[key]}`] : []);
+    const note = fa ? (details?.payment_instructions_fa || (!bankLines.length ? details?.payment_instructions : "")) : details?.payment_instructions;
+    if ((!bankLines.length && !note?.trim()) || !["AUD", "IRT"].includes(details?.funding_currency ?? "") || !Number.isFinite(Number(details?.funding_total)) || Number(details?.funding_total) <= 0) {
       throw new Error("funding_instructions_unavailable");
     }
     instructions.push(
-      `${fa ? "مبلغ واریز" : "Amount to transfer"}: ${receiptAmount(details.funding_total!, details.funding_currency!)}`,
-      details.payment_instructions,
+      `${fa ? "مبلغ واریز" : "Amount to transfer"}: ${receiptAmount(details!.funding_total!, details!.funding_currency!)}`,
+      ...bankLines,
+      ...(note?.trim() ? [note] : []),
       fa ? `کد پیگیری ${reference} را حتماً در توضیحات انتقال بانکی وارد کنید.` : `You must put your Reference Code ${reference} in your bank transfer description.`,
-      fa ? "رسید انتقال بانکی را در صفحه درخواست بارگذاری کنید. بارگذاری رسید به معنی تأیید دریافت وجه نیست." : "Upload your bank transfer receipt on the request page. Uploading evidence does not confirm that funds have cleared.",
+      fa ? "رسید بانکی را در صفحه درخواست بارگذاری کنید؛ وصول وجه جداگانه تأیید می‌شود." : "Upload your bank receipt on the request page; funds are confirmed separately.",
     );
   }
   if (["receipt_uploaded", "payment_evidence"].includes(snapshot.event_type ?? "")) {
@@ -130,9 +143,9 @@ export function renderRequestNotification(
   if (["submitted", "await_funds", "receipt_uploaded", "payment_evidence", "ready", "resume_funded_request", "start_processing"].includes(snapshot.event_type ?? "")) {
     const hours = Math.max(24, Number(details?.australian_clearance_minutes ?? 1440) / 60);
     instructions.push(
-      fa ? `تسویه بانک استرالیا ممکن است تا ${hours} ساعت و در صورت تأخیر بانکی بیشتر طول بکشد.` : `Australian bank clearance can take up to ${hours} hours, and longer if the bank delays payment.`,
-      fa ? "زمان هدف اولویت فقط پس از تأیید دریافت وجه و تکمیل بررسی‌های لازم، در ساعات کاری محاسبه می‌شود." : "The Priority handling target starts only after funds are confirmed received and required checks are complete, during operating hours.",
-      details?.iran_banking_notice || (fa ? "پرداخت ریالی تابع چرخه‌های بانکی ساتنا و پایا، تعطیلات و زمان پردازش بانک است." : "Iranian payouts depend on Satna/Paya banking cycles, holidays and bank processing times."),
+      fa ? `وصول وجه از بانک استرالیا: تا ${hours} ساعت؛ تأخیر بانکی ممکن است بیشتر شود.` : `Australian bank clearance: up to ${hours} hours; bank delays may take longer.`,
+      ...(isPriority ? [fa ? "زمان اولویت فقط پس از تأیید دریافت وجه و تکمیل بررسی‌ها، در ساعات کاری شروع می‌شود." : "Priority timing starts only after funds are confirmed received and checks are complete, within business hours."] : []),
+      fa ? (details?.iran_banking_notice_fa || "واریز تومان تابع چرخه‌های ساتنا و پایا و تعطیلات بانکی است.") : (details?.iran_banking_notice || "Iranian payouts follow Satna/Paya cycles and bank holidays."),
     );
   }
   if (details?.public_message) instructions.push(details.public_message);

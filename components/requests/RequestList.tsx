@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, RefreshCw } from "lucide-react";
+import { ArrowRight, RefreshCw, Search } from "lucide-react";
 import { listAdminRequests, listMyRequests } from "@/app/actions/request.actions";
 import type { ExchangeRequest } from "@/lib/requests/types";
-import { requestDate, requestLabel, requestMoney, isRequestTerminal, type RequestLocale } from "./request-labels";
+import { requestDate, requestLabel, requestMoney, requestError, isRequestTerminal, type RequestLocale } from "./request-labels";
 import { RequestSettingsForm } from "./RequestSettingsForm";
 import styles from "@/styles/requests/Requests.module.css";
+import workspace from "@/styles/requests/RequestWorkspace.module.css";
 
 export function RequestList({ admin = false, locale = "en", embedded = false }: { admin?: boolean; locale?: RequestLocale; embedded?: boolean }) {
   const fa = locale === "fa";
@@ -16,6 +17,7 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("active");
+  const [search, setSearch] = useState("");
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -34,43 +36,58 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
     return () => { window.clearInterval(timer); window.removeEventListener("focus", onFocus); };
   }, [refresh]);
 
-  const visible = requests.filter(request => filter === "all" || (filter === "active" ? !isRequestTerminal(request.status) : isRequestTerminal(request.status)))
+  const filters = [
+    { id: "active", label: fa ? "فعال" : "Active" },
+    ...(admin ? [{ id: "review", label: "Review" }, { id: "funding", label: "Payments" }, { id: "ready", label: "Ready" }] : []),
+    { id: "closed", label: fa ? "بسته‌شده" : "Closed" },
+    { id: "all", label: fa ? "همه" : "All" },
+  ];
+  const matchesFilter = (request: ExchangeRequest, value: string) => value === "all"
+    || (value === "active" && !isRequestTerminal(request.status))
+    || (value === "closed" && isRequestTerminal(request.status))
+    || (value === "review" && ["submitted", "under_review", "action_required", "reconciliation"].includes(request.status))
+    || (value === "funding" && (request.status === "awaiting_funds" || request.funding_status === "refund_pending" || request.priority_fee_status === "refund_pending"))
+    || (value === "ready" && request.status === "ready");
+  const visible = requests.filter(request => matchesFilter(request, filter)
+    && `${request.reference_code} ${request.quote.sender_snapshot.name} ${request.quote.sender_snapshot.email}`.toLowerCase().includes(search.trim().toLowerCase()))
     .sort((a, b) => admin ? (new Date(a.handling_due_at || "9999-01-01").getTime() - new Date(b.handling_due_at || "9999-01-01").getTime() || new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) : new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  return <section className={embedded ? styles.embedded : styles.workspace} dir={fa ? "rtl" : "ltr"}>
-    <header className={styles.header}>
-      <div><span className={styles.eyebrow}>Zarman / {admin ? "Operations" : (fa ? "حواله‌ها" : "Transfers")}</span>
-        {embedded ? <h2>{fa ? "درخواست‌های آنلاین" : "Online requests"}</h2> : <h1>{admin ? "Request queue" : (fa ? "درخواست‌های من" : "My requests")}</h1>}
-        <p className={styles.muted}>{admin ? "Earliest handling deadline first, then submission age. Only ready requests can start processing." : (fa ? "پیگیری وضعیت، ارسال اطلاعات تکمیلی و مشاهده مبلغ واریز، همه در همین سایت." : "Track progress, respond to information requests and view payment instructions in one place.")}</p>
-      </div>
+  return <section className={`${embedded ? styles.embedded : styles.workspace} ${workspace.workspace} ${admin ? workspace.adminWorkspace : ""}`} dir={fa ? "rtl" : "ltr"}>
+    <header className={`${styles.header} ${workspace.header}`}>
+      <div>{embedded ? <h2>{fa ? "درخواست‌های من" : "My requests"}</h2> : <h1>{admin ? "Request queue" : (fa ? "درخواست‌های من" : "My requests")}</h1>}</div>
       <div className={styles.actions}>
         {!admin && !embedded && <Link className={styles.button} href={`/${locale}/dashboard`}>{fa ? "درخواست جدید" : "New request"}<ArrowRight size={16} /></Link>}
         <button type="button" className={styles.secondary} onClick={() => void refresh()} disabled={refreshing}><RefreshCw size={16} />{fa ? "به‌روزرسانی" : "Refresh"}</button>
       </div>
     </header>
     {admin && <RequestSettingsForm />}
-    <div className={styles.actions} style={{ marginBottom: 18 }}>
-      <label className={styles.field}>{fa ? "نمایش" : "Show"}<select value={filter} onChange={e => setFilter(e.target.value)}><option value="active">{fa ? "درخواست‌های فعال" : "Active requests"}</option><option value="all">{fa ? "همه درخواست‌ها" : "All requests"}</option><option value="closed">{fa ? "درخواست‌های بسته‌شده" : "Closed requests"}</option></select></label>
-      <span className={styles.muted}>{visible.length} {fa ? "درخواست" : "requests"}</span>
+    <div className={workspace.queueToolbar}>
+      <div className={workspace.filters} role="group" aria-label={fa ? "فیلتر درخواست‌ها" : "Filter requests"}>
+        {filters.map(item => <button key={item.id} type="button" className={workspace.filter} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}<span>{requests.filter(request => matchesFilter(request, item.id)).length}</span></button>)}
+      </div>
+      <label className={workspace.search}><Search size={16} aria-hidden="true" /><span className={styles.srOnly}>{fa ? "جستجوی درخواست" : "Search requests"}</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder={admin ? "Code or customer" : (fa ? "کد تراکنش" : "Transaction code")} /></label>
     </div>
-    {error && <p className={styles.error} role="alert">{error}</p>}
-    {loading ? <p className={styles.loading} role="status">{fa ? "در حال بارگذاری درخواست‌ها…" : "Loading requests…"}</p> : <div className={styles.list}>
-      {visible.map(request => <Link className={styles.request} key={request.id} href={admin ? `/admin/requests/${request.id}` : `/${locale}/dashboard/requests/${request.id}`}>
-        <div>
-          <div className={styles.actions}><bdi className={styles.reference}>{request.reference_code}</bdi><span className={`${styles.badge} ${request.service_tier === "priority" ? styles.priority : ""}`}>{request.service_tier === "priority" ? (fa ? "اولویت‌دار" : "Priority") : (fa ? "استاندارد" : "Standard")}</span></div>
-          {admin && <p className={styles.muted}>{request.quote.sender_snapshot.name} · {request.quote.sender_snapshot.email}</p>}
-          <p className={styles.muted}>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)} → {requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</p>
-          <p className={styles.muted}>{requestDate(request.created_at, locale)}</p>
+    {error && <p className={styles.error} role="alert">{requestError(error, locale)}</p>}
+    {loading ? <p className={styles.loading} role="status">{fa ? "در حال بارگذاری…" : "Loading…"}</p> : admin ? <div className={`${styles.tableWrap} ${workspace.queueTable}`} role="region" aria-label="Request queue" tabIndex={0}>
+      <table className={styles.table}><thead><tr><th>Request / Customer</th><th>Transfer</th><th>Stage</th><th>Funding</th><th>Handling due</th><th><span className={styles.srOnly}>Manage</span></th></tr></thead><tbody>
+        {visible.map(request => <tr key={request.id}>
+          <td><Link href={`/admin/requests/${request.id}`}><bdi className={styles.reference}>{request.reference_code}</bdi></Link><span className={workspace.cellDetail}>{request.quote.sender_snapshot.name}</span><span className={workspace.cellDetail}>{request.quote.sender_snapshot.email}</span></td>
+          <td><strong>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</strong><span className={workspace.cellDetail}>→ {requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</span>{request.service_tier === "priority" && <span className={`${styles.badge} ${styles.priority}`}>Priority</span>}</td>
+          <td><span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{requestLabel(request.status, locale)}</span>{request.action_required && <span className={workspace.cellDetail}>Customer action needed</span>}{request.status === "processing" && <span className={workspace.cellDetail}>{request.owner_id ? "Assigned" : "Unassigned"}</span>}</td>
+          <td>{requestLabel(request.funding_status, locale)}{request.evidence_submitted_at && request.funding_status !== "confirmed" && <span className={workspace.attention}>Payment evidence received</span>}{request.priority_fee_status === "refund_pending" && <span className={workspace.attention}>Priority refund due</span>}</td>
+          <td><span>{request.handling_due_at && !isRequestTerminal(request.status) ? requestDate(request.handling_due_at, locale) : "—"}</span><span className={workspace.cellDetail}>Submitted {requestDate(request.created_at, locale)}</span></td>
+          <td><Link className={workspace.openRequest} href={`/admin/requests/${request.id}`} aria-label={`Manage ${request.reference_code}`}>Manage <ArrowRight size={14} /></Link></td>
+        </tr>)}
+      </tbody></table>{!visible.length && !error && <p className={styles.empty}>No requests in this view.</p>}
+    </div> : <div className={styles.list}>
+      {visible.map(request => <Link className={`${styles.request} ${workspace.customerRequest}`} key={request.id} href={`/${locale}/dashboard/requests/${request.id}`}>
+        <div><div className={styles.actions}><bdi className={styles.reference}>{request.reference_code}</bdi>{request.service_tier === "priority" && <span className={`${styles.badge} ${styles.priority}`}>{fa ? "اولویت‌دار" : "Priority"}</span>}</div>
+          <p className={workspace.transferAmount}><bdi>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</bdi> <span aria-hidden="true">{fa ? "←" : "→"}</span> <bdi>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</bdi></p>
+          <time className={styles.muted} dateTime={request.created_at}>{requestDate(request.created_at, locale)}</time>
         </div>
-        <div>
-          <span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{requestLabel(request.status, locale)}</span>
-          {request.handling_due_at && <p className={styles.muted}>{fa ? "مهلت شروع رسیدگی: " : "Handling due: "}{requestDate(request.handling_due_at, locale)}</p>}
-          {admin && <p className={styles.muted}>{requestLabel(request.funding_status, locale)} · {request.owner_id ? "Assigned" : "Unassigned"}</p>}
-          {request.action_required && <p className={styles.muted}>{fa ? "برای مشاهده اقدام بعدی باز کنید" : "Open to view the required action"}</p>}
-          {request.priority_fee_status === "refund_pending" && <p className={styles.muted}>{fa ? "بازپرداخت هزینه اولویت در انتظار انجام" : "Priority fee refund pending"}</p>}
-        </div>
+        <div className={workspace.customerRequestStatus}><span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{requestLabel(request.status, locale)}</span>{request.action_required && <span className={workspace.attention}>{fa ? "پیام زرمان را ببینید" : "View Zarman’s message"}</span>}<span className={workspace.openRequest}>{fa ? "مشاهده درخواست" : "View request"}<ArrowRight size={14} /></span></div>
       </Link>)}
-      {!visible.length && !error && <div className={`${styles.card} ${styles.empty}`}>{fa ? "درخواستی در این بخش وجود ندارد." : "No requests in this view."}</div>}
+      {!visible.length && !error && <div className={`${styles.card} ${styles.empty}`}>{fa ? "درخواستی در این بخش نیست." : "No requests in this view."}</div>}
     </div>}
   </section>;
 }

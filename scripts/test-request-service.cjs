@@ -34,6 +34,8 @@ const ACCOUNT = "50000000-0000-4000-8000-000000000001";
 const input = { rawAmount: 1000, txType: "sell_aud", sourceOfFunds: "Salary", reasonForTransfer: "Family support", recipientId: RECIPIENT, serviceTier: "standard", locale: "en" };
 const settings = { ...validation.DEFAULT_REQUEST_SETTINGS, enabled: true, priority_enabled: true, priority_fee_aud: 25, priority_capacity: 5,
   payment_instructions_aud: "Synthetic AUD bank details", payment_instructions_irt: "Synthetic IRT bank details",
+  payment_details_aud: { account_name: "TEST ONLY", bsb: "000-000", account_number: "00123456" },
+  payment_details_irt: { account_name: "TEST ONLY", iban: "IR" + "0".repeat(24) },
   management_emails: ["operations@example.invalid"], priority_terms: "Synthetic terms", priority_terms_fa: "شرایط آزمایشی" };
 
 function harness(overrides = {}) {
@@ -124,7 +126,7 @@ test("submission binds the RPC actor to the authenticated session and forwards t
 
 test("customer cannot complete or confirm funds, and admin must supply an actual receiving account", async () => {
   const { actions, state } = harness();
-  const base = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1 };
+  const base = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, sendEmail: false };
   assert.ok((await actions.mutateMyRequest({ ...base, action: "complete" })).error);
   assert.ok((await actions.mutateMyRequest({ ...base, action: "confirm_funds" })).error);
   assert.equal(state.calls.filter(call => call.rpc).length, 0);
@@ -136,7 +138,7 @@ test("customer cannot complete or confirm funds, and admin must supply an actual
 
 test("settlement dates use canonical Persian year/month/day and cannot be supplied by the browser", async () => {
   const { actions, state } = harness({ admin: true });
-  const response = await actions.mutateAdminRequest({ requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, action: "complete", payload: {
+  const response = await actions.mutateAdminRequest({ requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, sendEmail: true, action: "complete", payload: {
     settlement_reference: "SETTLED-123", payer_account_id: ACCOUNT, receiver_account_id: OTHER, transfer_method: "free", date_jalali: "2000/01/01",
   } });
   assert.equal(response.error, undefined);
@@ -149,6 +151,7 @@ test("foreign request and receipt downloads never expose event history or a sign
   const { actions, state } = harness({ requestOwner: OTHER, receipt: { request_id: REQUEST, storage_path: "private/object.pdf", original_name: "receipt.pdf" } });
   assert.ok((await actions.getMyRequest(REQUEST)).error);
   assert.equal(state.calls.some(call => call.table === "exchange_request_events"), false);
+  assert.equal(state.calls.some(call => call.table === "exchange_request_messages"), false);
   assert.ok((await actions.getRequestReceiptUrl(COMMAND)).error);
   assert.equal(state.storageCalls.length, 0);
 });
@@ -167,6 +170,9 @@ test("service enablement requires bank instructions and notification recipients;
   assert.ok(validation.settingsInputError({ ...settings, australian_clearance_minutes: 60 }));
   assert.ok(validation.settingsInputError({ ...settings, priority_fee_aud: NaN }));
   assert.ok(validation.settingsInputError({ ...settings, priority_minutes: settings.standard_minutes }));
+  assert.ok(validation.settingsInputError({ ...settings, iran_banking_notice_fa: "" }));
+  assert.ok(validation.bankDetailsError({ account_name: "TEST\nONLY" }, "aud"));
+  assert.ok(validation.bankDetailsError({ account_name: " ".repeat(201) }, "aud"));
 });
 
 test("activation rejects unusable mail configuration before writing settings", async () => {
@@ -187,4 +193,54 @@ test("login returns to tracking/draft URLs and rejects off-site and cross-locale
   for (const target of ["https://evil.invalid/en/dashboard", "//evil.invalid", "/fa/dashboard", "/en/dashboard/../../admin", "\\evil.invalid"]) {
     assert.equal(navigation.dashboardReturnPath(target, "en"), "/en/dashboard");
   }
+});
+
+test("legacy settings remain editable by admins, while new quotes require structured bank details", async () => {
+  const legacy = { ...settings, payment_details_aud: {}, payment_details_irt: {} };
+  const { actions, state } = harness({ settings: legacy, admin: true });
+  assert.equal((await actions.getRequestSettings()).data.settings.enabled, true);
+  assert.ok((await actions.createRequestQuote(input)).error);
+  assert.equal(state.inserts.length, 0);
+  state.admin = false;
+  assert.ok((await actions.getRequestSettings()).error);
+});
+
+test("each admin approval requires an email decision, and customer payloads cannot control delivery", async () => {
+  const { actions, state } = harness({ admin: true });
+  const base = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, action: "await_funds" };
+  assert.ok((await actions.mutateAdminRequest(base)).error);
+  assert.equal(state.calls.filter(call => call.rpc).length, 0);
+  for (const sendEmail of [false, true]) {
+    assert.equal((await actions.mutateAdminRequest({ ...base, sendEmail, payload: { send_email: !sendEmail, private_note: "forged" } })).error, undefined);
+    const payload = state.calls.filter(call => call.rpc).at(-1).args.p_payload;
+    assert.equal(payload.send_email, sendEmail);
+    assert.equal(payload.private_note, undefined);
+  }
+  assert.ok((await actions.mutateMyRequest({ ...base, action: "cancel", sendEmail: false })).error);
+  assert.equal((await actions.mutateMyRequest({ ...base, action: "cancel", payload: { send_email: false } })).error, undefined);
+  assert.equal(Object.hasOwn(state.calls.filter(call => call.rpc).at(-1).args.p_payload, "send_email"), false);
+});
+
+test("messages bind the actor and retry key, trim content, and restrict email decisions to admins", async () => {
+  const { actions, state } = harness();
+  const base = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 4, message: "  Please check the receipt.  " };
+  assert.equal((await actions.sendMyRequestMessage({ ...base, actorId: OTHER, sender_role: "admin" })).error, undefined);
+  const call = state.calls.find(call => call.rpc === "send_exchange_request_message");
+  assert.equal(call.args.p_actor_id, CUSTOMER);
+  assert.equal(call.args.p_command_key, COMMAND);
+  assert.equal(call.args.p_expected_version, 4);
+  assert.equal(call.args.p_message, "Please check the receipt.");
+  assert.equal(call.args.p_send_email, false);
+  assert.ok((await actions.sendMyRequestMessage({ ...base, sendEmail: true })).error);
+  assert.ok((await actions.sendMyRequestMessage({ ...base, message: " " })).error);
+  assert.ok((await actions.sendMyRequestMessage({ ...base, message: "x".repeat(2001) })).error);
+  assert.ok((await actions.sendAdminRequestMessage({ ...base, sendEmail: false })).error);
+  state.admin = true;
+  assert.ok((await actions.sendAdminRequestMessage(base)).error);
+  assert.equal((await actions.sendAdminRequestMessage({ ...base, sendEmail: false })).error, undefined);
+  assert.equal(state.calls.filter(call => call.rpc).at(-1).args.p_send_email, false);
+  assert.equal((await actions.sendAdminRequestMessage({ ...base, sendEmail: true })).error, undefined);
+  assert.equal(state.calls.filter(call => call.rpc).at(-1).args.p_send_email, true);
+  state.user = null;
+  assert.ok((await actions.sendMyRequestMessage(base)).error);
 });

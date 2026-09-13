@@ -2,23 +2,25 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Download, RefreshCw } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Download, Mail, RefreshCw } from "lucide-react";
 import { getAdminRequest, getMyRequest, getRequestBankAccounts, mutateAdminRequest, mutateMyRequest } from "@/app/actions/request.actions";
 import type { ExchangeRequest, RequestCommand, RequestDetail, RequestMutationInput } from "@/lib/requests/types";
-import { requestDate, requestLabel, requestMoney, isRequestTerminal, type RequestLocale } from "./request-labels";
+import { requestDate, requestLabel, requestMoney, requestError, isRequestTerminal, type RequestLocale } from "./request-labels";
 import { RequestQuoteFacts } from "./RequestQuoteFacts";
 import { RequestProgress } from "./RequestProgress";
 import { RequestPaymentInstructions } from "./RequestPaymentInstructions";
 import { RequestReceiptUpload } from "./RequestReceiptUpload";
+import { RequestAdminMessageBanner, RequestConversation } from "./RequestConversation";
 import styles from "@/styles/requests/Requests.module.css";
+import workspace from "@/styles/requests/RequestWorkspace.module.css";
 
 const commandLabels: Record<RequestCommand, [string, string]> = {
   review: ["Start review", "شروع بررسی"], request_info: ["Request information", "درخواست اطلاعات"], respond: ["Send response", "ارسال پاسخ"],
-  await_funds: ["Issue payment instructions", "صدور راهنمای واریز"], confirm_funds: ["Confirm cleared funds", "تأیید وجه وصول‌شده"],
-  resume_funded_request: ["Release funded request at accepted quote", "ادامه درخواست تأمین‌شده با نرخ پذیرفته‌شده"],
-  start_processing: ["Claim and begin processing", "پذیرش و شروع رسیدگی"], record_uncertain_payout: ["Place payout in reconciliation", "بررسی نتیجه نامشخص پرداخت"],
-  complete: ["Confirm settlement and complete", "تأیید تسویه و تکمیل"], cancel: ["Cancel request", "لغو درخواست"], reject: ["Reject request", "رد درخواست"],
-  confirm_refund: ["Confirm returned refund", "تأیید بازپرداخت"], payment_evidence: ["Submit payment reference", "ثبت اطلاعات واریز"],
+  await_funds: ["Approve request", "تأیید درخواست"], confirm_funds: ["Approve cleared funds", "تأیید وصول وجه"],
+  resume_funded_request: ["Approve funded request", "تأیید درخواست تأمین‌شده"],
+  start_processing: ["Approve & start processing", "تأیید و شروع پردازش"], record_uncertain_payout: ["Reconcile payout", "بررسی نتیجه پرداخت"],
+  complete: ["Approve completion", "تأیید تکمیل"], cancel: ["Cancel request", "لغو درخواست"], reject: ["Reject request", "رد درخواست"],
+  confirm_refund: ["Approve returned refund", "تأیید بازپرداخت"], payment_evidence: ["Add payment reference", "ثبت شماره پیگیری واریز"],
 };
 
 function allowedCommands(request: ExchangeRequest, admin: boolean): RequestCommand[] {
@@ -36,11 +38,15 @@ function allowedCommands(request: ExchangeRequest, admin: boolean): RequestComma
     if (!isRequestTerminal(request.status) && !["processing", "reconciliation"].includes(request.status)) commands.push("reject");
     if (request.priority_fee_status === "refund_pending" || request.funding_status === "refund_pending") commands.push("confirm_refund");
   } else {
-    if (request.status === "action_required") commands.push("respond");
     if (["awaiting_funds", "action_required"].includes(request.status)) commands.push("payment_evidence");
     if (["submitted", "under_review", "action_required", "awaiting_funds", "ready"].includes(request.status)) commands.push("cancel");
   }
   return commands;
+}
+
+function recommendedCommand(request: ExchangeRequest, commands: RequestCommand[]): RequestCommand | undefined {
+  const order: RequestCommand[] = ["confirm_refund", "resume_funded_request", "start_processing", "complete", ...(request.status === "awaiting_funds" || request.evidence_submitted_at ? ["confirm_funds" as const] : []), "await_funds", "review", "confirm_funds"];
+  return order.find(command => commands.includes(command));
 }
 
 export function RequestDetailView({ id, admin = false, locale = "en" }: { id: string; admin?: boolean; locale?: RequestLocale }) {
@@ -53,6 +59,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
   const [notice, setNotice] = useState("");
   const [action, setAction] = useState<RequestCommand | "">("");
   const [message, setMessage] = useState("");
+  const [sendEmail, setSendEmail] = useState(true);
   const [paymentReference, setPaymentReference] = useState("");
   const [receivedAmount, setReceivedAmount] = useState("");
   const [receivedCurrency, setReceivedCurrency] = useState<"AUD" | "IRT">("AUD");
@@ -68,7 +75,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
   const [confirmed, setConfirmed] = useState(false);
   const [accounts, setAccounts] = useState<Array<{ id: string; account_name: string; currency: string }>>([]);
   const pending = useRef(false);
-  const attempt = useRef<{ signature: string; key: string } | null>(null);
+  const attempt = useRef<{ signature: string; key: string; expectedVersion: number } | null>(null);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -93,7 +100,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
     getRequestBankAccounts().then(result => {
       if (result.data) setAccounts(result.data.map(account => ({ ...account, id: String(account.id) })));
       else if (result.error) setError(result.error);
-    }).catch(() => setError("Could not load settlement bank accounts."));
+    }).catch(() => setError("Could not load bank accounts."));
   }, [admin]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -106,128 +113,139 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
     if (action === "resume_funded_request") payload.honour_quote = honourQuote;
     if (action === "complete") { payload.settlement_reference = settlementReference.trim(); payload.payer_account_id = payerAccount; payload.receiver_account_id = receiverAccount; payload.transfer_method = transferMethod; }
     if (action === "confirm_refund") { payload.refund_kind = refundKind; payload.refund_reference = refundReference.trim(); payload.payer_account_id = refundAccount; }
-    const input = { requestId: id, expectedVersion: detail.request.version, action, payload };
+    const input = { requestId: id, action, payload, ...(admin ? { sendEmail } : {}) };
     const signature = JSON.stringify(input);
-    if (attempt.current?.signature !== signature) attempt.current = { signature, key: crypto.randomUUID() };
+    if (attempt.current?.signature !== signature) attempt.current = { signature, key: crypto.randomUUID(), expectedVersion: detail.request.version };
     pending.current = true; setBusy(true); setError(""); setNotice("");
     try {
-      const result = await (admin ? mutateAdminRequest : mutateMyRequest)({ ...input, commandKey: attempt.current.key });
-      if (result.error) setError(result.error);
+      const result = await (admin ? mutateAdminRequest : mutateMyRequest)({ ...input, commandKey: attempt.current.key, expectedVersion: attempt.current.expectedVersion });
+      if (result.error) {
+        if (result.error === "This request has changed. Refresh the page before continuing." || result.error === "REQUEST_CONFLICT") {
+          attempt.current = null;
+          setConfirmed(false);
+          await refresh();
+        }
+        setError(result.error);
+      }
       else {
         attempt.current = null; setAction(""); setMessage(""); setPaymentReference(""); setConfirmed(false); setHonourQuote(false);
-        setNotice(fa ? "اقدام شما ثبت شد. آخرین وضعیت در این صفحه نمایش داده می‌شود." : "Your update was saved. The latest request status is shown below.");
+        setReceivedAmount(""); setSettlementReference(""); setPayerAccount(""); setReceiverAccount(""); setFundingAccount(""); setRefundAccount(""); setRefundReference("");
+        setNotice(fa ? "تغییرات ثبت شد." : "Update saved.");
         await refresh();
       }
-    } catch { setError(fa ? "تأیید اقدام دریافت نشد. اطلاعات فرم حفظ شده؛ دوباره تلاش کنید." : "We could not confirm this update. Your form is preserved; please retry."); }
+    } catch { setError(fa ? "ثبت تأیید نشد. دوباره تلاش کنید." : "The update was not confirmed. Please retry."); }
     finally { pending.current = false; setBusy(false); }
   }
 
   const request = detail?.request;
   const commands = request ? allowedCommands(request, admin) : [];
   const currentAction = commands.includes(action as RequestCommand) ? action : "";
+  const recommended = request ? recommendedCommand(request, commands) : undefined;
+  const orderedCommands = recommended ? [recommended, ...commands.filter(command => command !== recommended)] : commands;
   const referenceRequired = currentAction === "payment_evidence" || currentAction === "confirm_funds";
   const messageRequired = ["request_info", "respond", "cancel", "reject", "record_uncertain_payout"].includes(currentAction);
   const accountsFor = (currency: "AUD" | "IRT") => accounts.filter(account => account.currency.toUpperCase() === currency || (currency === "IRT" && account.currency.toLowerCase() === "toman"));
+  const messages = detail?.messages || [];
+  const chooseAction = (command: RequestCommand) => {
+    if (!request) return;
+    setAction(command); setConfirmed(false); setHonourQuote(false); setNotice(""); setMessage(""); setSendEmail(true);
+    setRefundKind(request.priority_fee_status === "refund_pending" ? "priority" : "principal"); setReceivedCurrency(request.quote.funding_currency);
+  };
 
-  return <main className={styles.workspace} dir={fa ? "rtl" : "ltr"}>
-    <header className={styles.header}>
-      <div><Link className={styles.secondary} href={admin ? "/admin/requests" : `/${locale}/dashboard/requests`}><ArrowLeft size={16} />{fa ? "همه درخواست‌ها" : "All requests"}</Link>
-        <h1><bdi>{request?.reference_code || (fa ? "پیگیری درخواست" : "Request tracking")}</bdi></h1>
-        {request && <div className={styles.actions}><span className={styles.badge}>{requestLabel(request.status, locale)}</span><span className={`${styles.badge} ${request.service_tier === "priority" ? styles.priority : ""}`}>{request.service_tier === "priority" ? (fa ? "اولویت‌دار" : "Priority") : (fa ? "استاندارد" : "Standard")}</span></div>}
-      </div>
+  const actionPanel = request && commands.length > 0 && <div>
+    <div className={workspace.actionChoices} role="group" aria-label={admin ? "Approval actions" : (fa ? "اقدام روی درخواست" : "Request actions")}>
+      {orderedCommands.map(command => <button key={command} type="button" className={`${workspace.actionChoice} ${admin && command === recommended ? workspace.recommendedAction : ""}`} aria-pressed={currentAction === command} disabled={busy} onClick={() => chooseAction(command)}>{admin && command === recommended && <Check size={16} aria-hidden="true" />}{commandLabels[command][fa ? 1 : 0]}</button>)}
+    </div>
+    {currentAction && <form onSubmit={submit} className={workspace.actionForm}>
+      <fieldset disabled={busy} className={workspace.fieldset}>
+        <h3>{commandLabels[currentAction][fa ? 1 : 0]}</h3>
+        {referenceRequired && <label className={styles.field}>{fa ? "شماره پیگیری بانکی واریز" : "Bank payment reference"}<input value={paymentReference} onChange={event => setPaymentReference(event.target.value)} required maxLength={200} autoComplete="off" dir="ltr" /></label>}
+        {currentAction === "confirm_funds" && <>
+          <div className={styles.fields}><label className={styles.field}>Newly received amount<input type="number" inputMode="decimal" required min="0.01" step={receivedCurrency === "AUD" ? ".01" : "1"} value={receivedAmount} onChange={event => setReceivedAmount(event.target.value)} /></label><label className={styles.field}>Currency<select value={receivedCurrency} onChange={event => setReceivedCurrency(event.target.value as "AUD" | "IRT")}><option value="AUD">AUD</option><option value="IRT">Toman (IRT)</option></select></label></div>
+          <label className={styles.field}>Account credited<select required value={fundingAccount} onChange={event => setFundingAccount(event.target.value)}><option value="">Select account</option>{accountsFor(receivedCurrency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
+          <p className={workspace.actionNote}>Verify cleared funds, including the priority fee. Enter only the new payment; previous payments are retained.</p>
+        </>}
+        {currentAction === "resume_funded_request" && <label className={styles.checkbox}><input type="checkbox" required checked={honourQuote} onChange={event => setHonourQuote(event.target.checked)} /><span>Checks complete. Honour the accepted quote and release the confirmed funds for processing.</span></label>}
+        {currentAction === "complete" && <>
+          <p className={workspace.actionNote}>Confirm successful bank settlement. Completion posts the accounting entries.</p>
+          <label className={styles.field}>Settlement reference<input required value={settlementReference} onChange={event => setSettlementReference(event.target.value)} maxLength={200} /></label>
+          <div className={styles.fields}><label className={styles.field}>Payout account<select required value={payerAccount} onChange={event => setPayerAccount(event.target.value)}><option value="">Select account</option>{accountsFor(request.quote.recipient_currency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label><label className={styles.field}>Collection account<select required value={receiverAccount} onChange={event => setReceiverAccount(event.target.value)}><option value="">Select account</option>{accountsFor(request.quote.funding_currency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label></div>
+          <label className={styles.field}>Transfer method<select required value={transferMethod} onChange={event => setTransferMethod(event.target.value as typeof transferMethod)}><option value="free">Free transfer</option><option value="pol">Pol</option><option value="paya">Paya</option><option value="satna">Satna</option></select></label>
+        </>}
+        {currentAction === "start_processing" && <p className={workspace.actionNote}>Assign this request to you and begin processing. If the bank result is uncertain, use Reconcile payout.</p>}
+        {currentAction === "confirm_refund" && <>
+          <label className={styles.field}>Refund<select value={refundKind} onChange={event => setRefundKind(event.target.value as "priority" | "principal")}><option value="priority" disabled={request.priority_fee_status !== "refund_pending"}>Priority fee</option><option value="principal" disabled={request.funding_status !== "refund_pending"}>Principal</option></select></label>
+          <label className={styles.field}>Return reference<input required value={refundReference} onChange={event => setRefundReference(event.target.value)} maxLength={200} /></label>
+          <label className={styles.field}>Account debited<select required value={refundAccount} onChange={event => setRefundAccount(event.target.value)}><option value="">Select account</option>{accountsFor(request.quote.funding_currency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
+          <p className={workspace.actionNote}>Record a verified return in the original currency. This does not send a bank transfer.</p>
+        </>}
+        {messageRequired && <label className={styles.field}>{currentAction === "record_uncertain_payout" ? "Internal reconciliation note" : admin ? "Message to customer" : (fa ? "دلیل" : "Reason")}<textarea value={message} onChange={event => setMessage(event.target.value)} required minLength={3} maxLength={2000} rows={2} dir="auto" /></label>}
+        {admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} /><Mail size={16} aria-hidden="true" /><span>Send email to customer and management</span></label>}
+        <label className={`${styles.checkbox} ${workspace.confirmChoice}`}><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required /><span>{currentAction === "cancel" ? (fa ? "لغو را تأیید می‌کنم؛ بازپرداخت جداگانه پیگیری می‌شود." : "Confirm cancellation; any refund is tracked separately.") : currentAction === "confirm_funds" ? "I verified this payment in the bank account." : currentAction === "complete" ? "I verified successful settlement." : (fa ? "اطلاعات را بررسی و تأیید می‌کنم." : "I reviewed and approve this update.")}</span></label>
+        <div className={styles.actions}><button className={["cancel", "reject"].includes(currentAction) ? styles.danger : styles.button} type="submit" disabled={!confirmed}>{busy ? (fa ? "در حال ثبت…" : "Saving…") : commandLabels[currentAction][fa ? 1 : 0]}</button><button type="button" className={workspace.textButton} onClick={() => { setAction(""); setConfirmed(false); }}>{fa ? "انصراف" : "Dismiss"}</button></div>
+      </fieldset>
+    </form>}
+  </div>;
+
+  return <main className={`${styles.workspace} ${workspace.workspace} ${admin ? workspace.adminWorkspace : ""}`} dir={fa ? "rtl" : "ltr"}>
+    <header className={`${styles.header} ${workspace.header}`}>
+      <div><Link className={workspace.backLink} href={admin ? "/admin/requests" : `/${locale}/dashboard/requests`}><ArrowLeft size={15} />{fa ? "درخواست‌ها" : "Requests"}</Link><div className={workspace.titleRow}><h1><bdi>{request?.reference_code || (fa ? "پیگیری درخواست" : "Request")}</bdi></h1>{request && <><span className={styles.badge}>{requestLabel(request.status, locale)}</span>{request.service_tier === "priority" && <span className={`${styles.badge} ${styles.priority}`}>{fa ? "اولویت‌دار" : "Priority"}</span>}</>}</div>{admin && request && <p className={workspace.customerIdentity}>{request.quote.sender_snapshot.name}<span>{request.quote.sender_snapshot.email}</span></p>}</div>
       <button className={styles.secondary} type="button" onClick={() => void refresh()} disabled={refreshing || busy}><RefreshCw size={16} />{fa ? "به‌روزرسانی" : "Refresh"}</button>
     </header>
-    {error && <p className={styles.error} role="alert">{error}</p>}
-    {notice && <p className={styles.notice} role="status">{notice}</p>}
-    {loading && <p className={styles.loading} role="status">{fa ? "در حال دریافت درخواست…" : "Loading request…"}</p>}
+    {error && <p className={styles.error} role="alert">{requestError(error, locale)}</p>}{notice && <p className={workspace.saved} role="status">{notice}</p>}
+    {loading && <p className={styles.loading} role="status">{fa ? "در حال بارگذاری…" : "Loading…"}</p>}
     {request && detail && <>
-      {request.action_required && <section className={styles.warning}><strong>{fa ? "اقدام بعدی" : "Next action"}</strong><p className={styles.pre}>{request.action_required}</p></section>}
-      {request.status === "reconciliation" && <p className={styles.warning}>{fa ? "نتیجه پرداخت در حال تطبیق است. تیم مالی نتیجه بانکی را بررسی می‌کند." : "The payout outcome is being reconciled. Finance must verify the bank result before any further payment attempt."}</p>}
-      <RequestProgress request={request} locale={locale} />
-      <div className={styles.grid} style={{ marginTop: 22 }}>
-        <div className={styles.stack}>
-          {request.status === "completed" && <section className={styles.card}>
-            <h2>{fa ? "رسید نهایی حواله" : "Final transfer receipt"}</h2>
-            <p className={styles.muted}>{fa ? "نسخه نهایی رسید شامل مبالغ، کارمزدها و تأیید تسویه است." : "Download your final receipt with the settled amounts, service fees and settlement confirmation."}</p>
-            <a className={styles.button} href={`/api/requests/${request.id}/receipt`} target="_blank" rel="noopener noreferrer"><Download size={17} />{fa ? "دریافت رسید نهایی" : "Download final receipt"}</a>
-          </section>}
-          <RequestPaymentInstructions request={request} locale={locale} />
-          <RequestReceiptUpload request={request} receipts={detail.receipts || []} admin={admin} locale={locale} onUploaded={refresh} />
-          <section className={styles.card}>
-            <h2>{fa ? "وضعیت درخواست" : "Request progress"}</h2>
-            <dl className={styles.facts}>
-              <div className={styles.fact}><dt>{fa ? "ثبت درخواست" : "Submitted"}</dt><dd>{requestDate(request.created_at, locale)}</dd></div>
-              <div className={styles.fact}><dt>{fa ? "وضعیت وجه" : "Funding status"}</dt><dd>{requestLabel(request.funding_status, locale)}</dd></div>
-              <div className={styles.fact}><dt>{fa ? "وجه تأییدشده" : "Confirmed received amount"}</dt><dd>{requestMoney(request.funding_received, request.quote.funding_currency, locale)}</dd></div>
-              <div className={styles.fact}><dt>{fa ? "وضعیت هزینه اولویت" : "Priority fee status"}</dt><dd>{requestLabel(request.priority_fee_status, locale)}</dd></div>
-              {request.handling_due_at && <div className={styles.fact}><dt>{fa ? "مهلت شروع رسیدگی" : "Handling target due"}</dt><dd>{requestDate(request.handling_due_at, locale)}</dd></div>}
-              {request.handling_started_at && <div className={styles.fact}><dt>{fa ? "شروع رسیدگی" : "Processing started"}</dt><dd>{requestDate(request.handling_started_at, locale)}</dd></div>}
-              <div className={styles.fact}><dt>{fa ? "تیم مسئول" : "Responsible team"}</dt><dd>{request.owner_id ? (fa ? "کارشناس عملیات" : "Assigned operations specialist") : (fa ? "تیم عملیات زرمان" : "Zarman operations")}</dd></div>
-              {admin && <><div className={styles.fact}><dt>Customer</dt><dd>{request.quote.sender_snapshot.name}<div className={styles.muted}>{request.quote.sender_snapshot.email}</div></dd></div><div className={styles.fact}><dt>Assigned operator ID</dt><dd><bdi>{request.owner_id || "Unassigned"}</bdi></dd></div><div className={styles.fact}><dt>Record version</dt><dd>{request.version}</dd></div></>}
-            </dl>
-            <p className={styles.muted}>{fa ? "همه زمان‌ها به وقت سیدنی نمایش داده می‌شود. ارسال اطلاعات واریز به معنی تأیید دریافت وجه نیست." : "All dates use Sydney time. Submitting a payment reference does not confirm cleared funds."}</p>
-            {(request.priority_fee_status === "refund_pending" || request.funding_status === "refund_pending") && <p className={styles.warning}>{fa ? "بازپرداخت در انتظار تأیید مالی است. پس از تأیید برگشت وجه، وضعیت این صفحه به‌روزرسانی می‌شود." : "A refund is pending finance confirmation. This page will update after the returned funds are verified."}</p>}
-          </section>
-          {commands.length > 0 && <section className={styles.card}>
-            <h2>{admin ? "Manage request" : (fa ? "اقدام روی درخواست" : "Take action")}</h2>
-            <form onSubmit={submit}>
-              <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}>
-                <label className={styles.field}>{fa ? "انتخاب اقدام" : "Choose an action"}<select value={currentAction} required onChange={e => { setAction(e.target.value as RequestCommand); setConfirmed(false); setHonourQuote(false); setNotice(""); setRefundKind(request.priority_fee_status === "refund_pending" ? "priority" : "principal"); setReceivedCurrency(request.quote.funding_currency); }}><option value="">{fa ? "انتخاب کنید" : "Select action"}</option>{commands.map(command => <option key={command} value={command}>{commandLabels[command][fa ? 1 : 0]}</option>)}</select></label>
-                {currentAction && <div className={styles.stack} style={{ marginTop: 18 }}>
-                  {referenceRequired && <label className={styles.field}>{fa ? "شماره پیگیری بانکی واریز" : "Bank payment reference"}<input value={paymentReference} onChange={e => setPaymentReference(e.target.value)} required maxLength={200} autoComplete="off" /></label>}
-                  {currentAction === "confirm_funds" && <>
-                    <div className={styles.fields}><label className={styles.field}>Received amount<input type="number" inputMode="decimal" required min="0.01" step={receivedCurrency === "AUD" ? ".01" : "1"} value={receivedAmount} onChange={e => setReceivedAmount(e.target.value)} /></label><label className={styles.field}>Received currency<select value={receivedCurrency} onChange={e => setReceivedCurrency(e.target.value as "AUD" | "IRT")}><option value="AUD">AUD</option><option value="IRT">Toman (IRT)</option></select></label></div>
-                    <label className={styles.field}>Receiving bank account<select required value={fundingAccount} onChange={event => setFundingAccount(event.target.value)}><option value="">Select the account credited</option>{accountsFor(receivedCurrency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
-                    <p className={styles.warning}>Confirm against cleared bank funds, including any priority fee. Enter only the newly received payment amount; earlier recorded payments are retained. A customer reference or screenshot is not cleared funds. Full reconciliation starts the service time target; processing and final settlement remain separate actions.</p>
-                  </>}
-                  {currentAction === "resume_funded_request" && <label className={styles.checkbox}><input type="checkbox" required checked={honourQuote} onChange={event => setHonourQuote(event.target.checked)} /><span>I have completed the required checks and authorise fulfilment at the accepted quote. Release the confirmed funds to the processing queue and start the handling target without recording another payment.</span></label>}
-                  {currentAction === "complete" && <>
-                    <p className={styles.warning}>Confirm successful bank settlement before completing. This action posts the linked accounting entries. For an uncertain bank result, keep the request in reconciliation.</p>
-                    <label className={styles.field}>Confirmed settlement reference<input required value={settlementReference} onChange={e => setSettlementReference(e.target.value)} maxLength={200} /></label>
-                    <div className={styles.fields}>
-                      <label className={styles.field}>Payer bank account<select required value={payerAccount} onChange={e => setPayerAccount(e.target.value)}><option value="">Select account</option>{accountsFor(request.quote.recipient_currency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
-                      <label className={styles.field}>Receiver bank account<select required value={receiverAccount} onChange={e => setReceiverAccount(e.target.value)}><option value="">Select account</option>{accountsFor(request.quote.funding_currency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
-                    </div>
-                    <label className={styles.field}>Settlement transfer method<select required value={transferMethod} onChange={event => setTransferMethod(event.target.value as typeof transferMethod)}><option value="free">No bank fee / free transfer</option><option value="pol">Pol</option><option value="paya">Paya</option><option value="satna">Satna</option></select></label>
-                  </>}
-                  {currentAction === "start_processing" && <p className={styles.warning}>This claims the request and records the execution intent. Begin the handling step now; if the bank outcome becomes uncertain, record reconciliation before any retry.</p>}
-                  {currentAction === "confirm_refund" && <>
-                    <label className={styles.field}>Refund obligation<select value={refundKind} onChange={e => setRefundKind(e.target.value as "priority" | "principal")}><option value="priority" disabled={request.priority_fee_status !== "refund_pending"}>Priority fee</option><option value="principal" disabled={request.funding_status !== "refund_pending"}>Principal</option></select></label>
-                    <label className={styles.field}>Confirmed return reference<input required value={refundReference} onChange={e => setRefundReference(e.target.value)} maxLength={200} /></label>
-                    <label className={styles.field}>Refund paying bank account<select required value={refundAccount} onChange={event => setRefundAccount(event.target.value)}><option value="">Select the account debited</option>{accountsFor(request.quote.funding_currency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
-                    <p className={styles.warning}>Record only a verified return in the original collection currency. This records the confirmed refund; it does not initiate a bank transfer.</p>
-                  </>}
-                  <label className={styles.field}>{admin ? "Customer-visible explanation" : (fa ? "توضیحات" : "Message")} {messageRequired ? "*" : (fa ? "(اختیاری)" : "(optional)")}<textarea value={message} onChange={e => setMessage(e.target.value)} required={messageRequired} minLength={messageRequired ? 3 : undefined} maxLength={2000} /></label>
-                  {currentAction === "payment_evidence" && <p className={styles.muted}>{fa ? "شماره پیگیری را ثبت کنید. تیم مالی واریز را با حساب بانکی تطبیق می‌دهد." : "Submit your reference here. Finance will match it to the bank account before marking funds confirmed."}</p>}
-                  <label className={styles.checkbox}><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} required /><span>{currentAction === "cancel" ? (fa ? "درخواست لغو را تأیید می‌کنم. بازپرداخت احتمالی جداگانه پیگیری می‌شود." : "I confirm cancellation. Any required refund will be tracked separately.") : (fa ? "صحت اطلاعات واردشده و ثبت این اقدام را تأیید می‌کنم." : "I confirm the information is accurate and want to record this action.")}</span></label>
-                  <button className={["cancel", "reject"].includes(currentAction) ? styles.danger : styles.button} type="submit" disabled={!confirmed}>{busy ? (fa ? "در حال ثبت…" : "Saving…") : commandLabels[currentAction][fa ? 1 : 0]}</button>
-                </div>}
-              </fieldset>
-            </form>
-          </section>}
-          <section className={styles.card}>
-            <h2>{fa ? "رویدادهای درخواست" : "Request timeline"}</h2>
-            <ol className={styles.timeline}>{detail.events.map(event => <li key={event.id}>
-              <strong>{requestLabel(event.status, locale)}</strong><p>{event.public_message || requestLabel(event.event_type, locale)}</p><time dateTime={event.created_at}>{requestDate(event.created_at, locale)}</time>
-              {admin && event.internal_message && event.internal_message !== event.public_message && <p className={styles.notice}><strong>Private details: </strong>{event.internal_message}</p>}
-            </li>)}</ol>
-            {!detail.events.length && <p className={styles.muted}>{fa ? "رویدادها پس از ثبت به‌روزرسانی نمایش داده می‌شوند." : "Events appear here as updates are recorded."}</p>}
-          </section>
+      {!admin && <RequestAdminMessageBanner messages={messages} fallbackMessage={request.action_required} locale={locale} />}
+      {request.status === "reconciliation" && <p className={styles.warning}>{admin ? "Verify the bank result before retrying a payout." : (fa ? "نتیجه پرداخت بانکی در حال بررسی است." : "We’re checking the bank settlement.")}</p>}
+      {(request.priority_fee_status === "refund_pending" || request.funding_status === "refund_pending") && <p className={styles.warning}>{admin ? "Refund approval required." : (fa ? "بازپرداخت در حال پیگیری است." : "Your refund is being arranged.")}</p>}
+      {admin ? <div className={workspace.adminLayout}>
+        <div className={workspace.column}>
+          <section className={`${styles.card} ${workspace.approvalCard}`}><div className={workspace.sectionHeading}><h2>Review & approve</h2><span className={styles.badge}>{requestLabel(request.status, locale)}</span></div>{actionPanel || <p className={styles.muted}>No further approval needed.</p>}</section>
+          <RequestReceiptUpload request={request} receipts={detail.receipts || []} admin locale={locale} onUploaded={refresh} />
+          <RequestConversation requestId={id} version={request.version} messages={messages} admin locale={locale} disabled={busy} onUpdated={refresh} onSendingChange={sending => { pending.current = sending; setBusy(sending); }} />
         </div>
-        <div className={styles.stack}>
-          <section className={styles.card}>
-            <h2>{fa ? "پیش‌فاکتور پذیرفته‌شده" : "Accepted quote"}</h2><RequestQuoteFacts quote={request.quote} locale={locale} />
-            <p className={styles.muted}>{fa ? "منبع وجه: " : "Source of funds: "}{request.quote.source_of_funds}</p><p className={styles.muted}>{fa ? "دلیل انتقال: " : "Transfer purpose: "}{request.quote.reason_for_transfer}</p>
-            {request.service_tier === "priority" && <p className={styles.notice}>{fa ? request.quote.policy_snapshot.priority_terms_fa : request.quote.policy_snapshot.priority_terms}</p>}
-            {request.quote.payment_link && <p className={styles.muted}>{fa ? "لینک صورتحساب: " : "Invoice link: "}<a href={request.quote.payment_link} target="_blank" rel="noopener noreferrer">{fa ? "مشاهده وب‌سایت موسسه" : "Open institution website"}</a></p>}
-          </section>
-          {admin && detail.deliveries && <section className={styles.card}>
-            <h2>Notification deliveries</h2><p className={styles.muted}>Each milestone queues independent customer and management messages. Provider acceptance is separate from mailbox delivery.</p>
-            <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Audience</th><th>Status</th><th>Attempts</th></tr></thead><tbody>{detail.deliveries.map(delivery => <tr key={delivery.id}><td>{delivery.audience}<div className={styles.muted}>{delivery.recipient_email}</div></td><td>{delivery.status}{delivery.last_error && <p className={styles.error}>{delivery.last_error}</p>}</td><td>{delivery.attempts}</td></tr>)}</tbody></table></div>
-            {!detail.deliveries.length && <p className={styles.muted}>No delivery records yet.</p>}
-          </section>}
+        <div className={workspace.column}>
+          <section className={styles.card}><h2>Transfer summary</h2><dl className={styles.facts}>
+            <div className={styles.fact}><dt>To collect</dt><dd>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</dd></div>
+            <div className={styles.fact}><dt>Cleared funds</dt><dd>{requestMoney(request.funding_received, request.quote.funding_currency, locale)}<span className={workspace.cellDetail}>{requestLabel(request.funding_status, locale)}</span></dd></div>
+            <div className={styles.fact}><dt>Recipient gets</dt><dd>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</dd></div>
+            {request.service_tier === "priority" && <div className={styles.fact}><dt>Priority fee</dt><dd>{requestMoney(request.quote.priority_fee_amount, request.quote.funding_currency, locale)}<span className={workspace.cellDetail}>{requestLabel(request.priority_fee_status, locale)}</span></dd></div>}
+            <div className={styles.fact}><dt>Funds confirmed</dt><dd>{requestDate(request.funds_confirmed_at, locale)}</dd></div>
+            <div className={styles.fact}><dt>Handling due</dt><dd>{requestDate(request.handling_due_at, locale)}</dd></div>
+            <div className={styles.fact}><dt>Processing</dt><dd>{request.handling_started_at ? requestDate(request.handling_started_at, locale) : "Not started"}</dd></div>
+          </dl><span className={workspace.timezone}>Sydney time</span></section>
+          {request.action_required && <section className={workspace.adminAlert}><strong>Awaiting customer</strong><p dir="auto">{request.action_required}</p></section>}
+          {request.status === "completed" && <a className={styles.button} href={`/api/requests/${request.id}/receipt`} target="_blank" rel="noopener noreferrer"><Download size={17} />Final receipt</a>}
+          <details className={`${styles.card} ${workspace.disclosure}`}><summary>Quote & recipient<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}><RequestQuoteFacts quote={request.quote} locale={locale} /><dl className={styles.facts}><div className={styles.fact}><dt>Source of funds</dt><dd>{request.quote.source_of_funds}</dd></div><div className={styles.fact}><dt>Purpose</dt><dd>{request.quote.reason_for_transfer}</dd></div></dl></div></details>
+          <details className={`${styles.card} ${workspace.disclosure}`}><summary>Payment instructions<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}><RequestPaymentInstructions request={request} locale={locale} /></div></details>
+          <details className={`${styles.card} ${workspace.disclosure}`}><summary>Activity & emails<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}>
+            <ol className={styles.timeline}>{detail.events.map(event => <li key={event.id}><strong>{requestLabel(event.status, locale)}</strong>{event.public_message && <p dir="auto">{event.public_message}</p>}<time dateTime={event.created_at}>{requestDate(event.created_at, locale)}</time>{event.internal_message && event.internal_message !== event.public_message && <p className={styles.notice}>{event.internal_message}</p>}</li>)}</ol>
+            {detail.deliveries && detail.deliveries.length > 0 && <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Email</th><th>Status</th></tr></thead><tbody>{detail.deliveries.map(delivery => <tr key={delivery.id}><td>{delivery.audience}<span className={workspace.cellDetail}>{delivery.recipient_email}</span></td><td>{delivery.status === "skipped" && delivery.last_error === "admin_email_opt_out" ? "Not requested" : delivery.status}{delivery.last_error && delivery.last_error !== "admin_email_opt_out" && <p className={styles.error}>{delivery.last_error}</p>}</td></tr>)}</tbody></table></div>}
+            <p className={styles.muted}>Version {request.version} · {request.owner_id ? `Operator ${request.owner_id}` : "Unassigned"}</p>
+          </div></details>
         </div>
-      </div>
+      </div> : <>
+        <RequestProgress request={request} locale={locale} />
+        <div className={workspace.customerLayout}>
+          <div className={workspace.column}>
+            {request.status === "completed" && <section className={`${styles.card} ${workspace.receiptReady}`}><div><Check size={20} /><h2>{fa ? "رسید نهایی آماده است" : "Your receipt is ready"}</h2></div><a className={styles.button} href={`/api/requests/${request.id}/receipt`} target="_blank" rel="noopener noreferrer"><Download size={17} />{fa ? "دریافت رسید" : "Download receipt"}</a></section>}
+            <RequestPaymentInstructions request={request} locale={locale} />
+            <RequestReceiptUpload request={request} receipts={detail.receipts || []} locale={locale} onUploaded={refresh} />
+            <RequestConversation requestId={id} version={request.version} messages={messages} locale={locale} disabled={busy} onUpdated={refresh} onSendingChange={sending => { pending.current = sending; setBusy(sending); }} />
+          </div>
+          <div className={workspace.column}>
+            <section className={styles.card}><h2>{fa ? "خلاصه حواله" : "Transfer summary"}</h2><dl className={styles.facts}>
+              <div className={`${styles.fact} ${styles.total}`}><dt>{fa ? "مجموع پرداخت" : "You send"}</dt><dd>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</dd></div>
+              <div className={styles.fact}><dt>{fa ? "دریافتی گیرنده" : "Recipient gets"}</dt><dd>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</dd></div>
+              <div className={styles.fact}><dt>{fa ? "گیرنده" : "Recipient"}</dt><dd>{request.quote.institution_name || String(request.quote.recipient_snapshot.account_name || request.quote.recipient_snapshot.full_name || request.quote.recipient_snapshot.label || "—")}</dd></div>
+              {request.service_tier === "priority" && <div className={styles.fact}><dt>{fa ? "هزینه اولویت" : "Priority fee"}</dt><dd>{requestMoney(request.quote.priority_fee_amount, request.quote.funding_currency, locale)}</dd></div>}
+              {request.handling_due_at && <div className={styles.fact}><dt>{fa ? "مهلت شروع رسیدگی" : "Handling target"}</dt><dd>{requestDate(request.handling_due_at, locale)}</dd></div>}
+            </dl><details className={workspace.inlineDisclosure}><summary>{fa ? "جزئیات حواله" : "Transfer details"}<ChevronDown size={15} /></summary><RequestQuoteFacts quote={request.quote} locale={locale} />{request.service_tier === "priority" && <p className={styles.muted}>{fa ? request.quote.policy_snapshot.priority_terms_fa : request.quote.policy_snapshot.priority_terms}</p>}{request.quote.payment_link && <a href={request.quote.payment_link} target="_blank" rel="noopener noreferrer">{fa ? "مشاهده صورتحساب" : "View invoice"}</a>}</details></section>
+            {actionPanel && <details className={`${styles.card} ${workspace.disclosure}`}><summary>{fa ? "سایر اقدامات" : "Other actions"}<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}>{actionPanel}</div></details>}
+            <details className={`${styles.card} ${workspace.disclosure}`}><summary>{fa ? "تاریخچه وضعیت" : "Status history"}<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}><ol className={styles.timeline}>{detail.events.filter((event, index, events) => index === 0 || event.status !== events[index - 1].status).map(event => <li key={event.id}><strong>{requestLabel(event.status, locale)}</strong><time className={workspace.historyTime} dateTime={event.created_at}>{requestDate(event.created_at, locale)}</time></li>)}</ol><span className={workspace.timezone}>{fa ? "زمان‌ها به وقت سیدنی" : "Sydney time"}</span></div></details>
+          </div>
+        </div>
+      </>}
     </>}
   </main>;
 }

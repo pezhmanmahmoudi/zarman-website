@@ -5,8 +5,8 @@ import { createHash } from "node:crypto";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import { applyPromoCode, calcAppliedFee, calcEquivalentTomanForRequestType, calcLoyaltyDiscount, FINANCE_CONFIG_DEFAULTS, toCompanyTradeType, type PromoCodeData } from "@/lib/pricing";
-import { DEFAULT_REQUEST_SETTINGS, isUuid, mutationInputError, publicRequestSettings, quoteInputError, settingsInputError } from "@/lib/requests/validation";
-import type { ActionResult, ExchangeRequest, PublicRequestSettings, QuoteInput, QuoteSnapshot, RequestDetail, RequestMutationInput, RequestQuote, RequestReceipt, RequestSettings, SettingsRecord } from "@/lib/requests/types";
+import { DEFAULT_REQUEST_SETTINGS, isUuid, messageInputError, mutationInputError, publicRequestSettings, quoteInputError, settingsInputError } from "@/lib/requests/validation";
+import type { ActionResult, ExchangeRequest, PublicRequestSettings, QuoteInput, QuoteSnapshot, RequestDetail, RequestMessageInput, RequestMessageResult, RequestMutationInput, RequestQuote, RequestReceipt, RequestSettings, SettingsRecord } from "@/lib/requests/types";
 import { inspectReceiptUpload, MAX_REQUEST_RECEIPT_BYTES, REQUEST_RECEIPTS_BUCKET } from "@/lib/requests/receipt-upload";
 import { validatedNotificationSettings } from "@/lib/requests/notification-config";
 
@@ -36,13 +36,13 @@ async function result<T>(operation: () => Promise<T>): Promise<ActionResult<T>> 
   try { return { data: await operation() }; }
   catch (error) { return { error: failure(error) }; }
 }
-async function settingsRecord(): Promise<SettingsRecord> {
+async function settingsRecord(validate = true): Promise<SettingsRecord> {
   const { data, error } = await database().from("exchange_request_settings").select("version, settings").eq("id", true).single();
   if (error) throw error;
   if (!data) throw new Error("Request settings are unavailable.");
   const settings = { ...DEFAULT_REQUEST_SETTINGS, ...data.settings } as RequestSettings;
   const validation = settingsInputError(settings);
-  if (validation) throw new Error("Request service settings need administrator review.");
+  if (validate && validation) throw new Error("Request service settings need administrator review.");
   return { version: data.version, settings };
 }
 
@@ -159,15 +159,20 @@ async function readDetail(id: string, userId?: string): Promise<RequestDetail> {
   if (userId) query = query.eq("user_id", userId);
   const request = await query.single();
   if (request.error || !request.data) throw new Error("Request not found.");
-  const events = userId
-    ? await db.from("exchange_request_events").select("id,request_id,sequence,event_type,status,public_message,actor_id,created_at")
+  const eventQuery = userId
+    ? db.from("exchange_request_events").select("id,request_id,sequence,event_type,status,public_message,actor_id,created_at")
       .eq("request_id", id).eq("customer_visible", true).order("sequence", { ascending: true })
-    : await db.from("exchange_request_events").select("id,request_id,sequence,event_type,status,public_message,actor_id,created_at,internal_message")
+    : db.from("exchange_request_events").select("id,request_id,sequence,event_type,status,public_message,actor_id,created_at,internal_message,send_email")
       .eq("request_id", id).order("sequence", { ascending: true });
+  const [events, receipts, messages] = await Promise.all([
+    eventQuery,
+    db.from("exchange_request_receipts").select("id,request_id,original_name,content_type,size_bytes,sha256,uploaded_by,created_at").eq("request_id", id).order("created_at", { ascending: false }),
+    db.from("exchange_request_messages").select("id,request_id,event_id,event_sequence,sender_id,sender_role,body,send_email,created_at").eq("request_id", id).order("event_sequence", { ascending: true }),
+  ]);
   if (events.error) throw events.error;
-  const receipts = await db.from("exchange_request_receipts").select("id,request_id,original_name,content_type,size_bytes,sha256,uploaded_by,created_at").eq("request_id", id).order("created_at", { ascending: false });
   if (receipts.error) throw receipts.error;
-  const detail: RequestDetail = { request: request.data as ExchangeRequest, events: events.data || [], receipts: receipts.data as RequestReceipt[] };
+  if (messages.error) throw messages.error;
+  const detail: RequestDetail = { request: request.data as ExchangeRequest, events: events.data || [], receipts: receipts.data as RequestReceipt[], messages: messages.data || [] };
   if (!userId) {
     const deliveries = await db.from("exchange_request_notification_deliveries").select("id,event_id,request_id,audience,recipient_email,locale,status,attempts,last_error,created_at").eq("request_id", id).order("created_at", { ascending: false }).limit(100);
     if (deliveries.error) throw deliveries.error;
@@ -191,6 +196,7 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
     receiver_account_id: supplied.receiver_account_id, transfer_method: supplied.transfer_method || "free",
     refund_reference: supplied.refund_reference?.trim(), refund_kind: supplied.refund_kind,
     honour_quote: supplied.honour_quote,
+    ...(admin ? { send_email: input.sendEmail } : {}),
     ...(["complete", "confirm_funds", "resume_funded_request", "confirm_refund"].includes(input.action) ? { date_jalali: (() => {
       const parts = new Intl.DateTimeFormat("en-US-u-ca-persian", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "UTC" }).formatToParts(new Date());
       return ["year", "month", "day"].map(type => parts.find(part => part.type === type)?.value).join("/");
@@ -226,8 +232,26 @@ export async function getAdminRequest(id: string): Promise<ActionResult<RequestD
 export async function mutateAdminRequest(input: RequestMutationInput): Promise<ActionResult<ExchangeRequest>> {
   return result(() => mutate(input, true));
 }
+async function sendMessage(input: RequestMessageInput, admin: boolean): Promise<RequestMessageResult> {
+  const actor = admin ? await requireAdmin() : await customer();
+  const invalid = messageInputError(input, admin);
+  if (invalid) throw new Error(invalid);
+  const { data, error } = await database().rpc("send_exchange_request_message", {
+    p_actor_id: actor.id, p_request_id: input.requestId, p_expected_version: input.expectedVersion,
+    p_command_key: input.commandKey, p_message: input.message.trim(), p_send_email: admin ? input.sendEmail : false,
+  });
+  if (error) throw error;
+  return data as RequestMessageResult;
+}
+export async function sendMyRequestMessage(input: RequestMessageInput): Promise<ActionResult<RequestMessageResult>> {
+  return result(() => sendMessage(input, false));
+}
+export async function sendAdminRequestMessage(input: RequestMessageInput): Promise<ActionResult<RequestMessageResult>> {
+  return result(() => sendMessage(input, true));
+}
 export async function getRequestSettings(): Promise<ActionResult<SettingsRecord>> {
-  return result(async () => { await requireAdmin(); return settingsRecord(); });
+  // Administrators must be able to repair settings saved before new fields existed.
+  return result(async () => { await requireAdmin(); return settingsRecord(false); });
 }
 export async function saveRequestSettings(input: { expectedVersion: number; settings: RequestSettings }): Promise<ActionResult<SettingsRecord>> {
   return result(async () => {

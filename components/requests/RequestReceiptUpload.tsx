@@ -5,8 +5,9 @@ import { Download, FileUp } from "lucide-react";
 import { getRequestReceiptUrl, uploadRequestReceipt } from "@/app/actions/request.actions";
 import type { ExchangeRequest, RequestLocale, RequestReceipt } from "@/lib/requests/types";
 import { MAX_REQUEST_RECEIPT_BYTES } from "@/lib/requests/receipt-upload";
-import { requestDate } from "./request-labels";
+import { requestDate, requestError } from "./request-labels";
 import styles from "@/styles/requests/Requests.module.css";
+import compact from "@/styles/requests/RequestPayment.module.css";
 
 export function RequestReceiptUpload({ request, receipts, admin = false, locale, onUploaded }: {
   request: ExchangeRequest; receipts: RequestReceipt[]; admin?: boolean; locale: RequestLocale; onUploaded: () => Promise<void>;
@@ -40,7 +41,7 @@ export function RequestReceiptUpload({ request, receipts, admin = false, locale,
       if (result.error) setError(result.error);
       else {
         attempt.current = null; setFile(null); if (input.current) input.current.value = "";
-        setNotice(fa ? "رسید شما ثبت شد و تیم مالی مطلع می‌شود. تأیید دریافت وجه پس از تطبیق بانکی انجام می‌شود." : "Your receipt was saved and finance will be notified. Funds are confirmed separately after bank reconciliation.");
+        setNotice(fa ? "رسید ثبت شد؛ در انتظار تأیید وجه." : "Receipt saved. Awaiting funds confirmation.");
         await onUploaded();
       }
     } catch { setError(fa ? "نتیجه آپلود دریافت نشد. با همین فایل دوباره تلاش کنید." : "We could not confirm the upload. Retry with the same file."); }
@@ -63,21 +64,20 @@ export function RequestReceiptUpload({ request, receipts, admin = false, locale,
     finally { setOpening(""); }
   }
 
-  return <section className={styles.card}>
-    <h2>{fa ? "رسید واریز بانکی" : "Bank transfer receipt"}</h2>
-    <p className={styles.muted}>{fa ? "فایل رسید فقط برای تطبیق واریز استفاده می‌شود و دریافت وجه یا شروع زمان سرویس را تأیید نمی‌کند." : "A receipt helps finance match your payment. It does not confirm cleared funds or start the service time target."}</p>
+  return <section className={`${styles.card} ${compact.compactCard}`}>
+    <h2>{fa ? "رسید واریز" : admin ? "Payment evidence" : "Payment receipt"}</h2>
     {canUpload && <form onSubmit={submit}>
-      <label className={styles.field}>{fa ? "انتخاب رسید (PDF، JPG یا PNG؛ حداکثر ۴ مگابایت)" : "Choose receipt (PDF, JPG or PNG; maximum 4 MB)"}
+      <label className={styles.field}>{fa ? "انتخاب فایل: PDF، JPG یا PNG؛ تا ۴ مگابایت" : "Choose file: PDF, JPG or PNG, up to 4 MB"}
         <input ref={input} type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" required disabled={busy} onChange={event => { setFile(event.target.files?.[0] ?? null); attempt.current = null; setError(""); setNotice(""); }} />
       </label>
-      <button className={styles.button} type="submit" disabled={!file || busy} style={{ marginTop: 14 }}><FileUp size={17} />{busy ? (fa ? "در حال آپلود…" : "Uploading…") : (fa ? "آپلود رسید واریز" : "Upload bank receipt")}</button>
+      <button className={styles.button} type="submit" disabled={!file || busy} style={{ marginTop: 12 }}><FileUp size={17} aria-hidden="true" />{busy ? (fa ? "در حال بارگذاری…" : "Uploading…") : (fa ? "بارگذاری رسید" : "Upload receipt")}</button>
     </form>}
-    {error && <p className={styles.error} role="alert">{error}</p>}
+    {error && <p className={styles.error} role="alert">{requestError(error, locale)}</p>}
     {notice && <p className={styles.notice} role="status">{notice}</p>}
     <ul className={styles.receiptList}>{receipts.map(receipt => <li key={receipt.id}>
-      <div><span className={styles.receiptName}>{receipt.original_name}</span><p className={styles.muted}>{requestDate(receipt.created_at, locale)} · {Math.ceil(receipt.size_bytes / 1024)} KB</p></div>
+      <div><span className={styles.receiptName}>{receipt.original_name}</span><p className={styles.muted}>{requestDate(receipt.created_at, locale)} · {new Intl.NumberFormat(fa ? "fa-IR" : "en-AU").format(Math.ceil(receipt.size_bytes / 1024))} {fa ? "کیلوبایت" : "KB"}</p></div>
       <button className={styles.secondary} type="button" aria-label={`${fa ? "مشاهده رسید" : "View receipt"}: ${receipt.original_name}`} onClick={() => void openReceipt(receipt.id)} disabled={Boolean(opening)}><Download size={16} />{fa ? "مشاهده رسید" : "View receipt"}</button>
     </li>)}</ul>
-    {!receipts.length && <p className={styles.muted}>{fa ? "هنوز رسیدی آپلود نشده است." : "No bank receipts uploaded yet."}</p>}
+    {!receipts.length && !canUpload && <p className={styles.muted}>{fa ? "رسیدی ثبت نشده است." : "No receipts uploaded."}</p>}
   </section>;
 }

@@ -77,6 +77,43 @@ test("receipt and status templates escape content and do not confuse upload evid
   assert.match(uploaded.text, /will confirm when funds have cleared/);
 });
 
+test("new bank snapshots preserve copy values and Persian notes without English fallback prose", () => {
+  const payload_snapshot = {
+    payment_details: { account_name: "TEST ONLY", bsb: "000-000", account_number: "00123456" },
+    funding_currency: "AUD", funding_total: 1025,
+    payment_instructions: "English note only.", payment_instructions_fa: "فقط یادداشت فارسی.",
+    iran_banking_notice: "English banking notice.", iran_banking_notice_fa: "یادداشت چرخه بانکی فارسی.",
+  };
+  const en = templates.renderRequestNotification(delivery({ payload_snapshot }), settings);
+  const fa = templates.renderRequestNotification(delivery({ locale: "fa", payload_snapshot }), settings);
+  for (const result of [en, fa]) {
+    assert.match(result.text, /BSB: 000-000/);
+    assert.match(result.text, /00123456/);
+  }
+  assert.match(en.text, /English note only/);
+  assert.match(fa.text, /فقط یادداشت فارسی/);
+  assert.match(fa.text, /یادداشت چرخه بانکی فارسی/);
+  assert.doesNotMatch(fa.text, /English/);
+  assert.match(fa.html, /lang="fa" dir="rtl"/);
+  const noNote = templates.renderRequestNotification(delivery({ locale: "fa", payload_snapshot: { ...payload_snapshot, payment_instructions_fa: null, iran_banking_notice_fa: undefined } }), settings);
+  assert.doesNotMatch(noNote.text, /English/);
+  assert.match(noNote.text, /ساتنا و پایا/);
+});
+
+test("conversation emails have concise localized subjects, escaped messages and audience-specific reply links", () => {
+  for (const locale of ["en", "fa"]) for (const audience of ["customer", "management"]) {
+    const event_type = audience === "customer" ? "admin_message" : "customer_message";
+    const result = templates.renderRequestNotification(delivery({ locale, audience, event_type,
+      payload_snapshot: { public_message: "<b>Test reply</b>\nSecond line" } }), settings);
+    assert.match(result.subject, locale === "fa" ? /پیام زرمان|پاسخ مشتری/ : /Message from Zarman|Customer reply/);
+    assert.match(result.html, /&lt;b&gt;Test reply&lt;\/b&gt;/);
+    assert.doesNotMatch(result.html, /<b>Test reply/);
+    assert.match(result.text, /Test reply/);
+    assert.doesNotMatch(result.text, /24 hours|additional fee|Bank clearance/);
+    assert.match(result.html, new RegExp(audience === "management" ? `/admin/requests/${requestId}` : `/${locale}/dashboard/requests/${requestId}`));
+  }
+});
+
 test("PDF keeps Persian names and pins metadata to settlement; repeated rendering is deterministic", async () => {
   const first = await receipts.renderRequestReceiptPdf(completion);
   const second = await receipts.renderRequestReceiptPdf(completion);

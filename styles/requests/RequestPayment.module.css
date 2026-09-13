@@ -1,0 +1,43 @@
+.compactCard { padding: 20px; }
+.heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-block-end: 14px; }
+.heading h2, .heading h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 17px; }
+.amount { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; padding-block-end: 14px; border-bottom: 1px solid #dce8e3; }
+.amount dt { color: #536b67; font-size: 13px; }
+.amount dd { margin: 0; font-weight: 750; color: #126d64; font-size: 23px; }
+.bankGrid { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.bankField { min-width: 0; background: #f7faf9; border: 1px solid #e0e9e5; border-radius: 10px; padding: 10px 12px; }
+.bankField dt { font-size: 12px; color: #526b63; margin-block-end: 5px; }
+.bankField dd { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 16px; font-weight: 650; }
+.bankField bdi { overflow-wrap: anywhere; min-width: 0; font-variant-numeric: tabular-nums; user-select: all; }
+.full { grid-column: 1 / -1; }
+.reference { border-color: #a3c8bb; background: #edf7f2; }
+.copy { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 9px; background: white; border: 1px solid #ccdcd4; border-radius: 7px; color: #126d64; cursor: pointer; font: inherit; font-size: 12px; font-weight: 650; flex-shrink: 0; }
+.copy:hover { background: #e6f2ec; border-color: #92b8a8; }
+.copy:focus-visible, .details > summary:focus-visible { outline: 3px solid #55aca1; outline-offset: 3px; }
+.hint { margin: 10px 0 0; color: #365e50; font-size: 13px; line-height: 1.7; }
+.deadline { color: #65776f; font-size: 12px; margin: 10px 0 0; }
+.details { font-size: 13px; line-height: 1.7; margin-block-start: 12px; color: #526a61; }
+.details > summary { cursor: pointer; width: fit-content; min-height: 32px; padding-block: 5px; font-weight: 600; }
+.details p { margin: 5px 0 0; }
+.detailsBody { padding-block: 5px; }
+.bankNote { white-space: pre-wrap; unicode-bidi: plaintext; overflow-wrap: anywhere; }
+.timing { margin-block-start: 12px; padding-block-start: 12px; border-top: 1px solid #e1e9e5; }
+.timing > p { margin: 0; font-size: 13px; color: #4e685e; line-height: 1.7; }
+.timing .details { margin-block-start: 3px; }
+.confirmation { display: grid; gap: 16px; }
+.confirmationHeader { display: flex; align-items: center; gap: 10px; }
+.confirmationHeader h2 { margin: 0; font-size: 20px; }
+.confirmationHeader > svg { color: #126d64; flex-shrink: 0; }
+.confirmation > section { margin: 0; }
+.serviceTime { font-weight: 650; color: #365e50; }
+.meta { display: flex; flex-wrap: wrap; gap: 5px 14px; margin: 9px 0 0; color: #5f7180; font-size: 12px; line-height: 1.6; }
+.quoteFacts > div { padding-block: 9px; }
+.quoteDetails { border-top: 1px solid #e5ece8; margin-block-start: 8px; }
+.serviceDetails { margin-block: 10px 16px; }
+.rtlArrow { transform: rotate(180deg); }
+@media (max-width: 480px) {
+  .compactCard { padding: 16px; }
+  .bankGrid { grid-template-columns: minmax(0, 1fr); }
+  .bankField dd { font-size: 15px; }
+  .amount dd { font-size: 21px; }
+}

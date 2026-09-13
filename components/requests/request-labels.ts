@@ -1,7 +1,7 @@
 export type RequestLocale = "en" | "fa";
 
 const statuses: Record<string, [string, string]> = {
-  submitted: ["Submitted", "ثبت شده"],
+  submitted: ["Awaiting approval", "در انتظار تأیید"],
   under_review: ["Under review", "در حال بررسی"],
   action_required: ["Action required", "نیازمند اقدام شما"],
   awaiting_funds: ["Awaiting payment", "در انتظار واریز"],
@@ -31,10 +31,60 @@ const statuses: Record<string, [string, string]> = {
   responded: ["Response submitted", "پاسخ ثبت شده"],
   resolved: ["Resolved", "حل شده"],
   closed: ["Closed", "بسته شده"],
+  await_funds: ["Request approved", "درخواست تأیید شد"],
+  review: ["In review", "در حال بررسی"],
+  request_info: ["Information requested", "اطلاعات بیشتر لازم است"],
+  respond: ["Customer reply", "پاسخ شما"],
+  admin_message: ["Team message", "پیام زرمان"],
+  customer_message: ["Customer message", "پیام شما"],
+  funds_recorded: ["Payment reviewed", "واریز بررسی شد"],
+  start_processing: ["Processing started", "پردازش آغاز شد"],
+  complete: ["Completed", "تکمیل شد"],
+  cancel: ["Cancelled", "لغو شد"],
+  reject: ["Rejected", "رد شد"],
+  resume_funded_request: ["Request resumed", "درخواست از سر گرفته شد"],
+  record_uncertain_payout: ["Settlement review", "بررسی تسویه"],
+  refund_returned: ["Refund completed", "بازپرداخت شد"],
+  skipped: ["Email not sent", "ایمیل ارسال نشد"],
+  provider_accepted: ["Email sent", "ایمیل ارسال شد"],
+  delivered: ["Delivered", "تحویل شد"],
+  leased: ["Sending", "در حال ارسال"],
+  failed: ["Not delivered", "تحویل نشد"],
+  suppressed: ["Email blocked", "ایمیل مسدود شد"],
+  reconciliation_required: ["Check delivery", "نیازمند بررسی ارسال"],
 };
 
 export function requestLabel(status: string, locale: RequestLocale) {
-  return statuses[status]?.[locale === "fa" ? 1 : 0] ?? status.replaceAll("_", " ");
+  return statuses[status]?.[locale === "fa" ? 1 : 0] ?? (locale === "fa" ? "به‌روزرسانی" : status.replaceAll("_", " "));
+}
+
+/** Server errors are language-neutral; customer-facing feedback follows the page locale. */
+export function requestError(error: string, locale: RequestLocale): string {
+  if (locale !== "fa") return error;
+  if (/[\u0600-\u06ff]/.test(error)) return error;
+  const translations: Array<[RegExp, string]> = [
+    [/changed|stale|refresh.*before|VERSION|QUOTE_CHANGED/i, "اطلاعات این درخواست تغییر کرده است. صفحه را تازه کنید و دوباره تلاش کنید."],
+    [/sign in|authenticate|session|log.?in/i, "برای ادامه وارد حساب خود شوید."],
+    [/verify.*email|email.*verif/i, "ابتدا نشانی ایمیل خود را تأیید کنید."],
+    [/Identity|verification must|KYC/i, "ابتدا احراز هویت خود را تکمیل کنید."],
+    [/priority.*unavailable|PRIORITY_CAPACITY|capacity.*full/i, "ظرفیت سرویس اولویت‌دار تکمیل است. سرویس استاندارد را انتخاب کنید."],
+    [/paused|REQUESTS_DISABLED|submissions.*not available|temporarily unavailable|market.*closed/i, "ثبت درخواست فعلاً متوقف است. بعداً دوباره تلاش کنید."],
+    [/already.*recorded|duplicate|IDEMPOTENCY/i, "این عملیات قبلاً ثبت شده است. صفحه را تازه کنید."],
+    [/not found|unavailable for your account|permission|not allowed/i, "این درخواست در دسترس شما نیست."],
+    [/up to 4 MB|file.*large/i, "حجم رسید باید حداکثر ۴ مگابایت باشد."],
+    [/PDF|JPEG|PNG|receipt.*format|file.*type|unsupported/i, "رسید را با فرمت PDF، JPG یا PNG بارگذاری کنید."],
+    [/ten receipts|receipt.*limit/i, "حداکثر ۱۰ رسید مجاز است. از بخش پیام‌ها با ما تماس بگیرید."],
+    [/receipts can only|receipt.*awaiting review/i, "بارگذاری رسید در این مرحله امکان‌پذیر نیست."],
+    [/2,?000|message.*long|message.*empty|enter the reason|write a message/i, "پیامی بین ۱ تا ۲۰۰۰ نویسه بنویسید."],
+    [/wait a minute|too many|rate.?limit/i, "کمی صبر کنید و دوباره تلاش کنید."],
+    [/recipient|institution|invoice|payment link/i, "اطلاعات گیرنده و مقصد پرداخت را بررسی کنید."],
+    [/promotion|promo code/i, "کد تخفیف معتبر نیست یا دیگر قابل استفاده نیست."],
+    [/quote.*expir|quote.*valid|quote.*unavailable/i, "پیش‌فاکتور جدید بگیرید و مبلغ را تأیید کنید."],
+    [/amount|funding|currency|funds|source of funds/i, "مبلغ، ارز و اطلاعات پرداخت را بررسی کنید."],
+    [/email.*managed|email update/i, "تنظیمات ارسال ایمیل توسط مدیر تعیین می‌شود."],
+    [/could not|connection|network|try again|unavailable/i, "ارتباط برقرار نشد. دوباره تلاش کنید."],
+  ];
+  return translations.find(([pattern]) => pattern.test(error))?.[1] ?? "انجام این کار ممکن نشد. صفحه را تازه کنید و دوباره تلاش کنید.";
 }
 
 export function requestMoney(amount: number | string | null | undefined, currency: string, locale: RequestLocale) {

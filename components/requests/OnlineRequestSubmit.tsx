@@ -2,20 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock3 } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { createRequestQuote, getRequestPolicy, submitExchangeRequest } from "@/app/actions/request.actions";
 import type { ExchangeRequest, PublicRequestSettings, QuoteInput, RequestQuote, ServiceTier } from "@/lib/requests/types";
 import { RequestQuoteFacts } from "./RequestQuoteFacts";
 import { RequestPaymentInstructions } from "./RequestPaymentInstructions";
 import { RequestBankTiming } from "./RequestBankTiming";
 import { RequestProgress } from "./RequestProgress";
-import { requestDate, requestMoney } from "./request-labels";
+import { requestDate, requestError, requestMoney } from "./request-labels";
 import styles from "@/styles/requests/Requests.module.css";
+import compact from "@/styles/requests/RequestPayment.module.css";
 
 type Props = { input: Omit<QuoteInput, "serviceTier">; disabled: boolean; validationMessage: string | null; onBusyChange?: (busy: boolean) => void };
 
 export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusyChange }: Props) {
   const fa = input.locale === "fa";
+  const numbers = new Intl.NumberFormat(fa ? "fa-IR" : "en-AU");
   const [policy, setPolicy] = useState<PublicRequestSettings | null>(null);
   const [loadingPolicy, setLoadingPolicy] = useState(true);
   const [tier, setTier] = useState<ServiceTier>("standard");
@@ -31,6 +33,7 @@ export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusy
   const currentInput = JSON.stringify({ ...input, serviceTier: tier });
   const activeQuote = quote && quotedInput === currentInput ? quote : null;
   const expired = activeQuote ? new Date(activeQuote.expires_at).getTime() <= now : false;
+  const shownPolicy = activeQuote?.snapshot.policy_snapshot || policy;
 
   useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
 
@@ -40,7 +43,7 @@ export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusy
       if (!alive) return;
       if (result.error) setError(result.error);
       else if (result.data) setPolicy(result.data);
-    }).catch(() => { if (alive) setError(fa ? "دریافت اطلاعات سرویس ممکن نشد. صفحه را دوباره بارگذاری کنید." : "Service options could not be loaded. Please reload this page."); })
+    }).catch(() => { if (alive) setError(fa ? "گزینه‌های سرویس دریافت نشد. صفحه را دوباره بارگذاری کنید." : "Service options unavailable. Please reload."); })
       .finally(() => { if (alive) setLoadingPolicy(false); });
     return () => { alive = false; };
   }, [fa]);
@@ -66,7 +69,7 @@ export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusy
         commandKey.current = crypto.randomUUID();
         setNow(Date.now());
       }
-    } catch { setError(fa ? "دریافت پیش‌فاکتور انجام نشد. اطلاعات شما حفظ شده؛ دوباره تلاش کنید." : "Could not retrieve your quote. Your details are preserved; please try again."); }
+    } catch { setError(fa ? "دریافت پیش‌فاکتور انجام نشد. دوباره تلاش کنید." : "Could not load your quote. Please try again."); }
     finally { submitting.current = false; setBusy(false); }
   }
 
@@ -79,58 +82,60 @@ export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusy
       const result = await submitExchangeRequest({ quoteId: activeQuote.id, commandKey: commandKey.current });
       if (result.error) setError(result.error);
       else if (result.data) setSaved(result.data);
-    } catch { setError(fa ? "تأیید ثبت درخواست دریافت نشد. با همین دکمه دوباره تلاش کنید؛ درخواست تکراری ایجاد نمی‌شود." : "We could not confirm submission. Retry with this button; the same submission key prevents duplicates."); }
+    } catch { setError(fa ? "تأیید ثبت دریافت نشد. با همین دکمه دوباره تلاش کنید." : "Submission could not be confirmed. Retry using this button."); }
     finally { submitting.current = false; setBusy(false); }
   }
 
-  if (saved) return <section className={`${styles.embedded} ${styles.card}`} dir={fa ? "rtl" : "ltr"} aria-live="polite">
-    <CheckCircle2 size={30} color="#126d64" />
-    <h2>{fa ? "درخواست شما ثبت شد" : "Your request has been submitted"}</h2>
-    <p>{fa ? "کد پیگیری" : "Your reference"}: <bdi className={styles.reference}>{saved.reference_code}</bdi></p>
-    <p className={styles.muted}>{fa ? "مشخصات حساب و کد پیگیری در زیر نمایش داده می‌شود. رسید واریز را در صفحه پیگیری آپلود کنید و از وضعیت با ایمیل و داشبورد مطلع شوید." : "Your bank details and Reference Code are below. Upload your bank receipt on the tracking page and follow updates by email and in your dashboard."}</p>
-    <Link className={styles.button} href={`/${input.locale}/dashboard/requests/${saved.id}`}>{fa ? "پیگیری درخواست و آپلود رسید" : "Track request and upload receipt"}<ArrowRight size={17} /></Link>
-    <div className={styles.stack} style={{ marginTop: 20 }}><RequestProgress request={saved} locale={input.locale} /><RequestPaymentInstructions request={saved} locale={input.locale} /></div>
+  if (saved) return <section className={`${styles.embedded} ${compact.confirmation}`} dir={fa ? "rtl" : "ltr"} aria-live="polite">
+    <div className={compact.confirmationHeader}><CheckCircle2 size={26} aria-hidden="true" /><h2>{fa ? "درخواست ثبت شد" : "Request submitted"}</h2></div>
+    <RequestPaymentInstructions request={saved} locale={input.locale} />
+    <Link className={styles.button} href={`/${input.locale}/dashboard/requests/${saved.id}`}>{fa ? "رسید، پیام‌ها و پیگیری" : "Receipt, messages & tracking"}<ArrowRight size={17} className={fa ? compact.rtlArrow : undefined} aria-hidden="true" /></Link>
+    <RequestProgress request={saved} locale={input.locale} />
   </section>;
 
-  return <section className={styles.embedded} dir={fa ? "rtl" : "ltr"} aria-label={fa ? "انتخاب سرویس و تأیید درخواست" : "Service and request confirmation"}>
-    {loadingPolicy && <p className={styles.muted} role="status">{fa ? "در حال دریافت گزینه‌های سرویس…" : "Loading service options…"}</p>}
-    {policy && !policy.enabled && <p className={styles.warning}>{fa ? "ثبت آنلاین درخواست هنوز فعال نشده است. سوابق موجود شما در صفحه پیگیری در دسترس است." : "Online request submissions are not available yet. Existing requests remain accessible on the tracking page."}</p>}
+  return <section className={styles.embedded} dir={fa ? "rtl" : "ltr"} aria-label={fa ? "سرویس و تأیید درخواست" : "Service and confirmation"}>
+    {loadingPolicy && <p className={styles.muted} role="status">{fa ? "در حال دریافت سرویس‌ها…" : "Loading services…"}</p>}
+    {policy && !policy.enabled && <p className={styles.warning}>{fa ? "ثبت درخواست جدید فعلاً غیرفعال است." : "New requests are currently paused."}</p>}
     {policy?.enabled && <>
       <fieldset className={styles.services} disabled={busy}>
-        <legend>{fa ? "سطح خدمات" : "Choose your service"}</legend>
+        <legend>{fa ? "سرویس" : "Service"}</legend>
         <label className={styles.service} data-selected={tier === "standard"}>
           <input type="radio" name="request-service" value="standard" checked={tier === "standard"} onChange={() => { setTier("standard"); setAccepted(false); }} />
           <strong>{fa ? "استاندارد" : "Standard"}</strong>
-          <p>{fa ? "بدون هزینه افزوده" : "No additional service fee"}</p>
-          <p>{fa ? `هدف شروع رسیدگی: ${policy.standard_minutes} دقیقه کاری پس از تأیید الزامات و وجه.` : `Handling target: ${policy.standard_minutes} business minutes after checks and cleared funds.`}</p>
+          <p>{fa ? "بدون هزینه اضافه" : "No extra fee"}</p>
+          <p className={compact.serviceTime}>{fa ? `هدف رسیدگی: ${numbers.format(policy.standard_minutes)} دقیقه کاری` : `Handling target: ${numbers.format(policy.standard_minutes)} business minutes`}</p>
         </label>
         <label className={styles.service} data-selected={tier === "priority"} data-disabled={!policy.priority_enabled}>
           <input type="radio" name="request-service" value="priority" checked={tier === "priority"} disabled={!policy.priority_enabled} onChange={() => { setTier("priority"); setAccepted(false); }} />
           <strong>{fa ? "اولویت‌دار" : "Priority"}</strong>
-          <p>{policy.priority_enabled ? `+ ${requestMoney(policy.priority_fee_aud, "AUD", input.locale)}` : (fa ? "فعلاً در دسترس نیست" : "Currently unavailable")}</p>
-          <p>{fa ? `هدف شروع رسیدگی: ${policy.priority_minutes} دقیقه کاری پس از تأیید الزامات، وجه و هزینه سرویس. ظرفیت هنگام ثبت بررسی می‌شود.` : `Handling target: ${policy.priority_minutes} business minutes after checks, cleared funds and fee. Capacity is checked at submission.`}</p>
+          <p>{policy.priority_enabled ? <bdi>+ {requestMoney(policy.priority_fee_aud, "AUD", input.locale)}</bdi> : (fa ? "فعلاً غیرفعال" : "Unavailable")}</p>
+          <p className={compact.serviceTime}>{fa ? `هدف رسیدگی: ${numbers.format(policy.priority_minutes)} دقیقه کاری` : `Handling target: ${numbers.format(policy.priority_minutes)} business minutes`}</p>
         </label>
       </fieldset>
-      <p className={styles.muted}><Clock3 size={14} aria-hidden="true" /> {fa ? `ساعات کاری: ${policy.opening_hour}:00 تا ${policy.closing_hour}:00 به وقت سیدنی؛ روزهای کاری و تعطیلات طبق شرایط سرویس. زمان تسویه بانکی جداگانه است.` : `Operating hours: ${policy.opening_hour}:00–${policy.closing_hour}:00 Australia/Sydney, on the published business days excluding holidays. Bank settlement time is separate.`}</p>
-      <p className={styles.muted}>{fa ? "روزهای کاری: " : "Business days: "}{policy.business_days.map(day => (fa ? ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"] : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])[day]).join(fa ? "، " : ", ")}{policy.holidays.length > 0 && <>{fa ? " · تعطیلات: " : " · Holidays: "}{policy.holidays.join(", ")}</>}</p>
-      <RequestBankTiming locale={input.locale} iranBankingNotice={policy.iran_banking_notice} />
-      {tier === "priority" && <p className={styles.notice}>{fa ? policy.priority_terms_fa : policy.priority_terms}</p>}
-      {!activeQuote && <button className={styles.button} type="button" onClick={review} disabled={busy || disabled}>{busy ? (fa ? "در حال محاسبه…" : "Preparing quote…") : (fa ? "دریافت و بررسی پیش‌فاکتور" : "Review final quote")}<ArrowRight size={17} /></button>}
-      {activeQuote && <div className={styles.card} aria-live="polite">
-        <h3>{fa ? "پیش‌فاکتور نهایی را بررسی کنید" : "Review your final quote"}</h3>
+      <RequestBankTiming locale={input.locale} iranBankingNotice={shownPolicy?.iran_banking_notice} iranBankingNoticeFa={shownPolicy?.iran_banking_notice_fa} />
+      {shownPolicy && <details className={`${compact.details} ${compact.serviceDetails}`}>
+        <summary>{fa ? "ساعات و شرایط سرویس" : "Service hours & terms"}</summary>
+        <p>{fa ? "ساعات کاری سیدنی: " : "Sydney hours: "}{numbers.format(shownPolicy.opening_hour)}:00–{numbers.format(shownPolicy.closing_hour)}:00</p>
+        <p>{shownPolicy.business_days.map(day => (fa ? ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"] : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])[day]).join(fa ? "، " : ", ")}{shownPolicy.holidays.length > 0 && <>{fa ? "؛ تعطیلات: " : "; holidays: "}{shownPolicy.holidays.join(", ")}</>}</p>
+        <p>{fa ? "زمان رسیدگی پس از تأیید وجه و بررسی‌ها محاسبه می‌شود. زمان تسویه بانکی جداست." : "Handling begins after funds and checks are confirmed. Bank settlement time is separate."}</p>
+        {tier === "priority" && <><p>{fa ? shownPolicy.priority_terms_fa : shownPolicy.priority_terms}</p><p>{fa ? "ظرفیت اولویت هنگام ثبت بررسی می‌شود." : "Priority is subject to capacity at submission."}</p></>}
+      </details>}
+      {!activeQuote && <button className={styles.button} type="button" onClick={review} disabled={busy || disabled}>{busy ? (fa ? "در حال محاسبه…" : "Preparing quote…") : (fa ? "بررسی مبلغ نهایی" : "Review total")}<ArrowRight size={17} className={fa ? compact.rtlArrow : undefined} aria-hidden="true" /></button>}
+      {activeQuote && <div className={`${styles.card} ${compact.compactCard}`} aria-live="polite">
+        <h3>{fa ? "پیش‌فاکتور نهایی" : "Final quote"}</h3>
         <RequestQuoteFacts quote={activeQuote.snapshot} locale={input.locale} />
-        <p className={styles.muted}>{fa ? "معتبر تا " : "Valid until "}{requestDate(activeQuote.expires_at, input.locale)} ({fa ? "وقت سیدنی" : "Sydney time"})</p>
-        {expired ? <p className={styles.warning}>{fa ? "اعتبار پیش‌فاکتور تمام شده است. پیش‌فاکتور جدید را دریافت و تأیید کنید." : "This quote has expired. Request and accept a new quote to continue."}</p> : <label className={styles.checkbox}>
-          <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} disabled={busy} />
-          <span>{fa ? "مبالغ، ارزها، اطلاعات گیرنده و شرایط سرویس را بررسی و تأیید می‌کنم. ثبت درخواست به معنی تأیید واریز یا تکمیل حواله نیست." : "I accept the amounts, currencies, recipient details and service terms shown. Submission does not confirm payment or completion of the transfer."}</span>
+        <p className={compact.deadline}>{fa ? "معتبر تا " : "Valid until "}{requestDate(activeQuote.expires_at, input.locale)} ({fa ? "سیدنی" : "Sydney"})</p>
+        {expired ? <p className={styles.warning}>{fa ? "پیش‌فاکتور منقضی شد. مبلغ را دوباره محاسبه کنید." : "Quote expired. Refresh the quote to continue."}</p> : <label className={styles.checkbox}>
+          <input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} disabled={busy} />
+          <span>{fa ? "مبالغ، اطلاعات گیرنده و شرایط سرویس را تأیید می‌کنم." : "I accept the amounts, recipient details and service terms."}</span>
         </label>}
         <div className={styles.actions}>
-          {!expired && <button className={styles.button} type="button" onClick={submit} disabled={busy || !accepted || disabled}>{busy ? (fa ? "در حال ثبت…" : "Submitting…") : (fa ? "تأیید و ثبت درخواست" : "Accept and submit request")}</button>}
-          <button className={styles.secondary} type="button" onClick={review} disabled={busy || disabled}>{fa ? "دریافت پیش‌فاکتور جدید" : "Get a fresh quote"}</button>
+          {!expired && <button className={styles.button} type="button" onClick={submit} disabled={busy || !accepted || disabled}>{busy ? (fa ? "در حال ثبت…" : "Submitting…") : (fa ? "ثبت درخواست" : "Submit request")}</button>}
+          <button className={styles.secondary} type="button" onClick={review} disabled={busy || disabled}>{fa ? "محاسبه مجدد" : "Refresh quote"}</button>
         </div>
       </div>}
     </>}
-    {error && <p className={styles.error} role="alert">{error}</p>}
-    <p><Link className={styles.secondary} href={`/${input.locale}/dashboard/requests`}>{fa ? "مشاهده و پیگیری درخواست‌های من" : "View and track my requests"}</Link></p>
+    {error && <p className={styles.error} role="alert">{requestError(error, input.locale)}</p>}
+    <p><Link className={styles.secondary} href={`/${input.locale}/dashboard/requests`}>{fa ? "درخواست‌های من" : "My requests"}</Link></p>
   </section>;
 }

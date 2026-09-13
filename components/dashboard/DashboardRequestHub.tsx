@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Calculator, AlertTriangle, Lock, ServerCrash, PauseCircle, Tag, Banknote, ChevronDown } from "lucide-react";
+import { Calculator, AlertTriangle, Lock, ServerCrash, PauseCircle, Tag, Banknote } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/[locale]/dashboard/dashboard.types";
@@ -20,6 +20,31 @@ import { RecipientModal } from "@/components/dashboard/RecipientModal";
 import { getRecipients, validatePromoCode } from "@/app/actions/transaction.actions";
 import { useT } from "@/hooks/useT";
 import { useLocale } from "@/context/LocaleContext";
+import { requestError } from "@/components/requests/request-labels";
+
+// Keep the recorded values stable while displaying concise labels in the chosen language.
+const sourceOptions: Array<[string, string, string]> = [
+  ["Employment income e.g. salary, bonus, commission", "Employment income", "حقوق و درآمد شغلی"],
+  ["Business income e.g. earnings, profits", "Business income", "درآمد کسب‌وکار"],
+  ["Family support or gift (overseas transfer)", "Family support / gift — overseas", "کمک یا هدیه خانواده — خارج از کشور"],
+  ["Family support or gift (transfer within Australia)", "Family support / gift — Australia", "کمک یا هدیه خانواده — داخل استرالیا"],
+  ["Government benefits or grants", "Government benefits / grants", "کمک‌هزینه دولتی"],
+  ["Compensation e.g. insurance, divorce settlement", "Compensation / settlement", "غرامت یا تسویه حقوقی"],
+  ["Investment income e.g. interest, dividends, rent", "Investment income", "درآمد سرمایه‌گذاری"],
+  ["Liquidation or sale of assets", "Sale of assets", "فروش دارایی"],
+  ["Real estate", "Real estate", "املاک"],
+  ["Super or pension", "Super / pension", "بازنشستگی"],
+  ["Windfall e.g. inheritance, redundancy, winnings", "Inheritance / windfall", "ارث یا درآمد غیرمنتظره"],
+  ["Loan", "Loan", "وام"],
+  ["Tax refund", "Tax refund", "بازپرداخت مالیات"],
+];
+const purposeOptions: Array<[string, string]> = [
+  ["Support Family", "کمک به خانواده"], ["Loan repayment", "بازپرداخت وام"],
+  ["Personal savings / investment", "پس‌انداز یا سرمایه‌گذاری شخصی"], ["Business payment", "پرداخت تجاری"],
+  ["Education expenses", "هزینه تحصیل"], ["International Payment", "پرداخت بین‌المللی"],
+  ["Medical expenses", "هزینه درمان"], ["Property purchase", "خرید ملک"],
+  ["Travel expenses", "هزینه سفر"], ["Other", "سایر"],
+];
 
 function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]); }
 function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹"; return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d))); }
@@ -72,27 +97,6 @@ export function DashboardRequestHub({
   const amountInputRef = React.useRef<HTMLInputElement>(null);
   const t = useT();
   const locale = useLocale();
-
-  // === منطق نشانگر اسکرول ===
-  const [isAtTop, setIsAtTop] = useState(true);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      // اگر کاربر بیشتر از 50 پیکسل اسکرول کرد، نشانگر محو شود
-      setIsAtTop(window.scrollY < 50);
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // بررسی وضعیت اولیه
-
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToForm = () => {
-    // اسکرول نرم به سمت فیلد مبلغ
-    amountInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
-  // =========================
 
   const keepAmountCaretAtEnd = () => {
     requestAnimationFrame(() => {
@@ -201,7 +205,7 @@ export function DashboardRequestHub({
     try {
       const res = await validatePromoCode(promoInput.trim(), rawAmount, tailoredRate, txType);
       if ("error" in res && res.error) {
-        setPromoMsg({ type: "error", text: res.error });
+        setPromoMsg({ type: "error", text: requestError(res.error, locale) });
         setPromoDiscount(null);
         setAppliedPromoCode(null);
       } else if ("discount_amount" in res) {
@@ -209,10 +213,12 @@ export function DashboardRequestHub({
         setPromoEffectiveRate(res.effective_rate ?? null);
         setAppliedPromoCode(promoInput.trim().toUpperCase());
         const label = res.discount_type === "percentage"
-          ? `${formatNumberUI(Number(res.discount_value), locale)}% improved rate`
-          : `${formatNumberUI(Number(res.discount_value), locale, true)} ${locale === "fa" ? "تومان" : "Toman"} improved rate`;
+          ? `${formatNumberUI(Number(res.discount_value), locale)}${locale === "fa" ? "٪ بهبود نرخ" : "% improved rate"}`
+          : `${formatNumberUI(Number(res.discount_value), locale, true)} ${locale === "fa" ? "تومان بهبود نرخ" : "Toman improved rate"}`;
         setPromoMsg({ type: "success", text: `${locale === "fa" ? "کد تخفیف اعمال شد — " : "Promo code applied — "}${label}` });
       }
+    } catch {
+      setPromoMsg({ type: "error", text: locale === "fa" ? "بررسی کد ممکن نشد. دوباره تلاش کنید." : "Could not check this code. Please retry." });
     } finally {
       setPromoValidating(false);
     }
@@ -229,7 +235,6 @@ export function DashboardRequestHub({
   const resultNumber = (rawAmount === 0 || isRateOffline || activeRate === null)
     ? 0
     : calcEquivalentTomanForRequestType(rawAmount, activeRate, appliedFee, txType);
-  const transactionValidityNotice = locale === "fa" ? "مبلغ و نرخ نهایی در مرحله بررسی پیش‌فاکتور مشخص می‌شود. پس از ثبت، مشخصات حساب و پیگیری درخواست در همین سایت در دسترس است." : "Review the final rate and amounts before accepting your quote. After submission, bank instructions and request tracking are available on this site.";
 
   useEffect(() => {
     if (quoteSource === "irt") return;
@@ -371,7 +376,7 @@ export function DashboardRequestHub({
           <div className={styles.quoteInputStack}>
             <div className={styles.inputBox}>
               <div className={styles.labelRow}>
-                <label className={styles.label}>{t.hub.amountAud} <span className={styles.requiredMark}>*</span></label>
+                <label className={styles.label} htmlFor="request-amount-aud">{t.hub.amountAud} <span className={styles.requiredMark}>*</span></label>
                 {appliedFee > 0 && (
                   <span className={styles.feeWarning}>
                     <AlertTriangle size={14} />
@@ -384,6 +389,7 @@ export function DashboardRequestHub({
               <div className={`${styles.hubFieldGroup} ${styles.quoteFieldGroup}`}>
                 <input
                   ref={amountInputRef}
+                  id="request-amount-aud"
                   type="text"
                   inputMode="decimal"
                   pattern="[0-9۰-۹.,٫]*"
@@ -402,13 +408,15 @@ export function DashboardRequestHub({
             </div>
 
             <div className={styles.inputBox}>
-              <label className={`${styles.label} ${styles.labelWithIcon}`}>
+              <label className={`${styles.label} ${styles.labelWithIcon}`} htmlFor="request-amount-toman">
                 <Banknote size={14} className={styles.inlineLabelIcon} />
                 {txType === "buy_aud" ? t.hub.amountPayToman : t.hub.amountReceiveToman}
               </label>
               <div className={`${styles.hubFieldGroup} ${styles.quoteFieldGroup} ${quoteSource === "irt" ? styles.hubFieldActive : ""}`}>
                 <input
+                  id="request-amount-toman"
                   type="text"
+                  inputMode="numeric"
                   value={isRateOffline ? "" : equivalentStr}
                   onChange={handleEquivalentInput}
                   dir="ltr"
@@ -419,7 +427,6 @@ export function DashboardRequestHub({
                 <div className={styles.hubDivider}></div>
                 <span className={`${styles.currencyLabelFixed} ${styles.quoteCurrencyLabel}`}>{locale === "fa" ? "تومان" : "Toman"}</span>
               </div>
-              <span className={styles.fieldHint}>{t.hub.tomanHint}</span>
               {promoDiscount !== null && promoDiscount > 0 && (
                 <p className={styles.promoSuccess}>
                   {t.hub.promoSavings} {formatNumberUI(promoDiscount, locale, true)} {locale === "fa" ? "تومان" : "Toman"}
@@ -444,9 +451,10 @@ export function DashboardRequestHub({
         </div>
         {isEduPayment ? (
           <div className={styles.inputBox}>
-            <label className={styles.label}>{t.hub.paymentLink} <span className={styles.requiredMark}>*</span></label>
+            <label className={styles.label} htmlFor="request-payment-link">{t.hub.paymentLink} <span className={styles.requiredMark}>*</span></label>
             <div className={styles.hubFieldGroup}>
               <input
+                id="request-payment-link"
                 type="url"
                 className={`${styles.hubEnInput} ${styles.hubEnInputLtr}`}
                 placeholder="https://..."
@@ -480,24 +488,10 @@ export function DashboardRequestHub({
           <SelectBox
             value={sourceOfFunds}
             onChange={setSourceOfFunds}
-            placeholder="Select Source of Funds"
+            placeholder={locale === "fa" ? "منبع وجه را انتخاب کنید" : "Select source of funds"}
             disabled={isSubmitting}
             dir={locale === "fa" ? "rtl" : "ltr"}
-            options={[
-              "Employment income e.g. salary, bonus, commission",
-              "Business income e.g. earnings, profits",
-              "Family support or gift (overseas transfer)",
-              "Family support or gift (transfer within Australia)",
-              "Government benefits or grants",
-              "Compensation e.g. insurance, divorce settlement",
-              "Investment income e.g. interest, dividends, rent",
-              "Liquidation or sale of assets",
-              "Real estate",
-              "Super or pension",
-              "Windfall e.g. inheritance, redundancy, winnings",
-              "Loan",
-              "Tax refund",
-            ]}
+            labeledOptions={sourceOptions.map(([value, en, fa]) => ({ value, label: locale === "fa" ? fa : en }))}
           />
         </div>
 
@@ -506,34 +500,24 @@ export function DashboardRequestHub({
           <SelectBox
             value={reasonForTransfer}
             onChange={setReasonForTransfer}
-            placeholder="Select reason"
+            placeholder={locale === "fa" ? "دلیل انتقال را انتخاب کنید" : "Select transfer purpose"}
             disabled={isSubmitting}
             dir={locale === "fa" ? "rtl" : "ltr"}
-            options={[
-              "Support Family",
-              "Loan repayment",
-              "Personal savings / investment",
-              "Business payment",
-              "Education expenses",
-              "International Payment",
-              "Medical expenses",
-              "Property purchase",
-              "Travel expenses",
-              "Other",
-            ]}
+            labeledOptions={purposeOptions.map(([value, fa]) => ({ value, label: locale === "fa" ? fa : value }))}
           />
         </div>
       </div>
 
       <div className={styles.formRow}>
         <div className={styles.inputBox}>
-          <label className={`${styles.label} ${styles.labelWithIcon}`}>
+          <label className={`${styles.label} ${styles.labelWithIcon}`} htmlFor="request-promo-code">
             <Tag size={14} className={styles.inlineLabelIcon} />
             {t.hub.promoCode}
           </label>
           <div className={styles.promoRow}>
             <div className={styles.hubFieldGroup}>
               <input
+                id="request-promo-code"
                 type="text"
                 className={`${styles.hubEnInput} ${styles.hubEnInputLtr}`}
                 placeholder="PROMO2026"
@@ -615,19 +599,6 @@ export function DashboardRequestHub({
         onBusyChange={setIsSubmitting}
       />
 
-      <div className={styles.noticeBannerContainer}>
-        <div className={styles.noticeBanner}>
-          <div className={styles.noticeIcon}>
-            <AlertTriangle size={18} />
-          </div>
-          <div className={styles.noticeContent}>
-            <p className={styles.noticeText} style={{ whiteSpace: "pre-line", lineHeight: "1.8" }}>
-              {transactionValidityNotice}
-            </p>
-          </div>
-        </div>
-      </div>
-
       {showRecipientModal && (
         <RecipientModal
           direction={recipientDirection}
@@ -639,18 +610,6 @@ export function DashboardRequestHub({
         />
       )}
 
-      {/* === نشانگر اسکرول حرفه‌ای (Stripe/Apple Style) === */}
-      <div 
-        className={`${styles.scrollIndicatorContainer} ${!isAtTop ? styles.scrollHidden : ''}`} 
-        onClick={scrollToForm} 
-        aria-hidden="true"
-      >
-        <div className={styles.scrollPill}>
-          <span>{t.hub.scrollIndicator}</span>
-          <ChevronDown size={16} className={styles.scrollIcon} />
-        </div>
-      </div>
-      {/* ================================================== */}
     </article>
   );
 }
