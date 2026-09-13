@@ -5,6 +5,8 @@ import { ShieldCheck, Search, Download, AlertTriangle, Loader2, CheckCircle2, Fl
 import styles from "@/styles/admin/ComplianceButtons.module.css";
 import { recordCustomerComplianceCheck, saveCustomerComplianceReview } from "@/app/actions/admin.actions";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
+import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
+import { AUSTRAC_ID_TYPES, AUSTRAC_ID_TYPE_OTHER, type AustracIdType } from "@/lib/compliance/austrac-id-types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -24,6 +26,15 @@ interface Props {
   initialCustomerFlagged?: boolean | null;
   initialCustomerFlagReason?: string | null;
   initialCustomerNote?: string | null;
+  initialAltIdType?: string | null;
+  initialAltIdTypeOther?: string | null;
+  initialAltIdNumber?: string | null;
+  initialAltIdIssuer?: string | null;
+  initialAltAddressType?: string | null;
+  initialAltAddressTypeOther?: string | null;
+  initialAltAddressReference?: string | null;
+  initialAltAddressIssuer?: string | null;
+  initialAltAddressDate?: string | null;
   onSaved?: () => void;
 }
 
@@ -137,7 +148,21 @@ function formatMethod(method: string | null): string {
   return labels[method] ?? method;
 }
 
+// AUSTRAC's own "ID type" enumeration doubles as our identity/address document
+// dropdowns, so recorded values map 1:1 onto the exported IFTI-DRA report.
+const AUSTRAC_ID_TYPE_OPTIONS: { value: AustracIdType; label: string }[] =
+  AUSTRAC_ID_TYPES.map((value) => ({ value, label: value }));
+
+function formatAltIdType(type: string | null): string {
+  return type || "-";
+}
+
+function formatAltAddressType(type: string | null): string {
+  return type || "-";
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
+
 
 export function ComplianceCheckButtons({
   userId,
@@ -155,6 +180,15 @@ export function ComplianceCheckButtons({
   initialCustomerFlagged,
   initialCustomerFlagReason,
   initialCustomerNote,
+  initialAltIdType,
+  initialAltIdTypeOther,
+  initialAltIdNumber,
+  initialAltIdIssuer,
+  initialAltAddressType,
+  initialAltAddressTypeOther,
+  initialAltAddressReference,
+  initialAltAddressIssuer,
+  initialAltAddressDate,
   onSaved,
 }: Props) {
   const [state, setState] = useState<CheckStatus>({
@@ -162,7 +196,10 @@ export function ComplianceCheckButtons({
     dvsError: null, amlError: null,
     amlFlag: initialAmlFlag ?? "none",
   });
-  const [dvsMethod, setDvsMethod] = useState<DvsMethod>((initialDvsMethod as DvsMethod) ?? "vendor_rapidid");
+  const dvsCapableInitial = isDvsCapable(documentType);
+  const [dvsMethod, setDvsMethod] = useState<DvsMethod>(
+    (initialDvsMethod as DvsMethod) ?? (dvsCapableInitial ? "vendor_rapidid" : "manual_document_review")
+  );
   const [amlMethod, setAmlMethod] = useState<AmlMethod>((initialAmlMethod as AmlMethod) ?? "vendor_namescan");
   const [dvsInfo, setDvsInfo] = useState<PersistedCheckInfo>({
     status: initialDvsStatus ?? "not_started",
@@ -182,9 +219,26 @@ export function ComplianceCheckButtons({
   const [reviewStatus, setReviewStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [isReviewPending, startReviewTransition] = useTransition();
 
+  // Alternative identity/address documents — for AU customers with no AU driver
+  // licence or passport on file (e.g. Iranian passport + a bank statement).
+  // Document types use AUSTRAC's own "ID type" list so they map 1:1 onto the report.
+  const [altIdType, setAltIdType] = useState<AustracIdType | "">((initialAltIdType as AustracIdType) ?? "");
+  const [altIdTypeOther, setAltIdTypeOther] = useState(initialAltIdTypeOther ?? "");
+  const [altIdNumber, setAltIdNumber] = useState(initialAltIdNumber ?? "");
+  const [altIdIssuer, setAltIdIssuer] = useState(initialAltIdIssuer ?? "");
+  const [altAddressType, setAltAddressType] = useState<AustracIdType | "">((initialAltAddressType as AustracIdType) ?? "");
+  const [altAddressTypeOther, setAltAddressTypeOther] = useState(initialAltAddressTypeOther ?? "");
+  const [altAddressReference, setAltAddressReference] = useState(initialAltAddressReference ?? "");
+  const [altAddressIssuer, setAltAddressIssuer] = useState(initialAltAddressIssuer ?? "");
+  const [altAddressDate, setAltAddressDate] = useState(initialAltAddressDate ?? "");
+  const [altDocsError, setAltDocsError] = useState<string | null>(null);
+
   const auCustomer  = isAustralia(country);
   const dvsCapable  = isDvsCapable(documentType);
-  const showDvs     = auCustomer && dvsCapable;
+  // AU customers without a supported AU document still need DVS recorded —
+  // via the alternative identity/address documents form below.
+  const showDvs      = auCustomer;
+  const needsAltDocs = showDvs && !dvsCapable && dvsMethod === "manual_document_review";
 
   const markManualCheck = async (type: CheckType): Promise<boolean> => {
     const method = type === "dvs" ? dvsMethod : amlMethod;
@@ -213,7 +267,85 @@ export function ComplianceCheckButtons({
       setAmlInfo({ status: "completed", method, checkedAt: now, outcome });
       setState((prev) => ({ ...prev, amlFlag: "clear" }));
     }
-    onSaved?.();
+    // Don't refresh here — the parent remount would wipe any other in-progress
+    // selections/notes. A single refresh happens when Save Flag/Note is clicked.
+    return true;
+  };
+
+  // Records DVS completion for AU customers with no AU driver licence/passport,
+  // using an identity document (photo ID / proof of age / foreign passport) and
+  // a residential proof (utility bill / bank statement). Also downloads the
+  // compliance report PDF, since manual methods otherwise produce no report.
+  const runAltDocumentDvs = async (): Promise<boolean> => {
+    const idType = altIdType.trim();
+    const idNumber = altIdNumber.trim();
+    const addressType = altAddressType.trim();
+    const addressReference = altAddressReference.trim();
+
+    if (!idType || !idNumber || !addressType || !addressReference) {
+      setAltDocsError("Identity document type/number and proof-of-address type/reference are required.");
+      setState((prev) => ({ ...prev, dvs: "error", dvsError: null }));
+      return false;
+    }
+    if (idType === AUSTRAC_ID_TYPE_OTHER && !altIdTypeOther.trim()) {
+      setAltDocsError("Describe the identity document type since 'Other (provide description)' was selected.");
+      setState((prev) => ({ ...prev, dvs: "error", dvsError: null }));
+      return false;
+    }
+    if (addressType === AUSTRAC_ID_TYPE_OTHER && !altAddressTypeOther.trim()) {
+      setAltDocsError("Describe the proof-of-address document type since 'Other (provide description)' was selected.");
+      setState((prev) => ({ ...prev, dvs: "error", dvsError: null }));
+      return false;
+    }
+    setAltDocsError(null);
+
+    const res = await fetch("/api/admin/compliance/dvs-manual", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        altIdType: idType,
+        altIdTypeOther: idType === AUSTRAC_ID_TYPE_OTHER ? altIdTypeOther.trim() : undefined,
+        altIdNumber: idNumber,
+        altIdIssuer: altIdIssuer.trim() || undefined,
+        altAddressType: addressType,
+        altAddressTypeOther: addressType === AUSTRAC_ID_TYPE_OTHER ? altAddressTypeOther.trim() : undefined,
+        altAddressReference: addressReference,
+        altAddressIssuer: altAddressIssuer.trim() || undefined,
+        altAddressDate: altAddressDate || undefined,
+      }),
+    });
+
+    if (!res.ok) {
+      let message = `Request failed (HTTP ${res.status})`;
+      try {
+        const json: unknown = await res.json();
+        if (json && typeof json === "object" && "message" in json) {
+          message = String((json as Record<string, unknown>).message);
+        }
+      } catch { /* keep default */ }
+      setState((prev) => ({ ...prev, dvs: "error", dvsError: message }));
+      return false;
+    }
+
+    // Trigger browser download from the blob response.
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const tag  = document.createElement("a");
+    const ts   = Date.now();
+    tag.href     = url;
+    tag.download = `dvs-report-manual-${userId.slice(0, 8)}-${ts}.pdf`;
+    document.body.appendChild(tag);
+    tag.click();
+    document.body.removeChild(tag);
+    setTimeout(() => URL.revokeObjectURL(url), 5_000);
+
+    setDvsInfo({
+      status: "completed",
+      method: "manual_document_review",
+      checkedAt: new Date().toISOString(),
+      outcome: "MANUAL_COMPLETED",
+    });
     return true;
   };
 
@@ -226,6 +358,13 @@ export function ComplianceCheckButtons({
     }));
 
     const selectedMethod = type === "dvs" ? dvsMethod : amlMethod;
+
+    if (type === "dvs" && needsAltDocs) {
+      const ok = await runAltDocumentDvs();
+      setState((prev) => ({ ...prev, dvs: ok ? "success" : "error" }));
+      return;
+    }
+
     const isManual = selectedMethod.startsWith("manual_");
     if (isManual) {
       const ok = await markManualCheck(type);
@@ -267,7 +406,7 @@ export function ComplianceCheckButtons({
           outcome: result.outcome ?? "COMPLETED",
         });
       }
-      onSaved?.();
+      // Don't refresh here — see markManualCheck for rationale.
     }
   };
 
@@ -312,6 +451,12 @@ export function ComplianceCheckButtons({
             <div className={styles.summaryLine}><strong>Status:</strong> {dvsInfo.status}</div>
             <div className={styles.summaryLine}><strong>Method:</strong> {formatMethod(dvsInfo.method)}</div>
             <div className={styles.summaryLine}><strong>Checked:</strong> {formatDateTime(dvsInfo.checkedAt)}</div>
+            {dvsInfo.method === "manual_document_review" && altIdType && (
+              <>
+                <div className={styles.summaryLine}><strong>Identity Doc:</strong> {formatAltIdType(altIdType)} {altIdNumber && `— ${altIdNumber}`}</div>
+                <div className={styles.summaryLine}><strong>Address Doc:</strong> {formatAltAddressType(altAddressType)} {altAddressReference && `— ${altAddressReference}`}</div>
+              </>
+            )}
           </div>
         )}
         <div className={styles.summaryCard}>
@@ -323,23 +468,114 @@ export function ComplianceCheckButtons({
       </div>
 
       <div className={styles.btnRow}>
-        {/* DVS button (AU + driver_license or passport only) */}
+        {/* DVS button (AU customers — vendor check when a supported AU document is on
+            file, otherwise manual verification via alternative documents) */}
         {showDvs && (
           <div className={styles.checkGroup}>
             <label className={styles.inlineLabel}>DVS method</label>
             <SelectBox
               className={styles.methodSelect}
-              labeledOptions={[
-                { value: "vendor_rapidid", label: "Vendor (RapidID)" },
-                { value: "manual_document_review", label: "Manual: extra documents" },
-                { value: "manual_video_call", label: "Manual: video call verification" },
-                { value: "manual_in_person", label: "Manual: in person verification" },
-              ]}
+              labeledOptions={
+                dvsCapable
+                  ? [
+                      { value: "vendor_rapidid", label: "Vendor (RapidID)" },
+                      { value: "manual_document_review", label: "Manual: extra documents" },
+                      { value: "manual_video_call", label: "Manual: video call verification" },
+                      { value: "manual_in_person", label: "Manual: in person verification" },
+                    ]
+                  : [
+                      { value: "manual_document_review", label: "Manual: alternative documents (no AU licence/passport)" },
+                      { value: "manual_video_call", label: "Manual: video call verification" },
+                      { value: "manual_in_person", label: "Manual: in person verification" },
+                    ]
+              }
               value={dvsMethod}
               onChange={(val) => setDvsMethod(val as DvsMethod)}
               disabled={dvsState === "loading"}
               dir="ltr"
             />
+
+            {needsAltDocs && !dvsCompleted && (
+              <div className={styles.altDocsBlock}>
+                <div className={styles.altDocsHeader}>Identity Document — ID type (1)</div>
+                <SelectBox
+                  className={styles.methodSelect}
+                  labeledOptions={[{ value: "", label: "— Select ID type —" }, ...AUSTRAC_ID_TYPE_OPTIONS]}
+                  value={altIdType}
+                  onChange={(val) => setAltIdType(val as AustracIdType)}
+                  disabled={dvsState === "loading"}
+                  dir="ltr"
+                />
+                {altIdType === AUSTRAC_ID_TYPE_OTHER && (
+                  <input
+                    className={styles.textInput}
+                    placeholder="ID type description (required for 'Other')"
+                    value={altIdTypeOther}
+                    onChange={(e) => setAltIdTypeOther(e.target.value)}
+                    disabled={dvsState === "loading"}
+                  />
+                )}
+                <input
+                  className={styles.textInput}
+                  placeholder="Document number"
+                  value={altIdNumber}
+                  onChange={(e) => setAltIdNumber(e.target.value)}
+                  disabled={dvsState === "loading"}
+                />
+                <input
+                  className={styles.textInput}
+                  placeholder="Issuer / country (optional, e.g. Iran)"
+                  value={altIdIssuer}
+                  onChange={(e) => setAltIdIssuer(e.target.value)}
+                  disabled={dvsState === "loading"}
+                />
+
+                <div className={styles.altDocsHeader}>Proof of Residential Address — ID type (2)</div>
+                <SelectBox
+                  className={styles.methodSelect}
+                  labeledOptions={[{ value: "", label: "— Select ID type —" }, ...AUSTRAC_ID_TYPE_OPTIONS]}
+                  value={altAddressType}
+                  onChange={(val) => setAltAddressType(val as AustracIdType)}
+                  disabled={dvsState === "loading"}
+                  dir="ltr"
+                />
+                {altAddressType === AUSTRAC_ID_TYPE_OTHER && (
+                  <input
+                    className={styles.textInput}
+                    placeholder="ID type description (required for 'Other', e.g. Utility bill)"
+                    value={altAddressTypeOther}
+                    onChange={(e) => setAltAddressTypeOther(e.target.value)}
+                    disabled={dvsState === "loading"}
+                  />
+                )}
+                <input
+                  className={styles.textInput}
+                  placeholder="Account / reference number"
+                  value={altAddressReference}
+                  onChange={(e) => setAltAddressReference(e.target.value)}
+                  disabled={dvsState === "loading"}
+                />
+                <input
+                  className={styles.textInput}
+                  placeholder="Issuer (optional, e.g. AGL, Commonwealth Bank)"
+                  value={altAddressIssuer}
+                  onChange={(e) => setAltAddressIssuer(e.target.value)}
+                  disabled={dvsState === "loading"}
+                />
+                <CustomDatePicker
+                  value={altAddressDate}
+                  onChange={setAltAddressDate}
+                  placeholder="Document date (optional)"
+                />
+
+                {altDocsError && (
+                  <span className={styles.errorMsg}>
+                    <AlertTriangle size={11} />
+                    {altDocsError}
+                  </span>
+                )}
+              </div>
+            )}
 
             <button
               type="button"
@@ -460,7 +696,9 @@ export function ComplianceCheckButtons({
       )}
       {auCustomer && !dvsCapable && (
         <p className={styles.note}>
-          DVS not available — no supported identity document (driver licence or passport) on file.
+          No Australian driver licence or passport on file — select &quot;Manual: alternative documents&quot; above and
+          record an identity document (photo ID, proof of age, foreign passport, etc.) plus a proof of residential
+          address (utility bill, bank statement, etc.) to complete DVS.
         </p>
       )}
 
@@ -496,6 +734,9 @@ export function ComplianceCheckButtons({
           <Save size={13} />
           {isReviewPending ? "Saving..." : "Save Flag/Note"}
         </button>
+        <p className={styles.note}>
+          DVS and AML checks above save as soon as you run them. This button saves the flag/note and refreshes the page — run any checks first, then click this once at the end.
+        </p>
 
         {reviewStatus && (
           <div className={reviewStatus.type === "success" ? styles.statusOk : styles.errorMsg}>

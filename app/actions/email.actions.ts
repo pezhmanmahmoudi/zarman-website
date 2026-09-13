@@ -47,9 +47,17 @@ type TxRecipient = {
   account_number: string | null;
   account_name: string | null;
   residential_address: string | null;
+  residential_city: string | null;
+  residential_state: string | null;
+  residential_postcode: string | null;
+  residential_country: string | null;
   recipient_phone: string | null;
   full_name: string | null;
   irt_address: string | null;
+  irt_city: string | null;
+  irt_state: string | null;
+  irt_postcode: string | null;
+  irt_country: string | null;
   irt_phone: string | null;
   irt_account_number: string | null;
   card_number: string | null;
@@ -122,8 +130,10 @@ export async function sendTransactionReceipt(
       ),
       recipients(
         direction, bank_type, bank_name, bsb, account_number, account_name,
-        residential_address, recipient_phone, full_name,
-        irt_address, irt_phone, irt_account_number, card_number, shaba_number
+        residential_address, residential_city, residential_state, residential_postcode, residential_country,
+        recipient_phone, full_name,
+        irt_address, irt_city, irt_state, irt_postcode, irt_country,
+        irt_phone, irt_account_number, card_number, shaba_number
       )
     `)
     .eq("id", transactionId)
@@ -161,11 +171,17 @@ export async function sendTransactionReceipt(
     if (recipient.direction === "aud") {
       receiverFullName = recipient.account_name ?? "—";
       receiverPhone = recipient.recipient_phone ?? "";
-      receiverAddress = recipient.residential_address ?? "";
+      receiverAddress = [
+        recipient.residential_address, recipient.residential_city,
+        recipient.residential_state, recipient.residential_postcode, recipient.residential_country,
+      ].filter(Boolean).join(", ");
     } else {
       receiverFullName = recipient.full_name ?? "—";
       receiverPhone = recipient.irt_phone ?? "";
-      receiverAddress = recipient.irt_address ?? "";
+      receiverAddress = [
+        recipient.irt_address, recipient.irt_city,
+        recipient.irt_state, recipient.irt_postcode, recipient.irt_country,
+      ].filter(Boolean).join(", ");
     }
     receiverBankDetail = buildBankDetail(recipient);
   } else {

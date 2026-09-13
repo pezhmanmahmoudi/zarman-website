@@ -1,0 +1,268 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  color: #172033;
+  min-width: 0;
+}
+
+.intro {
+  color: #64748b;
+  font-size: .78rem;
+  margin: .2rem 0 0;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 1rem;
+}
+
+.summaryCard {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .7rem;
+  min-width: 0;
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+
+.summaryTitle {
+  font-size: .95rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.summaryHint {
+  color: #64748b;
+  font-size: .72rem;
+  margin: .15rem 0 0;
+}
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: .2rem .55rem;
+  border-radius: 999px;
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: #eef2ff;
+  color: #4f46e5;
+  white-space: nowrap;
+}
+
+.lastBatch {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  padding: .6rem .7rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: .78rem;
+}
+
+.lastBatchEmpty {
+  color: #92400e;
+  background: rgba(245, 158, 11, .08);
+  border-color: rgba(245, 158, 11, .25);
+}
+
+.lastBatchLabel {
+  color: #64748b;
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.metricsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .5rem;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  padding: .55rem .6rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.metricValue {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.metricLabel {
+  color: #64748b;
+  font-size: .68rem;
+  font-weight: 700;
+}
+
+.metricOverdue {
+  background: rgba(239, 68, 68, .08);
+  border-color: rgba(239, 68, 68, .25);
+}
+
+.metricOverdue .metricValue {
+  color: #b91c1c;
+}
+
+.section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  min-width: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-bottom: .75rem;
+}
+
+.sectionHeading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.sectionActions {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+.sectionActions button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  border-radius: 7px;
+  padding: .42rem .68rem;
+  font-weight: 700;
+  font-size: .74rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sectionActions button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.exportBtn {
+  background: #172033 !important;
+  color: #fff !important;
+  border-color: #172033 !important;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+}
+
+.table th, .table td {
+  padding: .55rem .6rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.table th {
+  color: #64748b;
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.urgencyBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .18rem .52rem;
+  border-radius: 999px;
+  font-size: .7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.urgencyOverdue {
+  background: rgba(239, 68, 68, .12);
+  color: #b91c1c;
+}
+
+.urgencyUrgent {
+  background: rgba(245, 158, 11, .16);
+  color: #b45309;
+}
+
+.urgencySoon {
+  background: rgba(245, 158, 11, .1);
+  color: #92400e;
+}
+
+.urgencyOk {
+  background: rgba(22, 163, 74, .1);
+  color: #15803d;
+}
+
+.emptyState {
+  color: #64748b;
+  font-size: .8rem;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.message {
+  border-radius: 8px;
+  padding: .6rem .75rem;
+  font-size: .78rem;
+  font-weight: 600;
+}
+
+.messageSuccess {
+  background: rgba(22, 163, 74, .1);
+  color: #15803d;
+}
+
+.messageError {
+  background: rgba(239, 68, 68, .1);
+  color: #b91c1c;
+}
+
+.revertedTag {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: .74rem;
+}

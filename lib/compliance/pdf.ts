@@ -25,9 +25,14 @@ export type DvsPdfData = {
     referenceId: string | null;
     resultCode: string | null;
   };
-  outcome: ManualDvsOutcome;
+  outcome: ManualDvsOutcome | "MANUAL_COMPLETED";
   rawResponse: unknown;
   performedByEmail: string;
+  /** Populated only for AU customers verified via alternative documents (no AU driver licence/passport on file). */
+  alternativeVerification?: {
+    identityDocument: { type: string; otherDescription?: string; number: string; issuer?: string };
+    addressDocument: { type: string; otherDescription?: string; reference: string; issuer?: string; date?: string };
+  };
 };
 
 export type AmlPdfData = {
@@ -185,8 +190,14 @@ function drawFooter(page: PDFPage, fonts: { bold: PDFFont; regular: PDFFont }) {
   });
 }
 
-function drawRawJson(page: PDFPage, fonts: { bold: PDFFont; mono: PDFFont }, rawResponse: unknown, y: number): void {
-  y = drawSection(page, fonts.bold, "VENDOR RESPONSE (RAW JSON — AUDIT TRAIL)", y);
+function drawRawJson(
+  page: PDFPage,
+  fonts: { bold: PDFFont; mono: PDFFont },
+  rawResponse: unknown,
+  y: number,
+  title = "VENDOR RESPONSE (RAW JSON — AUDIT TRAIL)"
+): void {
+  y = drawSection(page, fonts.bold, title, y);
   y -= 10;
 
   const json  = JSON.stringify(rawResponse, null, 2);
@@ -218,6 +229,46 @@ function drawRawJson(page: PDFPage, fonts: { bold: PDFFont; mono: PDFFont }, raw
   }
 }
 
+/** Draws the "alternative documents" section for customers without an AU driver licence/passport.
+ * Document types are AUSTRAC's own "ID type" values, so they're already report-ready labels. */
+function drawAlternativeVerification(
+  page: PDFPage,
+  fonts: { bold: PDFFont; regular: PDFFont },
+  alt: NonNullable<DvsPdfData["alternativeVerification"]>,
+  y: number
+): number {
+  y = drawSection(page, fonts.bold, "ALTERNATIVE IDENTITY & ADDRESS VERIFICATION (MANUAL)", y);
+  y -= 10;
+
+  const lX = MARGIN;
+  const rX = MARGIN + COL_W + COL_GAP;
+
+  let lY = y;
+  lY = drawKv(page, fonts, "Identity Document (ID type 1)", alt.identityDocument.type,   lX, lY, COL_W);
+  if (alt.identityDocument.otherDescription) {
+    lY = drawKv(page, fonts, "ID Type (if 'Other')", alt.identityDocument.otherDescription, lX, lY, COL_W);
+  }
+  lY = drawKv(page, fonts, "Identity Document Number",  alt.identityDocument.number,                    lX, lY, COL_W);
+  if (alt.identityDocument.issuer) {
+    lY = drawKv(page, fonts, "Identity Document Issuer", alt.identityDocument.issuer, lX, lY, COL_W);
+  }
+
+  let rY = y;
+  rY = drawKv(page, fonts, "Proof of Address Document (ID type 2)", alt.addressDocument.type, rX, rY, COL_W);
+  if (alt.addressDocument.otherDescription) {
+    rY = drawKv(page, fonts, "ID Type (if 'Other')", alt.addressDocument.otherDescription, rX, rY, COL_W);
+  }
+  rY = drawKv(page, fonts, "Address Document Reference", alt.addressDocument.reference,                    rX, rY, COL_W);
+  if (alt.addressDocument.issuer) {
+    rY = drawKv(page, fonts, "Address Document Issuer", alt.addressDocument.issuer, rX, rY, COL_W);
+  }
+  if (alt.addressDocument.date) {
+    rY = drawKv(page, fonts, "Address Document Date", alt.addressDocument.date, rX, rY, COL_W);
+  }
+
+  return Math.min(lY, rY) - 12;
+}
+
 function drawOutcomeBox(
   page: PDFPage,
   fonts: { bold: PDFFont; regular: PDFFont },
@@ -228,6 +279,7 @@ function drawOutcomeBox(
   const outcomeColorMap: Record<string, ReturnType<typeof rgb>> = {
     VERIFIED:          C_SUCCESS,
     CLEAR:             C_SUCCESS,
+    MANUAL_COMPLETED:  C_SUCCESS,
     "REVIEW REQUIRED": C_WARNING,
     FAILED:            C_DANGER,
     SKIPPED:           C_MUTED,
@@ -235,6 +287,7 @@ function drawOutcomeBox(
   const outcomeBgMap: Record<string, ReturnType<typeof rgb>> = {
     VERIFIED:          C_BG_OK,
     CLEAR:             C_BG_OK,
+    MANUAL_COMPLETED:  C_BG_OK,
     "REVIEW REQUIRED": C_BG_WARN,
     FAILED:            C_BG_FAIL,
     SKIPPED:           C_BG_SKIP,
@@ -297,8 +350,10 @@ export async function generateDvsPdf(data: DvsPdfData): Promise<Uint8Array> {
   y = drawSection(page, fonts.bold, "CHECK DETAILS", y);
   y -= 10;
 
+  const isManualCompletion = data.outcome === "MANUAL_COMPLETED";
+
   let lcY = y;
-  lcY = drawKv(page, fonts, "Provider",    "RapidID DVS",          lX, lcY, COL_W);
+  lcY = drawKv(page, fonts, "Provider",    isManualCompletion ? "Manual Review — Extra Documents" : "RapidID DVS", lX, lcY, COL_W);
   lcY = drawKv(page, fonts, "Check Type",  data.check.checkType,   lX, lcY, COL_W);
   lcY = drawKv(page, fonts, "Performed At", data.check.performedAt, lX, lcY, COL_W);
 
@@ -310,6 +365,12 @@ export async function generateDvsPdf(data: DvsPdfData): Promise<Uint8Array> {
   y = Math.min(lcY, rcY) - 12;
   drawRule(page, y); y -= 18;
 
+  // ── Alternative documents (AU customers without AU driver licence/passport) ──
+  if (data.alternativeVerification) {
+    y = drawAlternativeVerification(page, fonts, data.alternativeVerification, y);
+    drawRule(page, y); y -= 18;
+  }
+
   // ── Outcome ───────────────────────────────────────────────────────────────
   y = drawSection(page, fonts.bold, "OUTCOME", y);
   y -= 10;
@@ -319,13 +380,18 @@ export async function generateDvsPdf(data: DvsPdfData): Promise<Uint8Array> {
     "REVIEW REQUIRED": "Document could not be matched. Manual review is required before approving KYC.",
     FAILED:            "Verification failed. Check RapidID credentials or document data and retry.",
     SKIPPED:           "DVS check was not applicable (non-AU customer or unsupported document type).",
+    MANUAL_COMPLETED:  "No AU driver licence/passport on file. Identity and address verified manually from the alternative documents above.",
   };
-  y = drawOutcomeBox(page, fonts, data.outcome, outcomeNotes[data.outcome] ?? "", y);
+  const outcomeLabels: Record<string, string> = { MANUAL_COMPLETED: "COMPLETED" };
+  y = drawOutcomeBox(page, fonts, outcomeLabels[data.outcome] ?? data.outcome, outcomeNotes[data.outcome] ?? "", y);
 
   drawRule(page, y); y -= 18;
 
   // ── Raw response ──────────────────────────────────────────────────────────
-  drawRawJson(page, { bold: fonts.bold, mono: fonts.mono }, data.rawResponse, y);
+  drawRawJson(
+    page, { bold: fonts.bold, mono: fonts.mono }, data.rawResponse, y,
+    isManualCompletion ? "MANUAL REVIEW NOTES (AUDIT TRAIL)" : undefined
+  );
 
   drawFooter(page, fonts);
 

@@ -353,8 +353,23 @@ export type RecipientForAml = {
   account_name?: string | null; // AUD recipients
   direction: string;            // "aud" | "irt"
   irt_address?: string | null;
+  irt_city?: string | null;
+  irt_state?: string | null;
+  irt_postcode?: string | null;
+  irt_country?: string | null;
   residential_address?: string | null;
+  residential_city?: string | null;
+  residential_state?: string | null;
+  residential_postcode?: string | null;
+  residential_country?: string | null;
 };
+
+function composeRecipientAddress(recipient: RecipientForAml): string {
+  const parts = recipient.direction === "aud"
+    ? [recipient.residential_address, recipient.residential_city, recipient.residential_state, recipient.residential_postcode, recipient.residential_country]
+    : [recipient.irt_address, recipient.irt_city, recipient.irt_state, recipient.irt_postcode, recipient.irt_country];
+  return parts.map((p) => String(p ?? "").trim()).filter(Boolean).join(", ");
+}
 
 export async function runRecipientAmlCheck(recipient: RecipientForAml): Promise<ManualAmlResult> {
   const endpoint = process.env.NAMESCAN_API_URL;
@@ -376,7 +391,7 @@ export async function runRecipientAmlCheck(recipient: RecipientForAml): Promise<
   // If we can split the name, send firstname + lastname.
   // Otherwise fall back to originalname (NameScan v3 full-name field).
   const resolvedName    = (recipient.full_name ?? recipient.account_name ?? "").trim();
-  const resolvedAddress = (recipient.residential_address ?? recipient.irt_address ?? "").trim();
+  const resolvedAddress = composeRecipientAddress(recipient);
   const nameParts       = resolvedName.split(" ").filter(Boolean);
 
   const requestBody = nameParts.length >= 2
@@ -472,7 +487,7 @@ export async function runRecipientRapidIdCheck(recipient: RecipientForAml): Prom
   }
 
   const resolvedName    = (recipient.full_name ?? recipient.account_name ?? "").trim();
-  const resolvedAddress = (recipient.residential_address ?? recipient.irt_address ?? "").trim();
+  const resolvedAddress = composeRecipientAddress(recipient);
 
   const payload = {
     FullName: resolvedName || undefined,

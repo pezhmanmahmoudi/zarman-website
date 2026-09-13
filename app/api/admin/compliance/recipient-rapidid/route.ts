@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   const db = makeServiceRoleClient();
   const { data: recipient, error: recipientError } = await db
     .from("recipients")
-    .select("id, direction, full_name, account_name, residential_address, irt_address")
+    .select("id, direction, full_name, account_name, residential_address, residential_city, residential_state, residential_postcode, residential_country, irt_address")
     .eq("id", recipientId)
     .maybeSingle();
 
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
   // 5. Generate in-memory PDF.
   const resolvedName    = (recipient.full_name ?? recipient.account_name ?? "Unknown").trim();
-  const resolvedAddress = (recipient.residential_address ?? "").trim();
+  const resolvedAddress = [recipient.residential_address, recipient.residential_city, recipient.residential_state, recipient.residential_postcode, recipient.residential_country].filter(Boolean).join(", ");
 
   const pdfBytes = await generateAmlPdf({
     subject: {

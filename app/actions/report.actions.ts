@@ -5,6 +5,14 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import { resolveReportPeriod } from "@/lib/reporting/date-range";
 import { buildReportDashboard } from "@/lib/reporting/report-engine";
+import {
+  getAustracPendingQueue,
+  getLatestAustracBatch,
+  getRecentAustracBatches,
+  revertAustracReportBatch as revertAustracReportBatchRow,
+  type AustracReportType,
+  type AustracReportBatchSummary,
+} from "@/lib/reporting/austrac-compliance";
 import type {
   EnterpriseReportData,
   ReportAccountSummary,
@@ -213,4 +221,61 @@ export async function getReportAccountStatement(input: {
     total: numberValue((data as Array<Record<string, unknown>> | null)?.[0]?.total_count),
     page,
   };
+}
+
+// ── AUSTRAC IFTI-DRA reporting-deadline compliance ─────────────────────────
+
+export type AustracTypeStatus = Awaited<ReturnType<typeof loadAustracTypeStatus>>;
+
+async function loadAustracTypeStatus(db: ReturnType<typeof makeServiceRoleClient>, reportType: AustracReportType) {
+  const [pending, lastBatch] = await Promise.all([
+    getAustracPendingQueue(db, reportType),
+    getLatestAustracBatch(db, reportType),
+  ]);
+  return {
+    reportType,
+    pending,
+    pendingCount: pending.length,
+    overdueCount: pending.filter((row) => row.urgency === "overdue").length,
+    nextDueDate: pending[0]?.dueDate ?? null,
+    lastBatch,
+  };
+}
+
+export async function getAustracComplianceStatus(): Promise<{
+  outgoing: AustracTypeStatus;
+  incoming: AustracTypeStatus;
+  recentBatches: AustracReportBatchSummary[];
+}> {
+  await requireAdmin();
+  const db = makeServiceRoleClient();
+  const [outgoing, incoming, recentBatches] = await Promise.all([
+    loadAustracTypeStatus(db, "outgoing"),
+    loadAustracTypeStatus(db, "incoming"),
+    getRecentAustracBatches(db),
+  ]);
+  return { outgoing, incoming, recentBatches };
+}
+
+export async function revertAustracReportBatch(batchId: string): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+  if (!batchId) return { error: "Missing batch id." };
+
+  const db = makeServiceRoleClient();
+  try {
+    await revertAustracReportBatchRow(db, batchId, admin.email ?? "");
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Failed to revert the report batch." };
+  }
+
+  await db.from("audit_logs").insert({
+    actor_id: admin.id,
+    actor_email: admin.email ?? "",
+    action: "AUSTRAC_REPORT_BATCH_REVERTED",
+    target_type: "austrac_report_batches",
+    target_id: batchId,
+  });
+
+  revalidatePath("/admin/reports/austrac");
+  return { success: true };
 }

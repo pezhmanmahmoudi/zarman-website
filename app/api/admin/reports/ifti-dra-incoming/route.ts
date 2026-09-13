@@ -5,6 +5,7 @@ import {
   generateIftiDraIncomingWorkbook,
   type IftiSourceRecord,
 } from "@/lib/reporting/ifti-dra-incoming";
+import { recordAustracReportBatch } from "@/lib/reporting/austrac-compliance";
 
 const PRIVILEGED_ROLES = new Set(["admin", "supabase_admin", "service_role"]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -144,6 +145,20 @@ export async function POST(req: NextRequest) {
   }
 
   const fileName = buildFileName(orderedRows);
+
+  try {
+    await recordAustracReportBatch(db, {
+      reportType: "incoming",
+      transactionIds: orderedRows.map((row) => String(row.id)),
+      referenceDates: orderedRows.map((row) => row.approved_at ?? row.created_at),
+      fileName,
+      submittedById: user.id,
+      submittedByEmail: user.email ?? null,
+    });
+  } catch {
+    // Don't block the download over a compliance-tracking write failure — the
+    // admin still needs the file. These rows simply stay in the pending queue.
+  }
 
   return new Response(new Uint8Array(workbookBuffer), {
     status: 200,

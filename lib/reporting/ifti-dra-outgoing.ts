@@ -175,6 +175,14 @@ export type IftiSourceRecord = {
     state_of_issue?: string | null;
     passport_number?: string | null;
     compliance_dvs_method?: string | null;
+    compliance_dvs_alt_id_type?: string | null;
+    compliance_dvs_alt_id_type_other?: string | null;
+    compliance_dvs_alt_id_number?: string | null;
+    compliance_dvs_alt_id_issuer?: string | null;
+    compliance_dvs_alt_address_type?: string | null;
+    compliance_dvs_alt_address_type_other?: string | null;
+    compliance_dvs_alt_address_reference?: string | null;
+    compliance_dvs_alt_address_issuer?: string | null;
   } | null;
   recipients?: {
     direction?: string | null;
@@ -238,10 +246,10 @@ function fullName(first?: string | null, last?: string | null): string {
   return [first, last].map((v) => asString(v)).filter(Boolean).join(" ");
 }
 
-function resolveIdType(documentType?: string | null): string {
-  if (documentType === "driver_license") return "Driver's Licence";
+function resolveIdType(documentType?: string | null, altIdType?: string | null): string {
+  if (documentType === "driver_license") return "Driver's licence";
   if (documentType === "passport") return "Passport";
-  return "";
+  return altIdType ?? "";
 }
 
 function createDataRow(record: IftiSourceRecord): Array<string | number> {
@@ -288,9 +296,26 @@ function createDataRow(record: IftiSourceRecord): Array<string | number> {
   row[20] = asString(profile?.mobile_number);
   row[21] = asString(profile?.email);
   row[24] = asString(profile?.customer_code);
-  row[27] = resolveIdType(profile?.document_type);
-  row[29] = asString(profile?.document_type === "driver_license" ? profile?.license_number : profile?.passport_number);
-  row[30] = asString(profile?.document_type === "driver_license" ? profile?.state_of_issue : "");
+  row[27] = resolveIdType(profile?.document_type, profile?.compliance_dvs_alt_id_type);
+  row[28] = profile?.document_type === "driver_license" || profile?.document_type === "passport"
+    ? ""
+    : asString(profile?.compliance_dvs_alt_id_type_other);
+  row[29] = asString(
+    profile?.document_type === "driver_license" ? profile?.license_number
+      : profile?.document_type === "passport" ? profile?.passport_number
+      : profile?.compliance_dvs_alt_id_number
+  );
+  row[30] = asString(
+    profile?.document_type === "driver_license" ? profile?.state_of_issue
+      : profile?.document_type !== "passport" ? profile?.compliance_dvs_alt_id_issuer
+      : ""
+  );
+  // Second identification/verification document (AUSTRAC "ID type (2)") — used
+  // for the residential-address document recorded during alternative DVS review.
+  row[31] = asString(profile?.compliance_dvs_alt_address_type);
+  row[32] = asString(profile?.compliance_dvs_alt_address_type_other);
+  row[33] = asString(profile?.compliance_dvs_alt_address_reference);
+  row[34] = asString(profile?.compliance_dvs_alt_address_issuer);
   row[35] = asString(profile?.compliance_dvs_method);
 
   row[36] = beneficiaryName;

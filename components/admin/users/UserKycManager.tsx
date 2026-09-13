@@ -358,6 +358,15 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
                 initialCustomerFlagged={(profile as Record<string, unknown>).compliance_customer_flagged as boolean | null}
                 initialCustomerFlagReason={(profile as Record<string, unknown>).compliance_customer_flag_reason as string | null}
                 initialCustomerNote={(profile as Record<string, unknown>).compliance_admin_note as string | null}
+                initialAltIdType={(profile as Record<string, unknown>).compliance_dvs_alt_id_type as string | null}
+                initialAltIdTypeOther={(profile as Record<string, unknown>).compliance_dvs_alt_id_type_other as string | null}
+                initialAltIdNumber={(profile as Record<string, unknown>).compliance_dvs_alt_id_number as string | null}
+                initialAltIdIssuer={(profile as Record<string, unknown>).compliance_dvs_alt_id_issuer as string | null}
+                initialAltAddressType={(profile as Record<string, unknown>).compliance_dvs_alt_address_type as string | null}
+                initialAltAddressTypeOther={(profile as Record<string, unknown>).compliance_dvs_alt_address_type_other as string | null}
+                initialAltAddressReference={(profile as Record<string, unknown>).compliance_dvs_alt_address_reference as string | null}
+                initialAltAddressIssuer={(profile as Record<string, unknown>).compliance_dvs_alt_address_issuer as string | null}
+                initialAltAddressDate={(profile as Record<string, unknown>).compliance_dvs_alt_address_date as string | null}
                 onSaved={onProfileUpdated}
               />
             )}

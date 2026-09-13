@@ -65,8 +65,46 @@ function Field({ label, value, mono }: { label: string; value?: string | null; m
   );
 }
 
-function composeAddress(parts: Array<string | null | undefined>) {
-  return parts.map((p) => String(p ?? "").trim()).filter(Boolean).join(", ");
+// Collapses stray/duplicated comma punctuation left behind by earlier saves.
+function cleanAddressPunctuation(input: string): string {
+  return String(input ?? "")
+    .replace(/\s+/g, " ")
+    .replace(/(,\s*){2,}/g, ", ")
+    .replace(/\s*,\s*/g, ", ")
+    .replace(/^,\s*|\s*,\s*$/g, "")
+    .trim();
+}
+
+// Recovers the street-only portion of an address that was previously saved with
+// city/state/postcode/country appended to it (a legacy bug), by iteratively
+// stripping any of those known trailing values off the end of the string.
+function deriveStreetOnly(
+  rawAddress: string | null | undefined,
+  city?: string | null,
+  state?: string | null,
+  postcode?: string | null,
+  country?: string | null,
+): string {
+  const address = cleanAddressPunctuation(String(rawAddress ?? ""));
+  if (!address) return "";
+
+  const knownParts = [city, state, postcode, country]
+    .map((p) => cleanAddressPunctuation(String(p ?? "")))
+    .filter(Boolean);
+  if (knownParts.length === 0) return address;
+
+  let working = address;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const part of knownParts) {
+      if (working.toLowerCase().endsWith(part.toLowerCase())) {
+        working = working.slice(0, working.length - part.length).replace(/[\s,]+$/, "").trim();
+        changed = true;
+      }
+    }
+  }
+  return working || address;
 }
 
 function splitLegacyAddress(raw: string): {
@@ -244,13 +282,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
         bsb: form.bsb || undefined,
         account_number: form.account_number || undefined,
         account_name: form.account_name || undefined,
-        residential_address: composeAddress([
-          form.residential_address,
-          form.residential_city,
-          form.residential_state,
-          form.residential_postcode,
-          form.residential_country,
-        ]) || undefined,
+        residential_address: form.residential_address || undefined,
         residential_city: form.residential_city || undefined,
         residential_state: form.residential_state || undefined,
         residential_postcode: form.residential_postcode || undefined,
@@ -262,13 +294,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
         shaba_number: form.shaba_number || undefined,
         irt_account_number: form.irt_account_number || undefined,
         full_name: form.full_name || undefined,
-        irt_address: composeAddress([
-          form.irt_address,
-          form.irt_city,
-          form.irt_state,
-          form.irt_postcode,
-          form.irt_country,
-        ]) || undefined,
+        irt_address: form.irt_address || undefined,
         irt_city: form.irt_city || undefined,
         irt_state: form.irt_state || undefined,
         irt_postcode: form.irt_postcode || undefined,
@@ -293,17 +319,26 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
     setEditingRecipientId(recipient.id);
     const parsedResidential = splitLegacyAddress(recipient.residential_address || "");
     const parsedIrt = splitLegacyAddress(recipient.irt_address || "");
+    const residentialCity = recipient.residential_city || parsedResidential.city || "";
+    const residentialState = recipient.residential_state || parsedResidential.state || "";
+    const residentialPostcode = recipient.residential_postcode || parsedResidential.postcode || "";
+    const residentialCountry = recipient.residential_country || parsedResidential.country || "";
+    const irtCity = recipient.irt_city || parsedIrt.city || "";
+    const irtState = recipient.irt_state || parsedIrt.state || "";
+    const irtPostcode = recipient.irt_postcode || parsedIrt.postcode || "";
+    const irtCountry = recipient.irt_country || parsedIrt.country || "";
     setEditForm({
       direction: recipient.direction === "irt" ? "irt" : "aud",
       bank_name: recipient.bank_name || "",
       bsb: recipient.bsb || "",
       account_number: recipient.account_number || "",
       account_name: recipient.account_name || "",
-      residential_address: recipient.residential_address || parsedResidential.street || "",
-      residential_city: recipient.residential_city || parsedResidential.city || "",
-      residential_state: recipient.residential_state || parsedResidential.state || "",
-      residential_postcode: recipient.residential_postcode || parsedResidential.postcode || "",
-      residential_country: recipient.residential_country || parsedResidential.country || "",
+      // Recover street-only text in case an older save duplicated city/state/country into this field.
+      residential_address: deriveStreetOnly(recipient.residential_address, residentialCity, residentialState, residentialPostcode, residentialCountry) || parsedResidential.street || "",
+      residential_city: residentialCity,
+      residential_state: residentialState,
+      residential_postcode: residentialPostcode,
+      residential_country: residentialCountry,
       recipient_email: recipient.recipient_email || "",
       recipient_phone: recipient.recipient_phone || "",
       bank_type: recipient.bank_type === "bank_melli" ? "bank_melli" : "other",
@@ -311,11 +346,11 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
       shaba_number: recipient.shaba_number || "",
       irt_account_number: recipient.irt_account_number || "",
       full_name: recipient.full_name || "",
-      irt_address: recipient.irt_address || parsedIrt.street || "",
-      irt_city: recipient.irt_city || parsedIrt.city || "",
-      irt_state: recipient.irt_state || parsedIrt.state || "",
-      irt_postcode: recipient.irt_postcode || parsedIrt.postcode || "",
-      irt_country: recipient.irt_country || parsedIrt.country || "",
+      irt_address: deriveStreetOnly(recipient.irt_address, irtCity, irtState, irtPostcode, irtCountry) || parsedIrt.street || "",
+      irt_city: irtCity,
+      irt_state: irtState,
+      irt_postcode: irtPostcode,
+      irt_country: irtCountry,
       irt_phone: recipient.irt_phone || "",
     });
   };
@@ -341,13 +376,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
         bsb: editForm.bsb || undefined,
         account_number: editForm.account_number || undefined,
         account_name: editForm.account_name || undefined,
-        residential_address: composeAddress([
-          editForm.residential_address,
-          editForm.residential_city,
-          editForm.residential_state,
-          editForm.residential_postcode,
-          editForm.residential_country,
-        ]) || undefined,
+        residential_address: editForm.residential_address || undefined,
         residential_city: editForm.residential_city || undefined,
         residential_state: editForm.residential_state || undefined,
         residential_postcode: editForm.residential_postcode || undefined,
@@ -359,13 +388,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
         shaba_number: editForm.shaba_number || undefined,
         irt_account_number: editForm.irt_account_number || undefined,
         full_name: editForm.full_name || undefined,
-        irt_address: composeAddress([
-          editForm.irt_address,
-          editForm.irt_city,
-          editForm.irt_state,
-          editForm.irt_postcode,
-          editForm.irt_country,
-        ]) || undefined,
+        irt_address: editForm.irt_address || undefined,
         irt_city: editForm.irt_city || undefined,
         irt_state: editForm.irt_state || undefined,
         irt_postcode: editForm.irt_postcode || undefined,
@@ -718,7 +741,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                           <Field label="Account Number"      value={r.account_number} mono />
                           <Field label="Phone"               value={r.recipient_phone} />
                           <Field label="Email"               value={r.recipient_email} />
-                          <Field label="Street Address"      value={r.residential_address} />
+                          <Field label="Street Address"      value={deriveStreetOnly(r.residential_address, r.residential_city, r.residential_state, r.residential_postcode, r.residential_country)} />
                           <Field label="City"                value={r.residential_city} />
                           <Field label="State"               value={r.residential_state} />
                           <Field label="Postcode"            value={r.residential_postcode} />
@@ -732,7 +755,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                           <Field label="Account Number"      value={r.irt_account_number} mono />
                           <Field label="Shaba (IBAN)"        value={r.shaba_number || null} mono />
                           <Field label="Phone"               value={r.irt_phone} />
-                          <Field label="Street Address"      value={r.irt_address} />
+                          <Field label="Street Address"      value={deriveStreetOnly(r.irt_address, r.irt_city, r.irt_state, r.irt_postcode, r.irt_country)} />
                           <Field label="City"                value={r.irt_city} />
                           <Field label="State/Province"      value={r.irt_state} />
                           <Field label="Postcode"            value={r.irt_postcode} />

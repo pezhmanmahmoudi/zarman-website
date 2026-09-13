@@ -197,7 +197,7 @@ export function RecipientModal({ direction, mode = "standard", profile, locale =
         bsb: bsb.trim(),
         account_number: accountNumber.trim(),
         account_name: accountName.trim(),
-        residential_address: composeAddress([audStreet, audCity, audState, audPostcode, audCountry]),
+        residential_address: audStreet,
         residential_city: audCity,
         residential_state: audState,
         residential_postcode: audPostcode,
@@ -211,7 +211,7 @@ export function RecipientModal({ direction, mode = "standard", profile, locale =
     return {
       ...base,
       full_name: fullName.trim(),
-      irt_address: composeAddress([irtStreet, irtCityValue, irtStateValue, irtPostcodeValue, irtCountryValue]),
+      irt_address: irtStreet,
       irt_city: irtCityValue,
       irt_state: irtStateValue,
       irt_postcode: irtPostcodeValue,

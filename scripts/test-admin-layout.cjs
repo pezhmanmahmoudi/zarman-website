@@ -135,6 +135,13 @@ test("sidebar marks nested report pages active and does not match unrelated pref
   assert.doesNotMatch(unrelated, /aria-current="page"/);
 });
 
+test("sidebar marks only the more specific sibling active for /admin/reports/austrac", () => {
+  const html = renderSidebar("/admin/reports/austrac");
+  assert.match(html, /<a href="\/admin\/reports\/austrac" aria-current="page"/);
+  assert.doesNotMatch(html, /<a href="\/admin\/reports" aria-current="page"/);
+  assert.equal((html.match(/aria-current="page"/g) || []).length, 1);
+});
+
 test("sidebar keeps full pending counts accessible and exposes a collapsed mobile menu", () => {
   const html = renderSidebar("/admin/transactions", { pendingTx: 125, pendingKyc: 2 });
   assert.match(html, /aria-label="125 pending">99\+/);

@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, ShieldCheck, ArrowLeftRight, MessageSquare, Settings,
   ClipboardList, Users, LogOut, Menu, X, BookOpen, TrendingUp,
-  ChartNoAxesCombined, ExternalLink, LockKeyhole, type LucideIcon,
+  ChartNoAxesCombined, ExternalLink, LockKeyhole, ShieldAlert, type LucideIcon,
 } from "lucide-react";
 import { AdminDialog } from "@/components/admin/ui/AdminDialog";
 import styles from "@/styles/admin/AdminShell.module.css";
@@ -48,12 +48,20 @@ export function AdminSidebar({ adminEmail, pendingKyc, pendingTx, pendingFeedbac
       { href: "/admin/ledger", label: "Ledger", icon: BookOpen },
       { href: "/admin/treasury", label: "Treasury", icon: TrendingUp },
       { href: "/admin/reports", label: "Reports", icon: ChartNoAxesCombined },
+      { href: "/admin/reports/austrac", label: "AUSTRAC reporting", icon: ShieldAlert },
     ] },
     { label: "Administration", items: [
       { href: "/admin/audit", label: "Audit log", icon: ClipboardList },
       { href: "/admin/settings", label: "Settings", icon: Settings },
     ] },
   ];
+
+  // Only the most specific matching href is active, so a sub-route like
+  // /admin/reports/austrac doesn't also highlight the parent /admin/reports.
+  const activeHref = groups
+    .flatMap(group => group.items.map(item => item.href))
+    .filter(href => pathname === href || pathname.startsWith(href + "/"))
+    .sort((a, b) => b.length - a.length)[0];
 
   async function handleLogout() {
     if (signingOut) return;
@@ -90,7 +98,7 @@ export function AdminSidebar({ adminEmail, pendingKyc, pendingTx, pendingFeedbac
         {groups.map(group => <div key={group.label} className={styles.navGroup}>
           <span className={styles.navSection}>{group.label}</span>
           {group.items.map(({ icon: Icon, ...item }) => {
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
+            const active = item.href === activeHref;
             return <Link key={item.href} href={item.href}
               aria-current={active ? "page" : undefined}
               className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
