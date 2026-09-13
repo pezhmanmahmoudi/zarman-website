@@ -4,10 +4,11 @@ import { Resend, type CreateEmailResponse } from "resend";
 import {
   REQUEST_EMAIL_TEMPLATE_VERSION,
   renderRequestNotification,
-  validatedRequestSiteUrl,
   type RequestEmailPayload,
   type RequestEmailSnapshot,
 } from "./notification-template";
+import { renderRequestReceiptPdf } from "./receipt";
+import { validatedNotificationSettings } from "./notification-config";
 
 const IDEMPOTENCY_SAFE_WINDOW_MS = 23 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 12;
@@ -38,10 +39,26 @@ export function createNotificationDatabase(): NotificationDatabase {
 }
 
 export function notificationRuntimeSettings() {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.REQUEST_NOTIFICATIONS_FROM;
-  if (!apiKey || !from || /[\r\n]/.test(from)) throw new Error("notification_sender_not_configured");
-  return { apiKey, from, siteUrl: validatedRequestSiteUrl(process.env.REQUEST_SITE_URL) };
+  return validatedNotificationSettings(process.env);
+}
+
+/** Bound memory even when Content-Length is absent or dishonest. */
+export async function readRequestEmailWebhookBody(request: Request, maxBytes: number): Promise<string> {
+  if (Number(request.headers.get("content-length")) > maxBytes) throw new Error("webhook_body_too_large");
+  const reader = request.body?.getReader();
+  if (!reader) return "";
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  let body = "", bytes = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      bytes += next.value.byteLength;
+      if (bytes > maxBytes) { await reader.cancel(); throw new Error("webhook_body_too_large"); }
+      body += decoder.decode(next.value, { stream: true });
+    }
+    return body + decoder.decode();
+  } finally { reader.releaseLock(); }
 }
 
 async function rpc<T>(db: NotificationDatabase, name: string, args?: Record<string, unknown>): Promise<T> {
@@ -108,6 +125,15 @@ export async function runRequestNotificationWorker(options: {
     let payload: RequestEmailPayload;
     try {
       payload = delivery.rendered_payload ?? renderRequestNotification(delivery, options);
+      if (!delivery.rendered_payload && delivery.event_type === "complete") {
+        const receipt = delivery.payload_snapshot?.receipt;
+        if (!receipt) throw new Error("completion_receipt_unavailable");
+        payload.attachments = [{
+          filename: `zarman-receipt-${delivery.request_id}.pdf`,
+          content: Buffer.from(await renderRequestReceiptPdf(receipt)).toString("base64"),
+          contentType: "application/pdf",
+        }];
+      }
     } catch {
       await finish("failed", "recipient_or_snapshot_unavailable");
       counts.failed += 1;

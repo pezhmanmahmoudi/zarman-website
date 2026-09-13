@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { Suspense, useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import styles from "@/styles/Register.module.css";
 import { 
   ArrowLeft, Eye, EyeOff, ShieldCheck, KeyRound, CheckCircle2, AlertTriangle
@@ -12,6 +12,7 @@ import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import { supabase } from "@/lib/supabase";
+import { dashboardReturnPath } from "@/lib/requests/navigation";
 
 const countryCodes = [
   { code: "+61", label: "AU (+61)" },
@@ -24,8 +25,14 @@ const countryCodes = [
 const OTP_LENGTH = 6;
 
 export default function RegisterPage() {
+  return <Suspense><RegisterContent /></Suspense>;
+}
+
+function RegisterContent() {
   const router = useRouter();
   const { locale } = useParams<{ locale: string }>();
+  const searchParams = useSearchParams();
+  const returnPath = dashboardReturnPath(searchParams.get("next"), locale);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
@@ -187,7 +194,7 @@ export default function RegisterPage() {
     }
 
     setOtpSuccess(true);
-    setTimeout(() => router.push(`/${locale}/dashboard`), 1500);
+    setTimeout(() => router.push(returnPath), 1500);
   };
 
   const handleResend = async () => {
@@ -423,7 +430,7 @@ export default function RegisterPage() {
 
         {step === 1 && (
           <div className={styles.footerText}>
-            Already have an account? <Link href="/fa/login" className={styles.footerLink}>Log in</Link>
+            Already have an account? <Link href={`/${locale}/login?next=${encodeURIComponent(returnPath)}`} className={styles.footerLink}>Log in</Link>
           </div>
         )}
 

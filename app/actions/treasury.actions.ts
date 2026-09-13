@@ -102,7 +102,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
   const db = makeServiceRoleClient();
 
   // واکشی همزمان تمام داده‌های مالی زنده
-  const [ledgerRes, expenseRes, loanRes, settingsRes, rateRes, accountsRes, feePostingRes] = await Promise.all([
+  const [ledgerRes, expenseRes, loanRes, settingsRes, rateRes, accountsRes, feePostingRes, serviceFeeRes] = await Promise.all([
     db
       .from("ledger")
       .select("*")
@@ -115,7 +115,16 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     db.from("rates_history").select("buy_aud").order("date", { ascending: false }).limit(1).maybeSingle(),
     db.from("bank_accounts").select("*"),
     db.from("bank_fee_monthly_postings").select("fee_month, expense_id"),
+    db.rpc("get_exchange_request_fee_income"),
   ]);
+
+  // Refuse to report incomplete profit if the deployed request-fee accounting
+  // query fails. A missing RPC is allowed while the workflow is still disabled.
+  if (serviceFeeRes.error) {
+    if (!["42883", "PGRST202"].includes(serviceFeeRes.error.code)) throw new Error("Priority service fee income could not be loaded.");
+    const requests = await db.from("exchange_request_settings").select("settings").eq("id", true).maybeSingle();
+    if (requests.data?.settings?.enabled || (requests.error && !["42P01", "PGRST205"].includes(requests.error.code))) throw new Error("Apply the request fee accounting migration before reporting priority service income.");
+  }
 
   // هزینه‌های دوره‌ای را جداگانه واکشی می‌کنیم تا در صورت عدم وجود جدول، صفحه خراب نشود
   let recurringRes: { data: any[] | null } = { data: [] };
@@ -200,7 +209,8 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     expenseInputs,
     loanInputs,
     accountsMeta,
-    currentBuyRate
+    currentBuyRate,
+    Number(serviceFeeRes.data ?? 0)
   );
 
   // ۴. محاسبه نقدینگی داینامیک کل ایران بر مبنای برآیند کشوها (حذف کامل هاردکد کادوس/پژمان)

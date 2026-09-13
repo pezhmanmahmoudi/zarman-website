@@ -48,6 +48,7 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
         <button type="button" className={styles.secondary} onClick={() => void refresh()} disabled={refreshing}><RefreshCw size={16} />{fa ? "به‌روزرسانی" : "Refresh"}</button>
       </div>
     </header>
+    {admin && <RequestSettingsForm />}
     <div className={styles.actions} style={{ marginBottom: 18 }}>
       <label className={styles.field}>{fa ? "نمایش" : "Show"}<select value={filter} onChange={e => setFilter(e.target.value)}><option value="active">{fa ? "درخواست‌های فعال" : "Active requests"}</option><option value="all">{fa ? "همه درخواست‌ها" : "All requests"}</option><option value="closed">{fa ? "درخواست‌های بسته‌شده" : "Closed requests"}</option></select></label>
       <span className={styles.muted}>{visible.length} {fa ? "درخواست" : "requests"}</span>
@@ -71,6 +72,5 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
       </Link>)}
       {!visible.length && !error && <div className={`${styles.card} ${styles.empty}`}>{fa ? "درخواستی در این بخش وجود ندارد." : "No requests in this view."}</div>}
     </div>}
-    {admin && <RequestSettingsForm />}
   </section>;
 }

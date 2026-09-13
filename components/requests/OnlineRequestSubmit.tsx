@@ -6,12 +6,15 @@ import { ArrowRight, CheckCircle2, Clock3 } from "lucide-react";
 import { createRequestQuote, getRequestPolicy, submitExchangeRequest } from "@/app/actions/request.actions";
 import type { ExchangeRequest, PublicRequestSettings, QuoteInput, RequestQuote, ServiceTier } from "@/lib/requests/types";
 import { RequestQuoteFacts } from "./RequestQuoteFacts";
+import { RequestPaymentInstructions } from "./RequestPaymentInstructions";
+import { RequestBankTiming } from "./RequestBankTiming";
+import { RequestProgress } from "./RequestProgress";
 import { requestDate, requestMoney } from "./request-labels";
 import styles from "@/styles/requests/Requests.module.css";
 
-type Props = { input: Omit<QuoteInput, "serviceTier">; disabled: boolean; validationMessage: string | null };
+type Props = { input: Omit<QuoteInput, "serviceTier">; disabled: boolean; validationMessage: string | null; onBusyChange?: (busy: boolean) => void };
 
-export function OnlineRequestSubmit({ input, disabled, validationMessage }: Props) {
+export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusyChange }: Props) {
   const fa = input.locale === "fa";
   const [policy, setPolicy] = useState<PublicRequestSettings | null>(null);
   const [loadingPolicy, setLoadingPolicy] = useState(true);
@@ -28,6 +31,8 @@ export function OnlineRequestSubmit({ input, disabled, validationMessage }: Prop
   const currentInput = JSON.stringify({ ...input, serviceTier: tier });
   const activeQuote = quote && quotedInput === currentInput ? quote : null;
   const expired = activeQuote ? new Date(activeQuote.expires_at).getTime() <= now : false;
+
+  useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
 
   useEffect(() => {
     let alive = true;
@@ -82,8 +87,9 @@ export function OnlineRequestSubmit({ input, disabled, validationMessage }: Prop
     <CheckCircle2 size={30} color="#126d64" />
     <h2>{fa ? "درخواست شما ثبت شد" : "Your request has been submitted"}</h2>
     <p>{fa ? "کد پیگیری" : "Your reference"}: <bdi className={styles.reference}>{saved.reference_code}</bdi></p>
-    <p className={styles.muted}>{fa ? "پیشرفت و اقدامات بعدی را در صفحه پیگیری ببینید. به‌روزرسانی وضعیت برای شما و تیم مدیریت در سیستم ثبت می‌شود." : "Follow progress and next actions on your tracking page. Status updates are recorded for you and the management team."}</p>
-    <Link className={styles.button} href={`/${input.locale}/dashboard/requests/${saved.id}`}>{fa ? "پیگیری درخواست" : "Track request"}<ArrowRight size={17} /></Link>
+    <p className={styles.muted}>{fa ? "مشخصات حساب و کد پیگیری در زیر نمایش داده می‌شود. رسید واریز را در صفحه پیگیری آپلود کنید و از وضعیت با ایمیل و داشبورد مطلع شوید." : "Your bank details and Reference Code are below. Upload your bank receipt on the tracking page and follow updates by email and in your dashboard."}</p>
+    <Link className={styles.button} href={`/${input.locale}/dashboard/requests/${saved.id}`}>{fa ? "پیگیری درخواست و آپلود رسید" : "Track request and upload receipt"}<ArrowRight size={17} /></Link>
+    <div className={styles.stack} style={{ marginTop: 20 }}><RequestProgress request={saved} locale={input.locale} /><RequestPaymentInstructions request={saved} locale={input.locale} /></div>
   </section>;
 
   return <section className={styles.embedded} dir={fa ? "rtl" : "ltr"} aria-label={fa ? "انتخاب سرویس و تأیید درخواست" : "Service and request confirmation"}>
@@ -107,6 +113,7 @@ export function OnlineRequestSubmit({ input, disabled, validationMessage }: Prop
       </fieldset>
       <p className={styles.muted}><Clock3 size={14} aria-hidden="true" /> {fa ? `ساعات کاری: ${policy.opening_hour}:00 تا ${policy.closing_hour}:00 به وقت سیدنی؛ روزهای کاری و تعطیلات طبق شرایط سرویس. زمان تسویه بانکی جداگانه است.` : `Operating hours: ${policy.opening_hour}:00–${policy.closing_hour}:00 Australia/Sydney, on the published business days excluding holidays. Bank settlement time is separate.`}</p>
       <p className={styles.muted}>{fa ? "روزهای کاری: " : "Business days: "}{policy.business_days.map(day => (fa ? ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"] : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])[day]).join(fa ? "، " : ", ")}{policy.holidays.length > 0 && <>{fa ? " · تعطیلات: " : " · Holidays: "}{policy.holidays.join(", ")}</>}</p>
+      <RequestBankTiming locale={input.locale} iranBankingNotice={policy.iran_banking_notice} />
       {tier === "priority" && <p className={styles.notice}>{fa ? policy.priority_terms_fa : policy.priority_terms}</p>}
       {!activeQuote && <button className={styles.button} type="button" onClick={review} disabled={busy || disabled}>{busy ? (fa ? "در حال محاسبه…" : "Preparing quote…") : (fa ? "دریافت و بررسی پیش‌فاکتور" : "Review final quote")}<ArrowRight size={17} /></button>}
       {activeQuote && <div className={styles.card} aria-live="polite">

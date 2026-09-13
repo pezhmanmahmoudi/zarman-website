@@ -1,11 +1,14 @@
 "use server";
 
 import { createClient, type User } from "@supabase/supabase-js";
+import { createHash } from "node:crypto";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import { applyPromoCode, calcAppliedFee, calcEquivalentTomanForRequestType, calcLoyaltyDiscount, FINANCE_CONFIG_DEFAULTS, toCompanyTradeType, type PromoCodeData } from "@/lib/pricing";
 import { DEFAULT_REQUEST_SETTINGS, isUuid, mutationInputError, publicRequestSettings, quoteInputError, settingsInputError } from "@/lib/requests/validation";
-import type { ActionResult, ExchangeRequest, PublicRequestSettings, QuoteInput, QuoteSnapshot, RequestDetail, RequestMutationInput, RequestQuote, RequestSettings, SettingsRecord } from "@/lib/requests/types";
+import type { ActionResult, ExchangeRequest, PublicRequestSettings, QuoteInput, QuoteSnapshot, RequestDetail, RequestMutationInput, RequestQuote, RequestReceipt, RequestSettings, SettingsRecord } from "@/lib/requests/types";
+import { inspectReceiptUpload, MAX_REQUEST_RECEIPT_BYTES, REQUEST_RECEIPTS_BUCKET } from "@/lib/requests/receipt-upload";
+import { validatedNotificationSettings } from "@/lib/requests/notification-config";
 
 function database() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -156,9 +159,15 @@ async function readDetail(id: string, userId?: string): Promise<RequestDetail> {
   if (userId) query = query.eq("user_id", userId);
   const request = await query.single();
   if (request.error || !request.data) throw new Error("Request not found.");
-  const events = await db.from("exchange_request_events").select("id,request_id,sequence,event_type,status,public_message,actor_id,created_at").eq("request_id", id).order("sequence", { ascending: true });
+  const events = userId
+    ? await db.from("exchange_request_events").select("id,request_id,sequence,event_type,status,public_message,actor_id,created_at")
+      .eq("request_id", id).eq("customer_visible", true).order("sequence", { ascending: true })
+    : await db.from("exchange_request_events").select("id,request_id,sequence,event_type,status,public_message,actor_id,created_at,internal_message")
+      .eq("request_id", id).order("sequence", { ascending: true });
   if (events.error) throw events.error;
-  const detail: RequestDetail = { request: request.data as ExchangeRequest, events: events.data || [] };
+  const receipts = await db.from("exchange_request_receipts").select("id,request_id,original_name,content_type,size_bytes,sha256,uploaded_by,created_at").eq("request_id", id).order("created_at", { ascending: false });
+  if (receipts.error) throw receipts.error;
+  const detail: RequestDetail = { request: request.data as ExchangeRequest, events: events.data || [], receipts: receipts.data as RequestReceipt[] };
   if (!userId) {
     const deliveries = await db.from("exchange_request_notification_deliveries").select("id,event_id,request_id,audience,recipient_email,locale,status,attempts,last_error,created_at").eq("request_id", id).order("created_at", { ascending: false }).limit(100);
     if (deliveries.error) throw deliveries.error;
@@ -181,7 +190,11 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
     settlement_reference: supplied.settlement_reference?.trim(), payer_account_id: supplied.payer_account_id,
     receiver_account_id: supplied.receiver_account_id, transfer_method: supplied.transfer_method || "free",
     refund_reference: supplied.refund_reference?.trim(), refund_kind: supplied.refund_kind,
-    ...(input.action === "complete" ? { date_jalali: new Intl.DateTimeFormat("en-US-u-ca-persian", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "UTC" }).format(new Date()) } : {}),
+    honour_quote: supplied.honour_quote,
+    ...(["complete", "confirm_funds", "resume_funded_request", "confirm_refund"].includes(input.action) ? { date_jalali: (() => {
+      const parts = new Intl.DateTimeFormat("en-US-u-ca-persian", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "UTC" }).formatToParts(new Date());
+      return ["year", "month", "day"].map(type => parts.find(part => part.type === type)?.value).join("/");
+    })() } : {}),
   }).filter(([, value]) => value !== undefined));
   const { data, error } = await database().rpc("transition_exchange_request", {
     p_actor_id: actor.id, p_request_id: input.requestId, p_expected_version: input.expectedVersion,
@@ -222,7 +235,14 @@ export async function saveRequestSettings(input: { expectedVersion: number; sett
     if (!input || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) throw new Error("Refresh the settings before saving.");
     const invalid = settingsInputError(input.settings);
     if (invalid) throw new Error(invalid);
-    if (input.settings.enabled && (!process.env.RESEND_API_KEY || !process.env.REQUEST_NOTIFICATIONS_CRON_SECRET || !process.env.REQUEST_SITE_URL || !process.env.RESEND_WEBHOOK_SECRET)) throw new Error("Configure the notification sender, webhook, site URL and scheduled worker credentials before enabling requests.");
+    if (input.settings.enabled) {
+      try {
+        validatedNotificationSettings(process.env);
+        if ((process.env.REQUEST_NOTIFICATIONS_CRON_SECRET?.length ?? 0) < 32 || !process.env.RESEND_WEBHOOK_SECRET?.trim()) throw new Error("notification_worker_not_configured");
+      } catch {
+        throw new Error("Configure a valid notification sender, HTTPS site URL, webhook secret and scheduled worker secret (at least 32 characters) before enabling requests.");
+      }
+    }
     const { data, error } = await database().rpc("save_exchange_request_settings", {
       p_actor_id: actor.id, p_expected_version: input.expectedVersion,
       p_settings: { ...input.settings, management_emails: [...new Set(input.settings.management_emails.map(email => email.trim().toLowerCase()))] },
@@ -237,5 +257,79 @@ export async function getRequestBankAccounts(): Promise<ActionResult<Array<{ id:
     const { data, error } = await database().from("bank_accounts").select("id,account_name,currency").eq("is_active", true).order("account_name");
     if (error) throw error;
     return data || [];
+  });
+}
+
+const RECEIPT_PUBLIC_COLUMNS = "id,request_id,original_name,content_type,size_bytes,sha256,uploaded_by,created_at";
+
+export async function uploadRequestReceipt(form: FormData): Promise<ActionResult<RequestReceipt>> {
+  return result(async () => {
+    const user = await customer();
+    if (!(form instanceof FormData)) throw new Error("Choose a bank transfer receipt to upload.");
+    const requestId = form.get("requestId"), commandKey = form.get("commandKey"), file = form.get("file");
+    if (!isUuid(requestId) || !isUuid(commandKey) || !(file instanceof File)) throw new Error("Choose a receipt for a valid request.");
+    if (!file.size || file.size > MAX_REQUEST_RECEIPT_BYTES) throw new Error("Upload a receipt of up to 4 MB.");
+    const db = database();
+    const request = await db.from("exchange_requests").select("id,user_id,status,funding_status,priority_fee_status").eq("id", requestId).eq("user_id", user.id).single();
+    if (request.error || !request.data) throw new Error("Request not found.");
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const inspected = inspectReceiptUpload(bytes, file.name, file.type);
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    const duplicate = await db.from("exchange_request_receipts").select(RECEIPT_PUBLIC_COLUMNS).eq("request_id", requestId).eq("sha256", digest).maybeSingle();
+    if (duplicate.error) throw duplicate.error;
+    if (duplicate.data) return duplicate.data as RequestReceipt;
+    if (!["submitted", "under_review", "action_required", "awaiting_funds"].includes(request.data.status)
+      || ["confirmed", "refund_pending", "refunded"].includes(request.data.funding_status)
+      || ["refund_pending", "refunded"].includes(request.data.priority_fee_status)) throw new Error("Receipts can only be uploaded while your payment is awaiting review.");
+    const count = await db.from("exchange_request_receipts").select("id", { count: "exact", head: true }).eq("request_id", requestId);
+    if (count.error) throw count.error;
+    if ((count.count || 0) >= 10) throw new Error("This request already has ten receipts. Please use the request response to contact the team.");
+    const path = `${user.id}/${requestId}/${commandKey}.${inspected.extension}`;
+    const bucket = db.storage.from(REQUEST_RECEIPTS_BUCKET);
+    const upload = await bucket.upload(path, bytes, { contentType: inspected.contentType, upsert: false, cacheControl: "0" });
+    if (upload.error) {
+      // A timeout/retry can encounter an already-uploaded object. Verify the
+      // existing bytes; never overwrite evidence under an existing command key.
+      const existing = await bucket.download(path);
+      if (existing.error || !existing.data) throw new Error("The receipt upload could not be confirmed. Retry with the same file.");
+      const existingHash = createHash("sha256").update(new Uint8Array(await existing.data.arrayBuffer())).digest("hex");
+      if (existingHash !== digest) throw new Error("This upload attempt belongs to a different file. Select the receipt again.");
+    }
+    const attached = await db.rpc("attach_exchange_request_receipt", {
+      p_actor_id: user.id, p_request_id: requestId, p_receipt_id: commandKey, p_path: path,
+      p_original_name: inspected.filename, p_content_type: inspected.contentType, p_size_bytes: file.size,
+      p_sha256: digest, p_command_key: commandKey,
+    });
+    if (attached.error) {
+      // Only delete a new object after a definite rejected DB command. A network
+      // timeout may have committed; preserve its evidence for reconciliation.
+      if (!upload.error && attached.error.code && attached.error.code !== "PGRST000") {
+        const committed = await db.from("exchange_request_receipts").select("id").eq("id", commandKey).maybeSingle();
+        if (!committed.error && !committed.data) await bucket.remove([path]);
+      }
+      throw attached.error;
+    }
+    const receipt = attached.data as RequestReceipt;
+    if (receipt.id !== commandKey && !upload.error) await bucket.remove([path]);
+    // The RPC contains server-only storage metadata. Enumerate the public shape.
+    return { id: receipt.id, request_id: receipt.request_id, original_name: receipt.original_name,
+      content_type: receipt.content_type, size_bytes: receipt.size_bytes, sha256: receipt.sha256,
+      uploaded_by: receipt.uploaded_by, created_at: receipt.created_at, request_version: receipt.request_version };
+  });
+}
+
+export async function getRequestReceiptUrl(receiptId: string): Promise<ActionResult<{ url: string }>> {
+  return result(async () => {
+    const user = await customer();
+    if (!isUuid(receiptId)) throw new Error("Receipt not found.");
+    const db = database();
+    const receipt = await db.from("exchange_request_receipts").select("request_id,storage_path,original_name").eq("id", receiptId).single();
+    if (receipt.error || !receipt.data) throw new Error("Receipt not found.");
+    const request = await db.from("exchange_requests").select("user_id").eq("id", receipt.data.request_id).single();
+    if (request.error || !request.data) throw new Error("Receipt not found.");
+    if (request.data.user_id !== user.id) await requireAdmin();
+    const url = await db.storage.from(REQUEST_RECEIPTS_BUCKET).createSignedUrl(receipt.data.storage_path, 60, { download: receipt.data.original_name });
+    if (url.error || !url.data) throw new Error("The receipt download is temporarily unavailable.");
+    return { url: url.data.signedUrl };
   });
 }

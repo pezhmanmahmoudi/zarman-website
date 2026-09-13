@@ -1,173 +1,58 @@
--- Customer request aggregate. Staged rollout: both service flags default OFF.
--- This migration changes no existing trade amounts and sends no messages.
+-- Self-service funding, private uploaded evidence and bank-clearance-aware timing.
+-- No messages are sent by this migration; milestone mail is queued transactionally.
 BEGIN;
+ALTER TABLE public.exchange_requests
+  ADD COLUMN evidence_submitted_at timestamptz,
+  ADD COLUMN funds_confirmed_at timestamptz,
+  ADD COLUMN clearance_due_at timestamptz;
+UPDATE public.exchange_request_settings SET settings = jsonb_build_object(
+  'australian_clearance_minutes',1440,
+  'iran_banking_notice','Iranian payouts follow SATNA/PAYA banking cycles, bank operating hours and holidays. Processing is not confirmation of settlement.') || settings;
+UPDATE public.exchange_requests SET clearance_due_at=funding_due_at+make_interval(mins=>
+  CASE WHEN quote->>'funding_currency'='AUD' THEN COALESCE((quote->'policy_snapshot'->>'australian_clearance_minutes')::integer,1440) ELSE 1440 END),
+  funds_confirmed_at=CASE WHEN funding_status='confirmed' THEN ready_at END,
+  evidence_submitted_at=(SELECT min(created_at) FROM public.exchange_request_events WHERE request_id=exchange_requests.id AND event_type='payment_evidence');
+ALTER TABLE public.exchange_requests ALTER COLUMN clearance_due_at SET NOT NULL;
 
-CREATE TABLE public.exchange_request_settings (
-  id boolean PRIMARY KEY DEFAULT true CHECK(id), version integer NOT NULL DEFAULT 1 CHECK(version > 0),
-  settings jsonb NOT NULL DEFAULT '{"enabled":false,"priority_enabled":false,"priority_fee_aud":0,"priority_capacity":0,"standard_minutes":240,"priority_minutes":30,"quote_minutes":10,"funding_minutes":120,"max_amount_aud":50000,"timezone":"Australia/Sydney","business_days":[1,2,3,4,5],"opening_hour":9,"closing_hour":17,"holidays":[],"management_emails":[],"payment_instructions_aud":"","payment_instructions_irt":"","priority_terms":"","priority_terms_fa":""}',
-  updated_at timestamptz NOT NULL DEFAULT now(), updated_by uuid REFERENCES auth.users(id)
+CREATE TABLE public.exchange_request_receipts (
+  id uuid PRIMARY KEY, request_id uuid NOT NULL REFERENCES public.exchange_requests(id),
+  storage_path text NOT NULL UNIQUE, original_name text NOT NULL CHECK(char_length(original_name) BETWEEN 1 AND 180),
+  content_type text NOT NULL CHECK(content_type IN ('application/pdf','image/jpeg','image/png')),
+  size_bytes integer NOT NULL CHECK(size_bytes BETWEEN 1 AND 5242880),
+  sha256 text NOT NULL CHECK(sha256 ~ '^[0-9a-f]{64}$'), uploaded_by uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(request_id,sha256)
 );
-INSERT INTO public.exchange_request_settings(id) VALUES (true);
+CREATE INDEX ON public.exchange_request_receipts(request_id,created_at);
+ALTER TABLE public.exchange_request_receipts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.exchange_request_receipts FROM PUBLIC,anon,authenticated;
+GRANT SELECT,INSERT ON public.exchange_request_receipts TO service_role;
+CREATE TRIGGER guard_request_receipt_immutable BEFORE UPDATE OR DELETE ON public.exchange_request_receipts
+FOR EACH ROW EXECUTE FUNCTION public.guard_exchange_request_immutable();
+-- Access is through authenticated server handlers and short-lived signed URLs.
+INSERT INTO storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+VALUES('exchange-request-receipts','exchange-request-receipts',false,5242880,ARRAY['application/pdf','image/jpeg','image/png'])
+ON CONFLICT(id) DO UPDATE SET public=false,file_size_limit=EXCLUDED.file_size_limit,allowed_mime_types=EXCLUDED.allowed_mime_types;
+-- Restrictive policies protect this bucket even if a deployment has a broad
+-- permissive storage policy. Service-role handlers bypass RLS as intended.
+CREATE POLICY exchange_request_receipts_server_only ON storage.objects AS RESTRICTIVE
+FOR ALL TO anon,authenticated
+USING(bucket_id<>'exchange-request-receipts') WITH CHECK(bucket_id<>'exchange-request-receipts');
 
-CREATE TABLE public.exchange_request_quotes (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES auth.users(id),
-  snapshot jsonb NOT NULL CHECK(jsonb_typeof(snapshot) = 'object'), expires_at timestamptz NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(), CHECK(expires_at > created_at)
-);
-CREATE INDEX ON public.exchange_request_quotes(user_id,created_at DESC);
-
-CREATE TABLE public.exchange_requests (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), transaction_id uuid NOT NULL UNIQUE REFERENCES public.transactions(id),
-  user_id uuid NOT NULL REFERENCES auth.users(id), quote_id uuid NOT NULL UNIQUE REFERENCES public.exchange_request_quotes(id),
-  idempotency_key uuid NOT NULL, reference_code text NOT NULL UNIQUE,
-  status text NOT NULL DEFAULT 'submitted' CHECK(status IN ('submitted','under_review','action_required','awaiting_funds','ready','processing','reconciliation','completed','cancelled','rejected','expired')),
-  version integer NOT NULL DEFAULT 1 CHECK(version > 0), quote jsonb NOT NULL,
-  service_tier text NOT NULL CHECK(service_tier IN ('standard','priority')),
-  priority_fee_status text NOT NULL CHECK(priority_fee_status IN ('not_applicable','unpaid','paid','refund_pending','refunded')),
-  funding_status text NOT NULL DEFAULT 'unpaid' CHECK(funding_status IN ('unpaid','partial','confirmed','refund_pending','refunded')),
-  funding_received numeric(20,2) NOT NULL DEFAULT 0 CHECK(funding_received >= 0),
-  payment_instructions text, action_required text, owner_id uuid REFERENCES auth.users(id),
-  handling_due_at timestamptz, handling_started_at timestamptz, funding_due_at timestamptz NOT NULL,
-  ready_at timestamptz, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(user_id,idempotency_key)
-);
-CREATE INDEX ON public.exchange_requests(user_id,created_at DESC);
-CREATE INDEX ON public.exchange_requests(status,handling_due_at,created_at);
-
-CREATE TABLE public.exchange_request_events (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), request_id uuid NOT NULL REFERENCES public.exchange_requests(id),
-  sequence integer NOT NULL, event_type text NOT NULL, status text NOT NULL, public_message text,
-  actor_id uuid REFERENCES auth.users(id), created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(request_id,sequence)
-);
-CREATE TABLE public.exchange_request_commands (
-  request_id uuid NOT NULL REFERENCES public.exchange_requests(id), command_key uuid NOT NULL,
-  actor_id uuid NOT NULL REFERENCES auth.users(id), fingerprint text NOT NULL, result jsonb NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(request_id,command_key)
-);
-CREATE TABLE public.exchange_request_tasks (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), request_id uuid NOT NULL REFERENCES public.exchange_requests(id),
-  kind text NOT NULL, description text NOT NULL, status text NOT NULL DEFAULT 'open' CHECK(status IN ('open','completed')),
-  dedupe_key text NOT NULL UNIQUE, created_at timestamptz NOT NULL DEFAULT now(), completed_at timestamptz
-);
-CREATE TABLE public.exchange_request_payments (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), request_id uuid NOT NULL REFERENCES public.exchange_requests(id),
-  payment_reference text NOT NULL UNIQUE CHECK(char_length(payment_reference) BETWEEN 3 AND 200),
-  amount numeric(20,2) NOT NULL CHECK(amount > 0 AND amount < 'Infinity'::numeric),
-  currency text NOT NULL CHECK(currency IN ('AUD','IRT')), account_id uuid NOT NULL REFERENCES public.bank_accounts(id),
-  actor_id uuid NOT NULL REFERENCES auth.users(id), created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE TABLE public.exchange_request_executions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), request_id uuid NOT NULL UNIQUE REFERENCES public.exchange_requests(id),
-  status text NOT NULL DEFAULT 'claimed' CHECK(status IN ('claimed','uncertain','settled')),
-  claimed_by uuid NOT NULL REFERENCES auth.users(id), settlement_reference text UNIQUE,
-  created_at timestamptz NOT NULL DEFAULT now(), settled_at timestamptz
-);
-CREATE TABLE public.exchange_request_refunds (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), request_id uuid NOT NULL REFERENCES public.exchange_requests(id),
-  kind text NOT NULL CHECK(kind IN ('priority','principal')), amount numeric(20,2) NOT NULL CHECK(amount > 0),
-  currency text NOT NULL CHECK(currency IN ('AUD','IRT')), reason text NOT NULL,
-  status text NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','returned')),
-  refund_reference text UNIQUE, account_id uuid REFERENCES public.bank_accounts(id),
-  created_at timestamptz NOT NULL DEFAULT now(), returned_at timestamptz, UNIQUE(request_id,kind)
-);
--- Separate fee journal avoids altering trade volume, exchange rates or base fees.
--- Its original-currency cash movements are visible in the request finance queue;
--- enterprise-report integration is a launch prerequisite for paid priority.
-CREATE TABLE public.exchange_request_fee_entries (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), request_id uuid NOT NULL REFERENCES public.exchange_requests(id),
-  kind text NOT NULL CHECK(kind IN ('collected','refunded')), account_id uuid NOT NULL REFERENCES public.bank_accounts(id),
-  currency text NOT NULL CHECK(currency IN ('AUD','IRT')), amount numeric(20,2) NOT NULL CHECK(amount > 0),
-  amount_aud numeric(20,2) NOT NULL CHECK(amount_aud > 0), evidence_reference text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(request_id,kind)
-);
-CREATE TABLE public.exchange_request_notification_deliveries (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), request_id uuid NOT NULL REFERENCES public.exchange_requests(id),
-  event_id uuid NOT NULL REFERENCES public.exchange_request_events(id), event_sequence integer NOT NULL, event_type text NOT NULL,
-  audience text NOT NULL CHECK(audience IN ('customer','management')), recipient_email text NOT NULL,
-  channel text NOT NULL DEFAULT 'email' CHECK(channel = 'email'), locale text NOT NULL CHECK(locale IN ('en','fa')),
-  reference text NOT NULL, workflow_status text NOT NULL, requested_tier text NOT NULL, priority_fee_aud numeric NOT NULL DEFAULT 0,
-  status text NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','leased','provider_accepted','delivered','failed','suppressed','reconciliation_required')),
-  lease_owner uuid, lease_expires_at timestamptz, next_attempt_at timestamptz NOT NULL DEFAULT now(),
-  attempts integer NOT NULL DEFAULT 0 CHECK(attempts >= 0), rendered_payload jsonb, template_version text,
-  first_attempt_at timestamptz, provider_id text, last_error text, delivered_at timestamptz, provider_accepted_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(event_id,audience,recipient_email,channel)
-);
-CREATE INDEX ON public.exchange_request_notification_deliveries(status,next_attempt_at,created_at);
-CREATE INDEX ON public.exchange_request_notification_deliveries(provider_id) WHERE provider_id IS NOT NULL;
-
-CREATE FUNCTION public.exchange_request_is_admin(p_actor_id uuid) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog,public AS $$
-  SELECT EXISTS(SELECT 1 FROM auth.users WHERE id = p_actor_id
-    AND raw_app_meta_data ->> 'role' IN ('admin','supabase_admin','service_role'));
-$$;
-
--- Business-time arithmetic is performed in the accepted Sydney calendar, using
--- timezone conversion for every day (including DST boundaries and holidays).
-CREATE FUNCTION public.exchange_request_business_due(p_start timestamptz,p_minutes integer,p_policy jsonb)
-RETURNS timestamptz LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog,public AS $$
-DECLARE
-  v_cursor timestamptz := p_start; v_day date; v_open timestamptz; v_close timestamptz;
-  v_remaining interval := make_interval(mins => p_minutes); v_days integer := 0;
-BEGIN
-  IF p_start IS NULL OR p_minutes < 0 OR p_minutes > 10080 OR p_policy->>'timezone' <> 'Australia/Sydney'
-     OR jsonb_array_length(p_policy->'business_days') = 0 THEN RAISE EXCEPTION 'Invalid business calendar'; END IF;
-  LOOP
-    v_days := v_days + 1;
-    IF v_days > 730 THEN RAISE EXCEPTION 'Business calendar has no available capacity'; END IF;
-    v_day := (v_cursor AT TIME ZONE 'Australia/Sydney')::date;
-    v_open := (v_day + make_interval(hours => (p_policy->>'opening_hour')::integer)) AT TIME ZONE 'Australia/Sydney';
-    v_close := (v_day + make_interval(hours => (p_policy->>'closing_hour')::integer)) AT TIME ZONE 'Australia/Sydney';
-    IF (p_policy->'business_days') @> to_jsonb(ARRAY[extract(dow FROM v_day)::integer])
-       AND NOT (COALESCE(p_policy->'holidays','[]'::jsonb) @> to_jsonb(ARRAY[v_day::text]))
-       AND v_cursor < v_close THEN
-      v_cursor := GREATEST(v_cursor,v_open);
-      IF v_remaining <= v_close-v_cursor THEN RETURN v_cursor+v_remaining; END IF;
-      v_remaining := v_remaining-(v_close-v_cursor);
-    END IF;
-    v_cursor := (v_day+1)::timestamp AT TIME ZONE 'Australia/Sydney';
-  END LOOP;
-END;
-$$;
-
-CREATE FUNCTION public.emit_exchange_request_event(p_request_id uuid,p_event_type text,p_actor_id uuid,p_message text DEFAULT NULL)
-RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog,public AS $$
-DECLARE v_request public.exchange_requests%ROWTYPE; v_event public.exchange_request_events%ROWTYPE;
-  v_email text; v_settings jsonb; v_emails jsonb;
-BEGIN
-  SELECT * INTO STRICT v_request FROM public.exchange_requests WHERE id=p_request_id;
-  INSERT INTO public.exchange_request_events(request_id,sequence,event_type,status,public_message,actor_id)
-  VALUES(p_request_id,COALESCE((SELECT max(sequence)+1 FROM public.exchange_request_events WHERE request_id=p_request_id),1),
-    p_event_type,v_request.status,p_message,p_actor_id) RETURNING * INTO v_event;
-  SELECT email INTO v_email FROM auth.users WHERE id=v_request.user_id AND email_confirmed_at IS NOT NULL;
-  INSERT INTO public.exchange_request_notification_deliveries(request_id,event_id,event_sequence,event_type,audience,
-    recipient_email,locale,reference,workflow_status,requested_tier,priority_fee_aud,created_at)
-  VALUES(p_request_id,v_event.id,v_event.sequence,p_event_type,'customer',COALESCE(v_email,''),
-    v_request.quote->>'locale',v_request.reference_code,v_request.status,v_request.service_tier,
-    (v_request.quote->>'priority_fee_aud')::numeric,v_event.created_at);
-  SELECT settings INTO v_settings FROM public.exchange_request_settings WHERE id;
-  v_emails := v_settings->'management_emails';
-  IF jsonb_array_length(v_emails)=0 THEN v_emails := '[""]'::jsonb; END IF;
-  FOR v_email IN SELECT DISTINCT lower(value) FROM jsonb_array_elements_text(v_emails) LOOP
-    INSERT INTO public.exchange_request_notification_deliveries(request_id,event_id,event_sequence,event_type,audience,
-      recipient_email,locale,reference,workflow_status,requested_tier,priority_fee_aud,created_at)
-    VALUES(p_request_id,v_event.id,v_event.sequence,p_event_type,'management',v_email,'en',v_request.reference_code,
-      v_request.status,v_request.service_tier,(v_request.quote->>'priority_fee_aud')::numeric,v_event.created_at);
-  END LOOP;
-  RETURN v_event.id;
-END;
-$$;
-
-CREATE FUNCTION public.save_exchange_request_settings(p_actor_id uuid,p_expected_version integer,p_settings jsonb)
+CREATE OR REPLACE FUNCTION public.save_exchange_request_settings(p_actor_id uuid,p_expected_version integer,p_settings jsonb)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog,public AS $$
 DECLARE v_row public.exchange_request_settings%ROWTYPE; v_email text; v_day text;
 BEGIN
+  p_settings := jsonb_build_object('australian_clearance_minutes',1440,'iran_banking_notice','Iranian payouts follow SATNA/PAYA banking cycles, bank operating hours and holidays. Processing is not confirmation of settlement.') || p_settings;
   IF NOT public.exchange_request_is_admin(p_actor_id) THEN RAISE EXCEPTION 'Administrator required' USING ERRCODE='42501'; END IF;
   SELECT * INTO STRICT v_row FROM public.exchange_request_settings WHERE id FOR UPDATE;
   IF v_row.version IS DISTINCT FROM p_expected_version THEN RAISE EXCEPTION 'REQUEST_CONFLICT: Reload settings' USING ERRCODE='40001'; END IF;
   IF jsonb_typeof(p_settings) IS DISTINCT FROM 'object'
      OR jsonb_typeof(p_settings->'enabled') IS DISTINCT FROM 'boolean'
      OR jsonb_typeof(p_settings->'priority_enabled') IS DISTINCT FROM 'boolean'
+     OR COALESCE(p_settings->>'australian_clearance_minutes','') !~ '^[0-9]+$'
+     OR (p_settings->>'australian_clearance_minutes')::integer NOT BETWEEN 1440 AND 10080
+     OR jsonb_typeof(p_settings->'iran_banking_notice') IS DISTINCT FROM 'string'
+     OR char_length(p_settings->>'iran_banking_notice') NOT BETWEEN 1 AND 2000
      OR p_settings->>'timezone' IS DISTINCT FROM 'Australia/Sydney'
      OR COALESCE(p_settings->>'priority_fee_aud','') !~ '^[0-9]+(\.[0-9]{1,2})?$'
      OR (p_settings->>'priority_fee_aud')::numeric > 1000
@@ -227,7 +112,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.submit_exchange_request(p_actor_id uuid,p_quote_id uuid,p_idempotency_key uuid)
+CREATE OR REPLACE FUNCTION public.submit_exchange_request(p_actor_id uuid,p_quote_id uuid,p_idempotency_key uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
 DECLARE v_request public.exchange_requests%ROWTYPE; v_quote public.exchange_request_quotes%ROWTYPE;
   v_settings public.exchange_request_settings%ROWTYPE; q jsonb; v_transaction_id uuid; v_reference text;
@@ -255,7 +140,7 @@ BEGIN
     RAISE EXCEPTION 'Invalid authoritative quote';
   END IF;
   IF (q->>'policy_version')::integer IS DISTINCT FROM v_settings.version THEN RAISE EXCEPTION 'QUOTE_CHANGED: Accept a new quote'; END IF;
-  PERFORM 1 FROM public.profiles WHERE id=p_actor_id AND kyc_status='approved' FOR SHARE;
+  PERFORM 1 FROM public.profiles WHERE id=p_actor_id AND kyc_status='approved' AND NOT compliance_customer_flagged AND compliance_aml_flag NOT IN ('review_required','failed') AND compliance_dvs_status<>'failed' FOR SHARE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Identity approval required'; END IF;
   PERFORM 1 FROM auth.users WHERE id=p_actor_id AND email_confirmed_at IS NOT NULL;
   IF NOT FOUND THEN RAISE EXCEPTION 'Verified email required'; END IF;
@@ -286,9 +171,9 @@ BEGIN
     END IF;
     IF EXISTS(SELECT 1 FROM public.exchange_requests WHERE service_tier='standard' AND status='ready' AND handling_due_at<=now())
       OR (SELECT count(*) FROM public.exchange_requests WHERE service_tier='priority'
-        AND (status IN ('ready','processing','reconciliation') OR (status IN ('submitted','under_review','action_required','awaiting_funds') AND funding_due_at>now()))) >= (v_settings.settings->>'priority_capacity')::integer
+        AND (status IN ('ready','processing','reconciliation') OR (status IN ('submitted','under_review','action_required','awaiting_funds') AND (clearance_due_at>now() OR evidence_submitted_at IS NOT NULL OR funding_received>0)))) >= (v_settings.settings->>'priority_capacity')::integer
       OR EXISTS(SELECT 1 FROM public.exchange_requests WHERE user_id=p_actor_id AND service_tier='priority'
-        AND (status IN ('ready','processing','reconciliation') OR (status IN ('submitted','under_review','action_required','awaiting_funds') AND funding_due_at>now()))) THEN
+        AND (status IN ('ready','processing','reconciliation') OR (status IN ('submitted','under_review','action_required','awaiting_funds') AND (clearance_due_at>now() OR evidence_submitted_at IS NOT NULL OR funding_received>0)))) THEN
       RAISE EXCEPTION 'PRIORITY_CAPACITY: Choose standard or try later';
     END IF;
   ELSIF (q->>'priority_fee_aud')::numeric<>0 OR (q->>'priority_fee_amount')::numeric<>0 THEN RAISE EXCEPTION 'Invalid standard fee'; END IF;
@@ -326,13 +211,17 @@ BEGIN
     EXCEPTION WHEN unique_violation THEN IF v_attempt=10 THEN RAISE; END IF;
     END;
   END LOOP;
-  INSERT INTO public.exchange_requests(transaction_id,user_id,quote_id,idempotency_key,reference_code,quote,service_tier,priority_fee_status,funding_due_at,payment_instructions)
+  INSERT INTO public.exchange_requests(transaction_id,user_id,quote_id,idempotency_key,reference_code,quote,service_tier,priority_fee_status,funding_due_at,clearance_due_at,payment_instructions)
   VALUES(v_transaction_id,p_actor_id,p_quote_id,p_idempotency_key,v_reference,q,q->>'service_tier',
     CASE WHEN q->>'service_tier'='priority' THEN 'unpaid' ELSE 'not_applicable' END,
     now()+make_interval(mins=>(v_settings.settings->>'funding_minutes')::integer),
+    now()+make_interval(mins=>(v_settings.settings->>'funding_minutes')::integer + CASE WHEN q->>'funding_currency'='AUD' THEN COALESCE((v_settings.settings->>'australian_clearance_minutes')::integer,1440) ELSE 1440 END),
     CASE WHEN q->>'funding_currency'='AUD' THEN v_settings.settings->>'payment_instructions_aud' ELSE v_settings.settings->>'payment_instructions_irt' END) RETURNING * INTO v_request;
   UPDATE public.profiles SET loyalty_discount_toman=COALESCE(loyalty_discount_toman,0)+COALESCE((q->>'loyalty_discount')::numeric,0) WHERE id=p_actor_id;
   PERFORM public.emit_exchange_request_event(v_request.id,'submitted',p_actor_id,NULL);
+  UPDATE public.exchange_requests SET status='awaiting_funds',version=version+1 WHERE id=v_request.id RETURNING * INTO v_request;
+  PERFORM public.emit_exchange_request_event(v_request.id,'await_funds',p_actor_id,
+    'Use your Reference Code '||v_reference||' in your bank transfer description. Payment instructions are available in your request dashboard.');
   INSERT INTO public.audit_logs(actor_id,actor_email,action,target_type,target_id,new_value)
   VALUES(p_actor_id,(SELECT email FROM auth.users WHERE id=p_actor_id),'REQUEST_SUBMITTED','exchange_requests',v_request.id::text,
     jsonb_build_object('reference',v_reference,'quote_id',p_quote_id,'service_tier',q->>'service_tier'));
@@ -341,9 +230,7 @@ BEGIN
 END;
 $$;
 
--- Transition implementation follows below. Every mutation and its milestone
--- deliveries commit together, with an expected version and durable command key.
-CREATE FUNCTION public.transition_exchange_request(p_actor_id uuid,p_request_id uuid,p_expected_version integer,
+CREATE OR REPLACE FUNCTION public.transition_exchange_request(p_actor_id uuid,p_request_id uuid,p_expected_version integer,
   p_command_key uuid,p_action text,p_payload jsonb DEFAULT '{}') RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public SET timezone='UTC' AS $$
 DECLARE
@@ -387,8 +274,8 @@ BEGIN
     r.status:='under_review'; r.action_required:=NULL;
   WHEN 'await_funds' THEN
     IF r.status NOT IN ('submitted','under_review','action_required') OR r.funding_received<>0
-      OR r.funding_status<>'unpaid' OR r.funding_due_at<=now() THEN RAISE EXCEPTION 'Funding instructions require current unpaid request'; END IF;
-    PERFORM 1 FROM public.profiles WHERE id=r.user_id AND kyc_status='approved' FOR SHARE;
+      OR r.funding_status<>'unpaid' OR r.clearance_due_at<=now() THEN RAISE EXCEPTION 'Funding instructions require current unpaid request'; END IF;
+    PERFORM 1 FROM public.profiles WHERE id=r.user_id AND kyc_status='approved' AND NOT compliance_customer_flagged AND compliance_aml_flag NOT IN ('review_required','failed') AND compliance_dvs_status<>'failed' FOR SHARE;
     IF NOT FOUND THEN RAISE EXCEPTION 'Current identity approval required'; END IF;
     r.status:='awaiting_funds'; r.action_required:=NULL;
   WHEN 'payment_evidence' THEN
@@ -396,6 +283,7 @@ BEGIN
       RAISE EXCEPTION 'Payment evidence requires funding instructions and a reference'; END IF;
     INSERT INTO public.exchange_request_tasks(request_id,kind,description,dedupe_key)
     VALUES(r.id,'payment_evidence',v_message,r.id||':evidence:'||p_command_key);
+    r.evidence_submitted_at:=COALESCE(r.evidence_submitted_at,now());
     -- Customer evidence never changes cleared funds or priority eligibility.
   WHEN 'confirm_funds' THEN
     IF r.status IN ('ready','processing','reconciliation','completed','cancelled','rejected')
@@ -416,13 +304,19 @@ BEGIN
     r.funding_status:=CASE WHEN r.funding_received>0 THEN 'partial' ELSE 'unpaid' END;
     IF v_currency IS DISTINCT FROM r.quote->>'funding_currency'
       OR EXISTS(SELECT 1 FROM public.exchange_request_payments WHERE request_id=r.id AND currency<>r.quote->>'funding_currency')
-      OR r.funding_received>(r.quote->>'funding_total')::numeric OR r.funding_due_at<=now() THEN
+      OR r.funding_received>(r.quote->>'funding_total')::numeric THEN
       r.status:='action_required'; r.action_required:='Payment needs reconciliation. Please wait for the finance team.';
       INSERT INTO public.exchange_request_tasks(request_id,kind,description,dedupe_key)
-      VALUES(r.id,'funding_discrepancy','Review wrong-currency, excess or late funds before processing.',r.id||':funding_discrepancy') ON CONFLICT(dedupe_key) DO NOTHING;
+      VALUES(r.id,'funding_discrepancy','Review wrong-currency or excess funds before processing. The accepted quote remains unchanged.',r.id||':funding_discrepancy') ON CONFLICT(dedupe_key) DO NOTHING;
     ELSIF r.funding_received=(r.quote->>'funding_total')::numeric THEN
-      PERFORM 1 FROM public.profiles WHERE id=r.user_id AND kyc_status='approved' FOR SHARE;
-      IF NOT FOUND THEN
+      r.funding_status:='confirmed'; r.funds_confirmed_at:=COALESCE(r.funds_confirmed_at,now());
+      UPDATE public.transactions SET status='pending' WHERE id=r.transaction_id AND status='rejected' AND r.status='expired';
+      PERFORM 1 FROM public.profiles WHERE id=r.user_id AND kyc_status='approved' AND NOT compliance_customer_flagged AND compliance_aml_flag NOT IN ('review_required','failed') AND compliance_dvs_status<>'failed' FOR SHARE;
+      IF r.clearance_due_at<=now() THEN
+        r.status:='action_required'; r.action_required:='Cleared funds arrived after the banking allowance. Finance will review the accepted quote before processing.';
+        INSERT INTO public.exchange_request_tasks(request_id,kind,description,dedupe_key)
+        VALUES(r.id,'late_funding_review','Confirm the original accepted quote can be honoured before releasing these funds.',r.id||':late_funding_review') ON CONFLICT(dedupe_key) DO NOTHING;
+      ELSIF NOT FOUND THEN
         r.status:='under_review'; r.action_required:=NULL;
       ELSE
         r.funding_status:='confirmed'; r.status:='ready'; r.ready_at:=now(); r.action_required:=NULL;
@@ -438,10 +332,35 @@ BEGIN
     ELSE r.status:='awaiting_funds'; r.action_required:=NULL;
     END IF;
     v_event:=CASE WHEN r.status='ready' THEN 'ready' ELSE 'funds_recorded' END;
+  WHEN 'resume_funded_request' THEN
+    IF r.status NOT IN ('under_review','action_required') OR r.funding_status<>'confirmed'
+      OR r.funding_received<>(r.quote->>'funding_total')::numeric
+      OR EXISTS(SELECT 1 FROM public.exchange_request_payments WHERE request_id=r.id AND currency<>r.quote->>'funding_currency')
+      OR EXISTS(SELECT 1 FROM public.exchange_request_refunds WHERE request_id=r.id)
+      OR EXISTS(SELECT 1 FROM public.exchange_request_executions WHERE request_id=r.id)
+      OR (SELECT COALESCE(sum(amount),0) FROM public.exchange_request_payments WHERE request_id=r.id AND currency=r.quote->>'funding_currency')<>(r.quote->>'funding_total')::numeric THEN
+      RAISE EXCEPTION 'Only reconciled fully funded requests can resume'; END IF;
+    IF r.clearance_due_at<=now() AND COALESCE(p_payload->'honour_quote','false'::jsonb) IS DISTINCT FROM 'true'::jsonb THEN
+      RAISE EXCEPTION 'Explicit acceptance of the original quote is required for late funds'; END IF;
+    PERFORM 1 FROM public.profiles WHERE id=r.user_id AND kyc_status='approved' AND NOT compliance_customer_flagged AND compliance_aml_flag NOT IN ('review_required','failed') AND compliance_dvs_status<>'failed' FOR SHARE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'Current identity approval required'; END IF;
+    r.status:='ready'; r.ready_at:=now(); r.funds_confirmed_at:=now(); r.action_required:=NULL;
+    UPDATE public.exchange_request_tasks SET status='completed',completed_at=now()
+    WHERE request_id=r.id AND kind IN ('late_funding_review','funding_clearance_review') AND status='open';
+    r.handling_due_at:=public.exchange_request_business_due(now(),
+      (r.quote->'policy_snapshot'->>CASE WHEN r.service_tier='priority' THEN 'priority_minutes' ELSE 'standard_minutes' END)::integer,r.quote->'policy_snapshot');
+    IF r.service_tier='priority' AND r.priority_fee_status='unpaid' THEN
+      SELECT * INTO STRICT v_account FROM public.bank_accounts WHERE id=(SELECT account_id FROM public.exchange_request_payments WHERE request_id=r.id ORDER BY created_at DESC LIMIT 1);
+      r.priority_fee_status:='paid';
+      INSERT INTO public.exchange_request_fee_entries(request_id,kind,account_id,currency,amount,amount_aud,evidence_reference)
+      VALUES(r.id,'collected',v_account.id,r.quote->>'funding_currency',(r.quote->>'priority_fee_amount')::numeric,(r.quote->>'priority_fee_aud')::numeric,
+        (SELECT payment_reference FROM public.exchange_request_payments WHERE request_id=r.id ORDER BY created_at DESC LIMIT 1));
+    END IF;
+    v_event:='ready';
   WHEN 'start_processing' THEN
     IF r.status<>'ready' OR r.funding_status<>'confirmed' OR (r.service_tier='priority' AND r.priority_fee_status NOT IN ('paid','refund_pending','refunded')) THEN
       RAISE EXCEPTION 'Request is not ready'; END IF;
-    PERFORM 1 FROM public.profiles WHERE id=r.user_id AND kyc_status='approved' FOR SHARE;
+    PERFORM 1 FROM public.profiles WHERE id=r.user_id AND kyc_status='approved' AND NOT compliance_customer_flagged AND compliance_aml_flag NOT IN ('review_required','failed') AND compliance_dvs_status<>'failed' FOR SHARE;
     IF NOT FOUND THEN RAISE EXCEPTION 'Current identity approval required'; END IF;
     -- Overdue standard work must be started before a newer priority request.
     IF r.service_tier='priority' AND EXISTS(SELECT 1 FROM public.exchange_requests WHERE service_tier='standard'
@@ -449,6 +368,7 @@ BEGIN
       RAISE EXCEPTION 'Start overdue standard work first'; END IF;
     INSERT INTO public.exchange_request_executions(request_id,claimed_by) VALUES(r.id,p_actor_id);
     r.status:='processing'; r.owner_id:=p_actor_id; r.handling_started_at:=now();
+    v_message:=CASE WHEN r.quote->>'recipient_currency'='IRT' THEN COALESCE(r.quote->'policy_snapshot'->>'iran_banking_notice','Iranian payouts follow SATNA/PAYA banking cycles. Processing is not confirmation of settlement.') ELSE 'Payout processing has started. Completion will be confirmed after bank settlement.' END;
   WHEN 'record_uncertain_payout' THEN
     IF r.status<>'processing' OR v_message IS NULL THEN RAISE EXCEPTION 'Processing request and reconciliation reason required'; END IF;
     UPDATE public.exchange_request_executions SET status='uncertain' WHERE request_id=r.id AND status='claimed';
@@ -548,7 +468,8 @@ BEGIN
     VALUES(r.id,'priority_refund','Handling target missed. Return the priority fee.',r.id||':priority_refund') ON CONFLICT(dedupe_key) DO NOTHING;
   END IF;
   UPDATE public.exchange_requests SET status=r.status,version=version+1,priority_fee_status=r.priority_fee_status,
-    funding_status=r.funding_status,funding_received=r.funding_received,action_required=r.action_required,owner_id=r.owner_id,
+    funding_status=r.funding_status,funding_received=r.funding_received,funds_confirmed_at=r.funds_confirmed_at,
+    evidence_submitted_at=r.evidence_submitted_at,action_required=r.action_required,owner_id=r.owner_id,
     handling_due_at=r.handling_due_at,handling_started_at=r.handling_started_at,ready_at=r.ready_at,updated_at=now()
   WHERE id=r.id RETURNING * INTO r;
   PERFORM public.emit_exchange_request_event(r.id,v_event,p_actor_id,v_message);
@@ -567,16 +488,38 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.sweep_exchange_request_deadlines() RETURNS jsonb
+CREATE OR REPLACE FUNCTION public.guard_exchange_request_transaction() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
+DECLARE v_tx uuid;
+BEGIN
+  IF TG_TABLE_NAME='transactions' THEN v_tx:=OLD.id;
+  ELSE v_tx:=CASE WHEN TG_OP='DELETE' THEN OLD.transaction_id ELSE NEW.transaction_id END; END IF;
+  IF current_setting('app.exchange_request_write',true) IS DISTINCT FROM 'on' THEN
+    IF EXISTS(SELECT 1 FROM public.exchange_requests WHERE transaction_id=v_tx) THEN
+      RAISE EXCEPTION 'REQUEST_MANAGED_TRANSACTION: Use the request workflow for this linked transaction' USING ERRCODE='42501';
+    END IF;
+    IF TG_TABLE_NAME='ledger' AND TG_OP='UPDATE' THEN
+      IF EXISTS(SELECT 1 FROM public.exchange_requests WHERE transaction_id=OLD.transaction_id) THEN
+        RAISE EXCEPTION 'REQUEST_MANAGED_TRANSACTION: Use the request workflow for this linked transaction' USING ERRCODE='42501';
+      END IF;
+    END IF;
+  END IF;
+  IF TG_OP='DELETE' THEN RETURN OLD; END IF; RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.sweep_exchange_request_deadlines() RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
 DECLARE r public.exchange_requests%ROWTYPE; v_count integer:=0; v_previous text:=current_setting('app.exchange_request_write',true);
 BEGIN
   PERFORM 1 FROM public.exchange_request_settings WHERE id FOR UPDATE;
   PERFORM set_config('app.exchange_request_write','on',true);
   FOR r IN SELECT * FROM public.exchange_requests
-    WHERE (status IN ('submitted','under_review','action_required','awaiting_funds') AND funding_due_at<=now() AND funding_status='unpaid'
-      AND NOT EXISTS(SELECT 1 FROM public.exchange_request_payments WHERE request_id=exchange_requests.id))
-    OR (status='ready' AND handling_due_at<=now()) ORDER BY created_at LIMIT 200 FOR UPDATE LOOP
+    WHERE (status IN ('submitted','under_review','action_required','awaiting_funds') AND clearance_due_at<=now()
+      AND NOT EXISTS(SELECT 1 FROM public.exchange_request_tasks t WHERE t.request_id=exchange_requests.id AND t.dedupe_key=exchange_requests.id||':funding_clearance_review'))
+       OR (status='ready' AND handling_due_at<=now()
+      AND NOT EXISTS(SELECT 1 FROM public.exchange_request_tasks t WHERE t.request_id=exchange_requests.id AND t.dedupe_key=exchange_requests.id||':handling_overdue'))
+    ORDER BY created_at LIMIT 200 FOR UPDATE LOOP
     IF r.status='ready' THEN
       INSERT INTO public.exchange_request_tasks(request_id,kind,description,dedupe_key)
       VALUES(r.id,'handling_overdue','Handling deadline passed. Duty manager must review the queue.',r.id||':handling_overdue') ON CONFLICT(dedupe_key) DO NOTHING;
@@ -590,6 +533,16 @@ BEGIN
         UPDATE public.exchange_requests SET version=version+1,updated_at=now() WHERE id=r.id;
         PERFORM public.emit_exchange_request_event(r.id,'handling_overdue',NULL,NULL);
       END IF;
+    ELSIF r.evidence_submitted_at IS NOT NULL OR r.funding_received>0
+      OR EXISTS(SELECT 1 FROM public.exchange_request_payments WHERE request_id=r.id)
+      OR EXISTS(SELECT 1 FROM public.exchange_request_receipts WHERE request_id=r.id) THEN
+      -- Receipt evidence is not cleared cash. Do not expire or reprice an
+      -- in-flight payment. The fixed allowance is never extended by uploads.
+      INSERT INTO public.exchange_request_tasks(request_id,kind,description,dedupe_key)
+      VALUES(r.id,'funding_clearance_review','Banking allowance elapsed. Reconcile the submitted evidence and bank balance before taking further action.',r.id||':funding_clearance_review') ON CONFLICT(dedupe_key) DO NOTHING;
+      IF NOT FOUND THEN CONTINUE; END IF;
+      UPDATE public.exchange_requests SET version=version+1,updated_at=now() WHERE id=r.id;
+      PERFORM public.emit_exchange_request_event(r.id,'funding_clearance_review',NULL,NULL);
     ELSE
       UPDATE public.exchange_requests SET status='expired',version=version+1,updated_at=now(),action_required=NULL WHERE id=r.id;
       UPDATE public.transactions SET status='rejected' WHERE id=r.transaction_id AND status='pending';
@@ -602,58 +555,73 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.guard_exchange_request_transaction() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
-DECLARE v_tx uuid;
+CREATE FUNCTION public.attach_exchange_request_receipt(
+  p_actor_id uuid,p_request_id uuid,p_receipt_id uuid,p_path text,p_original_name text,
+  p_content_type text,p_size_bytes integer,p_sha256 text,p_command_key uuid
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
+DECLARE r public.exchange_requests%ROWTYPE; receipt public.exchange_request_receipts%ROWTYPE;
+  command public.exchange_request_commands%ROWTYPE; v_fingerprint text; v_result jsonb;
 BEGIN
-  IF TG_TABLE_NAME='transactions' THEN v_tx:=OLD.id;
-  ELSE v_tx:=CASE WHEN TG_OP='DELETE' THEN OLD.transaction_id ELSE NEW.transaction_id END; END IF;
-  IF current_setting('app.exchange_request_write',true) IS DISTINCT FROM 'on'
-    AND (EXISTS(SELECT 1 FROM public.exchange_requests WHERE transaction_id=v_tx)
-      OR (TG_TABLE_NAME='ledger' AND TG_OP='UPDATE' AND EXISTS(SELECT 1 FROM public.exchange_requests WHERE transaction_id=OLD.transaction_id))) THEN
-    RAISE EXCEPTION 'REQUEST_MANAGED_TRANSACTION: Use the request workflow for this linked transaction' USING ERRCODE='42501';
+  IF p_actor_id IS NULL OR p_request_id IS NULL OR p_receipt_id IS NULL OR p_command_key IS NULL
+    OR p_path IS NULL OR p_original_name IS NULL OR p_content_type IS NULL OR p_size_bytes IS NULL OR p_sha256 IS NULL
+    OR p_size_bytes NOT BETWEEN 1 AND 5242880 OR p_sha256 !~ '^[0-9a-f]{64}$'
+    OR p_content_type NOT IN ('application/pdf','image/jpeg','image/png')
+    OR char_length(p_original_name) NOT BETWEEN 1 AND 180 OR p_original_name ~ '[[:cntrl:]/\\]'
+    OR p_path !~ ('^'||p_actor_id||'/'||p_request_id||'/'||p_receipt_id||'\.(pdf|jpg|jpeg|png)$') THEN
+    RAISE EXCEPTION 'Invalid receipt metadata' USING ERRCODE='22023'; END IF;
+  PERFORM 1 FROM public.exchange_request_settings WHERE id FOR UPDATE;
+  SELECT * INTO r FROM public.exchange_requests WHERE id=p_request_id FOR UPDATE;
+  IF NOT FOUND OR r.user_id<>p_actor_id THEN RAISE EXCEPTION 'Request unavailable' USING ERRCODE='42501'; END IF;
+  v_fingerprint:=md5(jsonb_build_object('actor',p_actor_id,'action','attach_receipt','sha256',p_sha256,
+    'content_type',p_content_type,'size_bytes',p_size_bytes)::text);
+  SELECT * INTO command FROM public.exchange_request_commands WHERE request_id=r.id AND command_key=p_command_key;
+  IF FOUND THEN
+    IF command.fingerprint<>v_fingerprint THEN RAISE EXCEPTION 'IDEMPOTENCY_CONFLICT: Command key reused'; END IF;
+    RETURN command.result;
   END IF;
-  IF TG_OP='DELETE' THEN RETURN OLD; END IF; RETURN NEW;
+  IF r.status NOT IN ('submitted','awaiting_funds','action_required','under_review')
+    OR r.funding_status IN ('confirmed','refund_pending','refunded')
+    OR EXISTS(SELECT 1 FROM public.exchange_request_refunds WHERE request_id=r.id) THEN
+    RAISE EXCEPTION 'This request no longer accepts payment evidence'; END IF;
+  SELECT * INTO receipt FROM public.exchange_request_receipts WHERE request_id=r.id AND sha256=p_sha256;
+  IF NOT FOUND THEN
+    IF (SELECT count(*) FROM public.exchange_request_receipts WHERE request_id=r.id)>=10 THEN
+      RAISE EXCEPTION 'Receipt upload limit reached'; END IF;
+    IF NOT EXISTS(SELECT 1 FROM storage.objects WHERE bucket_id='exchange-request-receipts' AND name=p_path) THEN
+      RAISE EXCEPTION 'Uploaded receipt object unavailable'; END IF;
+    INSERT INTO public.exchange_request_receipts(id,request_id,storage_path,original_name,content_type,size_bytes,sha256,uploaded_by)
+    VALUES(p_receipt_id,r.id,p_path,p_original_name,p_content_type,p_size_bytes,p_sha256,p_actor_id) RETURNING * INTO receipt;
+    UPDATE public.exchange_requests SET evidence_submitted_at=COALESCE(evidence_submitted_at,now()),
+      version=version+1,updated_at=now() WHERE id=r.id RETURNING * INTO r;
+    INSERT INTO public.exchange_request_tasks(request_id,kind,description,dedupe_key)
+    VALUES(r.id,'payment_evidence','Bank receipt uploaded. Check actual cleared funds before confirming payment.',r.id||':receipt:'||receipt.id);
+    PERFORM public.emit_exchange_request_event(r.id,'receipt_uploaded',p_actor_id,
+      'Bank receipt received. We will confirm payment after the funds clear; uploading a receipt does not start the priority target.');
+    INSERT INTO public.audit_logs(actor_id,actor_email,action,target_type,target_id,new_value)
+    VALUES(p_actor_id,(SELECT email FROM auth.users WHERE id=p_actor_id),'REQUEST_RECEIPT_UPLOADED','exchange_requests',r.id::text,
+      jsonb_build_object('receipt_id',receipt.id,'sha256',receipt.sha256,'size_bytes',receipt.size_bytes));
+  END IF;
+  v_result:=to_jsonb(receipt)||jsonb_build_object('request_version',r.version);
+  INSERT INTO public.exchange_request_commands(request_id,command_key,actor_id,fingerprint,result)
+  VALUES(r.id,p_command_key,p_actor_id,v_fingerprint,v_result);
+  RETURN v_result;
 END;
 $$;
-CREATE TRIGGER guard_exchange_request_transaction BEFORE UPDATE OR DELETE ON public.transactions
-FOR EACH ROW EXECUTE FUNCTION public.guard_exchange_request_transaction();
-CREATE TRIGGER guard_exchange_request_ledger BEFORE INSERT OR UPDATE OR DELETE ON public.ledger
-FOR EACH ROW EXECUTE FUNCTION public.guard_exchange_request_transaction();
+REVOKE ALL ON FUNCTION public.attach_exchange_request_receipt(uuid,uuid,uuid,text,text,text,integer,text,uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.attach_exchange_request_receipt(uuid,uuid,uuid,text,text,text,integer,text,uuid) TO service_role;
 
-CREATE FUNCTION public.guard_exchange_request_immutable() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
-BEGIN RAISE EXCEPTION 'Request evidence is immutable; use an audited correction' USING ERRCODE='42501'; END;
+CREATE FUNCTION public.guard_exchange_request_snapshot() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,public AS $$
+BEGIN
+  IF ROW(NEW.transaction_id,NEW.user_id,NEW.quote_id,NEW.idempotency_key,NEW.reference_code,NEW.quote,NEW.service_tier,NEW.payment_instructions)
+    IS DISTINCT FROM ROW(OLD.transaction_id,OLD.user_id,OLD.quote_id,OLD.idempotency_key,OLD.reference_code,OLD.quote,OLD.service_tier,OLD.payment_instructions) THEN
+    RAISE EXCEPTION 'Accepted request quote and payment instructions are immutable' USING ERRCODE='42501'; END IF;
+  RETURN NEW;
+END;
 $$;
-CREATE TRIGGER guard_request_event_immutable BEFORE UPDATE OR DELETE ON public.exchange_request_events
-FOR EACH ROW EXECUTE FUNCTION public.guard_exchange_request_immutable();
-CREATE TRIGGER guard_request_payment_immutable BEFORE UPDATE OR DELETE ON public.exchange_request_payments
-FOR EACH ROW EXECUTE FUNCTION public.guard_exchange_request_immutable();
-CREATE TRIGGER guard_request_fee_immutable BEFORE UPDATE OR DELETE ON public.exchange_request_fee_entries
-FOR EACH ROW EXECUTE FUNCTION public.guard_exchange_request_immutable();
-CREATE TRIGGER guard_request_quote_immutable BEFORE UPDATE OR DELETE ON public.exchange_request_quotes
-FOR EACH ROW EXECUTE FUNCTION public.guard_exchange_request_immutable();
+CREATE TRIGGER guard_exchange_request_snapshot BEFORE UPDATE ON public.exchange_requests
+FOR EACH ROW EXECUTE FUNCTION public.guard_exchange_request_snapshot();
+REVOKE ALL ON FUNCTION public.guard_exchange_request_snapshot() FROM PUBLIC,anon,authenticated;
 
--- Public clients cannot read staff evidence or invoke privileged RPCs directly.
--- Server actions authenticate/authorise each read; commands recheck actors here.
-DO $$ DECLARE v_name text; v_function record; BEGIN
-  FOREACH v_name IN ARRAY ARRAY['exchange_request_settings','exchange_request_quotes','exchange_requests','exchange_request_events',
-    'exchange_request_commands','exchange_request_tasks','exchange_request_payments','exchange_request_executions','exchange_request_refunds',
-    'exchange_request_fee_entries','exchange_request_notification_deliveries'] LOOP
-    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY',v_name);
-    EXECUTE format('REVOKE ALL ON public.%I FROM PUBLIC,anon,authenticated',v_name);
-    EXECUTE format('GRANT ALL ON public.%I TO service_role',v_name);
-  END LOOP;
-  FOR v_function IN SELECT oid::regprocedure AS signature FROM pg_proc WHERE pronamespace='public'::regnamespace
-    AND proname IN ('exchange_request_is_admin','exchange_request_business_due','emit_exchange_request_event','save_exchange_request_settings',
-      'submit_exchange_request','transition_exchange_request','sweep_exchange_request_deadlines','guard_exchange_request_transaction','guard_exchange_request_immutable') LOOP
-    EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC,anon,authenticated',v_function.signature);
-  END LOOP;
-END $$;
-GRANT EXECUTE ON FUNCTION public.save_exchange_request_settings(uuid,integer,jsonb) TO service_role;
-GRANT EXECUTE ON FUNCTION public.submit_exchange_request(uuid,uuid,uuid) TO service_role;
-GRANT EXECUTE ON FUNCTION public.transition_exchange_request(uuid,uuid,integer,uuid,text,jsonb) TO service_role;
-GRANT EXECUTE ON FUNCTION public.sweep_exchange_request_deadlines() TO service_role;
-GRANT EXECUTE ON FUNCTION public.exchange_request_business_due(timestamptz,integer,jsonb) TO service_role;
 NOTIFY pgrst,'reload schema';
 COMMIT;

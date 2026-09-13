@@ -3,6 +3,15 @@ CREATE ROLE anon;
 CREATE ROLE authenticated;
 CREATE ROLE service_role BYPASSRLS;
 CREATE SCHEMA auth;
+CREATE SCHEMA storage;
+CREATE TABLE storage.buckets (
+  id text PRIMARY KEY, name text NOT NULL, public boolean DEFAULT false,
+  file_size_limit bigint, allowed_mime_types text[]
+);
+CREATE TABLE storage.objects (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), bucket_id text REFERENCES storage.buckets(id),
+  name text NOT NULL, metadata jsonb, UNIQUE(bucket_id,name)
+);
 CREATE TABLE auth.users (
   id uuid PRIMARY KEY, email text NOT NULL,
   email_confirmed_at timestamptz DEFAULT now(), raw_app_meta_data jsonb NOT NULL DEFAULT '{}'
@@ -10,9 +19,14 @@ CREATE TABLE auth.users (
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
   SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid;
 $$;
+CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$
+  SELECT jsonb_build_object('app_metadata',COALESCE((SELECT raw_app_meta_data FROM auth.users WHERE id=auth.uid()),'{}'::jsonb));
+$$;
 CREATE TABLE profiles (
-  id uuid PRIMARY KEY REFERENCES auth.users(id), email text, first_name text, last_name text,
-  kyc_status text NOT NULL DEFAULT 'pending', loyalty_discount_toman numeric NOT NULL DEFAULT 0
+  id uuid PRIMARY KEY REFERENCES auth.users(id), email text, first_name text, last_name text, customer_code text,
+  kyc_status text NOT NULL DEFAULT 'pending', loyalty_discount_toman numeric NOT NULL DEFAULT 0,
+  compliance_customer_flagged boolean NOT NULL DEFAULT false,
+  compliance_aml_flag text NOT NULL DEFAULT 'none', compliance_dvs_status text NOT NULL DEFAULT 'not_started'
 );
 CREATE TABLE recipients (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES profiles(id),
@@ -42,7 +56,17 @@ CREATE TABLE promo_codes (
   expires_at timestamptz
 );
 CREATE TABLE bank_accounts (
-  id uuid PRIMARY KEY, account_name text NOT NULL, currency text NOT NULL CHECK(currency IN ('AUD','IRT'))
+  id uuid PRIMARY KEY, account_name text NOT NULL, currency text NOT NULL CHECK(currency IN ('AUD','IRT')),
+  is_active boolean NOT NULL DEFAULT true, account_type text NOT NULL DEFAULT 'bank'
+);
+CREATE TABLE expenses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), date date NOT NULL, title text NOT NULL, category text NOT NULL,
+  currency text NOT NULL, amount numeric NOT NULL, exchange_rate numeric, payer_account_id uuid REFERENCES bank_accounts(id),
+  status text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE owner_loans (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), date date NOT NULL, loan_type text NOT NULL, currency text NOT NULL,
+  amount numeric NOT NULL, exchange_rate numeric, account_id uuid REFERENCES bank_accounts(id), created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE ledger (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), transaction_id uuid REFERENCES transactions(id),
@@ -50,7 +74,7 @@ CREATE TABLE ledger (
   entry_type text NOT NULL DEFAULT 'trade', exchange_rate numeric, amount_aud numeric NOT NULL,
   amount_toman numeric NOT NULL, sender text, recipient text, fee_aud numeric DEFAULT 0,
   payer_account_id uuid REFERENCES bank_accounts(id), receiver_account_id uuid REFERENCES bank_accounts(id),
-  created_by uuid REFERENCES auth.users(id)
+  created_by uuid REFERENCES auth.users(id), created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE bank_transfer_fee_accruals (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), transaction_id uuid NOT NULL UNIQUE REFERENCES transactions(id),

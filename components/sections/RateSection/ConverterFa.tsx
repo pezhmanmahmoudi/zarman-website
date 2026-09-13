@@ -7,7 +7,6 @@ import Button from "@/components/ui/Button/Button";
 import { ArrowLeft, ArrowDownCircle, Info, UserCircle, AlertTriangle } from "lucide-react";
 import { useRates } from "@/context/RateContext";
 import { useFinanceConfig } from "@/context/FinanceConfigContext";
-import { buildWhatsAppUrl } from "@/lib/constants/contact";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import { calcAppliedFee } from "@/lib/pricing";
 
@@ -97,32 +96,14 @@ export default function ConverterFa() {
     setAmountText(isEn ? formatted : toFaDigits(formatted).replace(/,/g, "،").replace(/\./g, "٫"));
   };
 
-  const handleWhatsApp = () => {
-    if (safeRate === 0) return;
-    const rateFa = formatNumberFa(safeRate, true);
-    let text = "";
-    if (isEn) {
-      if (from === "AUD") {
-        text = `Hi, I'd like to convert ${amountText} AUD at rate ${safeRate.toLocaleString("en-AU")} Toman/AUD. The website shows ${resultText} Toman. Please guide me.`;
-      } else {
-        text = `Hi, I'd like to convert ${amountText} Toman at rate ${safeRate.toLocaleString("en-AU")} Toman/AUD. The website shows ${resultText} AUD. Please guide me.`;
-      }
-    } else {
-      if (from === "AUD") {
-        text = `سلام، من می‌خواهم ${amountText} دلار استرالیا را با نرخ ${rateFa} تبدیل کنم که در وب‌سایت، مبلغ ${resultText} تومان محاسبه شده است. لطفا مرا راهنمایی کنید.`;
-      } else {
-        text = `سلام، من می‌خواهم ${amountText} تومان را با نرخ ${rateFa} تبدیل کنم که در وب‌سایت، مبلغ ${resultText} دلار استرالیا محاسبه شده است. لطفا مرا راهنمایی کنید.`;
-      }
-    }
-
-    const finalUrl = buildWhatsAppUrl(text);
-
-    // 👇 بررسی هوشمند برای جلوگیری از باز شدن تب خالی در موبایل
-    if (finalUrl.startsWith('http')) {
-      window.open(finalUrl, '_blank');
-    } else {
-      window.location.assign(finalUrl);
-    }
+  const continueOnline = () => {
+    const amountAud = from === "AUD" ? amountNum : finalValue;
+    if (safeRate <= 0 || amountAud <= 0) return;
+    const query = new URLSearchParams({
+      requestAmountAud: (Math.round(amountAud * 100) / 100).toFixed(2),
+      requestDirection: from === "AUD" ? "sell_aud" : "buy_aud",
+    });
+    window.location.assign(`/${isEn ? "en" : "fa"}/dashboard?${query}`);
   };
 
   return (
@@ -239,7 +220,7 @@ export default function ConverterFa() {
       </div>
 
       <div className={styles.cta}>
-        <Button variant="primary" fullWidth rightIcon={<ArrowLeft />} onClick={handleWhatsApp} disabled={safeRate === 0}>
+        <Button variant="primary" fullWidth rightIcon={<ArrowLeft />} onClick={continueOnline} disabled={safeRate <= 0 || amountNum <= 0 || finalValue <= 0}>
           {isEn ? "Send Request via WhatsApp" : "ارسال درخواست در واتس‌اپ"}
         </Button>
       </div>

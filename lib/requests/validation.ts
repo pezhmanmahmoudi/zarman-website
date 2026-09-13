@@ -2,8 +2,10 @@ import type { PublicRequestSettings, QuoteInput, RequestMutationInput, RequestSe
 
 export const DEFAULT_REQUEST_SETTINGS: RequestSettings = {
   enabled: false, priority_enabled: false, priority_fee_aud: 0, priority_capacity: 0,
-  standard_minutes: 240, priority_minutes: 30, quote_minutes: 10, funding_minutes: 60,
-  max_amount_aud: 1_000_000, timezone: "Australia/Sydney", business_days: [1, 2, 3, 4, 5],
+  standard_minutes: 240, priority_minutes: 30, quote_minutes: 10, funding_minutes: 120,
+  australian_clearance_minutes: 1440,
+  iran_banking_notice: "Iranian payouts follow SATNA/PAYA banking cycles, bank operating hours and holidays. Processing is not confirmation of settlement.",
+  max_amount_aud: 50_000, timezone: "Australia/Sydney", business_days: [1, 2, 3, 4, 5],
   opening_hour: 9, closing_hour: 17, holidays: [], management_emails: [],
   payment_instructions_aud: "", payment_instructions_irt: "", priority_terms: "", priority_terms_fa: "",
 };
@@ -20,6 +22,8 @@ export function publicRequestSettings(settings: RequestSettings): PublicRequestS
     priority_fee_aud: settings.priority_fee_aud, priority_capacity: settings.priority_capacity,
     standard_minutes: settings.standard_minutes, priority_minutes: settings.priority_minutes,
     quote_minutes: settings.quote_minutes, funding_minutes: settings.funding_minutes,
+    australian_clearance_minutes: settings.australian_clearance_minutes,
+    iran_banking_notice: settings.iran_banking_notice,
     max_amount_aud: settings.max_amount_aud, timezone: settings.timezone,
     business_days: settings.business_days, opening_hour: settings.opening_hour,
     closing_hour: settings.closing_hour, holidays: settings.holidays,
@@ -52,14 +56,15 @@ export function quoteInputError(input: QuoteInput, settings: RequestSettings): s
 export function settingsInputError(input: RequestSettings): string | null {
   if (!input || typeof input !== "object" || typeof input.enabled !== "boolean" || typeof input.priority_enabled !== "boolean") return "Invalid service settings.";
   for (const [key, minimum, maximum] of [
-    ["standard_minutes", 1, 10_080], ["priority_minutes", 1, 1_440], ["quote_minutes", 1, 60],
-    ["funding_minutes", 5, 10_080], ["priority_capacity", 0, 1_000], ["opening_hour", 0, 23], ["closing_hour", 1, 24],
+    ["standard_minutes", 1, 10_080], ["priority_minutes", 1, 10_080], ["quote_minutes", 1, 60],
+    ["funding_minutes", 1, 10_080], ["australian_clearance_minutes", 1440, 10_080], ["priority_capacity", 0, 100], ["opening_hour", 0, 23], ["closing_hour", 1, 24],
   ] as const) {
     if (!Number.isInteger(input[key]) || input[key] < minimum || input[key] > maximum) return `Invalid value for ${key.replaceAll("_", " ")}.`;
   }
   if (input.closing_hour <= input.opening_hour || input.timezone !== "Australia/Sydney") return "Choose valid Sydney business hours.";
-  if (!isMoney(input.max_amount_aud, 10_000_000)) return "Choose a positive maximum AUD amount up to 10,000,000.";
-  if (typeof input.priority_fee_aud !== "number" || (input.priority_fee_aud !== 0 && !isMoney(input.priority_fee_aud, 10_000))) return "Enter a valid priority fee.";
+  if (!isMoney(input.max_amount_aud, 1_000_000) || input.max_amount_aud < 1) return "Choose a maximum AUD amount between 1 and 1,000,000.";
+  if (typeof input.priority_fee_aud !== "number" || (input.priority_fee_aud !== 0 && !isMoney(input.priority_fee_aud, 1_000))) return "Enter a valid priority fee up to AUD 1,000.";
+  if (!boundedText(input.iran_banking_notice, 2000)) return "Enter the Iranian banking-cycle notice (up to 2,000 characters).";
   if (!Array.isArray(input.business_days) || !input.business_days.length || input.business_days.length > 7
       || new Set(input.business_days).size !== input.business_days.length || input.business_days.some(day => !Number.isInteger(day) || day < 0 || day > 6)) return "Choose at least one business day.";
   if (!Array.isArray(input.holidays) || input.holidays.length > 366 || input.holidays.some(day => {
@@ -80,7 +85,7 @@ export function settingsInputError(input: RequestSettings): string | null {
 export function mutationInputError(input: RequestMutationInput, admin: boolean): string | null {
   if (!input || !isUuid(input.requestId) || !isUuid(input.commandKey) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) return "Invalid request. Refresh the page and try again.";
   const allowed = admin
-    ? ["review", "request_info", "await_funds", "confirm_funds", "start_processing", "record_uncertain_payout", "complete", "cancel", "reject", "confirm_refund"]
+    ? ["review", "request_info", "await_funds", "confirm_funds", "resume_funded_request", "start_processing", "record_uncertain_payout", "complete", "cancel", "reject", "confirm_refund"]
     : ["respond", "cancel", "payment_evidence"];
   if (!allowed.includes(input.action)) return "This action is not available.";
   const payload = input.payload || {};
@@ -90,9 +95,12 @@ export function mutationInputError(input: RequestMutationInput, admin: boolean):
   if (["confirm_funds", "payment_evidence"].includes(input.action) && !boundedText(payload.payment_reference, 200)) return "Enter the payment reference.";
   if (input.action === "confirm_funds" && (!isMoney(payload.received_amount) || !["AUD", "IRT"].includes(payload.received_currency || "")
       || (payload.received_currency === "IRT" && !Number.isInteger(payload.received_amount)))) return "Enter the reconciled amount and currency (whole Toman).";
+  if (input.action === "confirm_funds" && !isUuid(payload.receiver_account_id)) return "Choose the account where the cleared funds were received.";
   if (input.action === "complete" && (!boundedText(payload.settlement_reference, 200) || !isUuid(payload.payer_account_id)
       || !isUuid(payload.receiver_account_id) || payload.payer_account_id === payload.receiver_account_id)) return "Enter the settlement reference and distinct payer and receiver accounts.";
   if (payload.transfer_method && !["free", "pol", "paya", "satna"].includes(payload.transfer_method)) return "Choose a valid bank transfer method.";
   if (input.action === "confirm_refund" && (!boundedText(payload.refund_reference, 200) || !["priority", "principal"].includes(payload.refund_kind || ""))) return "Enter the refund reference and refund kind.";
+  if (input.action === "confirm_refund" && !isUuid(payload.payer_account_id)) return "Choose the account used to return the refund.";
+  if (input.action === "resume_funded_request" && payload.honour_quote !== true) return "Confirm finance approval to honour the accepted quote before releasing the received funds.";
   return null;
 }

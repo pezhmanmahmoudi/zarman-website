@@ -1,15 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { getFinanceConfig } from "@/lib/finance-config";
-import {
-  applyPromoCode,
-  calcAppliedFee,
-  calcEquivalentTomanForRequestType,
-  calcExecutionRateFromSettlementForRequestType,
-  calcLoyaltyDiscount,
-  toCompanyTradeType,
-} from "@/lib/pricing";
+import { applyPromoCode } from "@/lib/pricing";
 import type { PromoCodeData } from "@/lib/pricing";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import type { Recipient } from "@/app/[locale]/dashboard/dashboard.types";
@@ -18,21 +10,6 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-/** Generate a unique ZE + 5-digit reference code, retrying on the rare collision. */
-async function generateReferenceCode(): Promise<string> {
-  for (let i = 0; i < 10; i++) {
-    const code = "ZE" + Math.floor(Math.random() * 100000).toString().padStart(5, "0");
-    const { data } = await supabaseAdmin
-      .from("transactions")
-      .select("id")
-      .eq("reference_code", code)
-      .maybeSingle();
-    if (!data) return code;
-  }
-  // Extremely unlikely fallback: use last 5 digits of current timestamp
-  return "ZE" + Date.now().toString().slice(-5);
-}
 
 async function getAuthenticatedUserId() {
   const supabaseServer = await createSupabaseServerActionClient();
@@ -45,222 +22,11 @@ async function getAuthenticatedUserId() {
   return data.user.id;
 }
 
-export async function processTransactionSecurely({
-  rawAmount,
-  txType,
-  sourceOfFunds,
-  reasonForTransfer,
-  recipientId,
-  promoCode,
-  paymentLink,
-  agreedEquivalentToman,
-}: {
-  rawAmount: number;
-  txType: "buy_aud" | "sell_aud";
-  sourceOfFunds: string;
-  reasonForTransfer: string;
-  recipientId?: string | null;
-  promoCode?: string | null;
-  paymentLink?: string | null;
-  /**
-   * The Toman amount shown to the customer before submit (loyalty + promo applied).
-   * Stored as equivalent_toman when within ±15% of server calculation.
-   * This prevents discrepancies when rates_history spread changes between page
-   * load and form submission.
-   */
-  agreedEquivalentToman?: number | null;
-}) {
-  if (rawAmount <= 0) return { error: "اطلاعات نامعتبر است." };
-  if (!sourceOfFunds) return { error: "لطفاً منبع وجه را انتخاب کنید." };
-  if (!reasonForTransfer) return { error: "لطفاً دلیل انتقال را انتخاب کنید." };
-
-  try {
-    const authenticatedUserId = await getAuthenticatedUserId();
-
-    // ۱. دریافت آخرین نرخ
-    const { data: rateData, error: rateError } = await supabaseAdmin
-      .from("rates_history")
-      .select("buy_aud, sell_aud")
-      .order("date", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (rateError || !rateData) {
-      return { error: "دریافت نرخ جهانی با مشکل مواجه شد." };
-    }
-
-    const spread = Math.abs(rateData.sell_aud - rateData.buy_aud);
-
-    // ۲. بررسی سوابق و دریافت تنظیمات مالی (موازی)
-    const [userTxsResult, financeConfig] = await Promise.all([
-      supabaseAdmin
-        .from("transactions")
-        .select("amount_aud")
-        .eq("user_id", authenticatedUserId)
-        .eq("status", "approved"),
-      getFinanceConfig(),
-    ]);
-    if (userTxsResult.error) {
-      return { error: "دریافت سوابق تراکنش با مشکل مواجه شد." };
-    }
-
-    const approvedVolume =
-      userTxsResult.data?.reduce((sum, tx) => sum + Number(tx.amount_aud || 0), 0) || 0;
-
-    // ۳. محاسبات وفاداری
-    const loyaltyBonus = calcLoyaltyDiscount(approvedVolume, spread, financeConfig);
-    const baseRate = txType === "buy_aud" ? rateData.sell_aud : rateData.buy_aud;
-    const tailoredRate = txType === "buy_aud" ? baseRate - loyaltyBonus : baseRate + loyaltyBonus;
-    const appliedFee = calcAppliedFee(rawAmount, financeConfig);
-
-    // ۴. اعتبارسنجی کد تخفیف — قبل از محاسبهٔ معادل تومان
-    // percentage: نرخ بهتر به کاربر داده می‌شود — buy_aud → sell_rate کاهش | sell_aud → buy_rate افزایش
-    // fixed:   مبلغ AUD کاهش می‌یابد، نرخ ثابت می‌ماند
-    let discount_amount = 0;
-    let final_amount = rawAmount;
-    let resolvedPromoCode: string | null = null;
-    let promoAdjustedRate = tailoredRate;
-
-    if (promoCode && promoCode.trim()) {
-      const trimmedCode = promoCode.trim().toUpperCase();
-      const { data: promoRow, error: promoError } = await supabaseAdmin
-        .from("promo_codes")
-        .select("code, discount_type, discount_value, max_uses, used_count, active, expires_at")
-        .eq("code", trimmedCode)
-        .single();
-
-      if (promoError || !promoRow) {
-        return { error: "کد تخفیف معتبر نیست." };
-      }
-
-      const promoResult = applyPromoCode(rawAmount, tailoredRate, txType, promoRow as PromoCodeData);
-      if (!promoResult.valid) {
-        return { error: promoResult.error };
-      }
-
-      promoAdjustedRate = promoResult.effectiveRate;
-      discount_amount = promoResult.discount_amount;
-      final_amount = promoResult.final_amount;
-      resolvedPromoCode = trimmedCode;
-
-      // افزایش شمارنده استفاده از کد
-      await supabaseAdmin
-        .from("promo_codes")
-        .update({ used_count: promoRow.used_count + 1 })
-        .eq("code", trimmedCode);
-    }
-
-    // For percentage promos: final_amount = rawAmount (AUD unchanged, rate improved).
-    // For fixed promos: final_amount < rawAmount (AUD reduced, rate unchanged).
-    const serverEquivalentToman = calcEquivalentTomanForRequestType(
-      final_amount,
-      promoAdjustedRate,
-      appliedFee,
-      txType,
-    );
-
-    // Use client-agreed amount when it is within ±15 % of server's calculation.
-    // This preserves the rate the customer was shown (which includes loyalty)
-    // even when the rates_history spread has changed since the page loaded.
-    const clientToman = Number(agreedEquivalentToman);
-    const useClientToman =
-      Number.isFinite(clientToman) &&
-      clientToman > 0 &&
-      serverEquivalentToman > 0 &&
-      Math.abs(clientToman - serverEquivalentToman) / serverEquivalentToman < 0.15;
-
-    const equivalentToman = useClientToman ? clientToman : serverEquivalentToman;
-    const appliedRate = calcExecutionRateFromSettlementForRequestType(
-      final_amount,
-      equivalentToman,
-      appliedFee,
-      txType,
-    ) || promoAdjustedRate;
-    const loyalty_discount_toman = loyaltyBonus > 0 ? Math.round(final_amount * loyaltyBonus) : 0;
-
-    // ۵. اعتبارسنجی گیرنده (اگر انتخاب شده بود)
-    // __edu_exam__ یک گیرنده مجازی است و نیاز به جستجو در دیتابیس ندارد
-    const resolvedRecipientId = (recipientId === "__edu_exam__") ? null : recipientId;
-    if (resolvedRecipientId) {
-      const { data: recipientRow, error: recipientError } = await supabaseAdmin
-        .from("recipients")
-        .select("id, user_id")
-        .eq("id", resolvedRecipientId)
-        .single();
-
-      if (recipientError || !recipientRow) {
-        return { error: "گیرنده انتخاب‌شده معتبر نیست." };
-      }
-      if (recipientRow.user_id !== authenticatedUserId) {
-        return { error: "دسترسی به این گیرنده مجاز نیست." };
-      }
-    }
-
-    // ۶. ثبت در دیتابیس
-    const referenceCode = await generateReferenceCode();
-    // Convert customer perspective to company perspective (matching admin.actions.ts behavior)
-    const companyTradeType = toCompanyTradeType(txType);
-
-    const { error: insertError } = await supabaseAdmin
-      .from("transactions")
-      .insert([{
-        user_id: authenticatedUserId,
-        type: companyTradeType,
-        amount_aud: rawAmount,
-        equivalent_toman: equivalentToman,
-        applied_rate: appliedRate,
-        status: "pending",
-        source_of_funds: sourceOfFunds,
-        reason_for_transfer: reasonForTransfer,
-        recipient_id: resolvedRecipientId ?? null,
-        promo_code: resolvedPromoCode,
-        discount_amount,
-        final_amount,
-        loyalty_discount: loyalty_discount_toman,
-        reference_code: referenceCode,
-        payment_link: paymentLink?.trim() || null,
-      }]);
-
-    if (insertError) return { error: "خطا در ثبت تراکنش." };
-
-    // Accumulate loyalty savings in the user's profile total
-    if (loyalty_discount_toman > 0) {
-      const { data: profileRow } = await supabaseAdmin
-        .from("profiles")
-        .select("loyalty_discount_toman")
-        .eq("id", authenticatedUserId)
-        .single();
-      const currentTotal = Number(profileRow?.loyalty_discount_toman ?? 0);
-      await supabaseAdmin
-        .from("profiles")
-        .update({ loyalty_discount_toman: currentTotal + loyalty_discount_toman })
-        .eq("id", authenticatedUserId);
-    }
-
-    return {
-      success: true,
-      data: {
-        baseRate,
-        tailoredRate,
-        promoAdjustedRate,
-        loyaltyBonus,
-        equivalentToman,
-        appliedFee,
-        rawAmount,
-        discount_amount,
-        final_amount,
-        promo_code: resolvedPromoCode,
-        loyalty_discount: loyalty_discount_toman,
-      }
-    };
-
-  } catch (caughtError) {
-    if (caughtError instanceof Error && caughtError.message === "Unauthorized request") {
-      return { error: "Unauthorized request" };
-    }
-    console.error("Server Error:", caughtError);
-    return { error: "خطای سیستمی رخ داد." };
-  }
+/** Retained for stale browser bundles. New requests must explicitly accept a
+ * server-issued quote; the former WhatsApp action cannot bypass that workflow. */
+export async function processTransactionSecurely(input?: unknown) {
+  void input;
+  return { error: "Please refresh the dashboard and review a new online quote before submitting." };
 }
 
 export async function deleteTransactionSecurely(transactionId: number | string) {
@@ -272,7 +38,9 @@ export async function deleteTransactionSecurely(transactionId: number | string) 
       .from("transactions")
       .delete()
       .eq("id", transactionId)
-      .eq("user_id", authenticatedUserId);
+      .eq("user_id", authenticatedUserId)
+      .eq("status", "pending")
+      .is("approved_at", null);
     if (error) return { error: "عملیات حذف ناموفق بود." };
 
     return { success: true };

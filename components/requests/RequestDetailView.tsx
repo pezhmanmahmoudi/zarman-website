@@ -2,16 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, RefreshCw } from "lucide-react";
 import { getAdminRequest, getMyRequest, getRequestBankAccounts, mutateAdminRequest, mutateMyRequest } from "@/app/actions/request.actions";
 import type { ExchangeRequest, RequestCommand, RequestDetail, RequestMutationInput } from "@/lib/requests/types";
 import { requestDate, requestLabel, requestMoney, isRequestTerminal, type RequestLocale } from "./request-labels";
 import { RequestQuoteFacts } from "./RequestQuoteFacts";
+import { RequestProgress } from "./RequestProgress";
+import { RequestPaymentInstructions } from "./RequestPaymentInstructions";
+import { RequestReceiptUpload } from "./RequestReceiptUpload";
 import styles from "@/styles/requests/Requests.module.css";
 
 const commandLabels: Record<RequestCommand, [string, string]> = {
   review: ["Start review", "شروع بررسی"], request_info: ["Request information", "درخواست اطلاعات"], respond: ["Send response", "ارسال پاسخ"],
-  await_funds: ["Issue payment instructions", "صدور راهنمای واریز"], confirm_funds: ["Reconcile received funds", "تطبیق وجه دریافتی"],
+  await_funds: ["Issue payment instructions", "صدور راهنمای واریز"], confirm_funds: ["Confirm cleared funds", "تأیید وجه وصول‌شده"],
+  resume_funded_request: ["Release funded request at accepted quote", "ادامه درخواست تأمین‌شده با نرخ پذیرفته‌شده"],
   start_processing: ["Claim and begin processing", "پذیرش و شروع رسیدگی"], record_uncertain_payout: ["Place payout in reconciliation", "بررسی نتیجه نامشخص پرداخت"],
   complete: ["Confirm settlement and complete", "تأیید تسویه و تکمیل"], cancel: ["Cancel request", "لغو درخواست"], reject: ["Reject request", "رد درخواست"],
   confirm_refund: ["Confirm returned refund", "تأیید بازپرداخت"], payment_evidence: ["Submit payment reference", "ثبت اطلاعات واریز"],
@@ -19,11 +23,13 @@ const commandLabels: Record<RequestCommand, [string, string]> = {
 
 function allowedCommands(request: ExchangeRequest, admin: boolean): RequestCommand[] {
   const commands: RequestCommand[] = [];
+  const hasRefund = ["refund_pending", "refunded"].includes(request.funding_status) || ["refund_pending", "refunded"].includes(request.priority_fee_status);
   if (admin) {
-    if (["submitted", "action_required"].includes(request.status)) commands.push("review");
+    if (["submitted", "action_required", "awaiting_funds"].includes(request.status)) commands.push("review");
     if (["submitted", "under_review", "awaiting_funds", "action_required"].includes(request.status)) commands.push("request_info");
     if (["submitted", "under_review", "action_required"].includes(request.status)) commands.push("await_funds");
-    if (["awaiting_funds", "action_required"].includes(request.status)) commands.push("confirm_funds");
+    if (!hasRefund && request.funding_status !== "confirmed" && ["submitted", "under_review", "awaiting_funds", "action_required", "expired"].includes(request.status)) commands.push("confirm_funds");
+    if (!hasRefund && request.funding_status === "confirmed" && ["under_review", "action_required"].includes(request.status)) commands.push("resume_funded_request");
     if (request.status === "ready") commands.push("start_processing");
     if (request.status === "processing") commands.push("record_uncertain_payout");
     if (["processing", "reconciliation"].includes(request.status)) commands.push("complete");
@@ -53,6 +59,10 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
   const [settlementReference, setSettlementReference] = useState("");
   const [payerAccount, setPayerAccount] = useState("");
   const [receiverAccount, setReceiverAccount] = useState("");
+  const [fundingAccount, setFundingAccount] = useState("");
+  const [refundAccount, setRefundAccount] = useState("");
+  const [honourQuote, setHonourQuote] = useState(false);
+  const [transferMethod, setTransferMethod] = useState<"free" | "pol" | "paya" | "satna">("free");
   const [refundKind, setRefundKind] = useState<"priority" | "principal">("priority");
   const [refundReference, setRefundReference] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -92,9 +102,10 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
     const payload: NonNullable<RequestMutationInput["payload"]> = {};
     if (message.trim()) payload.message = message.trim();
     if (action === "payment_evidence" || action === "confirm_funds") payload.payment_reference = paymentReference.trim();
-    if (action === "confirm_funds") { payload.received_amount = Number(receivedAmount); payload.received_currency = receivedCurrency; }
-    if (action === "complete") { payload.settlement_reference = settlementReference.trim(); payload.payer_account_id = payerAccount; payload.receiver_account_id = receiverAccount; payload.transfer_method = "bank_transfer"; }
-    if (action === "confirm_refund") { payload.refund_kind = refundKind; payload.refund_reference = refundReference.trim(); }
+    if (action === "confirm_funds") { payload.received_amount = Number(receivedAmount); payload.received_currency = receivedCurrency; payload.receiver_account_id = fundingAccount; }
+    if (action === "resume_funded_request") payload.honour_quote = honourQuote;
+    if (action === "complete") { payload.settlement_reference = settlementReference.trim(); payload.payer_account_id = payerAccount; payload.receiver_account_id = receiverAccount; payload.transfer_method = transferMethod; }
+    if (action === "confirm_refund") { payload.refund_kind = refundKind; payload.refund_reference = refundReference.trim(); payload.payer_account_id = refundAccount; }
     const input = { requestId: id, expectedVersion: detail.request.version, action, payload };
     const signature = JSON.stringify(input);
     if (attempt.current?.signature !== signature) attempt.current = { signature, key: crypto.randomUUID() };
@@ -103,7 +114,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
       const result = await (admin ? mutateAdminRequest : mutateMyRequest)({ ...input, commandKey: attempt.current.key });
       if (result.error) setError(result.error);
       else {
-        attempt.current = null; setAction(""); setMessage(""); setPaymentReference(""); setConfirmed(false);
+        attempt.current = null; setAction(""); setMessage(""); setPaymentReference(""); setConfirmed(false); setHonourQuote(false);
         setNotice(fa ? "اقدام شما ثبت شد. آخرین وضعیت در این صفحه نمایش داده می‌شود." : "Your update was saved. The latest request status is shown below.");
         await refresh();
       }
@@ -116,6 +127,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
   const currentAction = commands.includes(action as RequestCommand) ? action : "";
   const referenceRequired = currentAction === "payment_evidence" || currentAction === "confirm_funds";
   const messageRequired = ["request_info", "respond", "cancel", "reject", "record_uncertain_payout"].includes(currentAction);
+  const accountsFor = (currency: "AUD" | "IRT") => accounts.filter(account => account.currency.toUpperCase() === currency || (currency === "IRT" && account.currency.toLowerCase() === "toman"));
 
   return <main className={styles.workspace} dir={fa ? "rtl" : "ltr"}>
     <header className={styles.header}>
@@ -131,8 +143,16 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
     {request && detail && <>
       {request.action_required && <section className={styles.warning}><strong>{fa ? "اقدام بعدی" : "Next action"}</strong><p className={styles.pre}>{request.action_required}</p></section>}
       {request.status === "reconciliation" && <p className={styles.warning}>{fa ? "نتیجه پرداخت در حال تطبیق است. تیم مالی نتیجه بانکی را بررسی می‌کند." : "The payout outcome is being reconciled. Finance must verify the bank result before any further payment attempt."}</p>}
+      <RequestProgress request={request} locale={locale} />
       <div className={styles.grid} style={{ marginTop: 22 }}>
         <div className={styles.stack}>
+          {request.status === "completed" && <section className={styles.card}>
+            <h2>{fa ? "رسید نهایی حواله" : "Final transfer receipt"}</h2>
+            <p className={styles.muted}>{fa ? "نسخه نهایی رسید شامل مبالغ، کارمزدها و تأیید تسویه است." : "Download your final receipt with the settled amounts, service fees and settlement confirmation."}</p>
+            <a className={styles.button} href={`/api/requests/${request.id}/receipt`} target="_blank" rel="noopener noreferrer"><Download size={17} />{fa ? "دریافت رسید نهایی" : "Download final receipt"}</a>
+          </section>}
+          <RequestPaymentInstructions request={request} locale={locale} />
+          <RequestReceiptUpload request={request} receipts={detail.receipts || []} admin={admin} locale={locale} onUploaded={refresh} />
           <section className={styles.card}>
             <h2>{fa ? "وضعیت درخواست" : "Request progress"}</h2>
             <dl className={styles.facts}>
@@ -148,39 +168,33 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
             <p className={styles.muted}>{fa ? "همه زمان‌ها به وقت سیدنی نمایش داده می‌شود. ارسال اطلاعات واریز به معنی تأیید دریافت وجه نیست." : "All dates use Sydney time. Submitting a payment reference does not confirm cleared funds."}</p>
             {(request.priority_fee_status === "refund_pending" || request.funding_status === "refund_pending") && <p className={styles.warning}>{fa ? "بازپرداخت در انتظار تأیید مالی است. پس از تأیید برگشت وجه، وضعیت این صفحه به‌روزرسانی می‌شود." : "A refund is pending finance confirmation. This page will update after the returned funds are verified."}</p>}
           </section>
-          {request.payment_instructions && <section className={styles.card}>
-            <h2>{fa ? "راهنمای واریز" : "Payment instructions"}</h2>
-            <p className={styles.pre}>{request.payment_instructions}</p>
-            <dl className={styles.facts}>
-              <div className={styles.fact}><dt>{fa ? "مبلغ و ارز دقیق" : "Exact amount and currency"}</dt><dd>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</dd></div>
-              <div className={styles.fact}><dt>{fa ? "شناسه واریز" : "Payment reference"}</dt><dd><bdi>{request.reference_code}</bdi></dd></div>
-              <div className={styles.fact}><dt>{fa ? "مهلت واریز" : "Funding deadline"}</dt><dd>{requestDate(request.funding_due_at, locale)}</dd></div>
-            </dl>
-            {isRequestTerminal(request.status) && <p className={styles.warning}>{fa ? "این درخواست بسته شده است؛ برای آن وجه جدید واریز نکنید." : "This request is closed. Do not send a new payment for it."}</p>}
-          </section>}
           {commands.length > 0 && <section className={styles.card}>
             <h2>{admin ? "Manage request" : (fa ? "اقدام روی درخواست" : "Take action")}</h2>
             <form onSubmit={submit}>
               <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}>
-                <label className={styles.field}>{fa ? "انتخاب اقدام" : "Choose an action"}<select value={currentAction} required onChange={e => { setAction(e.target.value as RequestCommand); setConfirmed(false); setNotice(""); if (request) setReceivedCurrency(request.quote.funding_currency); }}><option value="">{fa ? "انتخاب کنید" : "Select action"}</option>{commands.map(command => <option key={command} value={command}>{commandLabels[command][fa ? 1 : 0]}</option>)}</select></label>
+                <label className={styles.field}>{fa ? "انتخاب اقدام" : "Choose an action"}<select value={currentAction} required onChange={e => { setAction(e.target.value as RequestCommand); setConfirmed(false); setHonourQuote(false); setNotice(""); setRefundKind(request.priority_fee_status === "refund_pending" ? "priority" : "principal"); setReceivedCurrency(request.quote.funding_currency); }}><option value="">{fa ? "انتخاب کنید" : "Select action"}</option>{commands.map(command => <option key={command} value={command}>{commandLabels[command][fa ? 1 : 0]}</option>)}</select></label>
                 {currentAction && <div className={styles.stack} style={{ marginTop: 18 }}>
                   {referenceRequired && <label className={styles.field}>{fa ? "شماره پیگیری بانکی واریز" : "Bank payment reference"}<input value={paymentReference} onChange={e => setPaymentReference(e.target.value)} required maxLength={200} autoComplete="off" /></label>}
                   {currentAction === "confirm_funds" && <>
                     <div className={styles.fields}><label className={styles.field}>Received amount<input type="number" inputMode="decimal" required min="0.01" step={receivedCurrency === "AUD" ? ".01" : "1"} value={receivedAmount} onChange={e => setReceivedAmount(e.target.value)} /></label><label className={styles.field}>Received currency<select value={receivedCurrency} onChange={e => setReceivedCurrency(e.target.value as "AUD" | "IRT")}><option value="AUD">AUD</option><option value="IRT">Toman (IRT)</option></select></label></div>
-                    <p className={styles.warning}>Confirm against cleared bank funds, including any priority fee. A customer reference or screenshot is not reconciliation evidence.</p>
+                    <label className={styles.field}>Receiving bank account<select required value={fundingAccount} onChange={event => setFundingAccount(event.target.value)}><option value="">Select the account credited</option>{accountsFor(receivedCurrency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
+                    <p className={styles.warning}>Confirm against cleared bank funds, including any priority fee. Enter only the newly received payment amount; earlier recorded payments are retained. A customer reference or screenshot is not cleared funds. Full reconciliation starts the service time target; processing and final settlement remain separate actions.</p>
                   </>}
+                  {currentAction === "resume_funded_request" && <label className={styles.checkbox}><input type="checkbox" required checked={honourQuote} onChange={event => setHonourQuote(event.target.checked)} /><span>I have completed the required checks and authorise fulfilment at the accepted quote. Release the confirmed funds to the processing queue and start the handling target without recording another payment.</span></label>}
                   {currentAction === "complete" && <>
                     <p className={styles.warning}>Confirm successful bank settlement before completing. This action posts the linked accounting entries. For an uncertain bank result, keep the request in reconciliation.</p>
                     <label className={styles.field}>Confirmed settlement reference<input required value={settlementReference} onChange={e => setSettlementReference(e.target.value)} maxLength={200} /></label>
                     <div className={styles.fields}>
-                      <label className={styles.field}>Payer bank account<select required value={payerAccount} onChange={e => setPayerAccount(e.target.value)}><option value="">Select account</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
-                      <label className={styles.field}>Receiver bank account<select required value={receiverAccount} onChange={e => setReceiverAccount(e.target.value)}><option value="">Select account</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
+                      <label className={styles.field}>Payer bank account<select required value={payerAccount} onChange={e => setPayerAccount(e.target.value)}><option value="">Select account</option>{accountsFor(request.quote.recipient_currency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
+                      <label className={styles.field}>Receiver bank account<select required value={receiverAccount} onChange={e => setReceiverAccount(e.target.value)}><option value="">Select account</option>{accountsFor(request.quote.funding_currency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
                     </div>
+                    <label className={styles.field}>Settlement transfer method<select required value={transferMethod} onChange={event => setTransferMethod(event.target.value as typeof transferMethod)}><option value="free">No bank fee / free transfer</option><option value="pol">Pol</option><option value="paya">Paya</option><option value="satna">Satna</option></select></label>
                   </>}
                   {currentAction === "start_processing" && <p className={styles.warning}>This claims the request and records the execution intent. Begin the handling step now; if the bank outcome becomes uncertain, record reconciliation before any retry.</p>}
                   {currentAction === "confirm_refund" && <>
                     <label className={styles.field}>Refund obligation<select value={refundKind} onChange={e => setRefundKind(e.target.value as "priority" | "principal")}><option value="priority" disabled={request.priority_fee_status !== "refund_pending"}>Priority fee</option><option value="principal" disabled={request.funding_status !== "refund_pending"}>Principal</option></select></label>
                     <label className={styles.field}>Confirmed return reference<input required value={refundReference} onChange={e => setRefundReference(e.target.value)} maxLength={200} /></label>
+                    <label className={styles.field}>Refund paying bank account<select required value={refundAccount} onChange={event => setRefundAccount(event.target.value)}><option value="">Select the account debited</option>{accountsFor(request.quote.funding_currency).map(account => <option key={account.id} value={account.id}>{account.account_name} ({account.currency})</option>)}</select></label>
                     <p className={styles.warning}>Record only a verified return in the original collection currency. This records the confirmed refund; it does not initiate a bank transfer.</p>
                   </>}
                   <label className={styles.field}>{admin ? "Customer-visible explanation" : (fa ? "توضیحات" : "Message")} {messageRequired ? "*" : (fa ? "(اختیاری)" : "(optional)")}<textarea value={message} onChange={e => setMessage(e.target.value)} required={messageRequired} minLength={messageRequired ? 3 : undefined} maxLength={2000} /></label>
@@ -195,6 +209,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
             <h2>{fa ? "رویدادهای درخواست" : "Request timeline"}</h2>
             <ol className={styles.timeline}>{detail.events.map(event => <li key={event.id}>
               <strong>{requestLabel(event.status, locale)}</strong><p>{event.public_message || requestLabel(event.event_type, locale)}</p><time dateTime={event.created_at}>{requestDate(event.created_at, locale)}</time>
+              {admin && event.internal_message && event.internal_message !== event.public_message && <p className={styles.notice}><strong>Private details: </strong>{event.internal_message}</p>}
             </li>)}</ol>
             {!detail.events.length && <p className={styles.muted}>{fa ? "رویدادها پس از ثبت به‌روزرسانی نمایش داده می‌شوند." : "Events appear here as updates are recorded."}</p>}
           </section>

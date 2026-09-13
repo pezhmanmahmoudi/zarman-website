@@ -1,16 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Image from "next/image"; 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import styles from "@/styles/Register.module.css"; 
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import Button from "@/components/ui/Button/Button";
 import AuthGradient from "@/components/ui/AuthGradient/AuthGradient";
 import { supabase } from "@/lib/supabase"; 
+import { dashboardReturnPath } from "@/lib/requests/navigation";
 
 export default function LoginPage() {
+  return <Suspense><LoginContent /></Suspense>;
+}
+
+function LoginContent() {
   const router = useRouter();
   const { locale } = useParams<{ locale: string }>();
   const [email, setEmail] = useState("");
@@ -18,13 +23,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const searchParams = useSearchParams();
+  const returnPath = dashboardReturnPath(searchParams.get("next"), locale);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
@@ -33,7 +40,7 @@ export default function LoginPage() {
       setError("Email or password is incorrect.");
       setLoading(false);
     } else {
-      router.push(`/${locale}/dashboard`);
+      router.push(returnPath);
     }
   };
 
@@ -118,8 +125,8 @@ export default function LoginPage() {
         </div>
 
         <div className={styles.footerText}>
-          Don't have an account? 
-          <Link href={`/${locale}/register`} className={styles.footerLink}>
+          Don&apos;t have an account?
+          <Link href={`/${locale}/register?next=${encodeURIComponent(returnPath)}`} className={styles.footerLink}>
             Sign up
           </Link>
         </div>

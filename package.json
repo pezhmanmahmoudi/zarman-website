@@ -11,6 +11,7 @@
     "test:seo": "node scripts/validate-seo.mjs",
     "test:converter": "node scripts/test-public-converter.cjs",
     "test:bank-fees": "node --test scripts/test-bank-fees.mjs",
+    "test:requests": "node --test scripts/test-customer-requests-db.mjs scripts/test-request-service.cjs scripts/test-request-interface.cjs scripts/test-request-notifications.mjs",
     "test:admin": "node --test scripts/test-admin-reads.mjs scripts/test-admin-overlays.mjs scripts/test-admin-layout.cjs scripts/test-admin-editing.cjs scripts/test-admin-pagination.cjs scripts/test-treasury-workspace.cjs scripts/test-ledger-workspace.cjs scripts/test-austrac-deadlines.mjs scripts/test-austrac-compliance.mjs"
   },
   "dependencies": {

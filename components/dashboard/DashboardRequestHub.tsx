@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Calculator, AlertTriangle, Lock, MessageSquare, ServerCrash, PauseCircle, Tag, Banknote, ChevronDown } from "lucide-react";
+import { Calculator, AlertTriangle, Lock, ServerCrash, PauseCircle, Tag, Banknote, ChevronDown } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/[locale]/dashboard/dashboard.types";
@@ -13,7 +13,7 @@ import {
   calcQuotedRawAudFromEquivalent,
   calcSettlementAudForRequestType,
 } from "@/lib/pricing";
-import { buildWhatsAppUrl } from "@/lib/constants/contact";
+import { OnlineRequestSubmit } from "@/components/requests/OnlineRequestSubmit";
 import { supabase } from "@/lib/supabase";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import { RecipientModal } from "@/components/dashboard/RecipientModal";
@@ -40,12 +40,6 @@ function formatNumberUI(num: number | null, locale: string, isToman: boolean = f
   return en;
 }
 
-function formatNumberWA(num: number | null, isToman: boolean = false) {
-  if (num === null) return "0";
-  const options = isToman ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
-  return Number(num).toLocaleString("en-US", options);
-}
-
 function formatAudState(num: number, locale: string) {
   return num > 0 ? formatNumberUI(num, locale, false) : "";
 }
@@ -53,18 +47,6 @@ function formatAudState(num: number, locale: string) {
 function formatIrtState(num: number, locale: string) {
   return num > 0 ? formatNumberUI(Math.round(num), locale, true) : "";
 }
-
-type ServerTransactionResult = {
-  baseRate: number;
-  tailoredRate: number;
-  loyaltyBonus: number;
-  equivalentToman: number;
-  appliedFee: number;
-  rawAmount: number;
-  discount_amount?: number;
-  final_amount?: number;
-  promo_code?: string | null;
-};
 
 type RequestHubProps = {
   isApproved: boolean;
@@ -76,23 +58,12 @@ type RequestHubProps = {
   tailoredRate: number | null; 
   baseRate: number | null;     
   profile: Profile | null;     
-  displayFullName: string;
-  onSaveTransaction: (
-    rawAmount: number,
-    txType: "buy_aud" | "sell_aud",
-    sourceOfFunds: string,
-    reasonForTransfer: string,
-    recipientId?: string | null,
-    promoCode?: string | null,
-    paymentLink?: string | null,
-    agreedEquivalentToman?: number | null,
-  ) => Promise<ServerTransactionResult | null>;
+
 };
 
 export function DashboardRequestHub({ 
   isApproved, txType, setTxType, amountStr, setAmountStr, 
-  loyaltyBonus, tailoredRate, baseRate, displayFullName, profile,
-  onSaveTransaction
+  loyaltyBonus, tailoredRate, baseRate, profile
 }: RequestHubProps) { 
   const NEW_RECIPIENT_VALUE = "__new__";
   const EDU_RECIPIENT_VALUE = "__edu_exam__";
@@ -151,6 +122,8 @@ export function DashboardRequestHub({
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
   const [promoEffectiveRate, setPromoEffectiveRate] = useState<number | null>(null);
   const [paymentLink, setPaymentLink] = useState("");
+  const [institutionName, setInstitutionName] = useState("");
+  const [invoiceReference, setInvoiceReference] = useState("");
   const [equivalentStr, setEquivalentStr] = useState("");
   const [quoteSource, setQuoteSource] = useState<"aud" | "irt">("aud");
 
@@ -256,8 +229,7 @@ export function DashboardRequestHub({
   const resultNumber = (rawAmount === 0 || isRateOffline || activeRate === null)
     ? 0
     : calcEquivalentTomanForRequestType(rawAmount, activeRate, appliedFee, txType);
-  const agreedEquivalentToman = quoteSource === "irt" ? getRawNumber(equivalentStr) : resultNumber;
-  const transactionValidityNotice = t.hub.validityNotice;
+  const transactionValidityNotice = locale === "fa" ? "مبلغ و نرخ نهایی در مرحله بررسی پیش‌فاکتور مشخص می‌شود. پس از ثبت، مشخصات حساب و پیگیری درخواست در همین سایت در دسترس است." : "Review the final rate and amounts before accepting your quote. After submission, bank instructions and request tracking are available on this site.";
 
   useEffect(() => {
     if (quoteSource === "irt") return;
@@ -337,124 +309,6 @@ export function DashboardRequestHub({
     resetPromo();
   };
 
-  const submit = async () => {
-    if (!profile || !isApproved || rawAmount <= 0 || isRateOffline || isSubmitting || !marketActive) return;
-    if (!sourceOfFunds || !reasonForTransfer || !selectedRecipientId) {
-      alert(t.hub.allFieldsRequired);
-      return;
-    }
-    if (isEduPayment && !paymentLink.trim()) {
-      alert(t.hub.paymentLinkRequired);
-      return;
-    }
-
-    setIsSubmitting(true);
-    const whatsappWindow = window.open("", "_blank");
-
-    try {
-      const serverData = await onSaveTransaction(
-        rawAmount, txType, sourceOfFunds, reasonForTransfer, selectedRecipientId || null,
-        appliedPromoCode, isEduPayment ? (paymentLink.trim() || null) : null,
-        agreedEquivalentToman > 0 ? agreedEquivalentToman : null,
-      );
-      
-      if (!serverData) {
-        whatsappWindow?.close();
-        return;
-      }
-
-      const actionLabel = txType === "sell_aud"
-        ? (locale === "fa" ? "فروش AUD (مشتری دلار می‌دهد)" : "Sell AUD (Customer sends AUD)")
-        : (locale === "fa" ? "خرید AUD (مشتری تومان می‌دهد)" : "Buy AUD (Customer sends Toman)");
-      const totalLoyalty = serverData.loyaltyBonus * serverData.rawAmount;
-
-      const fmtAmount = formatNumberWA(serverData.rawAmount, false);
-      const fmtResult = formatNumberWA(serverData.equivalentToman, true);
-      const fmtTailored = formatNumberWA(serverData.tailoredRate, true);
-      const fmtBase = formatNumberWA(serverData.baseRate, true);
-      const fmtLoyaltyTotal = formatNumberWA(totalLoyalty, true);
-      
-      let feeText = "بدون کارمزد";
-      if (serverData.appliedFee > 0) {
-         feeText = txType === "buy_aud" ? `${serverData.appliedFee} AUD (اضافه شده)` : `${serverData.appliedFee} AUD (کسر شده)`;
-      }
-
-      let recipientSection = "";
-      if (isEduPayment) {
-        recipientSection = "--------------------------\nگیرنده: آزمون / دانشگاه / موسسه\n" + (paymentLink ? `- لینک پرداخت: ${paymentLink}\n` : "");
-      } else {
-        const rec = recipients.find((r) => r.id === selectedRecipientId);
-        if (rec) {
-          const audAddress = [rec.residential_address, rec.residential_city, rec.residential_state, rec.residential_postcode, rec.residential_country]
-            .map((v) => String(v ?? "").trim())
-            .filter(Boolean)
-            .join(", ");
-          const irtAddress = [rec.irt_address, rec.irt_city, rec.irt_state, rec.irt_postcode, rec.irt_country]
-            .map((v) => String(v ?? "").trim())
-            .filter(Boolean)
-            .join(", ");
-
-          recipientSection = "--------------------------\n📋 اطلاعات گیرنده:\n";
-          if (rec.direction === "aud") {
-            recipientSection += `- نام صاحب حساب: ${rec.account_name || "—"}\n`;
-            recipientSection += `- بانک: ${rec.bank_name || "—"}\n`;
-            recipientSection += `- BSB: ${rec.bsb || "—"}\n`;
-            recipientSection += `- شماره حساب: ${rec.account_number || "—"}\n`;
-            recipientSection += `- آدرس: ${audAddress || "—"}\n`;
-            if (rec.recipient_phone) recipientSection += `- تلفن گیرنده: ${rec.recipient_phone}\n`;
-            if (rec.recipient_email) recipientSection += `- ایمیل گیرنده: ${rec.recipient_email}\n`;
-          } else {
-            recipientSection += `- نام صاحب حساب: ${rec.full_name || "—"}\n`;
-            if (rec.bank_type === "bank_melli") {
-              recipientSection += `- بانک: ملی ایران\n`;
-              recipientSection += `- شماره حساب: ${rec.irt_account_number || "—"}\n`;
-              recipientSection += `- شماره کارت: ${rec.card_number || "—"}\n`;
-            } else {
-              if (rec.bank_name) recipientSection += `- بانک: ${rec.bank_name}\n`;
-              recipientSection += `- شبا: ${rec.shaba_number || "—"}\n`;
-            }
-            if (rec.irt_phone) recipientSection += `- تلفن گیرنده: ${rec.irt_phone}\n`;
-            if (irtAddress) recipientSection += `- آدرس: ${irtAddress}\n`;
-          }
-        }
-      }
-
-      const text = 
-        "*** درخواست حواله اختصاصی زرمان ***\n\n" +
-        "- مشتری: " + displayFullName + "\n" +
-        "- ایمیل: " + (profile?.email || "—") + "\n" +
-        "- نوع درخواست: " + actionLabel + "\n" +
-        "- مقدار: " + fmtAmount + " AUD\n" +
-        "--------------------------\n" +
-        "- نرخ پایه بازار: " + fmtBase + " تومان\n" +
-        "- مجموع تخفیف وفاداری: " + fmtLoyaltyTotal + " تومان\n" +
-        "- نرخ اختصاصی نهایی: " + fmtTailored + " تومان\n" +
-        "- کارمزد: " + feeText + "\n" +
-        (serverData.promo_code ? `- کد تخفیف: ${serverData.promo_code} (صرفه‌جویی ${formatNumberWA(serverData.discount_amount ?? 0, true)} تومان)\n` : "") +
-        "--------------------------\n" +
-        "* معادل نهایی: " + fmtResult + " تومان *\n" +
-        "--------------------------\n" +
-        transactionValidityNotice + "\n" +
-        "--------------------------\n" +
-        "- منبع وجه: " + sourceOfFunds + "\n" +
-        "- دلیل انتقال: " + reasonForTransfer + "\n" +
-        (recipientSection ? "\n" + recipientSection : "") +
-        "\nلطفاً درخواست من را بررسی نمایید.";
-
-      const finalUrl = buildWhatsAppUrl(text);
-      if (whatsappWindow && !whatsappWindow.closed) {
-        whatsappWindow.location.href = finalUrl;
-      } else {
-        window.location.assign(finalUrl);
-      }
-      setAmountStr(""); resetPromo(); setPromoInput(""); setSelectedRecipientId(""); setPaymentLink("");
-    } catch (error) {
-      whatsappWindow?.close();
-      console.error(error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <article className={cardStyles.panelCard}>
@@ -609,6 +463,17 @@ export function DashboardRequestHub({
         )}
       </div>
 
+      {isEduPayment && <div className={styles.formRow}>
+        <div className={styles.inputBox}>
+          <label className={styles.label} htmlFor="request-institution">{locale === "fa" ? "نام دانشگاه / موسسه" : "Institution name"} <span className={styles.requiredMark}>*</span></label>
+          <div className={styles.hubFieldGroup}><input id="request-institution" className={styles.hubEnInput} value={institutionName} onChange={event => setInstitutionName(event.target.value)} maxLength={160} disabled={isSubmitting} /></div>
+        </div>
+        <div className={styles.inputBox}>
+          <label className={styles.label} htmlFor="request-invoice">{locale === "fa" ? "شماره صورتحساب" : "Invoice reference"} <span className={styles.requiredMark}>*</span></label>
+          <div className={styles.hubFieldGroup}><input id="request-invoice" className={styles.hubEnInput} value={invoiceReference} onChange={event => setInvoiceReference(event.target.value)} maxLength={120} disabled={isSubmitting} /></div>
+        </div>
+      </div>}
+
       <div className={styles.formRow}>
         <div className={styles.inputBox}>
           <label className={styles.label}>{t.hub.sourceOfFunds} <span className={styles.requiredMark}>*</span></label>
@@ -735,15 +600,21 @@ export function DashboardRequestHub({
             </div>
           )}
         </div>
-        <button className={`${cardStyles.primaryButton}${isSubmitting ? ` ${cardStyles.loading}` : ""}`} onClick={submit} disabled={!isApproved || rawAmount <= 0 || isRateOffline || isSubmitting || !marketActive} type="button">
-          {isSubmitting ? (
-            <><span className={cardStyles.spinner} aria-hidden="true" /> {t.hub.processing}</>
-          ) : (
-            <><MessageSquare size={20} /> {t.hub.submitBtn}</>
-          )}
-        </button>
+
       </div>
       
+      <OnlineRequestSubmit
+        input={{ rawAmount, txType, sourceOfFunds, reasonForTransfer, recipientId: selectedRecipientId,
+          promoCode: appliedPromoCode, paymentLink: isEduPayment ? paymentLink.trim() || null : null,
+          institutionName: isEduPayment ? institutionName : undefined,
+          invoiceReference: isEduPayment ? invoiceReference : undefined, locale }}
+        disabled={!isApproved || !profile || rawAmount <= 0 || isRateOffline || !marketActive}
+        validationMessage={!sourceOfFunds || !reasonForTransfer || !selectedRecipientId ? t.hub.allFieldsRequired
+          : isEduPayment && (!paymentLink.trim() || !institutionName.trim() || !invoiceReference.trim())
+            ? (locale === "fa" ? "نام موسسه، شماره صورتحساب و لینک پرداخت را وارد کنید." : "Enter the institution name, invoice reference and payment link.") : null}
+        onBusyChange={setIsSubmitting}
+      />
+
       <div className={styles.noticeBannerContainer}>
         <div className={styles.noticeBanner}>
           <div className={styles.noticeIcon}>

@@ -89,8 +89,10 @@ export async function proxy(request: NextRequest) {
   const locale = pathname.startsWith('/en') ? 'en' : 'fa'
 
   if (!user) {
+    const loginUrl = new URL(`/${locale}/login`, request.url)
+    loginUrl.searchParams.set('next', pathname + request.nextUrl.search)
     return applyPendingCookies(
-      NextResponse.redirect(new URL(`/${locale}/login`, request.url))
+      NextResponse.redirect(loginUrl)
     )
   }
 

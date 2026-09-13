@@ -3,12 +3,13 @@
 import React, { useMemo, useState } from "react";
 import { useRates } from "@/context/RateContext"; 
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { deleteTransactionSecurely, processTransactionSecurely } from "@/app/actions/transaction.actions";
+import { deleteTransactionSecurely } from "@/app/actions/transaction.actions";
 
 import shellStyles from "@/styles/dashboard/DashboardShell.module.css";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
+import { RequestList } from "@/components/requests/RequestList";
 import { DashboardRequestHub } from "@/components/dashboard/DashboardRequestHub";
 import dynamic from "next/dynamic";
 import type { Transaction } from "@/app/[locale]/dashboard/dashboard.types";
@@ -48,6 +49,19 @@ export default function ZarmanDashboard() {
   const [amountStr, setAmountStr] = useState(() => (locale === "fa" ? "۱،۰۰۰" : "1,000"));
   const [txType, setTxType] = useState<"sell_aud" | "buy_aud">("buy_aud"); 
 
+  React.useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const amount = query.get("requestAmountAud");
+    const direction = query.get("requestDirection");
+    if (amount && /^\d+(?:\.\d{1,2})?$/.test(amount)) {
+      const parsedAmount = Number(amount);
+      if (Number.isFinite(parsedAmount) && parsedAmount > 0 && parsedAmount <= 10_000_000) {
+        setAmountStr(parsedAmount.toLocaleString("en-US", { maximumFractionDigits: 2 }));
+      }
+    }
+    if (direction === "buy_aud" || direction === "sell_aud") setTxType(direction);
+  }, []);
+
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const activePanelRef = React.useRef<HTMLDivElement | null>(null);
@@ -84,23 +98,6 @@ export default function ZarmanDashboard() {
 
   const isApproved = String(profile?.kyc_status || "").replace(/['"]/g, '').trim().toLowerCase() === "approved";
   
-  const displayFullName = useMemo(() => {
-    if (!profile) return locale === "fa" ? "مشتری عزیز" : "Dear Customer";
-    const fullName = String(profile.full_name || "").trim();
-    if (fullName) return fullName;
-    return `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || (locale === "fa" ? "مشتری عزیز" : "Dear Customer");
-  }, [profile, locale]);
-
-  const activePanelLabel = useMemo(() => {
-    switch (activeTab) {
-      case "hub": return t.dashboard.tabs.hub;
-      case "profile": return t.dashboard.tabs.profile;
-      case "history": return t.dashboard.tabs.history;
-      case "feedback": return t.dashboard.tabs.feedback;
-      default: return "";
-    }
-  }, [activeTab, t]);
-
   const toggleOverviewCards = () => {
     setShowOverviewCards((current) => {
       const next = !current;
@@ -111,38 +108,6 @@ export default function ZarmanDashboard() {
       }
       return next;
     });
-  };
-
-  const handleSaveTransaction = async (rawAmount: number, currentTxType: "buy_aud" | "sell_aud", sourceOfFunds: string, reasonForTransfer: string, recipientId?: string | null, promoCode?: string | null, paymentLink?: string | null, agreedEquivalentToman?: number | null) => {
-    if (!profile || !profile.id || !isApproved || rawAmount <= 0) return null;
-    
-    const result = await processTransactionSecurely({
-      rawAmount: rawAmount,
-      txType: currentTxType,
-      sourceOfFunds,
-      reasonForTransfer,
-      recipientId,
-      promoCode,
-      paymentLink,
-      agreedEquivalentToman,
-    });
-
-    if (result?.error) {
-      alert(`${locale === "fa" ? "ثبت تراکنش مسدود شد!\nارور سرور: " : "Transaction blocked!\nServer error: "}${result.error}`);
-      return null;
-    }
-
-    return (result?.data as {
-      baseRate: number;
-      tailoredRate: number;
-      loyaltyBonus: number;
-      equivalentToman: number;
-      appliedFee: number;
-      rawAmount: number;
-      discount_amount?: number;
-      final_amount?: number;
-      promo_code?: string | null;
-    }) || null;
   };
 
   const handleDeleteRequest = (txId: string | number) => {
@@ -197,12 +162,14 @@ export default function ZarmanDashboard() {
           {activeTab === "hub" && (
             <DashboardRequestHub
               isApproved={isApproved} txType={txType} setTxType={setTxType} amountStr={amountStr} setAmountStr={setAmountStr}
-              loyaltyBonus={loyaltyBonus} tailoredRate={tailoredRate} baseRate={baseRate} profile={profile} displayFullName={displayFullName}
-              onSaveTransaction={handleSaveTransaction}
+              loyaltyBonus={loyaltyBonus} tailoredRate={tailoredRate} baseRate={baseRate} profile={profile}
             />
           )}
 
-          {activeTab === "history" && <DashboardTransactionHistory transactions={transactions} onDeleteTransaction={handleDeleteRequest} />}
+          {activeTab === "history" && <>
+            <RequestList locale={locale} embedded />
+            <DashboardTransactionHistory transactions={transactions} onDeleteTransaction={handleDeleteRequest} />
+          </>}
 
           {activeTab === "profile" && (
             <DashboardProfile

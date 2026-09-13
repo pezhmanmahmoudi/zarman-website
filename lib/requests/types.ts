@@ -1,7 +1,7 @@
 export type RequestLocale = "en" | "fa";
 export type ServiceTier = "standard" | "priority";
 export type RequestStatus = "submitted" | "under_review" | "action_required" | "awaiting_funds" | "ready" | "processing" | "reconciliation" | "completed" | "cancelled" | "rejected" | "expired";
-export type RequestCommand = "review" | "request_info" | "respond" | "await_funds" | "confirm_funds" | "start_processing" | "record_uncertain_payout" | "complete" | "cancel" | "reject" | "confirm_refund" | "payment_evidence";
+export type RequestCommand = "review" | "request_info" | "respond" | "await_funds" | "confirm_funds" | "resume_funded_request" | "start_processing" | "record_uncertain_payout" | "complete" | "cancel" | "reject" | "confirm_refund" | "payment_evidence";
 export type ActionResult<T> = { data: T; error?: never } | { error: string; data?: never };
 
 export type RequestSettings = {
@@ -13,6 +13,8 @@ export type RequestSettings = {
   priority_minutes: number;
   quote_minutes: number;
   funding_minutes: number;
+  australian_clearance_minutes: number;
+  iran_banking_notice: string;
   max_amount_aud: number;
   timezone: "Australia/Sydney";
   business_days: number[];
@@ -92,12 +94,19 @@ export type ExchangeRequest = {
   handling_started_at: string | null;
   funding_due_at: string;
   ready_at: string | null;
+  funds_confirmed_at: string | null;
+  evidence_submitted_at: string | null;
+  clearance_due_at: string | null;
   created_at: string;
   updated_at: string;
 };
-export type RequestEvent = { id: string; request_id: string; sequence: number; event_type: string; status: RequestStatus; public_message: string | null; actor_id: string | null; created_at: string };
+export type RequestEvent = { id: string; request_id: string; sequence: number; event_type: string; status: RequestStatus; public_message: string | null; internal_message?: string | null; actor_id: string | null; created_at: string };
 export type RequestDelivery = { id: string; event_id: string; request_id: string; audience: "customer" | "management"; recipient_email: string; locale: RequestLocale; status: string; attempts: number; last_error: string | null; created_at: string };
-export type RequestDetail = { request: ExchangeRequest; events: RequestEvent[]; deliveries?: RequestDelivery[] };
+export type RequestReceipt = {
+  id: string; request_id: string; original_name: string; content_type: string;
+  size_bytes: number; sha256: string; uploaded_by: string; created_at: string; request_version?: number;
+};
+export type RequestDetail = { request: ExchangeRequest; events: RequestEvent[]; receipts: RequestReceipt[]; deliveries?: RequestDelivery[] };
 export type RequestMutationInput = {
   requestId: string;
   expectedVersion: number;
@@ -114,5 +123,6 @@ export type RequestMutationInput = {
     transfer_method?: string;
     refund_reference?: string;
     refund_kind?: "priority" | "principal";
+    honour_quote?: boolean;
   };
 };
