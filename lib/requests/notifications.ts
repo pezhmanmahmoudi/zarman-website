@@ -12,6 +12,9 @@ import { validatedNotificationSettings } from "./notification-config";
 
 const IDEMPOTENCY_SAFE_WINDOW_MS = 23 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 12;
+const DATABASE_ATTEMPT_TIMEOUT_MS = 4_000;
+// Leave time for the final claim, preparation, 12-second send and acknowledgement.
+const WORKER_CLAIM_WINDOW_MS = 30_000;
 
 export type NotificationDelivery = RequestEmailSnapshot & {
   attempts: number;
@@ -77,7 +80,17 @@ export function createNotificationDatabase(): NotificationDatabase {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("notification_database_not_configured");
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: (input, init) => {
+      const callerSignal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
+      const timeoutSignal = AbortSignal.timeout(DATABASE_ATTEMPT_TIMEOUT_MS);
+      return fetch(input, {
+        ...init,
+        signal: callerSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : timeoutSignal,
+      });
+    } },
+  });
 }
 
 export function notificationRuntimeSettings() {
@@ -112,6 +125,17 @@ async function rpc<T>(db: NotificationDatabase, name: NotificationRpcOperation, 
     throw new NotificationRpcError(name, code, result.status);
   }
   return result.data as T;
+}
+
+async function sweepRequestDeadlines(db: NotificationDatabase): Promise<void> {
+  try { await rpc(db, "sweep_exchange_request_deadlines"); }
+  catch (error) {
+    if (!(error instanceof NotificationRpcError)
+      || !(error.code === "transport_error" || error.status === 0 || [502, 503, 504].includes(error.status ?? -1))) throw error;
+    // _23 serializes sweeps and deduplicates their committed tasks/events. Only
+    // this operation may retry a lost response; never replay a lease or send.
+    await rpc(db, "sweep_exchange_request_deadlines");
+  }
 }
 
 export function notificationRetryAt(attempts: number, now: number, retryAfter?: string | null, jitter = Math.random()): string {
@@ -150,8 +174,8 @@ export async function runRequestNotificationWorker(options: {
   const started = now();
   const workerId = options.workerId ?? randomUUID();
   const counts = { claimed: 0, accepted: 0, retrying: 0, failed: 0, reconciliation: 0 };
-  await rpc(options.db, "sweep_exchange_request_deadlines");
-  for (let i = 0; i < Math.min(Math.max(options.limit ?? 10, 1), 25) && now() - started < 40_000; i += 1) {
+  await sweepRequestDeadlines(options.db);
+  for (let i = 0; i < Math.min(Math.max(options.limit ?? 10, 1), 25) && now() - started < WORKER_CLAIM_WINDOW_MS; i += 1) {
     const rows = await rpc<NotificationDelivery[]>(options.db, "claim_request_notifications", {
       p_worker_id: workerId, p_limit: 1, p_lease_seconds: 120,
     });

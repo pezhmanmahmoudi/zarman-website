@@ -107,6 +107,74 @@ function workerDb(row, options = {}) {
   } };
 }
 const now = () => Date.parse("2026-09-13T01:00:00Z");
+
+test("only a transient deadline sweep retries once; lease and send mutations remain single-attempt", async () => {
+  for (const status of [0, 502, 503, 504, "rejected"]) {
+    let sweeps = 0, claims = 0;
+    const db = { async rpc(name) {
+      if (name === "sweep_exchange_request_deadlines") {
+        if (++sweeps === 1) {
+          if (status === "rejected") throw new Error("Synthetic transport loss");
+          return { data: null, error: { code: "", message: "Synthetic gateway failure" }, status };
+        }
+        return { data: { updated: 0 }, error: null, status: 200 };
+      }
+      assert.equal(name, "claim_request_notifications"); claims++;
+      return { data: [], error: null, status: 200 };
+    } };
+    const result = await notifications.runRequestNotificationWorker({ ...settings, db, now, send: async () => assert.fail("Queue is empty") });
+    assert.equal(sweeps, 2); assert.equal(claims, 1); assert.equal(result.claimed, 0);
+  }
+  for (const [operation, status, code, expectedCalls] of [
+    ["sweep_exchange_request_deadlines", 504, "", 2],
+    ["sweep_exchange_request_deadlines", 403, "42501", 1],
+    ["sweep_exchange_request_deadlines", 400, "PGRST202", 1],
+    ["claim_request_notifications", 504, "", 1],
+    ["prepare_request_notification", 503, "", 1],
+    ["finish_request_notification", 502, "", 1],
+  ]) {
+    const base = workerDb(delivery()); let failures = 0, sends = 0;
+    const db = { async rpc(name, args) {
+      if (name === operation) { failures++; return { data: null, error: { code }, status }; }
+      return base.rpc(name, args);
+    } };
+    await assert.rejects(notifications.runRequestNotificationWorker({ ...settings, db, now, send: async () => {
+      sends++; return { data: { id: "synthetic-provider-id" }, error: null, headers: null };
+    } }), /notification_rpc_failed/);
+    assert.equal(failures, expectedCalls, operation);
+    assert.equal(sends, operation === "finish_request_notification" ? 1 : 0);
+  }
+});
+
+test("database transport preserves cancellation and limits each HTTP attempt without retrying fetch", async (t) => {
+  let clientOptions, calls = 0, timeoutMs;
+  const timeoutController = new AbortController();
+  t.mock.method(AbortSignal, "timeout", (ms) => { timeoutMs = ms; return timeoutController.signal; });
+  t.mock.method(globalThis, "fetch", async (_input, init) => {
+    calls++;
+    return { signal: init.signal };
+  });
+  const compiled = compile("lib/requests/notifications.ts", {
+    "./receipt": receipts, "./notification-template": templates, "./notification-config": configuration,
+    "@supabase/supabase-js": { createClient(_url, _key, options) { clientOptions = options; return {}; } },
+  });
+  const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL, previousKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  try {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://synthetic.example.test";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "synthetic-only";
+    compiled.createNotificationDatabase();
+    const caller = new AbortController();
+    const response = await clientOptions.global.fetch("https://synthetic.example.test", { signal: caller.signal });
+    assert.equal(timeoutMs, 4000); assert.equal(calls, 1); assert.equal(response.signal.aborted, false);
+    caller.abort(); assert.equal(response.signal.aborted, true);
+    const timed = await clientOptions.global.fetch(new Request("https://synthetic.example.test"));
+    timeoutController.abort(); assert.equal(timed.signal.aborted, true); assert.equal(calls, 2);
+  } finally {
+    if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL; else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
+    if (previousKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = previousKey;
+  }
+});
+
 test("worker freezes PDF before send and retries ambiguous acceptance with identical payload/key", async () => {
   const row = delivery({ event_type: "complete", workflow_status: "completed", payload_snapshot: { receipt: completion } });
   const db = workerDb(row);
@@ -167,6 +235,8 @@ test("worker route logs only allowlisted diagnostics and never exposes RPC secre
       expected: { stage: "database_rpc", operation: "sweep_exchange_request_deadlines", code: "PGRST202", status: 404 } },
     { operation: "claim_request_notifications", error: { code: secret, message: secret }, status: 700,
       expected: { stage: "database_rpc", operation: "claim_request_notifications", code: "unclassified", status: null } },
+    { operation: "sweep_exchange_request_deadlines", error: { code: "", message: secret }, status: 504,
+      expected: { stage: "database_rpc", operation: "sweep_exchange_request_deadlines", code: "unclassified", status: 504 } },
     { operation: "sweep_exchange_request_deadlines", thrown: new Error(secret, { cause: { secret } }),
       expected: { stage: "database_rpc", operation: "sweep_exchange_request_deadlines", code: "transport_error", status: null } },
     { configurationError: new Error(`invalid_site_url:${secret}`), expected: { stage: "unknown" } },
@@ -204,19 +274,83 @@ test("webhook reads exact UTF-8 bytes with a memory limit even without a valid l
   await assert.rejects(notifications.readRequestEmailWebhookBody(new Request("https://example.test", { method: "POST", body: "small", headers: { "content-length": "9999" } }), 10), /too_large/);
 });
 
+async function loadNotificationDatabase(db) {
+  await db.exec(read("scripts/fixtures/customer-requests.sql"));
+  for (const migration of [
+    "20260802_09_enterprise_reporting.sql", "20260802_10_ledger_accounting_controls.sql",
+    "20260802_13_standardize_trade_fee_accounting.sql", "20260911_18_customer_requests.sql",
+    "20260911_19_request_notifications.sql", "20260913_23_request_funding_and_receipts.sql",
+    "20260913_24_request_receipt_notifications.sql", "20260913_25_request_fee_accounting.sql",
+    "20260913_26_request_fee_ledger_type.sql",
+  ]) await db.exec(read(`supabase/migrations/${migration}`));
+}
+
+test("a committed sweep with a lost response retries without duplicate tasks, refunds or notification events", async () => {
+  const db = new PGlite();
+  try {
+    await loadNotificationDatabase(db);
+    const user = randomUUID();
+    await db.query("insert into auth.users(id,email) values($1,'customer@example.test')", [user]);
+    await db.query("insert into profiles(id) values($1)", [user]);
+    await db.exec("update exchange_request_settings set settings=jsonb_set(settings,'{management_emails}','[\"manager@example.test\"]')");
+    for (const [status, tier, feeStatus, evidence] of [
+      ["ready", "priority", "paid", false],
+      ["awaiting_funds", "standard", "not_applicable", true],
+      ["awaiting_funds", "standard", "not_applicable", false],
+    ]) {
+      const id = randomUUID(), transaction = randomUUID(), quote = randomUUID();
+      const snapshot = { ...completion, locale: "en", policy_snapshot: {}, service_tier: tier,
+        priority_fee_aud: tier === "priority" ? 25 : 0, priority_fee_amount: tier === "priority" ? 25 : 0 };
+      await db.query("insert into transactions(id,user_id,type,amount_aud,equivalent_toman) values($1,$2,'buy_aud',1000,100000000)", [transaction, user]);
+      await db.query("insert into exchange_request_quotes(id,user_id,snapshot,expires_at) values($1,$2,$3,now()+interval '1 hour')", [quote, user, snapshot]);
+      await db.query(`insert into exchange_requests(id,transaction_id,user_id,quote_id,idempotency_key,reference_code,quote,
+        status,service_tier,priority_fee_status,funding_due_at,clearance_due_at,handling_due_at,evidence_submitted_at,payment_instructions)
+        values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now()-interval '2 days',now()-interval '1 day',now()-interval '1 hour',
+        case when $11::boolean then now()-interval '1 day' end,'Synthetic bank details')`,
+      [id, transaction, user, quote, randomUUID(), `ZE${id}`, snapshot, status, tier, feeStatus, evidence]);
+    }
+    let sweeps = 0, committed;
+    const facts = async () => ({
+      tasks: (await db.query("select request_id,kind,dedupe_key from exchange_request_tasks order by request_id,kind")).rows,
+      refunds: (await db.query("select request_id,kind,amount,status from exchange_request_refunds order by request_id,kind")).rows,
+      events: (await db.query("select id,request_id,sequence,event_type from exchange_request_events order by id")).rows,
+      requests: (await db.query("select id,status,version,priority_fee_status from exchange_requests order by id")).rows,
+    });
+    const adapter = { async rpc(name, args) {
+      if (name === "sweep_exchange_request_deadlines") {
+        const result = (await db.query("select sweep_exchange_request_deadlines() as result")).rows[0].result;
+        if (++sweeps === 1) {
+          committed = await facts();
+          return { data: null, error: { code: "", message: "Synthetic response lost after commit" }, status: 504 };
+        }
+        assert.deepEqual(await facts(), committed); assert.equal(result.updated, 0);
+        return { data: result, error: null, status: 200 };
+      }
+      const statements = {
+        claim_request_notifications: ["select * from claim_request_notifications($1,$2,$3)", [args.p_worker_id, args.p_limit, args.p_lease_seconds]],
+        prepare_request_notification: ["select prepare_request_notification($1,$2,$3,$4) as result", [args.p_id, args.p_worker_id, args.p_payload, args.p_template_version]],
+        finish_request_notification: ["select finish_request_notification($1,$2,$3,$4,$5,$6) as result", [args.p_id, args.p_worker_id, args.p_status, args.p_provider_id, args.p_error_code, args.p_next_attempt_at]],
+      };
+      assert.ok(statements[name], `Unexpected RPC ${name}`);
+      const [sql, params] = statements[name], result = await db.query(sql, params);
+      return { data: name === "claim_request_notifications" ? result.rows : result.rows[0].result, error: null, status: 200 };
+    } };
+    const sent = [];
+    const result = await notifications.runRequestNotificationWorker({ ...settings, db: adapter, send: async (_payload, key) => {
+      sent.push(key); return { data: { id: randomUUID() }, error: null, headers: null };
+    } });
+    assert.equal(sweeps, 2); assert.equal(committed.tasks.length, 2); assert.equal(committed.refunds.length, 1);
+    assert.equal(committed.events.length, 3); assert.deepEqual(await facts(), committed);
+    assert.equal(result.accepted, 5); assert.equal(sent.length, 5); assert.equal(new Set(sent).size, 5);
+    assert.equal((await db.query("select count(*)::int n from exchange_request_notification_deliveries")).rows[0].n, 5);
+    assert.equal((await db.query("select max(attempts)::int n from exchange_request_notification_deliveries")).rows[0].n, 1);
+  } finally { await db.close(); }
+});
+
 test("real SQL outbox preserves order, excludes internal customer events, freezes completion, and reconciles early/reordered callbacks", async () => {
   const db = new PGlite();
   try {
-    await db.exec(read("scripts/fixtures/customer-requests.sql"));
-    for (const migration of [
-      "20260802_09_enterprise_reporting.sql", "20260802_10_ledger_accounting_controls.sql",
-      "20260802_13_standardize_trade_fee_accounting.sql", "20260911_18_customer_requests.sql",
-      "20260911_19_request_notifications.sql", "20260913_23_request_funding_and_receipts.sql",
-      "20260913_24_request_receipt_notifications.sql", "20260913_25_request_fee_accounting.sql",
-      "20260913_26_request_fee_ledger_type.sql",
-    ]) {
-      await db.exec(read(`supabase/migrations/${migration}`));
-    }
+    await loadNotificationDatabase(db);
     const user = randomUUID(), quote = randomUUID();
     const snapshot = { ...completion, locale: "en", sender_snapshot: { name: "Original sender" }, recipient_snapshot: { full_name: "Original recipient" }, policy_snapshot: {} };
     await db.query("insert into auth.users(id,email) values($1,'customer@example.test')", [user]);
