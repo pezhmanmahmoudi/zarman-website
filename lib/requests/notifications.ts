@@ -20,9 +20,51 @@ export type NotificationDelivery = RequestEmailSnapshot & {
   template_version: string | null;
 };
 
-type RpcResult = { data: unknown; error: unknown };
+type RpcResult = { data: unknown; error: unknown; status?: number };
 export type NotificationDatabase = { rpc(name: string, args?: Record<string, unknown>): PromiseLike<RpcResult> };
 type FinishStatus = "pending" | "provider_accepted" | "failed" | "reconciliation_required";
+
+const NOTIFICATION_RPC_OPERATIONS = [
+  "sweep_exchange_request_deadlines", "claim_request_notifications", "prepare_request_notification",
+  "finish_request_notification", "record_request_email_event",
+] as const;
+type NotificationRpcOperation = typeof NOTIFICATION_RPC_OPERATIONS[number];
+const SAFE_RPC_ERROR_CODES = new Set([
+  "PGRST000", "PGRST001", "PGRST002", "PGRST003", "PGRST100", "PGRST102", "PGRST106",
+  "PGRST202", "PGRST301", "PGRST302", "PGRST303", "42501", "42883", "57014", "55P03",
+  "40P01", "40001", "53300", "08000", "08001", "08003", "08004", "08006", "08007", "08P01",
+  "transport_error", "unclassified",
+]);
+const SAFE_CONFIGURATION_ERRORS = new Set([
+  "notification_database_not_configured", "notification_sender_not_configured", "missing_site_url", "invalid_site_url",
+]);
+
+/** Discard provider messages, details and causes at the RPC boundary. */
+class NotificationRpcError extends Error {
+  readonly operation: NotificationRpcOperation;
+  readonly code: string;
+  readonly status: number | null;
+
+  constructor(operation: NotificationRpcOperation, code: unknown, status: unknown) {
+    super(`notification_rpc_failed:${operation}`);
+    this.operation = operation;
+    this.code = typeof code === "string" && SAFE_RPC_ERROR_CODES.has(code) ? code : "unclassified";
+    this.status = typeof status === "number" && Number.isInteger(status)
+      && (status === 0 || (status >= 100 && status <= 599)) ? status : null;
+  }
+}
+
+/** Only this explicit projection is safe to log; never serialize the error itself. */
+export function notificationWorkerFailureDiagnostic(error: unknown) {
+  const base = { event: "request_notification_worker_unavailable" };
+  if (error instanceof NotificationRpcError) {
+    return { ...base, stage: "database_rpc", operation: error.operation, code: error.code, status: error.status };
+  }
+  if (error instanceof Error && SAFE_CONFIGURATION_ERRORS.has(error.message)) {
+    return { ...base, stage: "configuration", code: error.message };
+  }
+  return { ...base, stage: "unknown" };
+}
 
 export function authorizedNotificationCron(header: string | null, secret: string | undefined): boolean {
   if (!secret || secret.length < 32 || !header) return false;
@@ -61,9 +103,14 @@ export async function readRequestEmailWebhookBody(request: Request, maxBytes: nu
   } finally { reader.releaseLock(); }
 }
 
-async function rpc<T>(db: NotificationDatabase, name: string, args?: Record<string, unknown>): Promise<T> {
-  const result = await db.rpc(name, args);
-  if (result.error) throw new Error(`notification_rpc_failed:${name}`);
+async function rpc<T>(db: NotificationDatabase, name: NotificationRpcOperation, args?: Record<string, unknown>): Promise<T> {
+  let result: RpcResult;
+  try { result = await db.rpc(name, args); }
+  catch { throw new NotificationRpcError(name, "transport_error", null); }
+  if (result.error) {
+    const code = typeof result.error === "object" && "code" in result.error ? result.error.code : undefined;
+    throw new NotificationRpcError(name, code, result.status);
+  }
   return result.data as T;
 }
 

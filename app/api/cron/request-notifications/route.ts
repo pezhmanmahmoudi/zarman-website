@@ -3,6 +3,7 @@ import {
   createNotificationDatabase,
   createRequestEmailSender,
   notificationRuntimeSettings,
+  notificationWorkerFailureDiagnostic,
   runRequestNotificationWorker,
 } from "@/lib/requests/notifications";
 
@@ -20,8 +21,9 @@ export async function GET(request: Request) {
       db: createNotificationDatabase(), send: createRequestEmailSender(settings.apiKey), ...settings,
     });
     return Response.json(result, { headers: { "Cache-Control": "no-store" } });
-  } catch {
-    // Provider/body/recipient data and credentials must not reach logs or HTTP.
+  } catch (error) {
+    // Log only explicit operation/code/status fields, never the error or cause.
+    console.error(notificationWorkerFailureDiagnostic(error));
     return Response.json({ error: "Notification worker unavailable; inspect the queue and configuration." }, { status: 503 });
   }
 }

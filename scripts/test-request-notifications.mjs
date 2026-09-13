@@ -139,6 +139,50 @@ test("stale ambiguity requires reconciliation; permanent errors fail; DB acknowl
   assert.equal(notifications.authorizedNotificationCron(`Bearer ${"b".repeat(32)}`, "a".repeat(32)), false);
 });
 
+test("worker route logs only allowlisted diagnostics and never exposes RPC secrets", async (t) => {
+  const secret = "whsec_TEST_ONLY_NEVER_LOG_recipient@example.test";
+  const records = [];
+  t.mock.method(console, "error", (...args) => records.push(args));
+  let scenario;
+  const route = compile("app/api/cron/request-notifications/route.ts", {
+    "@/lib/requests/notifications": {
+      ...notifications,
+      authorizedNotificationCron: () => true,
+      notificationRuntimeSettings: () => {
+        if (scenario.configurationError) throw scenario.configurationError;
+        return settings;
+      },
+      createNotificationDatabase: () => ({ async rpc(name) {
+        if (name === scenario.operation) {
+          if (scenario.thrown) throw scenario.thrown;
+          return { data: null, error: scenario.error, status: scenario.status };
+        }
+        return { data: [], error: null, status: 200 };
+      } }),
+      createRequestEmailSender: () => async () => { assert.fail("Failed RPC must not send email"); },
+    },
+  });
+  const cases = [
+    { operation: "sweep_exchange_request_deadlines", error: { code: "PGRST202", message: secret, details: secret, hint: secret }, status: 404,
+      expected: { stage: "database_rpc", operation: "sweep_exchange_request_deadlines", code: "PGRST202", status: 404 } },
+    { operation: "claim_request_notifications", error: { code: secret, message: secret }, status: 700,
+      expected: { stage: "database_rpc", operation: "claim_request_notifications", code: "unclassified", status: null } },
+    { operation: "sweep_exchange_request_deadlines", thrown: new Error(secret, { cause: { secret } }),
+      expected: { stage: "database_rpc", operation: "sweep_exchange_request_deadlines", code: "transport_error", status: null } },
+    { configurationError: new Error(`invalid_site_url:${secret}`), expected: { stage: "unknown" } },
+    { configurationError: new Error("missing_site_url"), expected: { stage: "configuration", code: "missing_site_url" } },
+  ];
+  for (scenario of cases) {
+    records.length = 0;
+    const response = await route.GET(new Request("https://example.test/api/cron/request-notifications"));
+    const body = await response.text();
+    assert.equal(response.status, 503);
+    assert.deepEqual(JSON.parse(body), { error: "Notification worker unavailable; inspect the queue and configuration." });
+    assert.deepEqual(records, [[{ event: "request_notification_worker_unavailable", ...scenario.expected }]]);
+    assert.ok(!`${JSON.stringify(records)}${body}`.includes(secret));
+  }
+});
+
 test("webhook verifies raw signed body and rejects replayed signatures over altered content", () => {
   const key = Buffer.from("synthetic test signing key only 12345");
   const secret = `whsec_${key.toString("base64")}`;
