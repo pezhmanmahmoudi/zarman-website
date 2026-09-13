@@ -41,19 +41,38 @@ const SAFE_RPC_ERROR_CODES = new Set([
 const SAFE_CONFIGURATION_ERRORS = new Set([
   "notification_database_not_configured", "notification_sender_not_configured", "missing_site_url", "invalid_site_url",
 ]);
+type TransportCategory = "timeout" | "aborted" | "socket_error" | "dns_error" | "invalid_response" | "unclassified";
+
+function transportCategory(error: unknown): TransportCategory {
+  if (!error || typeof error !== "object") return "unclassified";
+  const fields = error as Record<string, unknown>;
+  const cause = fields.cause && typeof fields.cause === "object" ? fields.cause as Record<string, unknown> : {};
+  // The SDK flattens transport/body errors into message/details with status 0.
+  // Inspect locally and retain only a fixed category, never the original text.
+  const text = [fields.name, fields.code, fields.message, fields.details, cause.name, cause.code, cause.message]
+    .filter((value): value is string => typeof value === "string").join("\n");
+  if (/\b(TimeoutError|ETIMEDOUT|UND_ERR_CONNECT_TIMEOUT|UND_ERR_HEADERS_TIMEOUT|UND_ERR_BODY_TIMEOUT)\b/.test(text)) return "timeout";
+  if (/\b(AbortError|ABORT_ERR|UND_ERR_ABORTED)\b/.test(text)) return "aborted";
+  if (/\b(ENOTFOUND|EAI_AGAIN)\b/.test(text)) return "dns_error";
+  if (/\b(SocketError|ECONNRESET|ECONNREFUSED|EPIPE|UND_ERR_SOCKET)\b/.test(text)) return "socket_error";
+  if (/\b(SyntaxError|UND_ERR_RES_CONTENT_LENGTH_MISMATCH|HPE_INVALID_HEADER_TOKEN|HPE_INVALID_STATUS)\b/.test(text)) return "invalid_response";
+  return "unclassified";
+}
 
 /** Discard provider messages, details and causes at the RPC boundary. */
 class NotificationRpcError extends Error {
   readonly operation: NotificationRpcOperation;
   readonly code: string;
   readonly status: number | null;
+  readonly category?: TransportCategory;
 
-  constructor(operation: NotificationRpcOperation, code: unknown, status: unknown) {
+  constructor(operation: NotificationRpcOperation, code: unknown, status: unknown, category?: TransportCategory) {
     super(`notification_rpc_failed:${operation}`);
     this.operation = operation;
     this.code = typeof code === "string" && SAFE_RPC_ERROR_CODES.has(code) ? code : "unclassified";
     this.status = typeof status === "number" && Number.isInteger(status)
       && (status === 0 || (status >= 100 && status <= 599)) ? status : null;
+    this.category = category;
   }
 }
 
@@ -61,7 +80,8 @@ class NotificationRpcError extends Error {
 export function notificationWorkerFailureDiagnostic(error: unknown) {
   const base = { event: "request_notification_worker_unavailable" };
   if (error instanceof NotificationRpcError) {
-    return { ...base, stage: "database_rpc", operation: error.operation, code: error.code, status: error.status };
+    return { ...base, stage: "database_rpc", operation: error.operation, code: error.code, status: error.status,
+      ...(error.category ? { category: error.category } : {}) };
   }
   if (error instanceof Error && SAFE_CONFIGURATION_ERRORS.has(error.message)) {
     return { ...base, stage: "configuration", code: error.message };
@@ -85,8 +105,12 @@ export function createNotificationDatabase(): NotificationDatabase {
     global: { fetch: (input, init) => {
       const callerSignal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
       const timeoutSignal = AbortSignal.timeout(DATABASE_ATTEMPT_TIMEOUT_MS);
+      const headers = new Headers(input instanceof Request ? input.headers : undefined);
+      new Headers(init?.headers).forEach((value, name) => headers.set(name, value));
+      // Do not retain database HTTP sockets across idle serverless invocations.
+      headers.set("Connection", "close");
       return fetch(input, {
-        ...init,
+        ...init, headers,
         signal: callerSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : timeoutSignal,
       });
     } },
@@ -119,10 +143,10 @@ export async function readRequestEmailWebhookBody(request: Request, maxBytes: nu
 async function rpc<T>(db: NotificationDatabase, name: NotificationRpcOperation, args?: Record<string, unknown>): Promise<T> {
   let result: RpcResult;
   try { result = await db.rpc(name, args); }
-  catch { throw new NotificationRpcError(name, "transport_error", null); }
+  catch (error) { throw new NotificationRpcError(name, "transport_error", null, transportCategory(error)); }
   if (result.error) {
     const code = typeof result.error === "object" && "code" in result.error ? result.error.code : undefined;
-    throw new NotificationRpcError(name, code, result.status);
+    throw new NotificationRpcError(name, code, result.status, result.status === 0 ? transportCategory(result.error) : undefined);
   }
   return result.data as T;
 }

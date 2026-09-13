@@ -152,7 +152,7 @@ test("database transport preserves cancellation and limits each HTTP attempt wit
   t.mock.method(AbortSignal, "timeout", (ms) => { timeoutMs = ms; return timeoutController.signal; });
   t.mock.method(globalThis, "fetch", async (_input, init) => {
     calls++;
-    return { signal: init.signal };
+    return { signal: init.signal, headers: init.headers };
   });
   const compiled = compile("lib/requests/notifications.ts", {
     "./receipt": receipts, "./notification-template": templates, "./notification-config": configuration,
@@ -164,10 +164,22 @@ test("database transport preserves cancellation and limits each HTTP attempt wit
     process.env.SUPABASE_SERVICE_ROLE_KEY = "synthetic-only";
     compiled.createNotificationDatabase();
     const caller = new AbortController();
-    const response = await clientOptions.global.fetch("https://synthetic.example.test", { signal: caller.signal });
+    const originalHeaders = new Headers({ authorization: "Bearer synthetic-token", apikey: "synthetic-key" });
+    const response = await clientOptions.global.fetch("https://synthetic.example.test", { signal: caller.signal, headers: originalHeaders });
     assert.equal(timeoutMs, 4000); assert.equal(calls, 1); assert.equal(response.signal.aborted, false);
+    assert.equal(response.headers.get("connection"), "close");
+    assert.equal(response.headers.get("authorization"), "Bearer synthetic-token");
+    assert.equal(response.headers.get("apikey"), "synthetic-key");
+    assert.equal(originalHeaders.has("connection"), false);
     caller.abort(); assert.equal(response.signal.aborted, true);
-    const timed = await clientOptions.global.fetch(new Request("https://synthetic.example.test"));
+    const timed = await clientOptions.global.fetch(new Request("https://synthetic.example.test", {
+      headers: { authorization: "Bearer request-token", "x-request-header": "preserved" },
+    }), { headers: { apikey: "init-key", "x-init-header": "preserved" } });
+    assert.equal(timed.headers.get("connection"), "close");
+    assert.equal(timed.headers.get("authorization"), "Bearer request-token");
+    assert.equal(timed.headers.get("apikey"), "init-key");
+    assert.equal(timed.headers.get("x-request-header"), "preserved");
+    assert.equal(timed.headers.get("x-init-header"), "preserved");
     timeoutController.abort(); assert.equal(timed.signal.aborted, true); assert.equal(calls, 2);
   } finally {
     if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL; else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
@@ -238,10 +250,17 @@ test("worker route logs only allowlisted diagnostics and never exposes RPC secre
     { operation: "sweep_exchange_request_deadlines", error: { code: "", message: secret }, status: 504,
       expected: { stage: "database_rpc", operation: "sweep_exchange_request_deadlines", code: "unclassified", status: 504 } },
     { operation: "sweep_exchange_request_deadlines", thrown: new Error(secret, { cause: { secret } }),
-      expected: { stage: "database_rpc", operation: "sweep_exchange_request_deadlines", code: "transport_error", status: null } },
+      expected: { stage: "database_rpc", operation: "sweep_exchange_request_deadlines", code: "transport_error", status: null, category: "unclassified" } },
+    { operation: "claim_request_notifications", thrown: new Error(secret, { cause: { code: "ENOTFOUND", message: secret } }),
+      expected: { stage: "database_rpc", operation: "claim_request_notifications", code: "transport_error", status: null, category: "dns_error" } },
     { configurationError: new Error(`invalid_site_url:${secret}`), expected: { stage: "unknown" } },
     { configurationError: new Error("missing_site_url"), expected: { stage: "configuration", code: "missing_site_url" } },
   ];
+  for (const [category, marker] of [
+    ["timeout", "TimeoutError"], ["aborted", "AbortError"], ["socket_error", "UND_ERR_SOCKET"],
+    ["dns_error", "EAI_AGAIN"], ["invalid_response", "SyntaxError"], ["unclassified", "unknown error"],
+  ]) cases.push({ operation: "claim_request_notifications", error: { code: "", message: secret, details: `${marker}: ${secret}` }, status: 0,
+    expected: { stage: "database_rpc", operation: "claim_request_notifications", code: "unclassified", status: 0, category } });
   for (scenario of cases) {
     records.length = 0;
     const response = await route.GET(new Request("https://example.test/api/cron/request-notifications"));

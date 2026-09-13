@@ -28,6 +28,7 @@ Configure the hosting scheduler or an external job runner to call `GET /api/cron
 Each run first sweeps deadlines, then claims up to 10 messages one at a time (120-second leases and bounded provider requests). Runs may overlap safely: row leases prevent two workers from owning the same job, and database ordering prevents later events overtaking earlier unsettled events for the same request, audience and recipient. A failed configuration produces HTTP 503, unauthorized calls produce HTTP 401, and successful runs return only aggregate counts. Alert on repeated 503s and old pending messages.
 
 Database HTTP attempts are capped at four seconds, and the worker stops starting new claims after 30 seconds to leave room within the 60-second route limit. Only the deadline sweep retries once after a transport failure or HTTP 502/503/504; its committed tasks and events are deduplicated. Claim, prepare and acknowledgement calls are never retried within the run. An unresolved failure returns the same generic 503 and logs only the operation, allowlisted error code and status; message bodies, recipients and credentials are excluded.
+Database HTTP calls request connection closure after each response to avoid retaining idle serverless sockets; transport failures include only a fixed diagnostic category such as timeout, socket error or invalid response.
 
 ## Resend webhook
 
