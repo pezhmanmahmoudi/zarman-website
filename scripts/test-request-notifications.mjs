@@ -166,7 +166,7 @@ test("database transport preserves cancellation and limits each HTTP attempt wit
     const caller = new AbortController();
     const originalHeaders = new Headers({ authorization: "Bearer synthetic-token", apikey: "synthetic-key" });
     const response = await clientOptions.global.fetch("https://synthetic.example.test", { signal: caller.signal, headers: originalHeaders });
-    assert.equal(timeoutMs, 4000); assert.equal(calls, 1); assert.equal(response.signal.aborted, false);
+    assert.equal(timeoutMs, 8000); assert.equal(calls, 1); assert.equal(response.signal.aborted, false);
     assert.equal(response.headers.get("connection"), "close");
     assert.equal(response.headers.get("authorization"), "Bearer synthetic-token");
     assert.equal(response.headers.get("apikey"), "synthetic-key");

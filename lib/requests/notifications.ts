@@ -12,9 +12,9 @@ import { validatedNotificationSettings } from "./notification-config";
 
 const IDEMPOTENCY_SAFE_WINDOW_MS = 23 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 12;
-const DATABASE_ATTEMPT_TIMEOUT_MS = 4_000;
+const DATABASE_ATTEMPT_TIMEOUT_MS = 8_000;
 // Leave time for the final claim, preparation, 12-second send and acknowledgement.
-const WORKER_CLAIM_WINDOW_MS = 30_000;
+const WORKER_CLAIM_WINDOW_MS = 20_000;
 
 export type NotificationDelivery = RequestEmailSnapshot & {
   attempts: number;
