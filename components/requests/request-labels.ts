@@ -63,6 +63,7 @@ export function requestError(error: string, locale: RequestLocale): string {
   if (locale !== "fa") return error;
   if (/[\u0600-\u06ff]/.test(error)) return error;
   const translations: Array<[RegExp, string]> = [
+    [/wait for (?:staff )?payment approval|payment.*not.*approved|PAYMENT_APPROVAL/i, "ابتدا منتظر تأیید پرداخت از سوی مدیر بمانید."],
     [/changed|stale|refresh.*before|VERSION|QUOTE_CHANGED/i, "اطلاعات این درخواست تغییر کرده است. صفحه را تازه کنید و دوباره تلاش کنید."],
     [/sign in|authenticate|session|log.?in/i, "برای ادامه وارد حساب خود شوید."],
     [/verify.*email|email.*verif/i, "ابتدا نشانی ایمیل خود را تأیید کنید."],
@@ -91,11 +92,12 @@ export function requestMoney(amount: number | string | null | undefined, currenc
   return `${new Intl.NumberFormat(locale === "fa" ? "fa-IR" : "en-AU", { maximumFractionDigits: currency.toUpperCase() === "AUD" ? 2 : 0 }).format(Number(amount || 0))} ${currency === "IRT" || currency.toLowerCase() === "toman" ? (locale === "fa" ? "تومان" : "Toman") : currency.toUpperCase()}`;
 }
 
-export function requestDate(value: string | null | undefined, locale: RequestLocale) {
+export function requestDate(value: string | null | undefined, _locale?: RequestLocale) {
+  void _locale;
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat(locale === "fa" ? "fa-IR" : "en-AU", { dateStyle: "medium", timeStyle: "short", timeZone: "Australia/Sydney" }).format(date);
+  return new Intl.DateTimeFormat("en-AU-u-ca-gregory-nu-latn", { dateStyle: "medium", timeStyle: "short", timeZone: "Australia/Sydney" }).format(date);
 }
 
 export const isRequestTerminal = (status: string) => ["completed", "cancelled", "rejected", "expired"].includes(status);

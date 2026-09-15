@@ -97,7 +97,7 @@ export function settingsInputError(input: RequestSettings): string | null {
 export function mutationInputError(input: RequestMutationInput, admin: boolean): string | null {
   if (!input || !isUuid(input.requestId) || !isUuid(input.commandKey) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) return "Invalid request. Refresh the page and try again.";
   const allowed = admin
-    ? ["review", "request_info", "await_funds", "confirm_funds", "resume_funded_request", "start_processing", "record_uncertain_payout", "complete", "cancel", "reject", "confirm_refund"]
+    ? ["review", "request_info", "await_funds", "confirm_funds", "resume_funded_request", "start_processing", "record_uncertain_payout", "complete", "reconcile_complete", "cancel", "reject", "confirm_refund"]
     : ["respond", "cancel", "payment_evidence"];
   if (!allowed.includes(input.action)) return "This action is not available.";
   if (admin && typeof input.sendEmail !== "boolean") return "Choose whether to send an email update.";
@@ -110,7 +110,7 @@ export function mutationInputError(input: RequestMutationInput, admin: boolean):
   if (input.action === "confirm_funds" && (!isMoney(payload.received_amount) || !["AUD", "IRT"].includes(payload.received_currency || "")
       || (payload.received_currency === "IRT" && !Number.isInteger(payload.received_amount)))) return "Enter the reconciled amount and currency (whole Toman).";
   if (input.action === "confirm_funds" && !isUuid(payload.receiver_account_id)) return "Choose the account where the cleared funds were received.";
-  if (input.action === "complete" && (!boundedText(payload.settlement_reference, 200) || !isUuid(payload.payer_account_id)
+  if (["complete", "reconcile_complete"].includes(input.action) && (!boundedText(payload.settlement_reference, 200) || !isUuid(payload.payer_account_id)
       || !isUuid(payload.receiver_account_id) || payload.payer_account_id === payload.receiver_account_id)) return "Enter the settlement reference and distinct payer and receiver accounts.";
   if (payload.transfer_method && !["free", "pol", "paya", "satna"].includes(payload.transfer_method)) return "Choose a valid bank transfer method.";
   if (input.action === "confirm_refund" && (!boundedText(payload.refund_reference, 200) || !["priority", "principal"].includes(payload.refund_kind || ""))) return "Enter the refund reference and refund kind.";

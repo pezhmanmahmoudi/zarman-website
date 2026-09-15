@@ -8,12 +8,12 @@ const vm = require("node:vm");
 const { test } = require("node:test");
 const ts = require("typescript");
 
-function compile(path, imports = {}, env = {}) {
+function compile(path, imports = {}, env = {}, globals = {}) {
   const code = ts.transpileModule(readFileSync(resolve(__dirname, "..", path), "utf8"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText;
   const compiledModule = { exports: {} };
-  const context = vm.createContext({ module: compiledModule, exports: compiledModule.exports, Buffer, URL, FormData, File, Uint8Array, Intl, Date, console,
+  const context = vm.createContext({ module: compiledModule, exports: compiledModule.exports, Buffer, URL, FormData, File, Uint8Array, Intl, Date, console, ...globals,
     process: { env: { NEXT_PUBLIC_SUPABASE_URL: "https://fixture.invalid", SUPABASE_SERVICE_ROLE_KEY: "test-only", ...env } },
     require: id => Object.hasOwn(imports, id) ? imports[id] : require(id),
   });
@@ -46,7 +46,8 @@ function harness(overrides = {}) {
     from(table) {
       const query = { table, filters: {}, operation: "read", value: undefined };
       const builder = {};
-      for (const name of ["select", "order", "limit", "gte", "not", "in", "is"]) builder[name] = () => builder;
+      for (const name of ["order", "limit", "gte", "not", "in", "is"]) builder[name] = () => builder;
+      builder.select = columns => { query.columns = columns; return builder; };
       builder.eq = (field, value) => { query.filters[field] = value; return builder; };
       builder.insert = value => { query.operation = "insert"; query.value = value; return builder; };
       const finish = () => {
@@ -63,16 +64,25 @@ function harness(overrides = {}) {
           case "recipients": return query.filters.user_id !== state.recipientOwner ? { data: null, error: { code: "PGRST116" } } : {
             data: { id: RECIPIENT, user_id: state.recipientOwner, direction: state.direction, full_name: "Test Recipient", bank_type: "other", shaba_number: "IR" + "1".repeat(24), account_name: "Test Recipient", bsb: "062000", account_number: "12345678" }, error: null };
           case "exchange_request_quotes": return { data: [], count: 0, error: null };
-          case "exchange_requests": return query.filters.user_id && query.filters.user_id !== state.requestOwner ? { data: null, error: {} } : { data: { id: REQUEST, user_id: state.requestOwner, status: "awaiting_funds" }, error: null };
+          case "exchange_request_commands": {
+            if (state.commandReadError) return { data: null, error: state.commandReadError };
+            const row = (state.commands || []).find(command => Object.entries(query.filters).every(([key, value]) => command[key] === value));
+            return { data: row ? { accounting_date_jalali: row.accounting_date_jalali } : null, error: null };
+          }
+          case "exchange_requests": {
+            if (query.filters.user_id && query.filters.user_id !== state.requestOwner) return { data: null, error: {} };
+            const request = { id: REQUEST, user_id: state.requestOwner, status: "awaiting_funds", payment_approved_at: null, funding_status: "unpaid", priority_fee_status: "not_applicable", ...state.request };
+            return { data: query.single ? request : [request], error: null };
+          }
           case "exchange_request_receipts": return state.receipt ? { data: state.receipt, error: null } : { data: null, count: 0, error: null };
           default: return { data: [], error: null };
         }
       };
-      builder.single = builder.maybeSingle = async () => finish();
+      builder.single = builder.maybeSingle = async () => { query.single = true; return finish(); };
       builder.then = (onSuccess, onFailure) => Promise.resolve(finish()).then(onSuccess, onFailure);
       return builder;
     },
-    rpc: async (name, args) => { state.calls.push({ rpc: name, args }); return { data: { id: REQUEST }, error: null }; },
+    rpc: async (name, args) => { state.calls.push({ rpc: name, args }); return state.rpc ? state.rpc(name, args) : { data: { id: REQUEST, ...state.rpcRequest }, error: null }; },
     storage: { from: bucket => ({
       createSignedUrl: async (...args) => { state.storageCalls.push({ bucket, args }); return { data: { signedUrl: "https://fixture.invalid/private-download" }, error: null }; },
     }) },
@@ -84,7 +94,10 @@ function harness(overrides = {}) {
     "@/app/actions/admin.actions": { requireAdmin: async () => { if (!state.admin) throw new Error("Administrator required"); return state.user; } },
     "@/lib/requests/validation": validation, "@/lib/requests/receipt-upload": upload, "@/lib/pricing": pricing,
     "@/lib/requests/notification-config": notificationConfig,
-  }, state.env);
+  }, state.env, state.now ? { Date: class extends Date {
+    constructor(...args) { super(...(args.length ? args : [state.now])); }
+    static now() { return new Date(state.now).getTime(); }
+  } } : {});
   return { actions, state };
 }
 
@@ -243,4 +256,139 @@ test("messages bind the actor and retry key, trim content, and restrict email de
   assert.equal(state.calls.filter(call => call.rpc).at(-1).args.p_send_email, true);
   state.user = null;
   assert.ok((await actions.sendMyRequestMessage(base)).error);
+});
+
+test("unapproved customer responses never expose bank details through submit, list, detail or mutation", async () => {
+  const bank = { payment_approved_at: null, payment_details: { bsb: "062000", account_number: "00123456" }, payment_instructions: "Private bank instructions", payment_instructions_fa: "مشخصات بانکی" };
+  const { actions, state } = harness({ request: bank, rpcRequest: bank });
+  const submit = await actions.submitExchangeRequest({ quoteId: REQUEST, commandKey: COMMAND });
+  const list = await actions.listMyRequests();
+  const detail = await actions.getMyRequest(REQUEST);
+  const cancelled = await actions.mutateMyRequest({ requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, action: "cancel" });
+  for (const request of [submit.data, list.data[0], detail.data.request, cancelled.data]) {
+    assert.equal(request.payment_details, null);
+    assert.equal(request.payment_instructions, null);
+    assert.equal(request.payment_instructions_fa, null);
+  }
+  state.request = { ...bank, payment_approved_at: "2026-09-15T01:00:00Z" };
+  assert.equal((await actions.getMyRequest(REQUEST)).data.request.payment_details.account_number, "00123456");
+  state.admin = true;
+  state.request = bank;
+  assert.equal((await actions.getAdminRequest(REQUEST)).data.request.payment_details.account_number, "00123456");
+});
+
+test("receipt sending requires payment approval before storage or registration can be touched", async () => {
+  const { actions, state } = harness({ request: { payment_approved_at: null } });
+  const form = new FormData();
+  form.set("requestId", REQUEST); form.set("commandKey", COMMAND);
+  form.set("file", new File(["%PDF-1.7\nfixture"], "receipt.pdf", { type: "application/pdf" }));
+  assert.match((await actions.uploadRequestReceipt(form)).error, /Wait for payment approval/);
+  assert.equal(state.storageCalls.length, 0);
+  assert.equal(state.calls.some(call => call.rpc || call.table === "exchange_request_receipts"), false);
+});
+
+test("final reconciliation is admin-only and sends one validated command with a server accounting date", async () => {
+  const { actions, state } = harness({ admin: true });
+  const input = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 5, action: "reconcile_complete", sendEmail: false,
+    payload: { payer_account_id: ACCOUNT, receiver_account_id: OTHER, settlement_reference: "TEST-DESTINATION-PAID", transfer_method: "paya", date_jalali: "forged" } };
+  assert.equal((await actions.mutateAdminRequest(input)).error, undefined);
+  const calls = state.calls.filter(call => call.rpc);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].args.p_action, "reconcile_complete");
+  assert.equal(calls[0].args.p_payload.send_email, false);
+  assert.match(calls[0].args.p_payload.date_jalali, /^14\d{2}\/\d{2}\/\d{2}$/);
+  assert.ok((await actions.mutateAdminRequest({ ...input, payload: { ...input.payload, settlement_reference: "" } })).error);
+  assert.ok((await actions.mutateMyRequest({ ...input, sendEmail: undefined })).error);
+});
+
+const financialActions = {
+  confirm_funds: { received_amount: 1000, received_currency: "AUD", payment_reference: "BANK-123", receiver_account_id: ACCOUNT },
+  complete: { settlement_reference: "SETTLED-123", payer_account_id: ACCOUNT, receiver_account_id: OTHER, transfer_method: "paya" },
+  reconcile_complete: { settlement_reference: "SETTLED-123", payer_account_id: ACCOUNT, receiver_account_id: OTHER, transfer_method: "satna" },
+  resume_funded_request: { honour_quote: true },
+  confirm_refund: { refund_reference: "REFUND-123", refund_kind: "principal", payer_account_id: ACCOUNT },
+};
+
+for (const [action, payload] of Object.entries(financialActions)) {
+  test(`${action}: a committed retry across UTC midnight reuses the original accounting date and still invokes SQL`, async () => {
+    const { actions, state } = harness({ admin: true, now: "2026-09-15T23:59:59Z", commands: [] });
+    let commits = 0;
+    state.rpc = (name, args) => {
+      assert.equal(name, "transition_exchange_request");
+      const prior = state.commands.find(command => command.request_id === args.p_request_id && command.command_key === args.p_command_key);
+      if (prior) {
+        if (prior.fingerprint !== JSON.stringify(args)) return { data: null, error: { code: "P0001", message: "COMMAND_PAYLOAD_CONFLICT" } };
+        return { data: { id: REQUEST, version: 6 }, error: null };
+      }
+      state.commands.push({ request_id: args.p_request_id, command_key: args.p_command_key, actor_id: args.p_actor_id,
+        accounting_date_jalali: args.p_payload.date_jalali, fingerprint: JSON.stringify(args) });
+      commits += 1;
+      return { data: null, error: { code: "FETCH_ERROR", message: "Response lost after commit" } };
+    };
+    const input = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 5, action, sendEmail: false, payload };
+    assert.ok((await actions.mutateAdminRequest(input)).error);
+    const first = state.calls.find(call => call.rpc).args;
+    state.now = "2026-09-16T00:00:01Z";
+    const replay = await actions.mutateAdminRequest(input);
+    assert.equal(replay.error, undefined);
+    assert.equal(replay.data.version, 6);
+    assert.equal(commits, 1);
+    assert.equal(JSON.stringify(state.calls.filter(call => call.rpc).at(-1).args), JSON.stringify(first));
+    assert.equal(state.calls.filter(call => call.rpc).length, 2);
+    const lookup = state.calls.filter(call => call.table === "exchange_request_commands").at(-1);
+    assert.deepEqual(lookup.filters, { request_id: REQUEST, command_key: COMMAND, actor_id: CUSTOMER });
+    assert.equal(lookup.columns, "accounting_date_jalali");
+
+    // Saved dates must not bypass the SQL fingerprint check for any other intent.
+    for (const changed of [{ sendEmail: true }, { expectedVersion: 6 }, { payload: { ...payload, message: "Changed intent" } }]) {
+      const rejected = await actions.mutateAdminRequest({ ...input, ...changed });
+      assert.equal(rejected.error, "COMMAND_PAYLOAD_CONFLICT");
+      assert.equal(state.calls.filter(call => call.rpc).at(-1).args.p_payload.date_jalali, first.p_payload.date_jalali);
+    }
+    assert.equal(commits, 1);
+
+    // A genuinely new command receives today's date, proving the clock crossed a day.
+    assert.ok((await actions.mutateAdminRequest({ ...input, commandKey: OTHER })).error);
+    const fresh = state.calls.filter(call => call.rpc).at(-1).args;
+    assert.notEqual(fresh.p_payload.date_jalali, first.p_payload.date_jalali);
+    assert.equal(commits, 2);
+  });
+}
+
+test("accounting date lookup excludes commands from another actor, request or key and preserves legacy fallback", async () => {
+  const input = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 5, action: "confirm_funds", sendEmail: false, payload: financialActions.confirm_funds };
+  const { actions, state } = harness({ admin: true, now: "2026-09-16T00:00:01Z", commands: [
+    { request_id: REQUEST, command_key: COMMAND, actor_id: OTHER, accounting_date_jalali: "1300/01/01" },
+    { request_id: OTHER, command_key: COMMAND, actor_id: CUSTOMER, accounting_date_jalali: "1300/01/02" },
+    { request_id: REQUEST, command_key: OTHER, actor_id: CUSTOMER, accounting_date_jalali: "1300/01/03" },
+  ] });
+  assert.equal((await actions.mutateAdminRequest(input)).error, undefined);
+  const currentDate = state.calls.find(call => call.rpc).args.p_payload.date_jalali;
+  assert.match(currentDate, /^14\d{2}\/\d{2}\/\d{2}$/);
+  state.commands.push({ request_id: REQUEST, command_key: COMMAND, actor_id: CUSTOMER, accounting_date_jalali: null });
+  assert.equal((await actions.mutateAdminRequest(input)).error, undefined);
+  assert.equal(state.calls.filter(call => call.rpc).at(-1).args.p_payload.date_jalali, currentDate);
+});
+
+test("an unavailable or malformed saved accounting date fails without sending a differently fingerprinted command", async () => {
+  const input = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 5, action: "confirm_funds", sendEmail: false, payload: financialActions.confirm_funds };
+  for (const overrides of [
+    { commandReadError: { code: "FETCH_ERROR", message: "Temporary read failure" } },
+    { commands: [{ request_id: REQUEST, command_key: COMMAND, actor_id: CUSTOMER, accounting_date_jalali: "invalid" }] },
+  ]) {
+    const { actions, state } = harness({ admin: true, ...overrides });
+    assert.ok((await actions.mutateAdminRequest(input)).error);
+    assert.equal(state.calls.filter(call => call.table === "exchange_request_commands").length, 1);
+    assert.equal(state.calls.some(call => call.rpc), false);
+  }
+});
+
+test("authentication, financial action permissions and payload validation precede the accounting date lookup", async () => {
+  const input = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 5, action: "confirm_funds", sendEmail: false, payload: financialActions.confirm_funds };
+  const { actions, state } = harness();
+  assert.ok((await actions.mutateAdminRequest(input)).error);
+  assert.ok((await actions.mutateMyRequest({ ...input, sendEmail: undefined })).error);
+  state.admin = true;
+  assert.ok((await actions.mutateAdminRequest({ ...input, payload: { ...input.payload, received_amount: -1 } })).error);
+  assert.equal(state.calls.some(call => call.table === "exchange_request_commands" || call.rpc), false);
 });

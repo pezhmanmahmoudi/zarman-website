@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Download, FileUp } from "lucide-react";
+import { Clock3, Download, FileText, FileUp, Plus } from "lucide-react";
 import { getRequestReceiptUrl, uploadRequestReceipt } from "@/app/actions/request.actions";
 import type { ExchangeRequest, RequestLocale, RequestReceipt } from "@/lib/requests/types";
+import { getRequestJourney } from "@/lib/requests/journey";
 import { MAX_REQUEST_RECEIPT_BYTES } from "@/lib/requests/receipt-upload";
 import { requestDate, requestError } from "./request-labels";
 import styles from "@/styles/requests/Requests.module.css";
@@ -18,33 +19,38 @@ export function RequestReceiptUpload({ request, receipts, admin = false, locale,
   const [opening, setOpening] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [additional, setAdditional] = useState(false);
+  const [sent, setSent] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const pending = useRef(false);
-  const attempt = useRef<{ file: File; key: string } | null>(null);
-  const canUpload = !admin && ["submitted", "under_review", "awaiting_funds", "action_required"].includes(request.status)
-    && ["unpaid", "partial"].includes(request.funding_status)
-    && !["refund_pending", "refunded"].includes(request.priority_fee_status);
+  const attempt = useRef<{ requestId: string; file: File; key: string } | null>(null);
+  const journey = getRequestJourney(request);
+  const canUpload = !admin && journey.canUpload;
+  const hasReceipt = sent || journey.receiptSubmitted || receipts.length > 0;
+  const showForm = canUpload && (!hasReceipt || additional);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!file || pending.current) return;
+    if (!canUpload || !file || pending.current) return;
     if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type) || file.size === 0 || file.size > MAX_REQUEST_RECEIPT_BYTES) {
       setError(fa ? "فایل PDF، JPG یا PNG با حجم حداکثر ۴ مگابایت انتخاب کنید." : "Choose a non-empty PDF, JPG or PNG file, no larger than 4 MB.");
       return;
     }
     pending.current = true; setBusy(true); setError(""); setNotice("");
-    if (attempt.current?.file !== file) attempt.current = { file, key: crypto.randomUUID() };
+    if (attempt.current?.file !== file || attempt.current.requestId !== request.id) attempt.current = { requestId: request.id, file, key: crypto.randomUUID() };
     const body = new FormData();
     body.set("requestId", request.id); body.set("commandKey", attempt.current.key); body.set("file", file);
     try {
       const result = await uploadRequestReceipt(body);
       if (result.error) setError(result.error);
       else {
-        attempt.current = null; setFile(null); if (input.current) input.current.value = "";
-        setNotice(fa ? "رسید ثبت شد؛ در انتظار تأیید وجه." : "Receipt saved. Awaiting funds confirmation.");
-        await onUploaded();
+        attempt.current = null; setFile(null); setSent(true); setAdditional(false);
+        if (input.current) input.current.value = "";
+        setNotice(fa ? "رسید ارسال شد؛ در حال بررسی واریز شما هستیم." : "Receipt sent — we are checking your payment.");
+        try { await onUploaded(); }
+        catch { setError(fa ? "رسید ارسال شد. برای دریافت آخرین وضعیت، صفحه را تازه کنید." : "Receipt sent. Refresh to see the latest status."); }
       }
-    } catch { setError(fa ? "نتیجه آپلود دریافت نشد. با همین فایل دوباره تلاش کنید." : "We could not confirm the upload. Retry with the same file."); }
+    } catch { setError(fa ? "ارسال رسید تأیید نشد. با همین فایل دوباره تلاش کنید." : "Sending was not confirmed. Retry with the same receipt."); }
     finally { pending.current = false; setBusy(false); }
   }
 
@@ -64,20 +70,25 @@ export function RequestReceiptUpload({ request, receipts, admin = false, locale,
     finally { setOpening(""); }
   }
 
-  return <section className={`${styles.card} ${compact.compactCard}`}>
-    <h2>{fa ? "رسید واریز" : admin ? "Payment evidence" : "Payment receipt"}</h2>
-    {canUpload && <form onSubmit={submit}>
-      <label className={styles.field}>{fa ? "انتخاب فایل: PDF، JPG یا PNG؛ تا ۴ مگابایت" : "Choose file: PDF, JPG or PNG, up to 4 MB"}
+  if (!admin && !journey.approved) return null;
+  return <section className={`${styles.card} ${compact.compactCard}`} dir={fa ? "rtl" : "ltr"}>
+    <div className={compact.heading}><h2>{fa ? "رسید واریز" : admin ? "Payment evidence" : "Payment receipt"}</h2>{receipts.length > 0 && <span className={styles.badge}>{receipts.length}</span>}</div>
+    {!admin && hasReceipt && !journey.fundsReceived && !journey.closed && <div className={compact.receiptStatus} role="status"><Clock3 size={17} aria-hidden="true" /><p>{fa ? "رسید ارسال شد؛ در حال بررسی واریز شما هستیم." : "Receipt sent — we are checking your payment."}</p></div>}
+    {showForm && <form onSubmit={submit} className={`${compact.receiptForm} ${hasReceipt ? compact.additionalReceipt : ""}`}>
+      <label className={compact.filePicker} data-disabled={busy}>
+        <FileUp size={22} aria-hidden="true" />
+        <span><strong>{file ? file.name : (fa ? "انتخاب رسید واریز" : "Choose your bank receipt")}</strong><small>{fa ? "PDF، JPG یا PNG · حداکثر ۴ مگابایت" : "PDF, JPG or PNG · up to 4 MB"}</small></span>
         <input ref={input} type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" required disabled={busy} onChange={event => { setFile(event.target.files?.[0] ?? null); attempt.current = null; setError(""); setNotice(""); }} />
       </label>
-      <button className={styles.button} type="submit" disabled={!file || busy} style={{ marginTop: 12 }}><FileUp size={17} aria-hidden="true" />{busy ? (fa ? "در حال بارگذاری…" : "Uploading…") : (fa ? "بارگذاری رسید" : "Upload receipt")}</button>
+      <button className={styles.button} type="submit" disabled={!file || busy}>{busy ? (fa ? "در حال ارسال…" : "Sending receipt…") : (fa ? "ارسال رسید برای بررسی" : "Send receipt for review")}</button>
     </form>}
+    {canUpload && hasReceipt && !additional && <button type="button" className={`${compact.secondaryButton} ${compact.additionalReceipt}`} onClick={() => setAdditional(true)}><Plus size={14} aria-hidden="true" />{fa ? "افزودن رسید دیگر" : "Add another receipt"}</button>}
     {error && <p className={styles.error} role="alert">{requestError(error, locale)}</p>}
-    {notice && <p className={styles.notice} role="status">{notice}</p>}
-    <ul className={styles.receiptList}>{receipts.map(receipt => <li key={receipt.id}>
-      <div><span className={styles.receiptName}>{receipt.original_name}</span><p className={styles.muted}>{requestDate(receipt.created_at, locale)} · {new Intl.NumberFormat(fa ? "fa-IR" : "en-AU").format(Math.ceil(receipt.size_bytes / 1024))} {fa ? "کیلوبایت" : "KB"}</p></div>
-      <button className={styles.secondary} type="button" aria-label={`${fa ? "مشاهده رسید" : "View receipt"}: ${receipt.original_name}`} onClick={() => void openReceipt(receipt.id)} disabled={Boolean(opening)}><Download size={16} />{fa ? "مشاهده رسید" : "View receipt"}</button>
-    </li>)}</ul>
-    {!receipts.length && !canUpload && <p className={styles.muted}>{fa ? "رسیدی ثبت نشده است." : "No receipts uploaded."}</p>}
+    {notice && !(hasReceipt && !journey.fundsReceived && !journey.closed) && <span className={styles.srOnly} role="status">{notice}</span>}
+    {receipts.length > 0 && <ul className={compact.receiptFiles}>{receipts.map(receipt => <li key={receipt.id}>
+      <div><FileText size={17} aria-hidden="true" /><div><strong>{receipt.original_name}</strong><small><bdi dir="ltr">{requestDate(receipt.created_at, locale)}</bdi> · {Math.ceil(receipt.size_bytes / 1024)} {fa ? "کیلوبایت" : "KB"}</small></div></div>
+      <button className={compact.secondaryButton} type="button" aria-label={`${fa ? "مشاهده رسید" : "View receipt"}: ${receipt.original_name}`} onClick={() => void openReceipt(receipt.id)} disabled={Boolean(opening)}><Download size={14} aria-hidden="true" />{fa ? "مشاهده" : "View"}</button>
+    </li>)}</ul>}
+    {!receipts.length && admin && <p className={styles.muted}>{fa ? "مشتری هنوز رسیدی ارسال نکرده است." : "The customer has not sent a receipt yet."}</p>}
   </section>;
 }

@@ -5,8 +5,9 @@ import Link from "next/link";
 import { ArrowRight, RefreshCw, Search } from "lucide-react";
 import { listAdminRequests, listMyRequests } from "@/app/actions/request.actions";
 import type { ExchangeRequest } from "@/lib/requests/types";
-import { requestDate, requestLabel, requestMoney, requestError, isRequestTerminal, type RequestLocale } from "./request-labels";
+import { requestDate, requestMoney, requestError, isRequestTerminal, type RequestLocale } from "./request-labels";
 import { RequestSettingsForm } from "./RequestSettingsForm";
+import { getRequestJourney, requestStageLabel } from "@/lib/requests/journey";
 import styles from "@/styles/requests/Requests.module.css";
 import workspace from "@/styles/requests/RequestWorkspace.module.css";
 
@@ -38,16 +39,27 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
 
   const filters = [
     { id: "active", label: fa ? "فعال" : "Active" },
-    ...(admin ? [{ id: "review", label: "Review" }, { id: "funding", label: "Payments" }, { id: "ready", label: "Ready" }] : []),
+    ...(admin ? [{ id: "review", label: "Approval" }, { id: "funding", label: "Check payment" }, { id: "ready", label: "To complete" }] : []),
     { id: "closed", label: fa ? "بسته‌شده" : "Closed" },
     { id: "all", label: fa ? "همه" : "All" },
   ];
   const matchesFilter = (request: ExchangeRequest, value: string) => value === "all"
     || (value === "active" && !isRequestTerminal(request.status))
     || (value === "closed" && isRequestTerminal(request.status))
-    || (value === "review" && ["submitted", "under_review", "action_required", "reconciliation"].includes(request.status))
-    || (value === "funding" && (request.status === "awaiting_funds" || request.funding_status === "refund_pending" || request.priority_fee_status === "refund_pending"))
-    || (value === "ready" && request.status === "ready");
+    || (value === "review" && !getRequestJourney(request).approved && !isRequestTerminal(request.status))
+    || (value === "funding" && getRequestJourney(request).receiptSubmitted && !getRequestJourney(request).fundsReceived && !isRequestTerminal(request.status))
+    || (value === "ready" && getRequestJourney(request).fundsReceived && !isRequestTerminal(request.status));
+  const nextAction = (request: ExchangeRequest) => {
+    const journey = getRequestJourney(request);
+    if (request.funding_status === "refund_pending" || request.priority_fee_status === "refund_pending") return "Confirm refund";
+    if (isRequestTerminal(request.status)) return "—";
+    if (request.action_required) return "Waiting for reply";
+    if (!journey.approved) return "Approve request";
+    if (journey.fundsReceived) return "Reconcile & complete";
+    if (journey.receiptSubmitted) return "Verify bank payment";
+    if (["submitted", "under_review"].includes(request.status)) return "Resume payment";
+    return "Waiting for receipt";
+  };
   const visible = requests.filter(request => matchesFilter(request, filter)
     && `${request.reference_code} ${request.quote.sender_snapshot.name} ${request.quote.sender_snapshot.email}`.toLowerCase().includes(search.trim().toLowerCase()))
     .sort((a, b) => admin ? (new Date(a.handling_due_at || "9999-01-01").getTime() - new Date(b.handling_due_at || "9999-01-01").getTime() || new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) : new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -69,23 +81,23 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
     </div>
     {error && <p className={styles.error} role="alert">{requestError(error, locale)}</p>}
     {loading ? <p className={styles.loading} role="status">{fa ? "در حال بارگذاری…" : "Loading…"}</p> : admin ? <div className={`${styles.tableWrap} ${workspace.queueTable}`} role="region" aria-label="Request queue" tabIndex={0}>
-      <table className={styles.table}><thead><tr><th>Request / Customer</th><th>Transfer</th><th>Stage</th><th>Funding</th><th>Handling due</th><th><span className={styles.srOnly}>Manage</span></th></tr></thead><tbody>
+      <table className={styles.table}><thead><tr><th>Request</th><th>Transfer</th><th>Progress</th><th>Next step</th><th>Due</th><th><span className={styles.srOnly}>Open request</span></th></tr></thead><tbody>
         {visible.map(request => <tr key={request.id}>
-          <td><Link href={`/admin/requests/${request.id}`}><bdi className={styles.reference}>{request.reference_code}</bdi></Link><span className={workspace.cellDetail}>{request.quote.sender_snapshot.name}</span><span className={workspace.cellDetail}>{request.quote.sender_snapshot.email}</span></td>
+          <td><Link href={`/admin/requests/${request.id}`}><bdi className={styles.reference}>{request.reference_code}</bdi></Link><span className={workspace.cellDetail}>{request.quote.sender_snapshot.name}</span></td>
           <td><strong>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</strong><span className={workspace.cellDetail}>→ {requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</span>{request.service_tier === "priority" && <span className={`${styles.badge} ${styles.priority}`}>Priority</span>}</td>
-          <td><span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{requestLabel(request.status, locale)}</span>{request.action_required && <span className={workspace.cellDetail}>Customer action needed</span>}{request.status === "processing" && <span className={workspace.cellDetail}>{request.owner_id ? "Assigned" : "Unassigned"}</span>}</td>
-          <td>{requestLabel(request.funding_status, locale)}{request.evidence_submitted_at && request.funding_status !== "confirmed" && <span className={workspace.attention}>Payment evidence received</span>}{request.priority_fee_status === "refund_pending" && <span className={workspace.attention}>Priority refund due</span>}</td>
-          <td><span>{request.handling_due_at && !isRequestTerminal(request.status) ? requestDate(request.handling_due_at, locale) : "—"}</span><span className={workspace.cellDetail}>Submitted {requestDate(request.created_at, locale)}</span></td>
-          <td><Link className={workspace.openRequest} href={`/admin/requests/${request.id}`} aria-label={`Manage ${request.reference_code}`}>Manage <ArrowRight size={14} /></Link></td>
+          <td><span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{requestStageLabel(request, locale)}</span>{request.funding_status === "partial" && <span className={workspace.cellDetail}>{requestMoney(request.funding_received, request.quote.funding_currency, locale)} received</span>}</td>
+          <td>{nextAction(request)}</td>
+          <td><span dir="ltr">{request.handling_due_at && !isRequestTerminal(request.status) ? requestDate(request.handling_due_at, locale) : "—"}</span></td>
+          <td><Link className={workspace.openRequest} href={`/admin/requests/${request.id}`} aria-label={`Open ${request.reference_code}`}>Open <ArrowRight size={14} /></Link></td>
         </tr>)}
       </tbody></table>{!visible.length && !error && <p className={styles.empty}>No requests in this view.</p>}
     </div> : <div className={styles.list}>
       {visible.map(request => <Link className={`${styles.request} ${workspace.customerRequest}`} key={request.id} href={`/${locale}/dashboard/requests/${request.id}`}>
         <div><div className={styles.actions}><bdi className={styles.reference}>{request.reference_code}</bdi>{request.service_tier === "priority" && <span className={`${styles.badge} ${styles.priority}`}>{fa ? "اولویت‌دار" : "Priority"}</span>}</div>
           <p className={workspace.transferAmount}><bdi>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</bdi> <span aria-hidden="true">{fa ? "←" : "→"}</span> <bdi>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</bdi></p>
-          <time className={styles.muted} dateTime={request.created_at}>{requestDate(request.created_at, locale)}</time>
+          <time dir="ltr" className={styles.muted} dateTime={request.created_at}>{requestDate(request.created_at, locale)}</time>
         </div>
-        <div className={workspace.customerRequestStatus}><span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{requestLabel(request.status, locale)}</span>{request.action_required && <span className={workspace.attention}>{fa ? "پیام زرمان را ببینید" : "View Zarman’s message"}</span>}<span className={workspace.openRequest}>{fa ? "مشاهده درخواست" : "View request"}<ArrowRight size={14} /></span></div>
+        <div className={workspace.customerRequestStatus}><span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{requestStageLabel(request, locale)}</span>{request.action_required && <span className={workspace.attention}>{fa ? "پیام زرمان را ببینید" : "View Zarman’s message"}</span>}<span className={workspace.openRequest}>{fa ? "مشاهده درخواست" : "View request"}<ArrowRight size={14} /></span></div>
       </Link>)}
       {!visible.length && !error && <div className={`${styles.card} ${styles.empty}`}>{fa ? "درخواستی در این بخش نیست." : "No requests in this view."}</div>}
     </div>}

@@ -1,7 +1,7 @@
 .categories { display:flex; gap:6px; flex-wrap:wrap; padding:16px 20px 0; }
 .categories button,.language button { background:transparent; border:1px solid #dce6e8; color:#506373; border-radius:8px; min-height:40px; padding:8px 12px; cursor:pointer; font:inherit; font-size:13px; }
-.categories button[aria-pressed="true"],.language button[aria-pressed="true"] { background:#e9f5f1; border-color:#7ab5a8; color:#14675c; font-weight:650; }
-.categories button:focus-visible,.language button:focus-visible { outline:3px solid #55aca1; outline-offset:2px; }
+.categories button[aria-pressed="true"],.language button[aria-pressed="true"] { background:#eef2ff; border-color:#a5b7ed; color:#365bd6; font-weight:650; }
+.categories button:focus-visible,.language button:focus-visible { outline:3px solid #8fa7ef; outline-offset:2px; }
 .section { padding:20px; scroll-margin-block-start:110px; }
 .section[hidden] { display:none; }
 .section textarea { resize:vertical; }

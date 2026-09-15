@@ -1,7 +1,7 @@
 export type RequestLocale = "en" | "fa";
 export type ServiceTier = "standard" | "priority";
 export type RequestStatus = "submitted" | "under_review" | "action_required" | "awaiting_funds" | "ready" | "processing" | "reconciliation" | "completed" | "cancelled" | "rejected" | "expired";
-export type RequestCommand = "review" | "request_info" | "respond" | "await_funds" | "confirm_funds" | "resume_funded_request" | "start_processing" | "record_uncertain_payout" | "complete" | "cancel" | "reject" | "confirm_refund" | "payment_evidence";
+export type RequestCommand = "review" | "request_info" | "respond" | "await_funds" | "confirm_funds" | "resume_funded_request" | "start_processing" | "record_uncertain_payout" | "complete" | "reconcile_complete" | "cancel" | "reject" | "confirm_refund" | "payment_evidence";
 export type ActionResult<T> = { data: T; error?: never } | { error: string; data?: never };
 export type FundingBankDetails = {
   account_name?: string; bank_name?: string; bsb?: string;
@@ -99,11 +99,12 @@ export type ExchangeRequest = {
   payment_instructions: string | null;
   payment_instructions_fa: string | null;
   payment_details: FundingBankDetails | null;
+  payment_approved_at: string | null;
   action_required: string | null;
   owner_id: string | null;
   handling_due_at: string | null;
   handling_started_at: string | null;
-  funding_due_at: string;
+  funding_due_at: string | null;
   ready_at: string | null;
   funds_confirmed_at: string | null;
   evidence_submitted_at: string | null;

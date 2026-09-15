@@ -86,6 +86,7 @@ const request = {
   service_tier: "priority", funding_status: "unpaid", funding_received: 0, priority_fee_status: "unpaid",
   payment_instructions: policy.payment_instructions_aud, action_required: null,
   payment_instructions_fa: policy.payment_instructions_aud_fa, payment_details: policy.payment_details_aud,
+  payment_approved_at: "2026-09-13T00:10:00Z", evidence_submitted_at: null,
   created_at: "2026-09-13T00:00:00Z", updated_at: "2026-09-13T00:00:00Z", funding_due_at: "2026-09-13T02:00:00Z",
   clearance_due_at: "2026-09-14T02:00:00Z", funds_confirmed_at: null, ready_at: null, handling_due_at: null, handling_started_at: null,
   quote: { funding_total: 1025, funding_currency: "AUD", recipient_amount: 55000000, recipient_currency: "IRT", service_tier: "priority",
@@ -109,29 +110,42 @@ function elements(element, predicate) {
 }
 const textOf = element => markup(element).replace(/<[^>]*>/g, "");
 
-test("four-step progress keeps uploaded evidence awaiting funds and funds-confirmed requests queued", () => {
+test("five customer milestones distinguish approval, receipt review, cleared funds and completion", () => {
   const waiting = render("RequestProgress", { request: { ...request, evidence_submitted_at: "2026-09-13T01:00:00Z" }, locale: "en" });
-  for (const label of ["Submitted", "Awaiting funds", "Processing", "Completed"]) assert.ok(waiting.includes(label));
+  for (const label of ["Request submitted", "Approved for payment", "Receipt sent for review", "Funds received", "Transfer completed"]) assert.ok(waiting.includes(label));
   assert.equal((waiting.match(/aria-current="step"/g) || []).length, 1);
-  assert.match(waiting, /data-current="true"[^>]*aria-current="step"[^]*?Awaiting funds/);
-  assert.doesNotMatch(waiting, /Handling clock started:/);
-  const ready = render("RequestProgress", { request: { ...request, status: "ready", funding_status: "confirmed", ready_at: "2026-09-14T01:00:00Z", funds_confirmed_at: "2026-09-14T01:00:00Z" }, locale: "en" });
-  assert.match(ready, /Queued for processing/);
-  assert.match(ready, /Handling clock started:/);
-  assert.match(ready, /Funds confirmed:/);
+  assert.match(waiting.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1], /Receipt sent for review/);
+  assert.doesNotMatch(waiting, /Handling target:/);
+  const readyRequest = { ...request, status: "ready", funding_status: "confirmed", ready_at: "2026-09-14T01:00:00Z", funds_confirmed_at: "2026-09-14T01:00:00Z", handling_due_at: "2026-09-14T02:00:00Z" };
+  const ready = render("RequestProgress", { request: readyRequest, locale: "en" });
+  assert.match(ready, /Handling target:/);
+  assert.match(ready.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1], /Funds received/);
+  const held = render("RequestProgress", { request: { ...readyRequest, status: "under_review" }, locale: "en" });
+  assert.match(held.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1], /Funds received/);
   const closed = render("RequestProgress", { request: { ...request, status: "cancelled" }, locale: "en" });
   assert.doesNotMatch(closed, /aria-current="step"/);
-  assert.match(closed, /Do not send further payment/);
-  const submitted = render("RequestProgress", { request: { ...request, status: "submitted" }, locale: "en" });
+  const submitted = render("RequestProgress", { request: { ...request, status: "submitted", payment_approved_at: null }, locale: "en" });
   const current = submitted.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1];
-  assert.match(current, /<span>Submitted<\/span>/); assert.doesNotMatch(current, /Awaiting funds/);
+  assert.match(current, /Request submitted/); assert.doesNotMatch(current, /Approved for payment/);
+});
+
+test("milestone dates remain English in both locales and completion time never follows later chat updates", () => {
+  const completed = { ...request, status: "completed", funding_status: "confirmed", funds_confirmed_at: "2026-09-14T01:00:00Z", updated_at: "2026-09-17T04:00:00Z" };
+  const events = [{ id: "completion", event_type: "complete", sequence: 8, created_at: "2026-09-14T03:00:00Z" }];
+  const en = render("RequestProgress", { request: completed, events, locale: "en" });
+  const fa = render("RequestProgress", { request: completed, events, locale: "fa" });
+  const times = html => [...html.matchAll(/<time dir="ltr" dateTime="([^"]+)">([^<]+)<\/time>/g)].map(match => [match[1], match[2]]);
+  assert.deepEqual(times(fa), times(en)); assert.ok(times(fa).length >= 4);
+  assert.ok(times(fa).every(([, text]) => /Sept? 2026/.test(text) && !/[\u06f0-\u06f9]/.test(text)));
+  assert.ok(times(fa).some(([iso]) => iso === events[0].created_at));
+  assert.ok(!times(fa).some(([iso]) => iso === completed.updated_at));
 });
 
 test("payment instructions expose real account details, reference description requirement and clearance timing", () => {
   const html = render("RequestPaymentInstructions", { request, locale: "en" });
   assert.match(html, /012-345/); assert.match(html, /0012345678/);
-  assert.match(html, /1,025 AUD/); assert.match(html, /Use this transaction code as your bank transfer reference/);
-  assert.match(html, /aria-label="Copy transaction code"/); assert.match(html, /Send payment by/);
+  assert.match(html, /1,025 AUD/); assert.match(html, /Enter this transaction code in your bank transfer description or reference/);
+  assert.match(html, /aria-label="Copy transaction code"/); assert.match(html, /Pay by/);
   assert.match(html, /up to 24 hours, or longer/);
   assert.match(html, /Paya cycles, Satna hours/);
   assert.match(html, /Settlement follows the receiving bank operating calendar/);
@@ -139,7 +153,7 @@ test("payment instructions expose real account details, reference description re
   assert.match(html, /A receipt does not confirm cleared funds/);
   assert.match(html, /<details[^>]*><summary>Bank timing<\/summary>/);
   const uploaded = render("RequestPaymentInstructions", { request: { ...request, evidence_submitted_at: request.created_at }, locale: "en" });
-  assert.match(uploaded, /Bank review after/); assert.doesNotMatch(uploaded, /Send payment by/);
+  assert.match(uploaded, /^<details/); assert.doesNotMatch(uploaded, /Pay by/);
   const fa = render("RequestPaymentInstructions", { request, locale: "fa" });
   assert.match(fa, /کد تراکنش/); assert.match(fa, /پایا/); assert.doesNotMatch(fa, /\?{3}/);
   assert.match(fa, /dir="rtl"/); assert.match(fa, /واریز فقط از حساب شخصی خودتان/);
@@ -205,9 +219,12 @@ test("legacy payment details remain unchanged and never infer individual account
 });
 
 test("bank receipt control accepts constrained files and displays escaped private attachment metadata", () => {
+  const empty = render("RequestReceiptUpload", { request, receipts: [], locale: "en", onUploaded: async () => {} });
+  assert.match(empty, /type="file"/); assert.match(empty, /application\/pdf,image\/jpeg,image\/png/);
+  assert.match(empty, /up to 4 MB/); assert.match(empty, /Send receipt for review/);
   const html = render("RequestReceiptUpload", { request, receipts: [{ id: "r1", original_name: "<invoice>.pdf", size_bytes: 2048, created_at: request.created_at }], locale: "en", onUploaded: async () => {} });
-  assert.match(html, /type="file"/); assert.match(html, /application\/pdf,image\/jpeg,image\/png/);
-  assert.match(html, /up to 4 MB/); assert.match(html, /Upload receipt/);
+  assert.doesNotMatch(html, /type="file"/); assert.match(html, /Add another receipt/);
+  assert.match(html, /Receipt sent — we are checking your payment/);
   assert.match(html, /&lt;invoice&gt;\.pdf/); assert.match(html, /2 KB/);
   assert.doesNotMatch(html, /storage\/v1|public\/request-receipts/);
   const admin = render("RequestReceiptUpload", { request, receipts: [], admin: true, locale: "en", onUploaded: async () => {} });
@@ -244,30 +261,87 @@ test("unsupported and oversized receipts never call the upload action", async ()
   }
 });
 
-test("completion is available only during settlement processing and uses supported bank methods", () => {
+test("bank details and receipt submission stay unavailable until admin payment approval", () => {
+  const pending = { ...request, status: "submitted", payment_approved_at: null, funding_due_at: null };
+  for (const locale of ["en", "fa"]) {
+    // Deliberately leave stale bank values present: the component gate must hide them.
+    const bank = render("RequestPaymentInstructions", { request: pending, locale });
+    const upload = render("RequestReceiptUpload", { request: pending, receipts: [], locale, onUploaded: async () => {} });
+    assert.equal(bank, ""); assert.equal(upload, "");
+    const approved = render("RequestPaymentInstructions", { request, locale });
+    assert.match(approved, /012-345/); assert.match(approved, /0012345678/); assert.match(approved, /ZE01234/);
+    const form = render("RequestReceiptUpload", { request, receipts: [], locale, onUploaded: async () => {} });
+    assert.match(form, /type="file"/);
+    assert.match(form, locale === "fa" ? /ارسال رسید برای بررسی/ : /Send receipt for review/);
+  }
+});
+
+test("one receipt submission moves to bank review and additional receipts use a secondary action", async () => {
+  for (const locale of ["en", "fa"]) {
+    const calls = []; let refreshed = 0;
+    const file = new File(["%PDF-one-step"], "payment.pdf", { type: "application/pdf" });
+    const harness = load("components/requests/RequestReceiptUpload.tsx", { actions: { uploadRequestReceipt: async body => {
+      calls.push({ requestId: body.get("requestId"), file: body.get("file"), key: body.get("commandKey") });
+      return { data: { id: "receipt-saved" } };
+    } } });
+    const props = { request, receipts: [], locale, onUploaded: async () => { refreshed++; } };
+    let tree = harness.rerender("RequestReceiptUpload", props);
+    elements(tree, node => node.type === "input" && node.props.type === "file")[0].props.onChange({ target: { files: [file] } });
+    tree = harness.rerender("RequestReceiptUpload", props);
+    const submit = elements(tree, node => node.type === "button" && node.props.type === "submit");
+    assert.equal(submit.length, 1); assert.equal(submit[0].props.disabled, false);
+    await elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });
+    assert.equal(calls.length, 1); assert.equal(calls[0].requestId, request.id); assert.equal(calls[0].file.name, "payment.pdf");
+    assert.match(calls[0].key, /^[\da-f-]{36}$/); assert.equal(refreshed, 1);
+    tree = harness.rerender("RequestReceiptUpload", props);
+    const html = markup(tree);
+    assert.match(html, locale === "fa" ? /در حال بررسی واریز شما/ : /we are checking your payment/);
+    assert.doesNotMatch(html, /type="file"|type="submit"|Bank payment reference/);
+    const additional = elements(tree, node => node.type === "button" && (locale === "fa" ? /افزودن رسید دیگر/ : /Add another receipt/).test(textOf(node)))[0];
+    assert.ok(additional); additional.props.onClick();
+    tree = harness.rerender("RequestReceiptUpload", props);
+    assert.equal(elements(tree, node => node.type === "input" && node.props.type === "file").length, 1);
+  }
+});
+
+test("a known receipt success stays sent even if refreshing the dashboard fails", async () => {
+  const harness = load("components/requests/RequestReceiptUpload.tsx", { states: { 0: new File(["%PDF-saved"], "saved.pdf", { type: "application/pdf" }) },
+    actions: { uploadRequestReceipt: async () => ({ data: { id: "receipt-saved" } }) } });
+  const props = { request, receipts: [], locale: "en", onUploaded: async () => { throw Error("Refresh unavailable"); } };
+  const tree = harness.rerender("RequestReceiptUpload", props);
+  await elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });
+  const html = markup(harness.rerender("RequestReceiptUpload", props));
+  assert.match(html, /Receipt sent/); assert.match(html, /Refresh to see the latest status/);
+  assert.doesNotMatch(html, /Sending was not confirmed|type="submit"/);
+});
+
+test("destination reconciliation follows confirmed funds and uses supported bank methods", () => {
   const detail = { request: { ...request, status: "processing", funding_status: "confirmed" }, events: [], receipts: [] };
   const html = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: detail, 1: false, 6: "complete", 22: [
     { id: "aud-account", account_name: "AUD collection", currency: "AUD" }, { id: "irt-account", account_name: "Iran payout", currency: "IRT" },
   ] } });
   for (const method of ["free", "pol", "paya", "satna"]) assert.ok(html.includes(`value="${method}"`));
-  assert.doesNotMatch(html, /value="bank_transfer"/); assert.match(html, /Confirm successful bank settlement/);
+  assert.doesNotMatch(html, /value="bank_transfer"/); assert.match(html, /I verified the destination account, amount and successful settlement/);
   const ready = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: { ...detail, request: { ...detail.request, status: "ready" } }, 1: false } });
-  assert.match(ready, /Approve &amp; start processing/); assert.doesNotMatch(ready, /Approve completion/);
+  assert.match(ready, /Reconcile &amp; complete/); assert.match(ready, /Settlement reference/);
+  const unfunded = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: { ...detail, request }, 1: false } });
+  assert.doesNotMatch(unfunded, /Reconcile &amp; complete|Settlement reference/);
   const customer = render("RequestDetailView", { id: request.id, locale: "en" }, { states: { 0: { ...detail, request: { ...detail.request, status: "completed" } }, 1: false } });
   assert.match(customer, /href="\/api\/requests\/request-test\/receipt"/);
-  assert.doesNotMatch(customer, /Approve cleared funds|Approve completion|Review &amp; approve/);
+  assert.doesNotMatch(customer, /Confirm funds received|Reconcile &amp; complete|Settlement reference/);
 });
 
-test("service selector prices Priority separately and saved submissions immediately show bank instructions", () => {
+test("service selector prices Priority separately and submission waits for approval before exposing payment details", () => {
   const props = { input: { locale: "en" }, disabled: false, validationMessage: null };
   const html = render("OnlineRequestSubmit", props, { states: { 0: policy, 1: false } });
   assert.match(html, /<legend>Service<\/legend>/); assert.match(html, /value="standard"/); assert.match(html, /value="priority"/);
   assert.match(html, /25 AUD/); assert.match(html, /Priority timing starts after cleared funds and required checks are confirmed/);
   assert.match(html, /<details[^>]*><summary>Service hours &amp; terms<\/summary>/);
-  const saved = render("OnlineRequestSubmit", props, { states: { 0: policy, 1: false, 8: request } });
-  assert.match(saved, /Request submitted/); assert.match(saved, /012-345/);
+  const saved = render("OnlineRequestSubmit", props, { states: { 0: policy, 1: false, 8: { ...request, status: "submitted", payment_approved_at: null } } });
+  assert.match(saved, /Request submitted/); assert.match(saved, /awaiting approval/);
+  assert.doesNotMatch(saved, /012-345|0012345678|TEST BANK|Copy BSB|Send receipt/);
+  assert.match(saved, /ZE01234/);
   assert.match(saved, /href="\/en\/dashboard\/requests\/request-test"/);
-  assert.ok(saved.indexOf("012-345") < saved.indexOf("/en/dashboard/requests/request-test"));
   assert.doesNotMatch(saved, /will be notified|by email|queued for email/);
   const fa = render("OnlineRequestSubmit", { ...props, input: { locale: "fa" } }, { states: { 0: policy, 1: false } });
   assert.match(fa, /dir="rtl"/); assert.match(fa, /<legend>سرویس<\/legend>/);
@@ -361,23 +435,25 @@ test("activity exposes private evidence details to management only", () => {
   const admin = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: detail, 1: false } });
   assert.match(admin, /Private bank reference: ABC123/);
   const customer = render("RequestDetailView", { id: request.id, locale: "en" }, { states: { 0: detail, 1: false } });
-  assert.match(customer, /Status history/);
+  assert.match(customer, /Transfer progress/);
   assert.doesNotMatch(customer, /Private bank reference|ABC123/);
 });
 
-test("staff can record late or reviewed funds and release an already funded request without a second payment", () => {
-  for (const status of ["submitted", "under_review", "awaiting_funds", "action_required", "expired"]) {
+test("staff can record approved late or reviewed funds and release funded requests without another payment", () => {
+  const unapproved = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: { request: { ...request, status: "submitted", payment_approved_at: null }, events: [], receipts: [] }, 1: false } });
+  assert.match(unapproved, /Approve request/); assert.doesNotMatch(unapproved, /Confirm funds received/);
+  for (const status of ["under_review", "awaiting_funds", "action_required", "expired"]) {
     const html = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: { request: { ...request, status }, events: [], receipts: [] }, 1: false } });
-    assert.match(html, /Approve cleared funds/, `Missing funds confirmation for ${status}`);
+    assert.match(html, /Confirm funds received/, `Missing funds confirmation for ${status}`);
   }
   for (const status of ["under_review", "action_required"]) {
     const html = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: { request: { ...request, status, funding_status: "confirmed" }, events: [], receipts: [] }, 1: false } });
     assert.match(html, /Approve funded request/);
-    assert.doesNotMatch(html, /Approve cleared funds/);
+    assert.doesNotMatch(html, /Confirm funds received/);
   }
   const refund = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: { request: { ...request, status: "action_required", funding_status: "refund_pending" }, events: [], receipts: [] }, 1: false } });
   assert.match(refund, /Approve returned refund/);
-  assert.doesNotMatch(refund, /Approve cleared funds|Approve funded request/);
+  assert.doesNotMatch(refund, /Confirm funds received|Approve funded request/);
 });
 
 test("receipt upload is unavailable once funds are confirmed or a refund is in progress", () => {
@@ -569,7 +645,7 @@ test("a definite stale approval conflict can be retried using the refreshed requ
   elements(tree, node => node.type === "button" && textOf(node) === "Refresh")[0].props.onClick();
   await new Promise(resolve => setImmediate(resolve));
   tree = harness.rerender("RequestDetailView", props);
-  const confirmation = elements(tree, node => node.type === "label" && textOf(node).includes("I verified this payment in the bank account."))[0];
+  const confirmation = elements(tree, node => node.type === "label" && textOf(node).includes("I verified cleared funds in the bank account"))[0];
   const checkbox = elements(confirmation, node => node.type === "input")[0];
   assert.equal(checkbox.props.checked, false);
   checkbox.props.onChange({ target: { checked: true } });
@@ -581,22 +657,23 @@ test("a definite stale approval conflict can be retried using the refreshed requ
 });
 
 test("admin approval steps each expose an explicit email option and require confirmation", () => {
-  for (const [status, action] of [["submitted", "await_funds"], ["awaiting_funds", "confirm_funds"], ["ready", "start_processing"], ["processing", "complete"]]) {
+  for (const [status, action] of [["submitted", "await_funds"], ["awaiting_funds", "confirm_funds"], ["ready", "reconcile_complete"], ["processing", "complete"]]) {
     const html = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: {
-      0: { request: { ...request, status, funding_status: ["ready", "processing"].includes(status) ? "confirmed" : "unpaid" }, events: [], receipts: [], messages: [] },
+      0: { request: { ...request, status, payment_approved_at: status === "submitted" ? null : request.payment_approved_at, funding_status: ["ready", "processing"].includes(status) ? "confirmed" : "unpaid" }, events: [], receipts: [], messages: [] },
       1: false, 6: action,
     } });
-    assert.match(html, /aria-label="Approval actions"/);
+    assert.match(html, /class="actionForm"/);
     assert.match(html, /Send email to customer and management/);
     assert.match(html, /type="checkbox" required=""/);
     assert.match(html, /type="submit" disabled=""/);
     assert.match(html, /adminWorkspace/);
-    assert.doesNotMatch(html, /class="[^"]*progressSteps/);
+    assert.doesNotMatch(html, /class="progress"/);
+    assert.doesNotMatch(html, /Copy BSB|Make your payment|Send receipt for review/);
   }
 });
 
 test("admin approval submits the chosen email policy and customer actions do not expose that control", async () => {
-  const detail = { request: { ...request, status: "submitted" }, events: [], receipts: [], messages: [] };
+  const detail = { request: { ...request, status: "submitted", payment_approved_at: null }, events: [], receipts: [], messages: [] };
   const calls = [];
   const harness = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false }, actions: {
     mutateAdminRequest: async input => { calls.push(input); return { data: detail.request }; },
@@ -605,11 +682,10 @@ test("admin approval submits the chosen email policy and customer actions do not
   const props = { id: request.id, admin: true, locale: "en" };
   let tree = harness.rerender("RequestDetailView", props);
   const approve = elements(tree, node => node.type === "button" && textOf(node) === "Approve request")[0];
-  assert.ok(approve); approve.props.onClick();
-  tree = harness.rerender("RequestDetailView", props);
+  assert.ok(approve); assert.equal(approve.props.type, "submit");
   const labels = elements(tree, node => node.type === "label");
   const email = labels.find(node => textOf(node).includes("Send email to customer and management"));
-  const confirm = labels.find(node => textOf(node).includes("I reviewed and approve this update."));
+  const confirm = labels.find(node => textOf(node).includes("I checked and approve the request details."));
   assert.ok(email); assert.ok(confirm);
   elements(email, node => node.type === "input")[0].props.onChange({ target: { checked: false } });
   elements(confirm, node => node.type === "input")[0].props.onChange({ target: { checked: true } });
@@ -619,7 +695,7 @@ test("admin approval submits the chosen email policy and customer actions do not
   assert.equal(calls[0].requestId, request.id); assert.equal(calls[0].expectedVersion, request.version);
   assert.match(calls[0].commandKey, /^[\da-f-]{36}$/);
   const customer = render("RequestDetailView", { id: request.id, locale: "en" }, { states: { 0: detail, 1: false } });
-  assert.doesNotMatch(customer, /Approval actions|Send email|Review &amp; approve|Approve cleared funds/);
+  assert.doesNotMatch(customer, /Approval actions|Send email|Confirm funds received|Add payment reference|Bank payment reference/);
   assert.match(customer, /customerLayout/); assert.doesNotMatch(customer, /adminWorkspace/);
-  assert.match(customer, /class="[^"]*progressSteps/);
+  assert.match(customer, /class="progress"/);
 });

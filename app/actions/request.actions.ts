@@ -46,6 +46,12 @@ async function settingsRecord(validate = true): Promise<SettingsRecord> {
   return { version: data.version, settings };
 }
 
+function customerRequest(request: ExchangeRequest): ExchangeRequest {
+  // Staff approval gates bank details in every customer-facing response.
+  if (request.payment_approved_at) return request;
+  return { ...request, payment_details: null, payment_instructions: null, payment_instructions_fa: null };
+}
+
 export async function getRequestPolicy(): Promise<ActionResult<PublicRequestSettings>> {
   return result(async () => publicRequestSettings((await settingsRecord()).settings));
 }
@@ -141,7 +147,7 @@ export async function submitExchangeRequest(input: { quoteId: string; commandKey
     if (!input || !isUuid(input.quoteId) || !isUuid(input.commandKey)) throw new Error("Invalid quote. Please request a new quote.");
     const { data, error } = await database().rpc("submit_exchange_request", { p_actor_id: user.id, p_quote_id: input.quoteId, p_idempotency_key: input.commandKey });
     if (error) throw error;
-    return data as ExchangeRequest;
+    return customerRequest(data as ExchangeRequest);
   });
 }
 export async function listMyRequests(): Promise<ActionResult<ExchangeRequest[]>> {
@@ -149,7 +155,7 @@ export async function listMyRequests(): Promise<ActionResult<ExchangeRequest[]>>
     const user = await customer();
     const { data, error } = await database().from("exchange_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100);
     if (error) throw error;
-    return data as ExchangeRequest[];
+    return (data as ExchangeRequest[]).map(customerRequest);
   });
 }
 async function readDetail(id: string, userId?: string): Promise<RequestDetail> {
@@ -172,7 +178,7 @@ async function readDetail(id: string, userId?: string): Promise<RequestDetail> {
   if (events.error) throw events.error;
   if (receipts.error) throw receipts.error;
   if (messages.error) throw messages.error;
-  const detail: RequestDetail = { request: request.data as ExchangeRequest, events: events.data || [], receipts: receipts.data as RequestReceipt[], messages: messages.data || [] };
+  const detail: RequestDetail = { request: userId ? customerRequest(request.data as ExchangeRequest) : request.data as ExchangeRequest, events: events.data || [], receipts: receipts.data as RequestReceipt[], messages: messages.data || [] };
   if (!userId) {
     const deliveries = await db.from("exchange_request_notification_deliveries").select("id,event_id,request_id,audience,recipient_email,locale,status,attempts,last_error,created_at").eq("request_id", id).order("created_at", { ascending: false }).limit(100);
     if (deliveries.error) throw deliveries.error;
@@ -187,6 +193,24 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
   const actor = admin ? await requireAdmin() : await customer();
   const invalid = mutationInputError(input, admin);
   if (invalid) throw new Error(invalid);
+  const db = database();
+  let accountingDate: string | undefined;
+  if (["complete", "reconcile_complete", "confirm_funds", "resume_funded_request", "confirm_refund"].includes(input.action)) {
+    // The server-added date is part of the SQL command fingerprint. Keep the
+    // original date on a retry across midnight, while the RPC still validates
+    // the actor, version, action and every caller-supplied payload field.
+    const prior = await db.from("exchange_request_commands").select("accounting_date_jalali")
+      .eq("request_id", input.requestId).eq("command_key", input.commandKey).eq("actor_id", actor.id).maybeSingle();
+    if (prior.error) throw prior.error;
+    const recordedDate = prior.data?.accounting_date_jalali;
+    if (recordedDate != null) {
+      if (typeof recordedDate !== "string" || !/^\d{4}\/\d{2}\/\d{2}$/.test(recordedDate)) throw new Error("The saved accounting date needs administrator review.");
+      accountingDate = recordedDate;
+    } else {
+      const parts = new Intl.DateTimeFormat("en-US-u-ca-persian", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "UTC" }).formatToParts(new Date());
+      accountingDate = ["year", "month", "day"].map(type => parts.find(part => part.type === type)?.value).join("/");
+    }
+  }
   // Whitelist fields rather than forwarding arbitrary client JSON to privileged SQL.
   const supplied = input.payload || {};
   const payload = Object.fromEntries(Object.entries({
@@ -197,17 +221,14 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
     refund_reference: supplied.refund_reference?.trim(), refund_kind: supplied.refund_kind,
     honour_quote: supplied.honour_quote,
     ...(admin ? { send_email: input.sendEmail } : {}),
-    ...(["complete", "confirm_funds", "resume_funded_request", "confirm_refund"].includes(input.action) ? { date_jalali: (() => {
-      const parts = new Intl.DateTimeFormat("en-US-u-ca-persian", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "UTC" }).formatToParts(new Date());
-      return ["year", "month", "day"].map(type => parts.find(part => part.type === type)?.value).join("/");
-    })() } : {}),
+    ...(accountingDate ? { date_jalali: accountingDate } : {}),
   }).filter(([, value]) => value !== undefined));
-  const { data, error } = await database().rpc("transition_exchange_request", {
+  const { data, error } = await db.rpc("transition_exchange_request", {
     p_actor_id: actor.id, p_request_id: input.requestId, p_expected_version: input.expectedVersion,
     p_command_key: input.commandKey, p_action: input.action, p_payload: payload,
   });
   if (error) throw error;
-  return data as ExchangeRequest;
+  return admin ? data as ExchangeRequest : customerRequest(data as ExchangeRequest);
 }
 export async function mutateMyRequest(input: RequestMutationInput): Promise<ActionResult<ExchangeRequest>> {
   return result(() => mutate(input, false));
@@ -294,8 +315,9 @@ export async function uploadRequestReceipt(form: FormData): Promise<ActionResult
     if (!isUuid(requestId) || !isUuid(commandKey) || !(file instanceof File)) throw new Error("Choose a receipt for a valid request.");
     if (!file.size || file.size > MAX_REQUEST_RECEIPT_BYTES) throw new Error("Upload a receipt of up to 4 MB.");
     const db = database();
-    const request = await db.from("exchange_requests").select("id,user_id,status,funding_status,priority_fee_status").eq("id", requestId).eq("user_id", user.id).single();
+    const request = await db.from("exchange_requests").select("id,user_id,status,funding_status,priority_fee_status,payment_approved_at").eq("id", requestId).eq("user_id", user.id).single();
     if (request.error || !request.data) throw new Error("Request not found.");
+    if (!request.data.payment_approved_at) throw new Error("Wait for payment approval before sending a receipt.");
     const bytes = new Uint8Array(await file.arrayBuffer());
     const inspected = inspectReceiptUpload(bytes, file.name, file.type);
     const digest = createHash("sha256").update(bytes).digest("hex");

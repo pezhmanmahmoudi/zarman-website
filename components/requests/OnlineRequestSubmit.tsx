@@ -5,10 +5,10 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { createRequestQuote, getRequestPolicy, submitExchangeRequest } from "@/app/actions/request.actions";
 import type { ExchangeRequest, PublicRequestSettings, QuoteInput, RequestQuote, ServiceTier } from "@/lib/requests/types";
+import { getRequestJourney } from "@/lib/requests/journey";
 import { RequestQuoteFacts } from "./RequestQuoteFacts";
 import { RequestPaymentInstructions } from "./RequestPaymentInstructions";
 import { RequestBankTiming } from "./RequestBankTiming";
-import { RequestProgress } from "./RequestProgress";
 import { requestDate, requestError, requestMoney } from "./request-labels";
 import styles from "@/styles/requests/Requests.module.css";
 import compact from "@/styles/requests/RequestPayment.module.css";
@@ -88,9 +88,10 @@ export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusy
 
   if (saved) return <section className={`${styles.embedded} ${compact.confirmation}`} dir={fa ? "rtl" : "ltr"} aria-live="polite">
     <div className={compact.confirmationHeader}><CheckCircle2 size={26} aria-hidden="true" /><h2>{fa ? "درخواست ثبت شد" : "Request submitted"}</h2></div>
+    <p>{fa ? "کد تراکنش" : "Transaction code"}<bdi dir="ltr" className={compact.confirmationReference}>{saved.reference_code}</bdi></p>
+    {!getRequestJourney(saved).approved && <p>{fa ? "درخواست شما در انتظار تأیید مدیر است. پس از تأیید، مشخصات حساب برای واریز نمایش داده می‌شود." : "Your request is awaiting approval. Bank details will appear once we approve it."}</p>}
     <RequestPaymentInstructions request={saved} locale={input.locale} />
-    <Link className={styles.button} href={`/${input.locale}/dashboard/requests/${saved.id}`}>{fa ? "رسید، پیام‌ها و پیگیری" : "Receipt, messages & tracking"}<ArrowRight size={17} className={fa ? compact.rtlArrow : undefined} aria-hidden="true" /></Link>
-    <RequestProgress request={saved} locale={input.locale} />
+    <Link className={styles.button} href={`/${input.locale}/dashboard/requests/${saved.id}`}>{fa ? "مشاهده درخواست" : "View request"}<ArrowRight size={17} className={fa ? compact.rtlArrow : undefined} aria-hidden="true" /></Link>
   </section>;
 
   return <section className={styles.embedded} dir={fa ? "rtl" : "ltr"} aria-label={fa ? "سرویس و تأیید درخواست" : "Service and confirmation"}>
@@ -115,16 +116,16 @@ export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusy
       <RequestBankTiming locale={input.locale} iranBankingNotice={shownPolicy?.iran_banking_notice} iranBankingNoticeFa={shownPolicy?.iran_banking_notice_fa} />
       {shownPolicy && <details className={`${compact.details} ${compact.serviceDetails}`}>
         <summary>{fa ? "ساعات و شرایط سرویس" : "Service hours & terms"}</summary>
-        <p>{fa ? "ساعات کاری سیدنی: " : "Sydney hours: "}{numbers.format(shownPolicy.opening_hour)}:00–{numbers.format(shownPolicy.closing_hour)}:00</p>
-        <p>{shownPolicy.business_days.map(day => (fa ? ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"] : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])[day]).join(fa ? "، " : ", ")}{shownPolicy.holidays.length > 0 && <>{fa ? "؛ تعطیلات: " : "; holidays: "}{shownPolicy.holidays.join(", ")}</>}</p>
+        <p>{fa ? "ساعات کاری سیدنی: " : "Sydney hours: "}<bdi dir="ltr">{String(shownPolicy.opening_hour).padStart(2, "0")}:00–{String(shownPolicy.closing_hour).padStart(2, "0")}:00</bdi></p>
+        <p>{shownPolicy.business_days.map(day => (fa ? ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"] : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])[day]).join(fa ? "، " : ", ")}{shownPolicy.holidays.length > 0 && <>{fa ? "؛ تعطیلات: " : "; holidays: "}<bdi dir="ltr">{shownPolicy.holidays.join(", ")}</bdi></>}</p>
         <p>{fa ? "زمان رسیدگی پس از تأیید وجه و بررسی‌ها محاسبه می‌شود. زمان تسویه بانکی جداست." : "Handling begins after funds and checks are confirmed. Bank settlement time is separate."}</p>
-        {tier === "priority" && <><p>{fa ? shownPolicy.priority_terms_fa : shownPolicy.priority_terms}</p><p>{fa ? "ظرفیت اولویت هنگام ثبت بررسی می‌شود." : "Priority is subject to capacity at submission."}</p></>}
+        {tier === "priority" && <><p>{fa ? shownPolicy.priority_terms_fa : shownPolicy.priority_terms}</p><p>{fa ? "ظرفیت سرویس اولویت‌دار هنگام تأیید درخواست بررسی می‌شود." : "Priority availability is confirmed when we approve your request."}</p></>}
       </details>}
       {!activeQuote && <button className={styles.button} type="button" onClick={review} disabled={busy || disabled}>{busy ? (fa ? "در حال محاسبه…" : "Preparing quote…") : (fa ? "بررسی مبلغ نهایی" : "Review total")}<ArrowRight size={17} className={fa ? compact.rtlArrow : undefined} aria-hidden="true" /></button>}
       {activeQuote && <div className={`${styles.card} ${compact.compactCard}`} aria-live="polite">
         <h3>{fa ? "پیش‌فاکتور نهایی" : "Final quote"}</h3>
         <RequestQuoteFacts quote={activeQuote.snapshot} locale={input.locale} />
-        <p className={compact.deadline}>{fa ? "معتبر تا " : "Valid until "}{requestDate(activeQuote.expires_at, input.locale)} ({fa ? "سیدنی" : "Sydney"})</p>
+        <p className={compact.deadline}>{fa ? "معتبر تا " : "Valid until "}<bdi dir="ltr">{requestDate(activeQuote.expires_at, input.locale)}</bdi> ({fa ? "سیدنی" : "Sydney"})</p>
         {expired ? <p className={styles.warning}>{fa ? "پیش‌فاکتور منقضی شد. مبلغ را دوباره محاسبه کنید." : "Quote expired. Refresh the quote to continue."}</p> : <label className={styles.checkbox}>
           <input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} disabled={busy} />
           <span>{fa ? "مبالغ، اطلاعات گیرنده و شرایط سرویس را تأیید می‌کنم." : "I accept the amounts, recipient details and service terms."}</span>

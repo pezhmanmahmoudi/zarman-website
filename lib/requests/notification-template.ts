@@ -3,7 +3,7 @@ import { validNotificationEmail, validatedRequestSiteUrl } from "./notification-
 import type { FundingBankDetails } from "./types";
 export { validNotificationEmail, validatedRequestSiteUrl } from "./notification-config";
 
-export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-status-v3";
+export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-status-v4";
 
 export type RequestEmailSnapshot = {
   id: string;
@@ -44,11 +44,11 @@ export type RequestEmailPayload = {
 };
 
 const statuses: Record<string, [string, string]> = {
-  submitted: ["Request received", "درخواست ثبت شد"],
+  submitted: ["Request submitted · awaiting approval", "درخواست ثبت شد؛ در انتظار تأیید"],
   under_review: ["Under review", "در حال بررسی"],
   action_required: ["Action required", "نیازمند اقدام شما"],
   awaiting_funds: ["Awaiting funds", "در انتظار واریز وجه"],
-  ready: ["Ready for processing", "آماده پردازش"],
+  ready: ["Funds received", "وجه شما دریافت شد"],
   processing: ["Processing", "در حال انجام"],
   reconciliation: ["Checking bank settlement", "در حال بررسی تسویه بانکی"],
   completed: ["Completed", "تکمیل شد"],
@@ -58,9 +58,10 @@ const statuses: Record<string, [string, string]> = {
 };
 
 const eventLabels: Record<string, [string, string]> = {
+  await_funds: ["Payment approved", "اجازه پرداخت صادر شد"],
   admin_message: ["Message from Zarman", "پیام زرمان"],
   customer_message: ["Customer reply", "پاسخ مشتری"],
-  receipt_uploaded: ["Payment receipt received", "رسید پرداخت دریافت شد"],
+  receipt_uploaded: ["Receipt submitted · checking your payment", "رسید ارسال شد؛ واریز در حال بررسی است"],
   payment_evidence: ["Payment evidence received", "مدرک پرداخت دریافت شد"],
   handling_overdue: ["Handling target overdue", "زمان هدف رسیدگی گذشته است"],
   funding_clearance_review: ["Bank clearance review required", "نیاز به بررسی تسویه بانکی"],
@@ -101,11 +102,16 @@ export function renderRequestNotification(
   const service = fa ? (isPriority ? "اولویت‌دار" : "عادی") : (isPriority ? "Priority" : "Standard");
   const occurred = new Date(snapshot.created_at);
   if (!Number.isFinite(occurred.getTime()) || !Number.isFinite(fee) || fee < 0) throw new Error("invalid_milestone_snapshot");
-  const time = occurred.toLocaleString(fa ? "fa-IR" : "en-AU", { timeZone: "Australia/Sydney", dateStyle: "medium", timeStyle: "short" });
+  const time = occurred.toLocaleString("en-AU-u-ca-gregory-nu-latn", { timeZone: "Australia/Sydney", dateStyle: "medium", timeStyle: "short" });
   const isMessage = ["admin_message", "customer_message"].includes(snapshot.event_type ?? "");
   let action = fa ? "جزئیات در صفحه درخواست." : "Details are on your request page.";
   if (snapshot.workflow_status === "action_required" || isMessage) action = fa ? "پاسخ خود را در صفحه درخواست بفرستید." : "Reply on the request page.";
   if (isManagement) action = fa ? "بررسی و پاسخ در پنل مدیریت." : "Review and respond in the admin workspace.";
+  if (snapshot.event_type === "submitted") action = isManagement
+    ? "Review the request and approve payment to release the bank details."
+    : (fa ? "منتظر تأیید درخواست بمانید. پس از تأیید، مشخصات بانکی در صفحه درخواست نمایش داده می‌شود." : "Wait for approval. Bank details will appear on your request page once payment is approved.");
+  if (snapshot.event_type === "await_funds" && !isManagement) action = fa ? "پس از واریز، رسید را در صفحه درخواست ارسال کنید." : "After making the transfer, send your receipt on the request page.";
+  if (snapshot.workflow_status === "ready" && !isManagement) action = fa ? "وجه شما دریافت شد. تسویه در مقصد در حال پیگیری است." : "Your funds are received. We are arranging settlement in the destination currency.";
   const receipt = snapshot.event_type === "complete" ? snapshot.payload_snapshot?.receipt : null;
   if (snapshot.event_type === "complete" && (!receipt || receipt.request_id !== snapshot.request_id || receipt.reference_code !== snapshot.reference)) throw new Error("completion_receipt_unavailable");
   const heading = receipt ? (fa ? "رسید نهایی انتقال زرمان" : "Your Zarman transfer receipt") : status;
@@ -117,7 +123,7 @@ export function renderRequestNotification(
   ];
   const details = snapshot.payload_snapshot;
   const instructions: string[] = [];
-  if (["submitted", "await_funds"].includes(snapshot.event_type ?? "")) {
+  if (snapshot.event_type === "await_funds") {
     const bank = details?.payment_details;
     const bankLabels: [keyof FundingBankDetails, string, string][] = [
       ["account_name", "Account name", "نام صاحب حساب"], ["bank_name", "Bank", "بانک"],
@@ -140,7 +146,7 @@ export function renderRequestNotification(
   if (["receipt_uploaded", "payment_evidence"].includes(snapshot.event_type ?? "")) {
     instructions.push(fa ? "رسید شما دریافت شد. تأیید وصول وجه توسط تیم مالی انجام می‌شود." : "We received your payment evidence. Our finance team will confirm when funds have cleared.");
   }
-  if (["submitted", "await_funds", "receipt_uploaded", "payment_evidence", "ready", "resume_funded_request", "start_processing"].includes(snapshot.event_type ?? "")) {
+  if (["await_funds", "receipt_uploaded", "payment_evidence", "ready", "resume_funded_request", "start_processing"].includes(snapshot.event_type ?? "")) {
     const hours = Math.max(24, Number(details?.australian_clearance_minutes ?? 1440) / 60);
     instructions.push(
       fa ? `وصول وجه از بانک استرالیا: تا ${hours} ساعت؛ تأخیر بانکی ممکن است بیشتر شود.` : `Australian bank clearance: up to ${hours} hours; bank delays may take longer.`,

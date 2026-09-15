@@ -73,8 +73,19 @@ test("receipt and status templates escape content and do not confuse upload evid
   assert.match(receipt.html, /&lt;script&gt;/);
   assert.throws(() => templates.renderRequestNotification(delivery({ event_type: "complete", workflow_status: "completed" }), settings), /completion_receipt_unavailable/);
   const uploaded = templates.renderRequestNotification(delivery({ event_type: "receipt_uploaded" }), settings);
-  assert.match(uploaded.subject, /Payment receipt received/);
+  assert.match(uploaded.subject, /Receipt submitted.*checking your payment/);
   assert.match(uploaded.text, /will confirm when funds have cleared/);
+});
+
+test("submission waits for approval and never releases bank details, even from a legacy snapshot", () => {
+  for (const locale of ["en", "fa"]) {
+    const message = templates.renderRequestNotification(delivery({ event_type: "submitted", workflow_status: "submitted", locale }), settings);
+    assert.doesNotMatch(message.text, /BSB|Number: 123456|Account: Zarman|Description Code/mi);
+    assert.match(message.text, locale === "fa" ? /منتظر تأیید درخواست/ : /Wait for approval/);
+    assert.match(message.text, /13 Sept 2026/);
+    assert.doesNotMatch(message.text, /[۰-۹]/);
+    assert.equal(templates.renderRequestNotification(delivery({ event_type: "submitted", workflow_status: "submitted", locale, payload_snapshot: {} }), settings).to[0], "customer@example.test");
+  }
 });
 
 test("new bank snapshots preserve copy values and Persian notes without English fallback prose", () => {

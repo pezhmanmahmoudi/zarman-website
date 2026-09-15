@@ -14,7 +14,7 @@ export function RequestAdminMessageBanner({ messages, fallbackMessage, locale }:
   if (!body) return null;
   return <aside className={workspace.messageBanner} aria-label={locale === "fa" ? "پیام زرمان" : "Message from Zarman"}>
     <MessageSquare size={20} aria-hidden="true" />
-    <div><div className={workspace.bannerHeading}><strong>{locale === "fa" ? "پیام زرمان" : "Message from Zarman"}</strong>{latest && <time dateTime={latest.created_at}>{requestDate(latest.created_at, locale)}</time>}</div><p dir="auto">{body}</p><a href="#request-conversation">{locale === "fa" ? "ارسال پاسخ" : "Reply"}</a></div>
+    <div><div className={workspace.bannerHeading}><strong>{locale === "fa" ? "پیام زرمان" : "Message from Zarman"}</strong>{latest && <time dir="ltr" dateTime={latest.created_at}>{requestDate(latest.created_at, locale)}</time>}</div><p dir="auto">{body}</p><a href="#request-conversation">{locale === "fa" ? "ارسال پاسخ" : "Reply"}</a></div>
   </aside>;
 }
 
@@ -66,7 +66,7 @@ export function RequestConversation({ requestId, version, messages, admin = fals
     {visible.length > 0 && <ol className={workspace.messages}>{visible.map(item => {
       const own = item.sender_role === (admin ? "admin" : "customer");
       return <li key={item.id} className={workspace.message} data-own={own}>
-        <div className={workspace.messageMeta}><strong>{item.sender_role === "admin" ? (fa ? "زرمان" : "Zarman") : admin ? "Customer" : (fa ? "شما" : "You")}</strong><time dateTime={item.created_at}>{requestDate(item.created_at, locale)}</time></div>
+        <div className={workspace.messageMeta}><strong>{item.sender_role === "admin" ? (fa ? "زرمان" : "Zarman") : admin ? "Customer" : (fa ? "شما" : "You")}</strong><time dir="ltr" dateTime={item.created_at}>{requestDate(item.created_at, locale)}</time></div>
         <p dir="auto">{item.body}</p>
         {admin && item.sender_role === "admin" && <span className={workspace.messageEmail}>{item.send_email ? "Email requested" : "Website only"}</span>}
       </li>;
