@@ -37,8 +37,8 @@ BEGIN
       IS DISTINCT FROM ROW(r.customer_action_required,r.funding_status,r.funds_confirmed_at) THEN
       UPDATE public.exchange_requests SET customer_action_required=v_question,funding_status=v_funding_status,
         funds_confirmed_at=v_confirmed_at,version=version+1,updated_at=now() WHERE id=r.id;
-      INSERT INTO public.audit_logs(actor_id,action,target_type,target_id,old_value,new_value)
-      VALUES(NULL,'REQUEST_RECEIVED_FUNDS_FACTS_BACKFILL','exchange_requests',r.id::text,
+      INSERT INTO public.audit_logs(actor_id,actor_email,action,target_type,target_id,old_value,new_value)
+      VALUES(NULL,'database-migration','REQUEST_RECEIVED_FUNDS_FACTS_BACKFILL','exchange_requests',r.id::text,
         jsonb_build_object('version',r.version,'funding_status',r.funding_status,'funds_confirmed_at',r.funds_confirmed_at,
           'customer_action_required',r.customer_action_required),
         jsonb_build_object('version',r.version+1,'funding_status',v_funding_status,'funds_confirmed_at',v_confirmed_at,

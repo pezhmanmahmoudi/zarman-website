@@ -101,6 +101,9 @@ describe('received funds and explicit customer action boundaries', { concurrency
     legacyCompleted = await command(legacyCompleted, 'reconcile_complete', settlement(legacyCompleted));
     legacySnapshots = await Promise.all([legacyMixed, legacyQuestion, legacyAnswered, legacyCompleted].map(r => frozen(r.id)));
     legacySettings = await one('SELECT * FROM exchange_request_settings WHERE id');
+    // The deployed audit schema requires an explicit actor label even for a
+    // system migration; do not let the lightweight baseline hide that contract.
+    await db.exec('ALTER TABLE audit_logs ALTER COLUMN actor_email SET NOT NULL');
     await db.exec(read('supabase/migrations/20260915_30_request_customer_actions_and_received_funds.sql'));
   });
   after(async () => db?.close());
@@ -117,7 +120,8 @@ describe('received funds and explicit customer action boundaries', { concurrency
     assert.equal(await count('exchange_request_payments', r.id), 2);
     assert.deepEqual(await Promise.all([legacyMixed, legacyQuestion, legacyAnswered, legacyCompleted].map(row => frozen(row.id))), legacySnapshots);
     assert.deepEqual(await one('SELECT * FROM exchange_request_settings WHERE id'), legacySettings);
-    const audit = await one("SELECT old_value,new_value FROM audit_logs WHERE target_id=$1 AND action='REQUEST_RECEIVED_FUNDS_FACTS_BACKFILL'", [r.id]);
+    const audit = await one("SELECT actor_id,actor_email,old_value,new_value FROM audit_logs WHERE target_id=$1 AND action='REQUEST_RECEIVED_FUNDS_FACTS_BACKFILL'", [r.id]);
+    assert.equal(audit.actor_id, null); assert.equal(audit.actor_email, 'database-migration');
     assert.equal(audit.old_value.funding_status, 'partial'); assert.equal(audit.new_value.funding_status, 'confirmed');
   });
 
