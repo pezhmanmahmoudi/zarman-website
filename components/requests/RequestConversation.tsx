@@ -8,13 +8,13 @@ import { requestDate, requestError } from "./request-labels";
 import styles from "@/styles/requests/Requests.module.css";
 import workspace from "@/styles/requests/RequestWorkspace.module.css";
 
-export function RequestAdminMessageBanner({ messages, fallbackMessage, locale }: { messages: RequestMessage[]; fallbackMessage?: string | null; locale: RequestLocale }) {
-  const latest = [...messages].reverse().find(message => message.sender_role === "admin");
-  const body = latest?.body || fallbackMessage;
+export function RequestAdminMessageBanner({ messages, fallbackMessage, locale, replyRequired = false }: { messages: RequestMessage[]; fallbackMessage?: string | null; locale: RequestLocale; replyRequired?: boolean }) {
+  const latest = [...messages].reverse().find(message => message.sender_role === "admin" && (!replyRequired || !fallbackMessage || message.body === fallbackMessage));
+  const body = replyRequired ? fallbackMessage || latest?.body : latest?.body || fallbackMessage;
   if (!body) return null;
   return <aside className={workspace.messageBanner} aria-label={locale === "fa" ? "پیام زرمان" : "Message from Zarman"}>
     <MessageSquare size={20} aria-hidden="true" />
-    <div><div className={workspace.bannerHeading}><strong>{locale === "fa" ? "پیام زرمان" : "Message from Zarman"}</strong>{latest && <time dir="ltr" dateTime={latest.created_at}>{requestDate(latest.created_at, locale)}</time>}</div><p dir="auto">{body}</p><a href="#request-conversation">{locale === "fa" ? "ارسال پاسخ" : "Reply"}</a></div>
+    <div><div className={workspace.bannerHeading}><strong>{locale === "fa" ? "پیام زرمان" : "Message from Zarman"}</strong>{latest && <time dir="ltr" dateTime={latest.created_at}>{requestDate(latest.created_at, locale)}</time>}</div><p dir="auto">{body}</p>{replyRequired && <a href="#request-conversation">{locale === "fa" ? "ارسال پاسخ" : "Reply"}</a>}</div>
   </aside>;
 }
 

@@ -101,6 +101,7 @@ export type ExchangeRequest = {
   payment_details: FundingBankDetails | null;
   payment_approved_at: string | null;
   action_required: string | null;
+  customer_action_required: string | null;
   owner_id: string | null;
   handling_due_at: string | null;
   handling_started_at: string | null;

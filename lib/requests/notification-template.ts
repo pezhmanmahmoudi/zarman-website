@@ -3,7 +3,7 @@ import { validNotificationEmail, validatedRequestSiteUrl } from "./notification-
 import type { FundingBankDetails } from "./types";
 export { validNotificationEmail, validatedRequestSiteUrl } from "./notification-config";
 
-export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-status-v5";
+export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-status-v6";
 
 export type RequestEmailSnapshot = {
   id: string;
@@ -19,6 +19,7 @@ export type RequestEmailSnapshot = {
   created_at: string;
   payload_snapshot?: {
     public_message?: string | null;
+    customer_action_required?: string | null;
     payment_instructions?: string | null;
     payment_instructions_fa?: string | null;
     payment_details?: FundingBankDetails | null;
@@ -46,7 +47,7 @@ export type RequestEmailPayload = {
 const statuses: Record<string, [string, string]> = {
   submitted: ["Request submitted · awaiting approval", "درخواست ثبت شد؛ در انتظار تأیید"],
   under_review: ["Under review", "در حال بررسی"],
-  action_required: ["Action required", "نیازمند اقدام شما"],
+  action_required: ["Under admin review", "در حال بررسی توسط مدیر"],
   awaiting_funds: ["Awaiting funds", "در انتظار واریز وجه"],
   ready: ["Funds received", "وجه شما دریافت شد"],
   processing: ["Processing", "در حال انجام"],
@@ -69,6 +70,7 @@ const eventLabels: Record<string, [string, string]> = {
   refund_pending: ["Refund being arranged", "در حال انجام مراحل بازپرداخت"],
   refund_returned: ["Refund completed", "بازپرداخت انجام شد"],
   funds_recorded: ["Payment reconciliation update", "به‌روزرسانی بررسی پرداخت"],
+  request_info: ["Your reply is needed", "پاسخ شما لازم است"],
 };
 
 function escapeHtml(value: string): string {
@@ -92,7 +94,15 @@ export function renderRequestNotification(
   const locale = fa ? "fa" : "en";
   const index = fa ? 1 : 0;
   const reference = snapshot.reference.replace(/[\r\n\u0000-\u001f]/g, "").slice(0, 80);
-  const status = (eventLabels[snapshot.event_type ?? ""] ?? statuses[snapshot.workflow_status] ?? ["Request updated", "درخواست به‌روزرسانی شد"])[index];
+  const details = snapshot.payload_snapshot;
+  const terminal = ["completed", "cancelled", "rejected", "expired"].includes(snapshot.workflow_status);
+  const customerQuestion = !terminal ? details?.customer_action_required?.trim()
+    || (snapshot.event_type === "request_info" ? details?.public_message?.trim() : null) : null;
+  const fundsReceived = Boolean(details?.funds_confirmed_at) && !terminal;
+  const heldFunds = fundsReceived && ["under_review", "action_required"].includes(snapshot.workflow_status);
+  const status = (snapshot.event_type === "funds_recorded" && heldFunds
+    ? ["Funds received · under admin review", "وجه دریافت شد؛ در حال بررسی توسط مدیر"]
+    : eventLabels[snapshot.event_type ?? ""] ?? statuses[snapshot.workflow_status] ?? ["Request updated", "درخواست به‌روزرسانی شد"])[index];
   const isManagement = snapshot.audience === "management";
   const trackingUrl = isManagement
     ? `${siteUrl}/admin/requests/${snapshot.request_id}`
@@ -105,13 +115,15 @@ export function renderRequestNotification(
   const time = occurred.toLocaleString("en-AU-u-ca-gregory-nu-latn", { timeZone: "Australia/Sydney", dateStyle: "medium", timeStyle: "short" });
   const isMessage = ["admin_message", "customer_message"].includes(snapshot.event_type ?? "");
   let action = fa ? "جزئیات در صفحه درخواست." : "Details are on your request page.";
-  if (snapshot.workflow_status === "action_required" || isMessage) action = fa ? "پاسخ خود را در صفحه درخواست بفرستید." : "Reply on the request page.";
+  if (isMessage) action = fa ? "در صورت نیاز می‌توانید در صفحه درخواست پاسخ دهید." : "You can reply on the request page if needed.";
+  if (heldFunds) action = fa ? "وجه شما دریافت شد و در حال بررسی توسط مدیر است. نیازی به اقدام شما نیست." : "Your funds are received and under admin review. No action is needed from you.";
   if (isManagement) action = fa ? "بررسی و پاسخ در پنل مدیریت." : "Review and respond in the admin workspace.";
   if (snapshot.event_type === "submitted") action = isManagement
     ? "Review the request and approve payment to release the bank details."
     : (fa ? "منتظر تأیید درخواست بمانید. پس از تأیید، مشخصات بانکی در صفحه درخواست نمایش داده می‌شود." : "Wait for approval. Bank details will appear on your request page once payment is approved.");
   if (snapshot.event_type === "await_funds" && !isManagement) action = fa ? "پس از واریز، رسید را در صفحه درخواست ارسال کنید." : "After making the transfer, send your receipt on the request page.";
-  if (snapshot.workflow_status === "ready" && !isManagement) action = fa ? "وجه شما دریافت شد. تسویه در مقصد در حال پیگیری است." : "Your funds are received. We are arranging settlement in the destination currency.";
+  if (snapshot.workflow_status === "ready" && !isManagement) action = fa ? "وجه شما دریافت شد. تسویه در مقصد در حال پیگیری است. نیازی به اقدام شما نیست." : "Your funds are received. We are arranging settlement in the destination currency. No action is needed from you.";
+  if (customerQuestion && !isManagement) action = fa ? "پاسخ خود را در صفحه درخواست بفرستید." : "Reply on the request page.";
   const receipt = snapshot.event_type === "complete" ? snapshot.payload_snapshot?.receipt : null;
   if (snapshot.event_type === "complete" && (!receipt || receipt.request_id !== snapshot.request_id || receipt.reference_code !== snapshot.reference)) throw new Error("completion_receipt_unavailable");
   const heading = receipt ? (fa ? "رسید نهایی انتقال زرمان" : "Your Zarman transfer receipt") : status;
@@ -121,7 +133,6 @@ export function renderRequestNotification(
     `${fa ? "زمان به وقت سیدنی" : "Updated (Sydney time)"}: ${time}`,
     ...(!isMessage ? [`${fa ? "نوع خدمت" : "Service"}: ${service}${isPriority ? ` · AUD ${fee.toFixed(2)} ${fa ? "هزینه اضافی" : "additional fee"}` : ""}`] : []),
   ];
-  const details = snapshot.payload_snapshot;
   const instructions: string[] = [];
   if (snapshot.event_type === "await_funds") {
     const bank = details?.payment_details;
@@ -159,6 +170,7 @@ export function renderRequestNotification(
     );
   }
   if (details?.public_message) instructions.push(details.public_message);
+  if (customerQuestion && customerQuestion !== details?.public_message) instructions.push(customerQuestion);
   if (receipt) {
     // The receipt is the same immutable settlement snapshot for both audiences.
     lines.push(...requestReceiptRows(receipt).map(([label, value]) => `${label}: ${value}`));

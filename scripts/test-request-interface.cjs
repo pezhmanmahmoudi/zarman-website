@@ -84,7 +84,7 @@ const policy = {
 const request = {
   id: "request-test", transaction_id: "tx-test", reference_code: "ZE01234", status: "awaiting_funds", version: 2,
   service_tier: "priority", funding_status: "unpaid", funding_received: 0, priority_fee_status: "unpaid",
-  payment_instructions: policy.payment_instructions_aud, action_required: null,
+  payment_instructions: policy.payment_instructions_aud, action_required: null, customer_action_required: null,
   payment_instructions_fa: policy.payment_instructions_aud_fa, payment_details: policy.payment_details_aud,
   payment_approved_at: "2026-09-13T00:10:00Z", evidence_submitted_at: null,
   created_at: "2026-09-13T00:00:00Z", updated_at: "2026-09-13T00:00:00Z", funding_due_at: "2026-09-13T02:00:00Z",
@@ -492,22 +492,25 @@ const messages = [
   { id: "message-4", sender_role: "customer", body: "Name confirmed. <script>alert('test')</script>", created_at: "2026-09-13T01:03:00Z" },
 ];
 
-test("customer banner highlights the latest admin message and links to a localized response panel", () => {
+test("ordinary admin messages remain visible while reply links require an explicit customer question", () => {
   const { RequestAdminMessageBanner } = load("components/requests/RequestConversation.tsx");
   for (const locale of ["en", "fa"]) {
     const banner = markup(RequestAdminMessageBanner({ messages, locale }));
     assert.match(banner, /Please confirm the sender name/);
     assert.doesNotMatch(banner, /Earlier admin guidance|First customer response|Name confirmed/);
-    assert.match(banner, /href="#request-conversation"/);
+    assert.doesNotMatch(banner, /href="#request-conversation"/);
     assert.match(banner, locale === "fa" ? /پیام زرمان/ : /Message from Zarman/);
-    assert.match(banner, locale === "fa" ? /ارسال پاسخ/ : /Reply/);
+    assert.doesNotMatch(banner, locale === "fa" ? /ارسال پاسخ/ : /Reply/);
+    const required = markup(RequestAdminMessageBanner({ messages, fallbackMessage: messages[2].body, replyRequired: true, locale }));
+    assert.match(required, /href="#request-conversation"/);
+    assert.match(required, locale === "fa" ? /ارسال پاسخ/ : /Reply/);
     const thread = render("RequestConversation", { requestId: request.id, version: request.version, messages, locale, onUpdated: async () => {} });
     assert.match(thread, /id="request-conversation"/);
     assert.match(thread, locale === "fa" ? /پیام به مدیر/ : /Message to admin/);
     assert.match(thread, /dir="auto"/); assert.match(thread, /maxLength="2000"/i);
     assert.match(thread, /&lt;script&gt;/); assert.doesNotMatch(thread, /<script>|Send email|Email requested|Website only/);
   }
-  const fallback = markup(RequestAdminMessageBanner({ messages: [], fallbackMessage: "Existing request requires a reply.", locale: "en" }));
+  const fallback = markup(RequestAdminMessageBanner({ messages: [], fallbackMessage: "Existing request requires a reply.", replyRequired: true, locale: "en" }));
   assert.match(fallback, /Existing request requires a reply/);
   assert.equal(RequestAdminMessageBanner({ messages: [], fallbackMessage: null, locale: "en" }), null);
 });
@@ -921,5 +924,210 @@ test("recording a different-currency deposit is explicit and its saved review st
     assert.equal(elements(tree, node => node.props.id === "request-payment-reference").length, 0);
     assert.equal(elements(tree, node => node.type === "button" && /^(Confirm funds received|Resume payment)$/.test(textOf(node))).length, 0);
     assert.ok(elements(tree, node => node.type === "button" && textOf(node) === "Record a separate cleared deposit")[0]);
+  }
+});
+
+test("fully received funds under internal review never ask the customer to pay, upload, cancel or reply", () => {
+  for (const locale of ["en", "fa"]) {
+    for (const funding_status of ["confirmed", "partial"]) {
+      const funded = { ...request, status: "under_review", funding_status, funding_received: request.quote.funding_total,
+        funds_confirmed_at: "2026-09-16T02:00:00Z", evidence_submitted_at: request.created_at,
+        action_required: "PRIVATE: finance must verify the credited account.", customer_action_required: null };
+      const detail = { request: funded, events: [], receipts: [{ id: "funded-receipt", original_name: "bank.pdf", size_bytes: 1024, created_at: request.created_at }],
+        messages: [{ id: "historic-admin-message", sender_role: "admin", body: "Your request is being reviewed by our team.", created_at: request.created_at }] };
+      const html = render("RequestDetailView", { id: request.id, locale }, { states: { 0: detail, 1: false } });
+      assert.match(html, locale === "fa" ? /وجه دریافت شد/ : /Funds received/);
+      assert.match(html, locale === "fa" ? /در حال بررسی توسط مدیر/ : /Under admin review/);
+      assert.match(html, locale === "fa" ? /نیازی به اقدام شما نیست/ : /No action needed/);
+      assert.match(html, locale === "fa" ? /پیام به مدیر/ : /Message to admin/);
+      assert.match(html, /Your request is being reviewed by our team/);
+      assert.doesNotMatch(html, /PRIVATE: finance|href="#request-conversation"|type="file"|request-payment-reference/);
+      assert.doesNotMatch(html, /Copy BSB|Make your payment|Send receipt for review|Add another receipt|Cancel request|Your response is needed|Reply needed|we are checking your payment/);
+      assert.doesNotMatch(html, /کپی کد شعبه|ارسال رسید برای بررسی|افزودن رسید دیگر|لغو درخواست|پاسخ شما لازم است|نیاز به پاسخ شما|در حال بررسی واریز شما/);
+      const thread = html.match(/<section id="request-conversation"[\s\S]*?<\/section>/)?.[0];
+      assert.ok(thread);
+      assert.match(thread, /<textarea/);
+      assert.doesNotMatch(thread.match(/<textarea[^>]*>/)?.[0] || "", /disabled/);
+      const list = render("RequestList", { locale, embedded: true }, { states: { 0: [funded], 1: false } });
+      assert.doesNotMatch(list, /View Zarman’s message|پیام زرمان را ببینید|Reply needed|نیاز به پاسخ شما/);
+    }
+  }
+});
+
+test("an explicit customer question displays its exact banner and reply prompt ahead of later informational messages", () => {
+  for (const locale of ["en", "fa"]) {
+    const question = locale === "fa" ? "لطفاً نام صاحب حساب فرستنده را تأیید کنید." : "Please confirm the sender account name.";
+    const questionAt = "2026-09-16T02:00:00Z";
+    const laterAt = "2026-09-16T03:00:00Z";
+    const detail = { request: { ...request, status: "under_review", funding_status: "confirmed", funding_received: request.quote.funding_total,
+      funds_confirmed_at: questionAt, action_required: "PRIVATE: internal accounting review", customer_action_required: question },
+      events: [], receipts: [], messages: [
+        { id: "required-question", sender_role: "admin", body: question, created_at: questionAt },
+        { id: "later-information", sender_role: "admin", body: "The office opens tomorrow.", created_at: laterAt },
+      ] };
+    const html = render("RequestDetailView", { id: request.id, locale }, { states: { 0: detail, 1: false } });
+    const banner = html.match(/<aside[^>]*class="messageBanner"[\s\S]*?<\/aside>/)?.[0];
+    assert.ok(banner);
+    assert.ok(banner.includes(question));
+    assert.ok(banner.includes(`dateTime="${questionAt}"`));
+    assert.doesNotMatch(banner, /The office opens tomorrow|PRIVATE: internal/);
+    assert.ok(!banner.includes(laterAt));
+    assert.match(banner, /href="#request-conversation"/);
+    assert.match(banner, locale === "fa" ? /ارسال پاسخ/ : /Reply/);
+    assert.match(html, locale === "fa" ? /پاسخ شما لازم است/ : /Your response is needed/);
+    assert.doesNotMatch(html, /No action needed|نیازی به اقدام شما نیست|PRIVATE: internal|Cancel request|لغو درخواست/);
+    const list = render("RequestList", { locale, embedded: true }, { states: { 0: [detail.request], 1: false } });
+    assert.match(list, locale === "fa" ? /پیام زرمان را ببینید/ : /View Zarman’s message/);
+    const { RequestAdminMessageBanner } = load("components/requests/RequestConversation.tsx");
+    const noMatchingMessage = markup(RequestAdminMessageBanner({ messages: [detail.messages[1]], fallbackMessage: question, replyRequired: true, locale }));
+    assert.ok(noMatchingMessage.includes(question));
+    assert.doesNotMatch(noMatchingMessage, /<time|The office opens tomorrow/);
+  }
+});
+
+test("admin queue keeps funded financial holds in review and out of the settlement filter", () => {
+  const held = { ...request, id: "funded-review", reference_code: "ZE-REVIEW", status: "under_review", funding_status: "confirmed", funding_received: request.quote.funding_total,
+    funds_confirmed_at: "2026-09-16T02:00:00Z", action_required: "Internal bank account review", customer_action_required: null };
+  const ready = { ...held, id: "funded-ready", reference_code: "ZE-READY", status: "ready", action_required: null };
+  const question = { ...ready, id: "funded-question", reference_code: "ZE-QUESTION", customer_action_required: "Please confirm the recipient account." };
+  const harness = load("components/requests/RequestList.tsx", { states: { 0: [held, ready, question], 1: false } });
+  const props = { admin: true, locale: "en" };
+  let tree = harness.rerender("RequestList", props);
+  const rowFor = (tree, reference) => elements(tree, node => node.type === "tr" && textOf(node).includes(reference))[0];
+  assert.match(textOf(rowFor(tree, held.reference_code)), /Review funds/);
+  assert.doesNotMatch(textOf(rowFor(tree, held.reference_code)), /Reconcile &amp; complete|Waiting for reply/);
+  assert.match(textOf(rowFor(tree, question.reference_code)), /Waiting for reply/);
+  const filters = elements(tree, node => node.props["aria-label"] === "Filter requests")[0];
+  elements(filters, node => node.type === "button" && textOf(node).startsWith("To complete"))[0].props.onClick();
+  tree = harness.rerender("RequestList", props);
+  assert.equal(rowFor(tree, held.reference_code), undefined);
+  assert.equal(rowFor(tree, question.reference_code), undefined);
+  assert.ok(rowFor(tree, ready.reference_code));
+  const updatedFilters = elements(tree, node => node.props["aria-label"] === "Filter requests")[0];
+  elements(updatedFilters, node => node.type === "button" && textOf(node).startsWith("Review"))[0].props.onClick();
+  tree = harness.rerender("RequestList", props);
+  assert.ok(rowFor(tree, held.reference_code));
+  assert.ok(rowFor(tree, question.reference_code));
+  assert.equal(rowFor(tree, ready.reference_code), undefined);
+  const readyView = render("RequestDetailView", { id: ready.id, admin: true, locale: "en" }, { states: { 0: { request: ready, events: [], receipts: [], messages: [] }, 1: false } });
+  assert.match(readyView, /Request information/);
+  const questionView = render("RequestDetailView", { id: question.id, admin: true, locale: "en" }, { states: { 0: { request: question, events: [], receipts: [], messages: [] }, 1: false } });
+  assert.doesNotMatch(questionView, /Reconcile destination payment|Settlement reference/);
+});
+
+test("an overdue Priority fee refund keeps the exact post-funding question visible in both customer languages", () => {
+  for (const locale of ["en", "fa"]) {
+    for (const priority_fee_status of ["refund_pending", "refunded"]) {
+      const question = locale === "fa" ? "لطفاً شماره حساب گیرنده را پیش از تسویه تأیید کنید." : "Please confirm the recipient account before settlement.";
+      const detail = { request: { ...request, status: "action_required", funding_status: "confirmed", priority_fee_status, funding_received: request.quote.funding_total,
+        funds_confirmed_at: "2026-09-16T02:00:00Z", handling_due_at: "2026-09-16T03:00:00Z", customer_action_required: question,
+        action_required: "PRIVATE: Priority handling overdue; fee refund pending." },
+        receipts: [], events: [], messages: [{ id: "required-recipient-check", sender_role: "admin", body: question, created_at: "2026-09-16T02:30:00Z" }] };
+      const html = render("RequestDetailView", { id: request.id, locale }, { states: { 0: detail, 1: false } });
+      const banner = html.match(/<aside[^>]*class="messageBanner"[\s\S]*?<\/aside>/)?.[0];
+      assert.ok(banner?.includes(question));
+      assert.match(banner, /href="#request-conversation"/);
+      assert.match(html, locale === "fa" ? /پاسخ شما لازم است|نیاز به پاسخ شما/ : /Your response is needed|Reply needed/);
+      assert.doesNotMatch(html, /PRIVATE: Priority|No action needed|نیازی به اقدام شما نیست|Cancel request|لغو درخواست|type="file"/);
+    }
+  }
+});
+
+test("after a customer reply staff can resume fully funded transfers during a Priority-only refund, never a principal refund", async () => {
+  for (const priority_fee_status of ["refund_pending", "refunded"]) {
+    let detail = { request: { ...request, status: "under_review", funding_status: "confirmed", priority_fee_status, funding_received: request.quote.funding_total,
+      funds_confirmed_at: "2026-09-16T02:00:00Z", customer_action_required: null, action_required: "Priority fee refund tracked separately." }, receipts: [], events: [], messages: [] };
+    const calls = [];
+    const harness = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false }, actions: {
+      mutateAdminRequest: async input => {
+        calls.push(input);
+        detail = { ...detail, request: { ...detail.request, status: "ready", version: request.version + 1, action_required: null } };
+        return { data: detail.request };
+      },
+      getAdminRequest: async () => ({ data: detail }),
+    } });
+    const props = { id: request.id, admin: true, locale: "en" };
+    let tree = harness.rerender("RequestDetailView", props);
+    let resume = elements(tree, node => node.type === "button" && textOf(node) === "Approve funded request")[0];
+    assert.ok(resume);
+    if (priority_fee_status === "refund_pending") {
+      const primary = elements(tree, node => node.type === "button" && node.props.type === "submit")[0];
+      assert.equal(textOf(primary), "Approve returned refund");
+      assert.equal(resume.props.type, "button");
+      resume.props.onClick();
+      tree = harness.rerender("RequestDetailView", props);
+      resume = elements(tree, node => node.type === "button" && textOf(node) === "Approve funded request")[0];
+    }
+    assert.equal(resume.props.type, "submit");
+    assert.equal(calls.length, 0);
+    requiredField(tree, "request-honour-quote").props.onChange({ target: { checked: true } });
+    requiredField(tree, "request-confirmation").props.onChange({ target: { checked: true } });
+    const email = elements(tree, node => node.type === "label" && /Send email to customer and management/.test(textOf(node)))[0];
+    elements(email, node => node.type === "input")[0].props.onChange({ target: { checked: false } });
+    tree = harness.rerender("RequestDetailView", props);
+    await elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].action, "resume_funded_request");
+    assert.equal(calls[0].payload.honour_quote, true);
+    assert.equal(calls[0].sendEmail, false);
+    assert.equal(Object.hasOwn(calls[0].payload, "received_amount"), false);
+    assert.equal(Object.hasOwn(calls[0].payload, "payment_reference"), false);
+    for (const funding_status of ["refund_pending", "refunded"]) {
+      const principal = { ...detail, request: { ...detail.request, status: "under_review", funding_status } };
+      const html = render("RequestDetailView", props, { states: { 0: principal, 1: false } });
+      assert.doesNotMatch(html, /Approve funded request|Confirm funds received|Reconcile destination payment/);
+    }
+  }
+});
+
+test("customer tracking refreshes automatically on visible polling, focus and return to the tab", async () => {
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+  const windowEvents = new Map(); const documentEvents = new Map();
+  let timer; let timerDelay; let cleared = false; let reads = 0; let cleanups = [];
+  const visibility = { visibilityState: "visible", addEventListener: (name, callback) => documentEvents.set(name, callback), removeEventListener: (name, callback) => { if (documentEvents.get(name) === callback) documentEvents.delete(name); } };
+  let latest = incomingDetail();
+  try {
+    Object.defineProperty(globalThis, "document", { configurable: true, value: visibility });
+    Object.defineProperty(globalThis, "window", { configurable: true, value: {
+      setInterval: (callback, delay) => { timer = callback; timerDelay = delay; return 1; },
+      clearInterval: id => { assert.equal(id, 1); cleared = true; },
+      addEventListener: (name, callback) => windowEvents.set(name, callback),
+      removeEventListener: (name, callback) => { if (windowEvents.get(name) === callback) windowEvents.delete(name); },
+    } });
+    const harness = load("components/requests/RequestDetailView.tsx", { captureEffects: true, states: { 0: latest, 1: false }, actions: {
+      getMyRequest: async () => { reads++; return { data: latest }; },
+    } });
+    const props = { id: request.id, locale: "en" };
+    harness.rerender("RequestDetailView", props);
+    cleanups = harness.runEffects();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(reads, 1);
+    assert.equal(timerDelay, 20000);
+    visibility.visibilityState = "hidden";
+    timer(); documentEvents.get("visibilitychange")();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(reads, 1);
+    latest = { ...latest, request: { ...latest.request, version: request.version + 1, status: "under_review", funding_status: "confirmed", funds_confirmed_at: "2026-09-16T02:00:00Z" } };
+    visibility.visibilityState = "visible";
+    documentEvents.get("visibilitychange")();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(reads, 2);
+    const html = markup(harness.rerender("RequestDetailView", props));
+    assert.match(html, /Funds received|Under admin review/);
+    assert.doesNotMatch(html, /we are checking your payment|Your response is needed/);
+    timer();
+    await new Promise(resolve => setImmediate(resolve));
+    windowEvents.get("focus")();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(reads, 4);
+    cleanups.forEach(cleanup => cleanup()); cleanups = [];
+    assert.equal(cleared, true);
+    assert.equal(windowEvents.has("focus"), false);
+    assert.equal(documentEvents.has("visibilitychange"), false);
+  } finally {
+    cleanups.forEach(cleanup => cleanup());
+    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow); else delete globalThis.window;
+    if (originalDocument) Object.defineProperty(globalThis, "document", originalDocument); else delete globalThis.document;
   }
 });

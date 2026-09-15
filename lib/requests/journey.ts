@@ -12,10 +12,15 @@ export function getRequestJourney(request: ExchangeRequest) {
   const stageKey: RequestJourneyStage = (["approval", "payment", "receipt_review", "funds_received", "completed"] as const)[stage];
   const refundable = ["refund_pending", "refunded"].includes(request.funding_status) || ["refund_pending", "refunded"].includes(request.priority_fee_status);
   const unpaid = ["unpaid", "partial"].includes(request.funding_status);
+  const customerActionMessage = !closed && request.status !== "completed" && !["refund_pending", "refunded"].includes(request.funding_status)
+    ? request.customer_action_required?.trim() || null : null;
+  const customerActionRequired = Boolean(customerActionMessage);
   return {
     approved, receiptSubmitted, fundsReceived, closed, stage, stageKey,
-    canPay: approved && !closed && !refundable && unpaid && request.status === "awaiting_funds",
-    canUpload: approved && !closed && !refundable && unpaid && ["submitted", "awaiting_funds", "under_review", "action_required"].includes(request.status),
+    customerActionRequired, customerActionMessage,
+    readyForSettlement: request.status === "ready" && request.funding_status === "confirmed" && !customerActionRequired,
+    canPay: approved && !closed && !refundable && !fundsReceived && unpaid && request.status === "awaiting_funds",
+    canUpload: approved && !closed && !refundable && !fundsReceived && unpaid && ["submitted", "awaiting_funds", "under_review", "action_required"].includes(request.status),
   };
 }
 
@@ -23,12 +28,15 @@ export function requestStageLabel(request: ExchangeRequest, locale: RequestLocal
   const index = locale === "fa" ? 1 : 0;
   const exceptions: Record<string, [string, string]> = {
     cancelled: ["Cancelled", "لغو شده"], rejected: ["Not approved", "تأیید نشده"], expired: ["Payment window closed", "مهلت پرداخت پایان یافته"],
-    action_required: ["Reply needed", "نیاز به پاسخ شما"], reconciliation: ["Checking destination settlement", "در حال بررسی تسویه مقصد"],
+    reconciliation: ["Checking destination settlement", "در حال بررسی تسویه مقصد"],
   };
   if (exceptions[request.status]) return exceptions[request.status][index];
   if (request.funding_status === "refund_pending") return ["Refund in progress", "بازپرداخت در حال انجام"][index];
   if (request.funding_status === "refunded") return ["Funds returned", "وجه بازپرداخت شد"][index];
-  if (request.status === "under_review" && !request.evidence_submitted_at && !getRequestJourney(request).fundsReceived) return ["Admin review in progress", "در حال بررسی توسط مدیر"][index];
+  const journey = getRequestJourney(request);
+  if (journey.customerActionRequired) return ["Reply needed", "نیاز به پاسخ شما"][index];
+  if (["under_review", "action_required"].includes(request.status) && journey.fundsReceived) return ["Funds received · under admin review", "وجه دریافت شد · در حال بررسی توسط مدیر"][index];
+  if (request.status === "action_required" || (request.status === "under_review" && !request.evidence_submitted_at && !journey.fundsReceived)) return ["Admin review in progress", "در حال بررسی توسط مدیر"][index];
   const labels: Record<RequestJourneyStage, [string, string]> = {
     approval: ["Awaiting approval", "در انتظار تأیید درخواست"],
     payment: ["Ready for your payment", "آماده پرداخت شما"],
@@ -36,7 +44,7 @@ export function requestStageLabel(request: ExchangeRequest, locale: RequestLocal
     funds_received: ["Funds received", "وجه شما دریافت شد"],
     completed: ["Transfer completed", "انتقال تکمیل شد"],
   };
-  return labels[getRequestJourney(request).stageKey][index];
+  return labels[journey.stageKey][index];
 }
 
 export type RequestMilestone = {

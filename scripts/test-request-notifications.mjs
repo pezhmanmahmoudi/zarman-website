@@ -142,6 +142,33 @@ test("conversation emails have concise localized subjects, escaped messages and 
   }
 });
 
+test("received funds under finance review do not ask the customer to act in either language", () => {
+  for (const locale of ["en", "fa"]) for (const workflow_status of ["action_required", "under_review"]) {
+    const result = templates.renderRequestNotification(delivery({ locale, workflow_status, event_type: "funds_recorded",
+      payload_snapshot: { funds_confirmed_at: "2026-09-15T03:55:16Z", customer_action_required: null } }), settings);
+    assert.match(result.subject, locale === "fa" ? /وجه دریافت شد؛ در حال بررسی توسط مدیر/ : /Funds received · under admin review/);
+    assert.match(result.text, locale === "fa" ? /نیازی به اقدام شما نیست/ : /No action is needed from you/);
+    assert.doesNotMatch(result.text, /Reply on the request page|پاسخ خود را|24 hours|BSB/);
+  }
+});
+
+test("only an explicit question requires a reply; ordinary admin messages are optional", () => {
+  for (const locale of ["en", "fa"]) {
+    const optional = templates.renderRequestNotification(delivery({ locale, workflow_status: "action_required", event_type: "admin_message",
+      payload_snapshot: { public_message: "Progress update", customer_action_required: null } }), settings);
+    assert.match(optional.text, locale === "fa" ? /در صورت نیاز/ : /if needed/);
+    assert.doesNotMatch(optional.text, /Reply on the request page|پاسخ خود را/);
+    const required = templates.renderRequestNotification(delivery({ locale, workflow_status: "under_review", event_type: "funds_recorded",
+      payload_snapshot: { funds_confirmed_at: "2026-09-15T03:55:16Z", customer_action_required: "Please confirm the sender name." } }), settings);
+    assert.match(required.text, /Please confirm the sender name/);
+    assert.match(required.text, locale === "fa" ? /پاسخ خود را/ : /Reply on the request page/);
+    assert.doesNotMatch(required.text, /No action is needed|نیازی به اقدام شما نیست/);
+    const legacy = templates.renderRequestNotification(delivery({ locale, workflow_status: "action_required", event_type: "request_info",
+      payload_snapshot: { public_message: "Please confirm the sender name." } }), settings);
+    assert.match(legacy.text, locale === "fa" ? /پاسخ خود را/ : /Reply on the request page/);
+  }
+});
+
 test("PDF keeps Persian names and pins metadata to settlement; repeated rendering is deterministic", async () => {
   const first = await receipts.renderRequestReceiptPdf(completion);
   const second = await receipts.renderRequestReceiptPdf(completion);

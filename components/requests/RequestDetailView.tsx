@@ -27,26 +27,27 @@ const commandLabels: Record<RequestCommand, [string, string]> = {
 
 function allowedCommands(request: ExchangeRequest, admin: boolean): RequestCommand[] {
   const commands: RequestCommand[] = [];
-  const hasRefund = ["refund_pending", "refunded"].includes(request.funding_status) || ["refund_pending", "refunded"].includes(request.priority_fee_status);
+  const hasPrincipalRefund = ["refund_pending", "refunded"].includes(request.funding_status);
+  const hasRefund = hasPrincipalRefund || ["refund_pending", "refunded"].includes(request.priority_fee_status);
   if (admin) {
-    if (["submitted", "under_review", "awaiting_funds", "action_required"].includes(request.status)) commands.push("request_info");
+    if (["submitted", "under_review", "awaiting_funds", "action_required", "ready"].includes(request.status)) commands.push("request_info");
     if (!hasRefund && request.funding_status !== "confirmed" && ["submitted", "under_review", "action_required"].includes(request.status)) commands.push("await_funds");
     if (request.payment_approved_at && !hasRefund && request.funding_status !== "confirmed" && ["submitted", "under_review", "awaiting_funds", "action_required", "expired"].includes(request.status)) commands.push("confirm_funds");
-    if (!hasRefund && request.funding_status === "confirmed" && ["under_review", "action_required"].includes(request.status)) commands.push("resume_funded_request");
-    if (request.status === "ready") commands.push("reconcile_complete");
+    if (!hasPrincipalRefund && request.funding_status === "confirmed" && ["under_review", "action_required"].includes(request.status)) commands.push("resume_funded_request");
+    if (getRequestJourney(request).readyForSettlement) commands.push("reconcile_complete");
     if (request.status === "processing") commands.push("record_uncertain_payout");
     if (["processing", "reconciliation"].includes(request.status)) commands.push("complete");
     if (!isRequestTerminal(request.status) && !["processing", "reconciliation"].includes(request.status)) commands.push("reject");
     if (request.priority_fee_status === "refund_pending" || request.funding_status === "refund_pending") commands.push("confirm_refund");
   } else {
-    if (["submitted", "under_review", "action_required", "awaiting_funds", "ready"].includes(request.status)) commands.push("cancel");
+    if (!getRequestJourney(request).fundsReceived && ["submitted", "under_review", "action_required", "awaiting_funds", "ready"].includes(request.status)) commands.push("cancel");
   }
   return commands;
 }
 
 function recommendedCommand(request: ExchangeRequest, commands: RequestCommand[]): RequestCommand | undefined {
   if (commands.includes("confirm_refund")) return "confirm_refund";
-  if (request.status === "action_required") return undefined;
+  if (getRequestJourney(request).customerActionRequired) return undefined;
   const order: RequestCommand[] = ["resume_funded_request", "reconcile_complete", "complete", ...(request.payment_approved_at && request.evidence_submitted_at ? ["confirm_funds" as const] : []), "await_funds"];
   return order.find(command => commands.includes(command));
 }
@@ -102,8 +103,10 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
     void refresh();
     const timer = window.setInterval(() => { if (document.visibilityState === "visible" && !pending.current) void refresh(); }, 20000);
     const onFocus = () => { if (!pending.current) void refresh(); };
+    const onVisible = () => { if (document.visibilityState === "visible" && !pending.current) void refresh(); };
     window.addEventListener("focus", onFocus);
-    return () => { window.clearInterval(timer); window.removeEventListener("focus", onFocus); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onVisible); };
   }, [refresh]);
 
   useEffect(() => {
@@ -177,7 +180,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
           const outstanding = Math.max(0, Number(updated.quote.funding_total) - Number(updated.funding_received));
           setNotice(fundingCurrency !== updated.quote.funding_currency
             ? `Deposit recorded in ${currencyLabel(fundingCurrency)}. This request expects ${currencyLabel(updated.quote.funding_currency)}; finance review is required.`
-            : updated.status === "ready" ? "Funds received. Ready for destination reconciliation."
+            : getRequestJourney(updated).readyForSettlement ? "Funds received. Ready for destination reconciliation."
             : updated.funding_status === "partial" ? `Partial payment recorded. ${requestMoney(outstanding, updated.quote.funding_currency, locale)} still to collect.`
             : "Deposit recorded. The request remains on hold for review.");
         } else setNotice(fa ? "تغییرات ثبت شد." : "Update saved.");
@@ -197,7 +200,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
   const visibleSavedDeposit = savedDeposit?.requestId === request?.id ? savedDeposit : null;
   const payments = admin ? detail?.payments || [] : [];
   const hasMismatchedDeposit = payments.some(payment => payment.currency !== request?.quote.funding_currency) || !!(visibleSavedDeposit && visibleSavedDeposit.currency !== request?.quote.funding_currency);
-  const commands = request ? allowedCommands(request, admin).filter(command => !(hasMismatchedDeposit && command === "await_funds")) : [];
+  const commands = request ? allowedCommands(request, admin).filter(command => !(hasMismatchedDeposit && ["await_funds", "resume_funded_request"].includes(command))) : [];
   const recommended = admin && request ? recommendedCommand(request, commands) : undefined;
   const selectedAction = commands.includes(action as RequestCommand) ? action : recommended || "";
   const currentAction = selectedAction === "confirm_funds" && hasMismatchedDeposit && !separateDeposit ? "" : selectedAction;
@@ -268,7 +271,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
     {error && (!currentAction || validation?.field !== "submission") && <p className={styles.error} role="alert">{requestError(error, locale)}</p>}{notice && <p className={workspace.saved} role="status">{notice}</p>}
     {loading && <p className={styles.loading} role="status">{fa ? "در حال بارگذاری…" : "Loading…"}</p>}
     {request && detail && <>
-      {!admin && <RequestAdminMessageBanner messages={messages} fallbackMessage={request.action_required} locale={locale} />}
+      {!admin && <RequestAdminMessageBanner messages={messages} fallbackMessage={journey?.customerActionMessage} replyRequired={journey?.customerActionRequired} locale={locale} />}
       {request.status === "reconciliation" && <p className={styles.warning}>{admin ? "Verify the bank result before retrying a payout." : (fa ? "نتیجه پرداخت بانکی در حال بررسی است." : "We’re checking the bank settlement.")}</p>}
       {(request.priority_fee_status === "refund_pending" || request.funding_status === "refund_pending") && <p className={styles.warning}>{admin ? "Refund approval required." : (fa ? "بازپرداخت در حال پیگیری است." : "Your refund is being arranged.")}</p>}
       {admin ? <div className={workspace.adminLayout}>
@@ -282,7 +285,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
             </li>)}{visibleSavedDeposit && !payments.some(payment => payment.payment_reference === visibleSavedDeposit.reference && payment.currency === visibleSavedDeposit.currency && Number(payment.amount) === visibleSavedDeposit.amount) && <li><div className={workspace.depositHeading}><strong><bdi>{requestMoney(visibleSavedDeposit.amount, visibleSavedDeposit.currency, locale)}</bdi></strong><span className={workspace.depositMismatch}>{visibleSavedDeposit.currency !== expectedCurrency ? "Currency mismatch" : "Saved"}</span></div><span className={workspace.depositReference}>Bank reference: <bdi>{visibleSavedDeposit.reference}</bdi></span><span className={workspace.fieldHint}>Saved. Refresh to load the bank record details.</span></li>}</ol>
             {hasMismatchedDeposit && commands.includes("confirm_funds") && currentAction !== "confirm_funds" && <button type="button" className={workspace.textButton} disabled={busy} onClick={() => chooseAction("confirm_funds")}>Record a separate cleared deposit</button>}
           </section>}
-          {actionPanel && <section className={`${styles.card} ${workspace.approvalCard}`}>{!currentAction && <div className={workspace.waitingAdmin}><Clock3 size={24} /><h2>{isRequestTerminal(request.status) ? requestStageLabel(request, locale) : hasMismatchedDeposit ? "Review recorded deposit" : request.action_required ? "Waiting for customer response" : "Waiting for customer receipt"}</h2></div>}{actionPanel}</section>}
+          {actionPanel && <section className={`${styles.card} ${workspace.approvalCard}`}>{!currentAction && <div className={workspace.waitingAdmin}><Clock3 size={24} /><h2>{isRequestTerminal(request.status) ? requestStageLabel(request, locale) : journey?.customerActionRequired ? "Waiting for customer response" : hasMismatchedDeposit ? "Review recorded deposit" : journey?.fundsReceived || request.action_required ? "Admin review required" : "Waiting for customer receipt"}</h2></div>}{actionPanel}</section>}
           {request.status === "completed" && <section className={`${styles.card} ${workspace.receiptReady}`}><div><Check size={20} /><h2>Transfer completed</h2></div><a className={styles.button} href={`/api/requests/${request.id}/receipt`} target="_blank" rel="noopener noreferrer"><Download size={17} />Final receipt</a></section>}
           {currentAction !== "confirm_funds" && detail.receipts.length > 0 && <RequestReceiptUpload request={request} receipts={detail.receipts} admin locale={locale} onUploaded={refresh} />}
           <RequestConversation requestId={id} version={request.version} messages={messages} admin locale={locale} disabled={busy} onUpdated={refresh} onSendingChange={sending => { pending.current = sending; setBusy(sending); }} />
@@ -296,7 +299,8 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
             <div className={styles.fact}><dt>Funds confirmed</dt><dd>{requestDate(request.funds_confirmed_at, locale)}</dd></div>
             <div className={styles.fact}><dt>Handling due</dt><dd>{requestDate(request.handling_due_at, locale)}</dd></div>
           </dl><span className={workspace.timezone}>Sydney time</span></section>
-          {request.action_required && <section className={workspace.adminAlert}><strong>Awaiting customer</strong><p dir="auto">{request.action_required}</p></section>}
+          {request.action_required && request.action_required !== journey?.customerActionMessage && <section className={workspace.adminAlert}><strong>Admin review</strong><p dir="auto">{request.action_required}</p></section>}
+          {journey?.customerActionRequired && <section className={workspace.adminAlert}><strong>Awaiting customer</strong><p dir="auto">{journey.customerActionMessage}</p></section>}
           <section className={styles.card}><h2>Destination account</h2><dl className={styles.facts}>
             <div className={styles.fact}><dt>Recipient</dt><dd>{request.quote.institution_name || String(request.quote.recipient_snapshot.account_name || request.quote.recipient_snapshot.full_name || request.quote.recipient_snapshot.label || "—")}</dd></div>
             {request.quote.recipient_snapshot.bsb != null && <div className={styles.fact}><dt>BSB</dt><dd><bdi>{String(request.quote.recipient_snapshot.bsb)}</bdi></dd></div>}
@@ -321,9 +325,9 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
         <div className={workspace.customerLayout}>
           <div className={workspace.column}>
             {request.status === "completed" && <section className={`${styles.card} ${workspace.receiptReady}`}><div><Check size={20} /><h2>{fa ? "رسید نهایی آماده است" : "Your receipt is ready"}</h2></div><a className={styles.button} href={`/api/requests/${request.id}/receipt`} target="_blank" rel="noopener noreferrer"><Download size={17} />{fa ? "دریافت رسید" : "Download receipt"}</a></section>}
-            {journey && !journey.closed && request.status !== "completed" && (!journey.approved || journey.fundsReceived || request.action_required) && <section className={`${styles.card} ${workspace.stageCard}`}>
+            {journey && !journey.closed && request.status !== "completed" && (!journey.approved || journey.fundsReceived || journey.customerActionRequired) && <section className={`${styles.card} ${workspace.stageCard}`}>
               <span className={workspace.stageIcon}>{journey.fundsReceived ? <Check size={22} /> : <Clock3 size={22} />}</span>
-              <div><h2>{request.action_required ? (fa ? "پاسخ شما لازم است" : "Your response is needed") : journey.fundsReceived ? (fa ? "وجه دریافت شد" : "Funds received") : (fa ? "درخواست ثبت شد" : "Request submitted")}</h2><p>{request.action_required ? (fa ? "پیام زرمان را پاسخ دهید." : "Reply to Zarman’s message.") : journey.fundsReceived ? (fa ? "مرحله بعد: تسویه با گیرنده." : "Next: destination settlement.") : (fa ? "در انتظار تأیید زرمان" : "Awaiting Zarman approval")}</p>{request.action_required && <a className={styles.button} href="#request-conversation">{fa ? "ارسال پاسخ" : "Reply"}</a>}</div>
+              <div><h2>{journey.customerActionRequired ? (fa ? "پاسخ شما لازم است" : "Your response is needed") : journey.fundsReceived ? (fa ? "وجه دریافت شد" : "Funds received") : (fa ? "درخواست ثبت شد" : "Request submitted")}</h2><p>{journey.customerActionRequired ? (fa ? "پیام زرمان را پاسخ دهید." : "Reply to Zarman’s message.") : journey.fundsReceived ? (journey.readyForSettlement || ["processing", "reconciliation"].includes(request.status) ? (fa ? "مرحله بعد: تسویه با گیرنده." : "Next: destination settlement.") : (fa ? "در حال بررسی توسط مدیر" : "Under admin review")) : (fa ? "در انتظار تأیید زرمان" : "Awaiting Zarman approval")}{journey.fundsReceived && !journey.customerActionRequired && <span className={workspace.cellDetail}>{fa ? "نیازی به اقدام شما نیست" : "No action needed"}</span>}</p>{journey.customerActionRequired && <a className={styles.button} href="#request-conversation">{fa ? "ارسال پاسخ" : "Reply"}</a>}</div>
             </section>}
             {journey?.canPay && !journey.receiptSubmitted && <RequestPaymentInstructions request={request} locale={locale} />}
             <RequestReceiptUpload request={request} receipts={detail.receipts || []} locale={locale} onUploaded={refresh} />

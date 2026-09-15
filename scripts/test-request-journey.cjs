@@ -31,7 +31,7 @@ test("the next customer step follows recorded approvals and evidence, never mere
   assert.equal(journey.getRequestJourney(funded).stageKey, "funds_received");
   assert.equal(journey.getRequestJourney(funded).canUpload, false);
   assert.equal(journey.getRequestJourney({ ...funded, status: "action_required" }).stageKey, "funds_received");
-  assert.equal(journey.requestStageLabel({ ...funded, status: "action_required" }, "en"), "Reply needed");
+  assert.equal(journey.requestStageLabel({ ...funded, status: "action_required" }, "en"), "Funds received · under admin review");
   assert.equal(journey.getRequestJourney({ ...funded, status: "completed" }).stageKey, "completed");
 });
 
@@ -53,6 +53,79 @@ test("closed requests and pending refunds cannot offer new customer payments or 
     const state = journey.getRequestJourney({ ...approved, ...patch });
     assert.equal(state.canPay, false);
     assert.equal(state.canUpload, false);
+  }
+});
+
+test("funds received remains factual during internal review and never reopens funding or asks for a customer reply", () => {
+  for (const status of ["under_review", "action_required", "awaiting_funds"]) {
+    for (const funding of [{ funding_status: "confirmed", funds_confirmed_at: null }, { funding_status: "partial", funds_confirmed_at: "2026-09-15T04:00:00Z" }]) {
+      const request = { ...submitted, ...funding, status, payment_approved_at: "2026-09-15T02:00:00Z", evidence_submitted_at: "2026-09-15T03:00:00Z",
+        action_required: "Finance must verify the credited account.", customer_action_required: null };
+      const state = journey.getRequestJourney(request);
+      assert.equal(state.fundsReceived, true);
+      assert.equal(state.stageKey, "funds_received");
+      assert.equal(state.canPay, false);
+      assert.equal(state.canUpload, false);
+      assert.equal(state.customerActionRequired, false);
+      assert.equal(state.customerActionMessage, null);
+      assert.equal(state.readyForSettlement, false);
+      assert.doesNotMatch(journey.requestStageLabel(request, "en"), /Reply|your payment|Checking your payment/);
+      assert.doesNotMatch(journey.requestStageLabel(request, "fa"), /نیاز به پاسخ|آماده پرداخت|بررسی واریز/);
+    }
+  }
+});
+
+test("only an explicit open customer question requires a reply, independently of internal financial notes", () => {
+  const question = "Please confirm the sender's account name.";
+  const request = { ...submitted, status: "under_review", funding_status: "confirmed", action_required: "Internal account reconciliation", customer_action_required: question };
+  assert.equal(journey.getRequestJourney(request).customerActionRequired, true);
+  assert.equal(journey.getRequestJourney(request).customerActionMessage, question);
+  assert.equal(journey.requestStageLabel(request, "en"), "Reply needed");
+  assert.equal(journey.requestStageLabel(request, "fa"), "نیاز به پاسخ شما");
+  for (const customer_action_required of [undefined, null, "", "   "]) {
+    assert.equal(journey.getRequestJourney({ ...request, customer_action_required }).customerActionRequired, false);
+    assert.equal(journey.getRequestJourney({ ...request, customer_action_required }).customerActionMessage, null);
+  }
+  for (const status of ["completed", "cancelled", "rejected", "expired"]) {
+    assert.equal(journey.getRequestJourney({ ...request, status }).customerActionRequired, false);
+  }
+});
+
+test("settlement readiness requires released confirmed funds and no outstanding customer question", () => {
+  const ready = { ...submitted, status: "ready", funding_status: "confirmed", funds_confirmed_at: "2026-09-15T04:00:00Z" };
+  assert.equal(journey.getRequestJourney(ready).readyForSettlement, true);
+  for (const patch of [{ status: "under_review" }, { status: "action_required" }, { funding_status: "partial" }, { customer_action_required: "Please confirm the recipient." }]) {
+    const state = journey.getRequestJourney({ ...ready, ...patch });
+    assert.equal(state.fundsReceived, true);
+    assert.equal(state.readyForSettlement, false);
+  }
+});
+
+test("a Priority fee refund preserves an open customer question while principal refunds close that prompt", () => {
+  const question = "Please confirm the recipient account before settlement.";
+  const funded = { ...submitted, status: "action_required", funding_status: "confirmed", funds_confirmed_at: "2026-09-15T04:00:00Z",
+    customer_action_required: question, action_required: "Priority handling overdue; fee refund pending." };
+  for (const priority_fee_status of ["refund_pending", "refunded"]) {
+    const request = { ...funded, priority_fee_status };
+    const state = journey.getRequestJourney(request);
+    assert.equal(state.customerActionRequired, true);
+    assert.equal(state.customerActionMessage, question);
+    assert.equal(state.fundsReceived, true);
+    assert.equal(state.readyForSettlement, false);
+    assert.equal(state.canPay, false);
+    assert.equal(state.canUpload, false);
+    assert.equal(journey.requestStageLabel(request, "en"), "Reply needed");
+    assert.equal(journey.requestStageLabel(request, "fa"), "نیاز به پاسخ شما");
+    const answered = journey.getRequestJourney({ ...request, status: "under_review", customer_action_required: null });
+    assert.equal(answered.customerActionRequired, false);
+    assert.equal(answered.fundsReceived, true);
+    assert.equal(answered.readyForSettlement, false);
+    for (const funding_status of ["refund_pending", "refunded"]) {
+      const principal = journey.getRequestJourney({ ...request, funding_status });
+      assert.equal(principal.customerActionRequired, false);
+      assert.equal(principal.customerActionMessage, null);
+      assert.equal(principal.readyForSettlement, false);
+    }
   }
 });
 

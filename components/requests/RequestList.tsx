@@ -39,23 +39,24 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
 
   const filters = [
     { id: "active", label: fa ? "فعال" : "Active" },
-    ...(admin ? [{ id: "review", label: "Approval" }, { id: "funding", label: "Check payment" }, { id: "ready", label: "To complete" }] : []),
+    ...(admin ? [{ id: "review", label: "Review" }, { id: "funding", label: "Check payment" }, { id: "ready", label: "To complete" }] : []),
     { id: "closed", label: fa ? "بسته‌شده" : "Closed" },
     { id: "all", label: fa ? "همه" : "All" },
   ];
   const matchesFilter = (request: ExchangeRequest, value: string) => value === "all"
     || (value === "active" && !isRequestTerminal(request.status))
     || (value === "closed" && isRequestTerminal(request.status))
-    || (value === "review" && !getRequestJourney(request).approved && !isRequestTerminal(request.status))
+    || (value === "review" && (!getRequestJourney(request).approved || (getRequestJourney(request).fundsReceived && (getRequestJourney(request).customerActionRequired || ["under_review", "action_required"].includes(request.status)))) && !isRequestTerminal(request.status))
     || (value === "funding" && getRequestJourney(request).receiptSubmitted && !getRequestJourney(request).fundsReceived && !isRequestTerminal(request.status))
-    || (value === "ready" && getRequestJourney(request).fundsReceived && !isRequestTerminal(request.status));
+    || (value === "ready" && (getRequestJourney(request).readyForSettlement || ["processing", "reconciliation"].includes(request.status)));
   const nextAction = (request: ExchangeRequest) => {
     const journey = getRequestJourney(request);
     if (request.funding_status === "refund_pending" || request.priority_fee_status === "refund_pending") return "Confirm refund";
     if (isRequestTerminal(request.status)) return "—";
-    if (request.action_required) return "Waiting for reply";
+    if (journey.customerActionRequired) return "Waiting for reply";
+    if (journey.fundsReceived) return journey.readyForSettlement || ["processing", "reconciliation"].includes(request.status) ? "Reconcile & complete" : "Review funds";
+    if (request.action_required) return "Admin review";
     if (!journey.approved) return "Approve request";
-    if (journey.fundsReceived) return "Reconcile & complete";
     if (journey.receiptSubmitted) return "Verify bank payment";
     if (["submitted", "under_review"].includes(request.status)) return "Resume payment";
     return "Waiting for receipt";
@@ -97,7 +98,7 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
           <p className={workspace.transferAmount}><bdi>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</bdi> <span aria-hidden="true">{fa ? "←" : "→"}</span> <bdi>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</bdi></p>
           <time dir="ltr" className={styles.muted} dateTime={request.created_at}>{requestDate(request.created_at, locale)}</time>
         </div>
-        <div className={workspace.customerRequestStatus}><span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{requestStageLabel(request, locale)}</span>{request.action_required && <span className={workspace.attention}>{fa ? "پیام زرمان را ببینید" : "View Zarman’s message"}</span>}<span className={workspace.openRequest}>{fa ? "مشاهده درخواست" : "View request"}<ArrowRight size={14} /></span></div>
+        <div className={workspace.customerRequestStatus}><span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{requestStageLabel(request, locale)}</span>{getRequestJourney(request).customerActionRequired && <span className={workspace.attention}>{fa ? "پیام زرمان را ببینید" : "View Zarman’s message"}</span>}<span className={workspace.openRequest}>{fa ? "مشاهده درخواست" : "View request"}<ArrowRight size={14} /></span></div>
       </Link>)}
       {!visible.length && !error && <div className={`${styles.card} ${styles.empty}`}>{fa ? "درخواستی در این بخش نیست." : "No requests in this view."}</div>}
     </div>}
