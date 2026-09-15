@@ -148,11 +148,11 @@ export function RequestSettingsForm() {
           <p className={ui.hint}>New requests and customer replies notify this list. Choose email delivery when approving or messaging.</p>
         </section>
         <section id="request-timing" className={ui.section} hidden={active !== "timing"} aria-label="Hours and timing">
-          <p className={ui.hint}>Handling starts after cleared funds and checks. Calendar: Sydney.</p>
+          <p className={ui.hint}>Handling starts after cleared funds and checks. The bank allowance is a review deadline, not a required wait. Calendar: Sydney.</p>
           <div className={styles.fields}>
             {number("standard_minutes", "Standard · business minutes", 1, 10080)}{number("priority_minutes", "Priority · business minutes", 1, 10080)}
             {number("quote_minutes", "Quote validity · minutes", 1, 60)}{number("funding_minutes", "Payment window · minutes", 1, 10080)}
-            {number("australian_clearance_minutes", "AU clearance · minutes (1440 = 24h)", 1440, 10080)}
+            {number("australian_clearance_minutes", "AU bank review allowance · minutes (1440 = 24h)", 1440, 10080)}
             {number("opening_hour", "Opening hour", 0, 23)}{number("closing_hour", "Closing hour", 1, 24)}
           </div>
           <div className={styles.settingsDays}>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => <label key={day}><input type="checkbox" checked={settings.business_days.includes(index)} onChange={event => set("business_days", event.target.checked ? [...settings.business_days, index].sort() : settings.business_days.filter(value => value !== index))} />{day}</label>)}</div>

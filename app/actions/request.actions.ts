@@ -180,9 +180,14 @@ async function readDetail(id: string, userId?: string): Promise<RequestDetail> {
   if (messages.error) throw messages.error;
   const detail: RequestDetail = { request: userId ? customerRequest(request.data as ExchangeRequest) : request.data as ExchangeRequest, events: events.data || [], receipts: receipts.data as RequestReceipt[], messages: messages.data || [] };
   if (!userId) {
-    const deliveries = await db.from("exchange_request_notification_deliveries").select("id,event_id,request_id,audience,recipient_email,locale,status,attempts,last_error,created_at").eq("request_id", id).order("created_at", { ascending: false }).limit(100);
+    const [deliveries, payments] = await Promise.all([
+      db.from("exchange_request_notification_deliveries").select("id,event_id,request_id,audience,recipient_email,locale,status,attempts,last_error,created_at").eq("request_id", id).order("created_at", { ascending: false }).limit(100),
+      db.from("exchange_request_payments").select("id,request_id,payment_reference,amount,currency,account_id,created_at").eq("request_id", id).order("created_at", { ascending: false }),
+    ]);
     if (deliveries.error) throw deliveries.error;
+    if (payments.error) throw payments.error;
     detail.deliveries = deliveries.data as RequestDetail["deliveries"];
+    detail.payments = (payments.data || []) as RequestDetail["payments"];
   }
   return detail;
 }

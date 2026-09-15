@@ -77,6 +77,23 @@ test("receipt and status templates escape content and do not confuse upload evid
   assert.match(uploaded.text, /will confirm when funds have cleared/);
 });
 
+test("bank delay advice is conditional on the incoming currency and ends after funds confirmation", () => {
+  for (const locale of ["en", "fa"]) {
+    const aud = templates.renderRequestNotification(delivery({ locale }), settings);
+    assert.match(aud.text, locale === "fa" ? /انتظار اجباری ۲۴ ساعته نداریم/ : /do not impose a 24-hour wait/);
+    assert.doesNotMatch(aud.text, /700|۷۰۰/);
+    const irt = templates.renderRequestNotification(delivery({ locale, payload_snapshot: {
+      payment_instructions: "Test bank", funding_currency: "IRT", funding_total: 234675000,
+    } }), settings);
+    assert.doesNotMatch(irt.text, /24|۲۴|Satna|ساتنا/);
+    assert.match(irt.text, locale === "fa" ? /پرداخت تومانی/ : /incoming Toman payment/);
+    for (const event_type of ["ready", "resume_funded_request", "start_processing"]) {
+      const ready = templates.renderRequestNotification(delivery({ event_type, workflow_status: "ready", locale }), settings);
+      assert.doesNotMatch(ready.text, /24|۲۴|first-time/);
+    }
+  }
+});
+
 test("submission waits for approval and never releases bank details, even from a legacy snapshot", () => {
   for (const locale of ["en", "fa"]) {
     const message = templates.renderRequestNotification(delivery({ event_type: "submitted", workflow_status: "submitted", locale }), settings);

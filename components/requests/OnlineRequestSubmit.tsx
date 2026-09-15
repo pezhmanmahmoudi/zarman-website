@@ -113,7 +113,7 @@ export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusy
           <p className={compact.serviceTime}>{fa ? `هدف رسیدگی: ${numbers.format(policy.priority_minutes)} دقیقه کاری` : `Handling target: ${numbers.format(policy.priority_minutes)} business minutes`}</p>
         </label>
       </fieldset>
-      <RequestBankTiming locale={input.locale} iranBankingNotice={shownPolicy?.iran_banking_notice} iranBankingNoticeFa={shownPolicy?.iran_banking_notice_fa} />
+      <RequestBankTiming locale={input.locale} fundingCurrency={input.txType === "buy_aud" ? "IRT" : "AUD"} iranBankingNotice={shownPolicy?.iran_banking_notice} iranBankingNoticeFa={shownPolicy?.iran_banking_notice_fa} />
       {shownPolicy && <details className={`${compact.details} ${compact.serviceDetails}`}>
         <summary>{fa ? "ساعات و شرایط سرویس" : "Service hours & terms"}</summary>
         <p>{fa ? "ساعات کاری سیدنی: " : "Sydney hours: "}<bdi dir="ltr">{String(shownPolicy.opening_hour).padStart(2, "0")}:00–{String(shownPolicy.closing_hour).padStart(2, "0")}:00</bdi></p>

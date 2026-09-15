@@ -3,7 +3,7 @@ import { validNotificationEmail, validatedRequestSiteUrl } from "./notification-
 import type { FundingBankDetails } from "./types";
 export { validNotificationEmail, validatedRequestSiteUrl } from "./notification-config";
 
-export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-status-v4";
+export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-status-v5";
 
 export type RequestEmailSnapshot = {
   id: string;
@@ -147,11 +147,15 @@ export function renderRequestNotification(
     instructions.push(fa ? "رسید شما دریافت شد. تأیید وصول وجه توسط تیم مالی انجام می‌شود." : "We received your payment evidence. Our finance team will confirm when funds have cleared.");
   }
   if (["await_funds", "receipt_uploaded", "payment_evidence", "ready", "resume_funded_request", "start_processing"].includes(snapshot.event_type ?? "")) {
-    const hours = Math.max(24, Number(details?.australian_clearance_minutes ?? 1440) / 60);
+    const waitingForFunds = ["await_funds", "receipt_uploaded", "payment_evidence"].includes(snapshot.event_type ?? "") && !details?.funds_confirmed_at;
+    if (waitingForFunds) instructions.push(details?.funding_currency === "AUD"
+      ? (fa ? "پرداخت استرالیایی ممکن است سریع برسد. بعضی واریزهای بار اول یا بررسی‌های بانکی تا ۲۴ ساعت یا بیشتر طول می‌کشند؛ انتظار اجباری ۲۴ ساعته نداریم." : "Australian payments may arrive quickly. Some first-time transfers or bank checks take up to 24 hours, or longer; we do not impose a 24-hour wait.")
+      : (fa ? "پس از بررسی وصول پرداخت تومانی، دریافت وجه تأیید می‌شود." : "We confirm the incoming Toman payment once cleared funds are verified."));
     instructions.push(
-      fa ? `وصول وجه از بانک استرالیا: تا ${hours} ساعت؛ تأخیر بانکی ممکن است بیشتر شود.` : `Australian bank clearance: up to ${hours} hours; bank delays may take longer.`,
       ...(isPriority ? [fa ? "زمان اولویت فقط پس از تأیید دریافت وجه و تکمیل بررسی‌ها، در ساعات کاری شروع می‌شود." : "Priority timing starts only after funds are confirmed received and checks are complete, within business hours."] : []),
-      fa ? (details?.iran_banking_notice_fa || "واریز تومان تابع چرخه‌های ساتنا و پایا و تعطیلات بانکی است.") : (details?.iran_banking_notice || "Iranian payouts follow Satna/Paya cycles and bank holidays."),
+      details?.funding_currency === "AUD"
+        ? (fa ? (details?.iran_banking_notice_fa || "واریز تومان تابع چرخه‌های ساتنا و پایا و تعطیلات بانکی است.") : (details?.iran_banking_notice || "Iranian payouts follow Satna/Paya cycles and bank holidays."))
+        : (fa ? "زمان واریز دلار به گیرنده به بانک مقصد و روش پرداخت بستگی دارد." : "The AUD payout to the recipient depends on the receiving bank and payment method."),
     );
   }
   if (details?.public_message) instructions.push(details.public_message);

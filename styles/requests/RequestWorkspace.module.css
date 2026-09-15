@@ -76,7 +76,32 @@
 .emailChoice { align-items: center; margin: 0; padding: 0; font-size: 13px; color: #647083; gap: 8px; }
 .emailChoice input { margin-top: 0; }
 .emailChoice svg { color: #68758d; flex-shrink: 0; }
-.confirmChoice { margin: 0; font-size: 13px; }
+.confirmChoice { margin: 0; font-size: 13px; padding: 12px; background: #f8f9fc; border: 1px solid #e4e8f0; border-radius: 8px; align-items: flex-start; }
+.fieldHint { color: #687181; font-size: 12px; line-height: 1.5; font-weight: 400; }
+.fieldset [aria-invalid="true"] { border-color: #b53e3e; outline: 2px solid #b53e3e; outline-offset: 2px; }
+.formFeedback { margin: 0; padding: 10px 12px; border: 1px solid #e7bcbc; border-radius: 8px; background: #fff6f6; color: #923333; font-size: 13px; line-height: 1.5; }
+.paymentDirection { display: grid; gap: 12px; padding: 15px 16px; border: 1px solid #dce3f4; border-radius: 10px; background: #f7f9fe; }
+.paymentDirection > div { display: grid; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
+.paymentDirection span { color: #566278; font-size: 12px; }
+.paymentDirection strong { color: #273851; font-size: 21px; font-variant-numeric: tabular-nums; }
+.paymentDirection > div + div { border-block-start: 1px solid #dfe5f2; padding-block-start: 10px; color: #566278; font-size: 13px; }
+.lockedCurrency { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.lockedCurrency > span { font-size: 13px; color: #374151; }
+.lockedCurrency > strong { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; border: 1px solid #e2e6ed; border-radius: 8px; background: #f7f8fb; color: #45536b; font-size: 14px; font-weight: 550; }
+.depositException { font-size: 12px; color: #596579; }
+.depositException > summary { display: flex; align-items: center; min-height: 36px; cursor: pointer; }
+.depositException label { margin-block: 10px; }
+.depositException > summary:focus-visible { outline: 3px solid #8fa7ef; outline-offset: 3px; border-radius: 5px; }
+.depositWarning { color: #77551d; background: #fff8eb; border: 1px solid #ead9b3; border-radius: 8px; font-size: 13px; line-height: 1.5; padding: 10px 12px; margin: 0 0 12px; }
+.depositList { margin: 0; padding: 0; list-style: none; }
+.depositList > li { display: grid; gap: 6px; padding: 12px 0; border-block-end: 1px solid #eceef3; min-width: 0; }
+.depositList > li:last-child { border: 0; }
+.depositHeading { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 12px; }
+.depositHeading strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.depositMismatch { font-size: 11px; font-weight: 550; color: #785622; background: #fff5df; padding: 3px 6px; border-radius: 4px; }
+.depositReference { color: #526078; font-size: 12px; overflow-wrap: anywhere; }
+.depositList time { color: #687181; font-size: 11px; }
+.recordedDeposits > .textButton { margin-block-start: 6px; text-align: start; }
 .saved { color: #2f6651; background: #f1f8f4; border: 1px solid #d4e8dc; border-radius: 8px; font-size: 13px; padding: 10px 14px; margin-block: 12px; }
 .adminAlert { border: 1px solid #ead6a7; background: #fff7e5; color: #775e2d; padding: 16px; border-radius: 12px; font-size: 14px; }
 .adminAlert p { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }

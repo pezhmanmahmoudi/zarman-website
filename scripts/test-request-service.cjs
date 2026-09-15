@@ -46,8 +46,9 @@ function harness(overrides = {}) {
     from(table) {
       const query = { table, filters: {}, operation: "read", value: undefined };
       const builder = {};
-      for (const name of ["order", "limit", "gte", "not", "in", "is"]) builder[name] = () => builder;
+      for (const name of ["limit", "gte", "not", "in", "is"]) builder[name] = () => builder;
       builder.select = columns => { query.columns = columns; return builder; };
+      builder.order = (column, options) => { query.order = { column, ...options }; return builder; };
       builder.eq = (field, value) => { query.filters[field] = value; return builder; };
       builder.insert = value => { query.operation = "insert"; query.value = value; return builder; };
       const finish = () => {
@@ -68,6 +69,12 @@ function harness(overrides = {}) {
             if (state.commandReadError) return { data: null, error: state.commandReadError };
             const row = (state.commands || []).find(command => Object.entries(query.filters).every(([key, value]) => command[key] === value));
             return { data: row ? { accounting_date_jalali: row.accounting_date_jalali } : null, error: null };
+          }
+          case "exchange_request_payments": {
+            if (state.paymentReadError) return { data: null, error: state.paymentReadError };
+            const rows = (state.payments || []).filter(payment => Object.entries(query.filters).every(([key, value]) => payment[key] === value));
+            if (query.order) rows.sort((a, b) => (query.order.ascending ? 1 : -1) * String(a[query.order.column]).localeCompare(String(b[query.order.column])));
+            return { data: rows.map(row => Object.fromEntries(query.columns.split(",").map(column => [column, row[column]]))), error: null };
           }
           case "exchange_requests": {
             if (query.filters.user_id && query.filters.user_id !== state.requestOwner) return { data: null, error: {} };
@@ -167,6 +174,57 @@ test("foreign request and receipt downloads never expose event history or a sign
   assert.equal(state.calls.some(call => call.table === "exchange_request_messages"), false);
   assert.ok((await actions.getRequestReceiptUrl(COMMAND)).error);
   assert.equal(state.storageCalls.length, 0);
+});
+
+test("admin detail reads actual bank deposits in their recorded currency with only the permitted columns", async () => {
+  const payment = { id: COMMAND, request_id: REQUEST, payment_reference: "BANK-AUD-2235", amount: "2235.00", currency: "AUD",
+    account_id: ACCOUNT, actor_id: CUSTOMER, created_at: "2026-09-16T02:00:00Z" };
+  const { actions, state } = harness({ admin: true, request: { funding_currency: "IRT", funding_total: 120000000, funds_received_at: null }, payments: [
+    { ...payment, id: OTHER, payment_reference: "EARLIER-DEPOSIT", amount: 100, created_at: "2026-09-16T01:00:00Z" },
+    { ...payment, id: RECIPIENT, request_id: OTHER, payment_reference: "PRIVATE-OTHER-REQUEST" },
+    payment,
+  ] });
+  const response = await actions.getAdminRequest(REQUEST);
+  assert.equal(response.error, undefined);
+  assert.equal(response.data.request.funding_currency, "IRT");
+  assert.equal(response.data.request.funds_received_at, null);
+  assert.equal(response.data.payments.length, 2);
+  assert.equal(response.data.payments[0].payment_reference, "BANK-AUD-2235");
+  assert.equal(response.data.payments[0].amount, "2235.00");
+  assert.equal(response.data.payments[0].currency, "AUD");
+  assert.equal(response.data.payments[0].account_id, ACCOUNT);
+  assert.equal(response.data.payments[1].amount, 100);
+  assert.equal(Object.hasOwn(response.data.payments[0], "actor_id"), false);
+  const reads = state.calls.filter(call => call.table === "exchange_request_payments");
+  assert.equal(reads.length, 1);
+  assert.equal(reads[0].columns, "id,request_id,payment_reference,amount,currency,account_id,created_at");
+  assert.deepEqual(reads[0].filters, { request_id: REQUEST });
+  assert.deepEqual(reads[0].order, { column: "created_at", ascending: false });
+  assert.equal(state.calls.some(call => call.rpc || call.operation === "insert"), false);
+});
+
+test("customers cannot query or receive private funding payments, including through the admin action", async () => {
+  const { actions, state } = harness({ payments: [{ request_id: REQUEST, payment_reference: "PRIVATE-BANK-REFERENCE" }] });
+  const ownerDetail = await actions.getMyRequest(REQUEST);
+  assert.equal(ownerDetail.error, undefined);
+  assert.equal(Object.hasOwn(ownerDetail.data, "payments"), false);
+  assert.equal(Object.hasOwn(ownerDetail.data, "deliveries"), false);
+  assert.equal(state.calls.some(call => call.table === "exchange_request_payments"), false);
+  assert.ok((await actions.getAdminRequest(REQUEST)).error);
+  state.requestOwner = OTHER;
+  assert.ok((await actions.getMyRequest(REQUEST)).error);
+  state.user = null;
+  assert.ok((await actions.getMyRequest(REQUEST)).error);
+  assert.equal(state.calls.some(call => call.table === "exchange_request_payments"), false);
+});
+
+test("admin payment read failures do not masquerade as an empty deposit history", async () => {
+  const { actions, state } = harness({ admin: true, paymentReadError: { code: "FETCH_ERROR", message: "Temporary read failure" } });
+  const response = await actions.getAdminRequest(REQUEST);
+  assert.ok(response.error);
+  assert.equal(response.data, undefined);
+  assert.equal(state.calls.filter(call => call.table === "exchange_request_payments").length, 1);
+  assert.equal(state.calls.some(call => call.rpc || call.operation === "insert"), false);
 });
 
 test("file validation rejects HTML, mismatched MIME and oversized data; sanitises supplied filenames", () => {

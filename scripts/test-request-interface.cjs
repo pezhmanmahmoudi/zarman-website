@@ -161,6 +161,17 @@ test("payment instructions expose real account details, reference description re
   assert.doesNotMatch(fa, /Settlement follows|Bank timing|Payment instructions|Copy transaction code/);
 });
 
+test("bank timing distinguishes incoming currency and describes possible delays without a compulsory wait", () => {
+  for (const locale of ["en", "fa"]) {
+    const aud = render("RequestBankTiming", { request, locale });
+    assert.match(aud, locale === "fa" ? /انتظار اجباری ۲۴ ساعته نداریم/ : /do not impose a 24-hour wait/);
+    const irt = render("RequestBankTiming", { request: { ...request, quote: { ...request.quote, funding_currency: "IRT", recipient_currency: "AUD" } }, locale });
+    assert.doesNotMatch(irt, /24|۲۴|Paya cycles|چرخه‌های پایا/);
+    assert.match(irt, locale === "fa" ? /وصول پرداخت تومانی/ : /Incoming Toman payments/);
+    assert.doesNotMatch(irt, /700|۷۰۰/);
+  }
+});
+
 test("structured bank copy controls preserve exact values and show localized success and failure feedback", async () => {
   const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
   const copied = [];
@@ -360,7 +371,8 @@ test("main dashboard composes self-service submission and discoverable request h
 test("management settings keep payment initiation and Australian bank clearance as separate windows", () => {
   const html = render("RequestSettingsForm", {}, { states: { 0: { version: 1, settings: policy }, 3: false } });
   assert.match(html, /Payment window · minutes/);
-  assert.match(html, /AU clearance · minutes \(1440 = 24h\)/);
+  assert.match(html, /AU bank review allowance · minutes \(1440 = 24h\)/);
+  assert.match(html, /review deadline, not a required wait/);
   assert.match(html, /min="1440" max="10080" step="1" value="1440"/);
   assert.match(html, /Handling starts after cleared funds and checks/);
   assert.match(html, /Iran bank notice · English/); assert.match(html, /Iran bank notice · فارسی/);
@@ -656,16 +668,30 @@ test("a definite stale approval conflict can be retried using the refreshed requ
   assert.deepEqual(calls[1].payload, calls[0].payload);
 });
 
-test("admin approval steps each expose an explicit email option and require confirmation", () => {
+test("admin approval steps remain actionable and validate the explicit approval confirmation", async () => {
   for (const [status, action] of [["submitted", "await_funds"], ["awaiting_funds", "confirm_funds"], ["ready", "reconcile_complete"], ["processing", "complete"]]) {
-    const html = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: {
+    const calls = [];
+    const harness = load("components/requests/RequestDetailView.tsx", { states: {
       0: { request: { ...request, status, payment_approved_at: status === "submitted" ? null : request.payment_approved_at, funding_status: ["ready", "processing"].includes(status) ? "confirmed" : "unpaid" }, events: [], receipts: [], messages: [] },
-      1: false, 6: action,
-    } });
+      1: false, 6: action, 9: "BANK-CONSENT-CHECK", 10: "1025", 12: "SETTLEMENT-CONSENT-CHECK", 13: "irt-account", 14: "aud-account", 15: "aud-account",
+      22: [{ id: "aud-account", account_name: "AUD collection", currency: "AUD" }, { id: "irt-account", account_name: "IRT payout", currency: "IRT" }],
+    }, actions: { mutateAdminRequest: async input => { calls.push(input); return { error: "Unexpected mutation without confirmation" }; } } });
+    const props = { id: request.id, admin: true, locale: "en" };
+    let tree = harness.rerender("RequestDetailView", props);
+    const html = markup(tree);
     assert.match(html, /class="actionForm"/);
     assert.match(html, /Send email to customer and management/);
     assert.match(html, /type="checkbox" required=""/);
-    assert.match(html, /type="submit" disabled=""/);
+    const form = elements(tree, node => node.type === "form")[0];
+    const submit = elements(form, node => node.type === "button" && node.props.type === "submit")[0];
+    assert.notEqual(submit.props.disabled, true);
+    assert.equal(form.props.noValidate, true);
+    await form.props.onSubmit({ preventDefault() {} });
+    tree = harness.rerender("RequestDetailView", props);
+    assert.equal(calls.length, 0);
+    assert.match(markup(tree), /role="alert"/);
+    assert.match(markup(tree), /tick the (?:cleared-funds verification|approval confirmation)/);
+    assert.equal(elements(tree, node => node.props.id === "request-confirmation")[0].props["aria-invalid"], true);
     assert.match(html, /adminWorkspace/);
     assert.doesNotMatch(html, /class="progress"/);
     assert.doesNotMatch(html, /Copy BSB|Make your payment|Send receipt for review/);
@@ -698,4 +724,202 @@ test("admin approval submits the chosen email policy and customer actions do not
   assert.doesNotMatch(customer, /Approval actions|Send email|Confirm funds received|Add payment reference|Bank payment reference/);
   assert.match(customer, /customerLayout/); assert.doesNotMatch(customer, /adminWorkspace/);
   assert.match(customer, /class="progress"/);
+});
+
+const fundingAccounts = [
+  { id: "aud-account", account_name: "AUD collection", currency: "AUD" },
+  { id: "irt-account", account_name: "IRT collection", currency: "IRT" },
+];
+function incomingDetail(currency = "AUD") {
+  return { request: { ...request, evidence_submitted_at: request.created_at,
+    quote: currency === "AUD" ? request.quote : { ...request.quote, funding_currency: "IRT", funding_total: 120000000, recipient_currency: "AUD", recipient_amount: 2235 },
+  }, events: [], receipts: [], messages: [], payments: [] };
+}
+function requiredField(tree, id) {
+  const field = elements(tree, node => node.props.id === id)[0];
+  assert.ok(field, `Missing field ${id}`);
+  return field;
+}
+
+test("incoming payment validation explains and focuses each missing value before any bank mutation", async () => {
+  const calls = []; const focused = [];
+  const harness = load("components/requests/RequestDetailView.tsx", { states: { 0: incomingDetail(), 1: false, 22: fundingAccounts }, actions: {
+    mutateAdminRequest: async input => { calls.push(input); return { error: "Synthetic bank review hold" }; },
+  } });
+  const props = { id: request.id, admin: true, locale: "en" };
+  let tree = harness.rerender("RequestDetailView", props);
+  async function submitWithFeedback(fieldId, explanation) {
+    const form = elements(tree, node => node.type === "form")[0];
+    const submit = elements(form, node => node.type === "button" && node.props.type === "submit")[0];
+    assert.notEqual(submit.props.disabled, true);
+    await form.props.onSubmit({ preventDefault() {}, currentTarget: { querySelector: selector => ({ focus: () => focused.push(selector) }) } });
+    tree = harness.rerender("RequestDetailView", props);
+    assert.equal(calls.length, 0);
+    const feedback = requiredField(tree, "request-form-feedback");
+    assert.equal(feedback.props.role, "alert");
+    assert.match(textOf(feedback), explanation);
+    assert.equal(requiredField(tree, fieldId).props["aria-invalid"], true);
+    assert.ok(requiredField(tree, fieldId).props["aria-describedby"].split(/\s+/).includes("request-form-feedback"));
+    assert.equal(focused.at(-1), `#${fieldId}`);
+  }
+  const change = (id, value) => {
+    requiredField(tree, id).props.onChange({ target: { value } });
+    tree = harness.rerender("RequestDetailView", props);
+  };
+  await submitWithFeedback("request-payment-reference", /payment reference from the bank statement/);
+  change("request-payment-reference", "BANK-VERIFIED-123");
+  await submitWithFeedback("request-received-amount", /cleared amount in AUD/);
+  change("request-received-amount", "1000.001");
+  await submitWithFeedback("request-received-amount", /up to two decimal places/);
+  change("request-received-amount", "1025");
+  await submitWithFeedback("request-funding-account", /Select the AUD account/);
+  change("request-funding-account", "aud-account");
+  await submitWithFeedback("request-confirmation", /tick the cleared-funds verification/);
+  requiredField(tree, "request-confirmation").props.onChange({ target: { checked: true } });
+  tree = harness.rerender("RequestDetailView", props);
+  await elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].payload.received_amount, 1025);
+  assert.equal(calls[0].payload.received_currency, "AUD");
+  assert.equal(calls[0].payload.receiver_account_id, "aud-account");
+});
+
+test("normal funds verification locks the incoming currency independently from the recipient currency", async () => {
+  for (const currency of ["AUD", "IRT"]) {
+    const detail = incomingDetail(currency);
+    const calls = [];
+    const account = currency === "AUD" ? "aud-account" : "irt-account";
+    const harness = load("components/requests/RequestDetailView.tsx", { states: {
+      0: detail, 1: false, 9: "BANK-CURRENCY-CHECK", 10: String(detail.request.quote.funding_total),
+      11: currency === "AUD" ? "IRT" : "AUD", 15: account, 21: true, 22: fundingAccounts,
+    }, actions: { mutateAdminRequest: async input => { calls.push(input); return { error: "Synthetic review hold" }; } } });
+    const tree = harness.rerender("RequestDetailView", { id: request.id, admin: true, locale: "en" });
+    const form = elements(tree, node => node.type === "form")[0];
+    assert.equal(elements(form, node => node.type === "select" && node.props.id === "request-received-currency").length, 0);
+    const accountValues = elements(requiredField(tree, "request-funding-account"), node => node.type === "option").map(node => node.props.value);
+    assert.deepEqual(accountValues, ["", account]);
+    assert.equal(Number(requiredField(tree, "request-received-amount").props.step), currency === "IRT" ? 1 : 0.01);
+    assert.match(textOf(form), currency === "IRT" ? /120,000,000 Toman/ : /1,025 AUD/);
+    assert.match(textOf(form), currency === "IRT" ? /2,235 AUD/ : /55,000,000 Toman/);
+    await form.props.onSubmit({ preventDefault() {} });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].payload.received_currency, currency);
+    assert.equal(calls[0].payload.received_amount, detail.request.quote.funding_total);
+    assert.equal(calls[0].payload.receiver_account_id, account);
+  }
+});
+
+test("successful cleared funds immediately show destination reconciliation when refresh fails or returns older data", async () => {
+  for (const refreshResult of ["throws", "error", "older"]) {
+    const detail = incomingDetail();
+    const updated = { ...detail.request, version: request.version + 1, status: "ready", funding_status: "confirmed", funding_received: request.quote.funding_total,
+      funds_confirmed_at: "2026-09-16T02:00:00Z", ready_at: "2026-09-16T02:00:00Z", handling_due_at: "2026-09-16T03:00:00Z" };
+    const calls = [];
+    const harness = load("components/requests/RequestDetailView.tsx", { states: {
+      0: detail, 1: false, 9: "BANK-FULL-PAYMENT", 10: "1025", 15: "aud-account", 21: true, 22: fundingAccounts,
+    }, actions: {
+      mutateAdminRequest: async input => { calls.push(input); return { data: updated }; },
+      getAdminRequest: async () => {
+        if (refreshResult === "throws") throw Error("Refresh unavailable");
+        return refreshResult === "error" ? { error: "Could not load the latest status. Please try again." } : { data: detail };
+      },
+    } });
+    const props = { id: request.id, admin: true, locale: "en" };
+    let tree = harness.rerender("RequestDetailView", props);
+    await elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });
+    tree = harness.rerender("RequestDetailView", props);
+    assert.equal(calls.length, 1);
+    assert.match(markup(tree), /Funds received\. Ready for destination reconciliation/);
+    assert.match(markup(tree), /Reconcile destination payment/);
+    assert.equal(elements(tree, node => node.props.id === "request-payment-reference").length, 0);
+    assert.ok(requiredField(tree, "request-settlement-reference"));
+    assert.doesNotMatch(markup(tree), /The update was not confirmed/);
+  }
+});
+
+test("an existing AUD deposit against an IRT quote stays visible to management and closes repeated confirmation", () => {
+  const base = incomingDetail("IRT");
+  const detail = { ...base, request: { ...base.request, status: "action_required", action_required: "Finance must review the received currency." }, payments: [
+    { id: "saved-deposit", request_id: request.id, amount: "2235.00", currency: "AUD", payment_reference: "BANK-MISMATCH-2235", account_id: "aud-account", created_at: "2026-09-16T02:00:00Z" },
+  ] };
+  const harness = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false, 6: "confirm_funds", 9: "OLD-AMBIGUOUS-DEPOSIT", 10: "2235", 15: "aud-account", 21: true, 22: fundingAccounts } });
+  const props = { id: request.id, admin: true, locale: "en" };
+  let tree = harness.rerender("RequestDetailView", props);
+  const html = markup(tree);
+  assert.match(html, /2,235 AUD/);
+  assert.match(html, /BANK-MISMATCH-2235/);
+  assert.match(html, /120,000,000 Toman/);
+  assert.equal(elements(tree, node => node.props.id === "request-payment-reference").length, 0);
+  assert.equal(elements(tree, node => node.type === "button" && node.props.type === "submit" && /Confirm funds received/.test(textOf(node))).length, 0);
+  const separate = elements(tree, node => node.type === "button" && /separate.*deposit/i.test(textOf(node)))[0];
+  assert.ok(separate, "A separate real deposit needs an explicit exception action");
+  assert.equal(separate.props.type, "button");
+  separate.props.onClick();
+  tree = harness.rerender("RequestDetailView", props);
+  assert.equal(requiredField(tree, "request-payment-reference").props.value, "");
+  assert.equal(requiredField(tree, "request-received-amount").props.value, "");
+  assert.equal(requiredField(tree, "request-funding-account").props.value, "");
+  assert.equal(requiredField(tree, "request-confirmation").props.checked, false);
+  const customer = render("RequestDetailView", { id: request.id, locale: "en" }, { states: { 0: detail, 1: false } });
+  assert.doesNotMatch(customer, /BANK-MISMATCH-2235|Record a separate cleared deposit/);
+});
+
+test("recording a different-currency deposit is explicit and its saved review state survives failed refresh", async () => {
+  for (const expectedCurrency of ["IRT", "AUD"]) {
+    const detail = incomingDetail(expectedCurrency);
+    const actualCurrency = expectedCurrency === "IRT" ? "AUD" : "IRT";
+    const originalAccount = expectedCurrency === "IRT" ? "irt-account" : "aud-account";
+    const actualAccount = actualCurrency === "IRT" ? "irt-account" : "aud-account";
+    const amount = actualCurrency === "AUD" ? 2235 : 1000000;
+    const calls = [];
+    const harness = load("components/requests/RequestDetailView.tsx", { states: {
+      0: detail, 1: false, 8: false, 9: "ACTUAL-DEPOSIT-456", 10: String(detail.request.quote.funding_total), 15: originalAccount, 21: true, 22: fundingAccounts,
+    }, actions: {
+      mutateAdminRequest: async input => {
+        calls.push(input);
+        return { data: { ...detail.request, version: request.version + 1, status: "under_review", funding_status: "unpaid", funding_received: 0 } };
+      },
+      getAdminRequest: async () => { throw Error("Refresh temporarily unavailable"); },
+    } });
+    const props = { id: request.id, admin: true, locale: "en" };
+    let tree = harness.rerender("RequestDetailView", props);
+    const exception = elements(tree, node => node.type === "details" && /Deposit arrived in another currency/.test(textOf(node)))[0];
+    assert.ok(exception);
+    assert.notEqual(exception.props.open, true);
+    const option = elements(exception, node => node.type === "input" && node.props.type === "checkbox")[0];
+    assert.equal(option.props.checked, false);
+    option.props.onChange({ target: { checked: true } });
+    tree = harness.rerender("RequestDetailView", props);
+    assert.equal(calls.length, 0);
+    assert.equal(requiredField(tree, "request-received-amount").props.value, "");
+    assert.equal(requiredField(tree, "request-funding-account").props.value, "");
+    assert.equal(requiredField(tree, "request-confirmation").props.checked, false);
+    let form = elements(tree, node => node.type === "form")[0];
+    assert.match(textOf(form), /It does not confirm the expected/);
+    const options = elements(requiredField(tree, "request-funding-account"), node => node.type === "option").map(node => node.props.value);
+    assert.deepEqual(options, ["", actualAccount]);
+    assert.equal(textOf(elements(form, node => node.type === "button" && node.props.type === "submit")[0]), "Record deposit for review");
+    requiredField(tree, "request-received-amount").props.onChange({ target: { value: String(amount) } });
+    requiredField(tree, "request-funding-account").props.onChange({ target: { value: actualAccount } });
+    requiredField(tree, "request-confirmation").props.onChange({ target: { checked: true } });
+    tree = harness.rerender("RequestDetailView", props);
+    form = elements(tree, node => node.type === "form")[0];
+    await form.props.onSubmit({ preventDefault() {} });
+    tree = harness.rerender("RequestDetailView", props);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].action, "confirm_funds");
+    assert.equal(calls[0].payload.received_currency, actualCurrency);
+    assert.equal(calls[0].payload.received_amount, amount);
+    assert.equal(calls[0].payload.receiver_account_id, actualAccount);
+    assert.equal(calls[0].sendEmail, false);
+    const html = markup(tree);
+    assert.match(html, /Recorded deposits|Finance review required/);
+    assert.match(html, /ACTUAL-DEPOSIT-456/);
+    assert.match(html, /Saved\. Refresh to load the bank record details/);
+    assert.match(html, /Deposit recorded in .*finance review is required/);
+    assert.doesNotMatch(html, /Funds received\. Ready|The update was not confirmed/);
+    assert.equal(elements(tree, node => node.props.id === "request-payment-reference").length, 0);
+    assert.equal(elements(tree, node => node.type === "button" && /^(Confirm funds received|Resume payment)$/.test(textOf(node))).length, 0);
+    assert.ok(elements(tree, node => node.type === "button" && textOf(node) === "Record a separate cleared deposit")[0]);
+  }
 });

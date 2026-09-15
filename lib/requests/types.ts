@@ -124,7 +124,11 @@ export type RequestReceipt = {
   id: string; request_id: string; original_name: string; content_type: string;
   size_bytes: number; sha256: string; uploaded_by: string; created_at: string; request_version?: number;
 };
-export type RequestDetail = { request: ExchangeRequest; events: RequestEvent[]; receipts: RequestReceipt[]; messages: RequestMessage[]; deliveries?: RequestDelivery[] };
+export type RequestFundingPayment = {
+  id: string; request_id: string; payment_reference: string; amount: number | string;
+  currency: "AUD" | "IRT"; account_id: string; created_at: string;
+};
+export type RequestDetail = { request: ExchangeRequest; events: RequestEvent[]; receipts: RequestReceipt[]; messages: RequestMessage[]; deliveries?: RequestDelivery[]; payments?: RequestFundingPayment[] };
 export type RequestMutationInput = {
   requestId: string;
   expectedVersion: number;

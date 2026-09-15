@@ -167,6 +167,15 @@ describe('sequential request payment and settlement approvals', { concurrency: f
 
   test('sending approved evidence is idempotent and only actual cleared funds start handling', async () => {
     let r = await command(await submit('priority'), 'await_funds');
+    // now() is fixed inside this test's transaction. Backdate only this synthetic
+    // fixture's approval window to model an hour before the incoming funds clear.
+    // Restore the production guard before exercising any customer/staff command.
+    await db.exec('ALTER TABLE exchange_requests DISABLE TRIGGER guard_request_payment_approval');
+    await query(`UPDATE exchange_requests SET created_at=created_at-interval '1 hour',
+      payment_approved_at=payment_approved_at-interval '1 hour',funding_due_at=funding_due_at-interval '1 hour',
+      clearance_due_at=clearance_due_at-interval '1 hour' WHERE id=$1`, [r.id]);
+    await db.exec('ALTER TABLE exchange_requests ENABLE TRIGGER guard_request_payment_approval');
+    r = await get(r.id);
     const receiptId = randomUUID();
     const receipt = await attach(r, { id: receiptId });
     assert.deepEqual(await attach(r, { id: receiptId }), receipt);
@@ -181,6 +190,19 @@ describe('sequential request payment and settlement approvals', { concurrency: f
     assert.equal(r.status, 'ready');
     assert.ok(r.funds_confirmed_at && r.handling_due_at);
     assert.equal(r.priority_fee_status, 'paid');
+    assert.equal(r.quote.funding_currency, 'AUD');
+    assert.equal(Number(r.funding_received), Number(r.quote.funding_total));
+    const approvedAt = new Date(r.payment_approved_at).getTime();
+    const readyAt = new Date(r.ready_at).getTime();
+    const handlingDueAt = new Date(r.handling_due_at).getTime();
+    const priorityDuration = r.quote.policy_snapshot.priority_minutes * 60_000;
+    assert.ok(readyAt < new Date(r.clearance_due_at).getTime(), 'Cleared funds are ready before the banking allowance ends');
+    assert.equal(readyAt - approvedAt, 60 * 60_000, 'No mandatory 24-hour wait after approval');
+    assert.equal(new Date(r.funds_confirmed_at).getTime(), readyAt);
+    // The fixture operates 24/7, so its full accepted Priority target remains
+    // available after actual receipt of funds, despite earlier payment approval.
+    assert.equal(handlingDueAt, readyAt + priorityDuration);
+    assert.notEqual(handlingDueAt, approvedAt + priorityDuration);
   });
 
   test('approved late funds retain the existing finance reconciliation path', async () => {
