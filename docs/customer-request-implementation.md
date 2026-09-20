@@ -18,7 +18,9 @@ flowchart LR
 
 ## Customer and management screens
 
-- `/{en|fa}/dashboard`: the existing transfer form now offers Standard/Priority, shows the extra fee and total before acceptance, and retains converter drafts through sign-in.
+- `/{en|fa}/dashboard`: account overview with completed transfer volume, recent activity, current indicative rate and clear attention states. This is transfer history, not a wallet balance.
+- `/{en|fa}/dashboard?tab=transfer`: the transfer form offers Standard/Priority, shows the extra fee and total before acceptance, and retains converter drafts through sign-in. Legacy `tab=hub` links still work. Direction and rate changes invalidate promotional quotes; direction changes also clear the previous recipient.
+- Overview, transfer, activity, profile and feedback share the same dashboard shell. Tabs survive refresh/back navigation, and individual request pages keep desktop and mobile navigation. Language switching preserves the current route and query.
 - `/{en|fa}/dashboard/requests`: request history, with individual tracking pages under `/requests/<id>`.
 - Each request shows its four-step timeline, frozen company bank instructions, copyable reference and the explicit requirement to put that reference in the bank transfer description. PDF, PNG and JPEG bank receipts can be uploaded while payment awaits review, with a 4 MB application limit and private authenticated downloads.
 - `/admin/requests`: queue and request settings. Staff can request information, record cleared funds against the actual receiving account, review late funds, start processing, record verified settlement or uncertain payout, and confirm refunds against a paying account. Account currencies and amounts are checked again in PostgreSQL.

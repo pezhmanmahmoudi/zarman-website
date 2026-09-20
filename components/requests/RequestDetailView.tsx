@@ -262,7 +262,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
     {otherCommands.length > 0 && <details className={workspace.exceptionActions}><summary>{fa ? "سایر اقدامات" : "Other actions"}<ChevronDown size={14} /></summary><div className={workspace.actionChoices}>{otherCommands.map(command => <button key={command} type="button" className={workspace.actionChoice} aria-pressed={currentAction === command} disabled={busy} onClick={() => chooseAction(command)}>{actionLabel(command)}</button>)}</div></details>}
   </div>;
 
-  const Page = admin ? "div" : "main";
+  const Page = admin ? "div" : "section";
   return <Page className={`${styles.workspace} ${workspace.workspace} ${admin ? workspace.adminWorkspace : ""}`} dir={fa ? "rtl" : "ltr"}>
     <header className={`${styles.header} ${workspace.header}`}>
       <div><Link className={workspace.backLink} href={admin ? "/admin/requests" : `/${locale}/dashboard/requests`}><ArrowLeft size={15} />{fa ? "درخواست‌ها" : "Requests"}</Link><div className={workspace.titleRow}><h1><bdi>{request?.reference_code || (fa ? "پیگیری درخواست" : "Request")}</bdi></h1>{request && <><span className={styles.badge}>{requestStageLabel(request, locale)}</span>{request.service_tier === "priority" && <span className={`${styles.badge} ${styles.priority}`}>{fa ? "اولویت‌دار" : "Priority"}</span>}</>}</div>{admin && request && <p className={workspace.customerIdentity}>{request.quote.sender_snapshot.name}<span>{request.quote.sender_snapshot.email}</span></p>}</div>

@@ -1,176 +1,31 @@
-import React, { useState } from "react";
-import { History, Trash2, ChevronLeft, ChevronRight, Tag, Star } from "lucide-react";
-import { formatToman } from "@/app/[locale]/dashboard/dashboard.utils";
-import styles from "@/styles/dashboard/DashboardTransactionHistory.module.css";
-import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
+"use client";
+import { useState } from "react";
+import { ArrowUpRight, ArrowDownLeft, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import type { Transaction } from "@/app/[locale]/dashboard/dashboard.types";
+import { requestDate, requestMoney } from "@/components/requests/request-labels";
 import { useLocale } from "@/context/LocaleContext";
+import styles from "@/styles/dashboard/DashboardHome.module.css";
 
-const PAGE_SIZE = 10;
-
-export function DashboardTransactionHistory({ transactions, onDeleteTransaction }: any) {
-  const [page, setPage] = useState(1);
-  const locale = useLocale();
-  const isEn = locale === "en";
-
-  const formatEquivalent = (num: number) => {
-    if (!num) return "—";
-    if (isEn) {
-      return `${Number(num).toLocaleString("en-US", { maximumFractionDigits: 0 })} Toman`;
-    }
-    return formatToman(num);
-  };
-
-  const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
-  const paginated = transactions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const recipientName = (tx: any): string | null => {
-    const r = tx.recipients;
-    if (!r) return null;
-    return r.label || r.full_name || r.account_name || null;
-  };
-
-  // Customer history should show transaction type from the customer's perspective.
-  const customerSideType = (type: string) => (type === "buy_aud" ? "sell_aud" : "buy_aud");
-
-  return (
-    <article className={cardStyles.panelCard}>
-      <div className={`${cardStyles.panelHeader} ${styles.headerWrap}`}>
-        <h2 className={`${cardStyles.panelTitle} ${styles.tableTitle}`}>
-          <History size={24} /> {isEn ? "Financial & Transaction History" : "سوابق مالی و تراکنش‌ها"}
-        </h2>
+export function DashboardTransactionHistory({ transactions, onDeleteTransaction }: {
+  transactions: Transaction[]; onDeleteTransaction: (id: string | number) => void;
+}) {
+  const locale = useLocale(), fa = locale === "fa";
+  const [page,setPage] = useState(1);
+  const pages = Math.max(1,Math.ceil(transactions.length/10)), current = Math.min(page,pages);
+  const visible = transactions.slice((current-1)*10,current*10);
+  const labels = { approved: fa ? "تکمیل‌شده" : "Completed", pending: fa ? "در حال بررسی" : "Under review", rejected: fa ? "رد شده" : "Declined", cancelled: fa ? "لغو شده" : "Cancelled" };
+  return <article className={styles.card}>
+    <header className={styles.cardHeader}><h2>{fa ? "سوابق تراکنش‌ها" : "Transaction records"}</h2></header>
+    {visible.map(tx => <div className={styles.activityRow} key={tx.id}>
+      <span className={styles.activityIcon}>{tx.type === "buy_aud" ? <ArrowUpRight size={18}/> : <ArrowDownLeft size={18}/>}</span>
+      <div><div className={styles.activityName}>{tx.recipients?.label || tx.recipients?.full_name || tx.recipients?.account_name || tx.reference_code || (fa ? "انتقال وجه" : "Money transfer")}</div>
+        <div className={styles.activityMeta}><bdi>{tx.reference_code || "—"}</bdi><time dir="ltr" dateTime={tx.created_at}>{requestDate(tx.created_at,locale)}</time></div>
+        <span className={styles.status} data-tone={tx.status === "approved" ? "complete" : "neutral"}>{labels[tx.status]}</span>
       </div>
-      
-      <div className={styles.tableWrap}>
-        <table className={styles.historyTable}>
-          <thead>
-            <tr>
-              <th>{isEn ? "Reference Code" : "کد مرجع"}</th>
-              <th>{isEn ? "Submitted On" : "تاریخ ثبت"}</th>
-              <th>{isEn ? "Transaction Type" : "نوع تراکنش"}</th>
-              <th>{isEn ? "Amount (AUD)" : "مبلغ ارزی (AUD)"}</th>
-              <th>{isEn ? "Equivalent (Toman)" : "معادل (تومان)"}</th>
-              <th>{isEn ? "Recipient" : "گیرنده"}</th>
-              <th>{isEn ? "Discount" : "تخفیف"}</th>
-              <th>{isEn ? "Status" : "وضعیت"}</th>
-              <th>{isEn ? "Delete" : "حذف"}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginated.length === 0 && (
-              <tr>
-                <td colSpan={9} className={styles.emptyTable}>{isEn ? "No transaction history found." : "هیچ سابقه تراکنشی یافت نشد."}</td>
-              </tr>
-            )}
-            {paginated.map((tx: any) => {
-              const displayType = customerSideType(tx.type);
-
-              return (
-              <tr key={tx.id}>
-                <td dir="ltr" className={styles.tableRef}>
-                  {tx.reference_code ?? <span className={styles.noAction}>—</span>}
-                </td>
-                <td dir="ltr" className={styles.tableDate}>
-                  {new Date(tx.created_at).toLocaleDateString("en-GB", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "2-digit"
-                  })}
-                </td>
-                
-                <td>
-                  <span className={displayType === "buy_aud" ? styles.txTypeBuy : styles.txTypeSell}>
-                    {displayType === "buy_aud" ? (isEn ? "Buy AUD" : "خرید دلار") : (isEn ? "Sell AUD" : "فروش دلار")}
-                  </span>
-                </td>
-                
-                <td dir="ltr" className={styles.tableMoney}>${Number(tx.amount_aud).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                
-                <td className={styles.tableToman}>{formatEquivalent(Number(tx.equivalent_toman))}</td>
-
-                <td className={styles.recipientCell}>
-                  {recipientName(tx) ?? <span className={styles.noAction}>—</span>}
-                </td>
-
-                <td>
-                  {!tx.promo_code && !Number(tx.loyalty_discount ?? 0) ? (
-                    <span className={styles.noAction}>—</span>
-                  ) : (
-                    <div className={styles.discountCell}>
-                      {tx.promo_code && (
-                        <span className={styles.promoRow}>
-                          <Tag size={10} />
-                          <span className={styles.discountType}>{isEn ? "Promo" : "پرومو"}</span>
-                          {Number(tx.discount_amount ?? 0) > 0 && (
-                            <span className={styles.discountAmt}>{formatToman(Number(tx.discount_amount))}</span>
-                          )}
-                        </span>
-                      )}
-                      {Number(tx.loyalty_discount ?? 0) > 0 && (
-                        <span className={styles.loyaltyRow}>
-                          <Star size={10} />
-                          <span className={styles.discountType}>{isEn ? "Loyalty" : "وفاداری"}</span>
-                          <span className={styles.discountAmt}>{formatToman(Number(tx.loyalty_discount))}</span>
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </td>
-                
-                <td>
-                  <span className={
-                    tx.status === "approved" ? styles.statusApproved :
-                    tx.status === "rejected" ? styles.statusRejected :
-                    styles.statusPending
-                  }>
-                    {tx.status === "approved" ? (isEn ? "Approved" : "تایید شده") :
-                     tx.status === "rejected" ? (isEn ? "Rejected" : "رد شده") : (isEn ? "Under Review" : "در حال بررسی")}
-                  </span>
-                </td>
-                
-                <td>
-                  {tx.status === "pending" ? (
-                    <button 
-                      onClick={() => onDeleteTransaction(tx.id)} 
-                      className={styles.deleteBtn} 
-                      title={isEn ? "Cancel and delete request" : "لغو و حذف درخواست"}
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  ) : (
-                    <span className={styles.noAction}>-</span>
-                  )}
-                </td>
-              </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className={styles.activityAmount}><bdi data-private-value>{requestMoney(tx.amount_aud,"AUD",locale)}</bdi><span className={styles.status} data-private-value>{requestMoney(tx.equivalent_toman,"IRT",locale)}</span>
+        {tx.status === "pending" && <button className={styles.textLink} onClick={() => onDeleteTransaction(tx.id)} aria-label={`${fa ? "لغو درخواست" : "Cancel request"} ${tx.reference_code||""}`}><Trash2 size={13}/>{fa ? "لغو" : "Cancel"}</button>}
       </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className={styles.pagination}>
-          <button
-            className={styles.pageBtn}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            aria-label={isEn ? "Previous page" : "صفحه قبل"}
-          >
-            <ChevronRight size={18} />
-          </button>
-          <span className={styles.pageInfo}>
-            {page} / {totalPages}
-          </span>
-          <button
-            className={styles.pageBtn}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            aria-label={isEn ? "Next page" : "صفحه بعد"}
-          >
-            <ChevronLeft size={18} />
-          </button>
-        </div>
-      )}
-    </article>
-  );
+    </div>)}
+    {pages>1 && <div className={styles.more}><button className={styles.secondary} onClick={() => setPage(current-1)} disabled={current===1} aria-label={fa ? "صفحه قبل" : "Previous page"}><ChevronLeft size={15}/></button><span className={styles.count}>{current} / {pages}</span><button className={styles.secondary} onClick={() => setPage(current+1)} disabled={current===pages} aria-label={fa ? "صفحه بعد" : "Next page"}><ChevronRight size={15}/></button></div>}
+  </article>;
 }

@@ -21,6 +21,8 @@ import { getRecipients, validatePromoCode } from "@/app/actions/transaction.acti
 import { useT } from "@/hooks/useT";
 import { useLocale } from "@/context/LocaleContext";
 import { requestError } from "@/components/requests/request-labels";
+import Link from "next/link";
+import { dashboardHref } from "@/lib/dashboard/navigation";
 
 // Keep the recorded values stable while displaying concise labels in the chosen language.
 const sourceOptions: Array<[string, string, string]> = [
@@ -47,7 +49,7 @@ const purposeOptions: Array<[string, string]> = [
 ];
 
 function toFaDigits(input: string) { return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]); }
-function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹"; return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d))); }
+function faToEnDigits(input: string) { const fa = "۰۱۲۳۴۵۶۷۸۹", ar = "٠١٢٣٤٥٦٧٨٩"; return String(input).replace(/[۰-۹٠-٩]/g, (d) => String(fa.includes(d) ? fa.indexOf(d) : ar.indexOf(d))); }
 function getRawNumber(value: string) {
   let v = faToEnDigits(value);
   v = v.replace(/٫/g, ".").replace(/،/g, "").replace(/,/g, "").replace(/[^\d.]/g, "");
@@ -130,6 +132,21 @@ export function DashboardRequestHub({
   const [invoiceReference, setInvoiceReference] = useState("");
   const [equivalentStr, setEquivalentStr] = useState("");
   const [quoteSource, setQuoteSource] = useState<"aud" | "irt">("aud");
+  const promoGeneration = React.useRef(0);
+
+  useEffect(() => {
+    // A quote and recipient belong to one direction only.
+    promoGeneration.current += 1;
+    setSelectedRecipientId(""); setPaymentLink(""); setInstitutionName(""); setInvoiceReference("");
+    setPromoDiscount(null); setAppliedPromoCode(null); setPromoEffectiveRate(null); setPromoMsg(null);
+    setPromoValidating(false);
+  }, [txType]);
+
+  useEffect(() => {
+    // A promotion must be rechecked if the underlying live rate changes.
+    promoGeneration.current += 1;
+    setPromoDiscount(null); setAppliedPromoCode(null); setPromoEffectiveRate(null); setPromoMsg(null); setPromoValidating(false);
+  }, [tailoredRate, baseRate]);
 
   useEffect(() => {
     supabase
@@ -192,6 +209,8 @@ export function DashboardRequestHub({
   };
 
   const resetPromo = () => {
+    promoGeneration.current += 1;
+    setPromoValidating(false);
     setPromoDiscount(null);
     setPromoMsg(null);
     setAppliedPromoCode(null);
@@ -199,11 +218,13 @@ export function DashboardRequestHub({
   };
 
   const handleApplyPromo = async () => {
-    if (!promoInput.trim() || rawAmount <= 0 || isRateOffline || tailoredRate === null) return;
+    if (promoValidating || !promoInput.trim() || rawAmount <= 0 || isRateOffline || tailoredRate === null) return;
+    const generation = ++promoGeneration.current;
     setPromoValidating(true);
     setPromoMsg(null);
     try {
       const res = await validatePromoCode(promoInput.trim(), rawAmount, tailoredRate, txType);
+      if (generation !== promoGeneration.current) return;
       if ("error" in res && res.error) {
         setPromoMsg({ type: "error", text: requestError(res.error, locale) });
         setPromoDiscount(null);
@@ -218,9 +239,9 @@ export function DashboardRequestHub({
         setPromoMsg({ type: "success", text: `${locale === "fa" ? "کد تخفیف اعمال شد — " : "Promo code applied — "}${label}` });
       }
     } catch {
-      setPromoMsg({ type: "error", text: locale === "fa" ? "بررسی کد ممکن نشد. دوباره تلاش کنید." : "Could not check this code. Please retry." });
+      if (generation === promoGeneration.current) setPromoMsg({ type: "error", text: locale === "fa" ? "بررسی کد ممکن نشد. دوباره تلاش کنید." : "Could not check this code. Please retry." });
     } finally {
-      setPromoValidating(false);
+      if (generation === promoGeneration.current) setPromoValidating(false);
     }
   };
 
@@ -264,7 +285,7 @@ export function DashboardRequestHub({
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuoteSource("aud");
     let val = e.target.value;
-    val = val.replace(/٫/g, ".").replace(/[^\d۰-۹.]/g, "");
+    val = val.replace(/٫/g, ".").replace(/[^\d۰-۹٠-٩.]/g, "");
     const normalized = faToEnDigits(val);
     const dotCount = (normalized.match(/\./g) || []).length;
     if (dotCount > 1) return;
@@ -299,7 +320,7 @@ export function DashboardRequestHub({
   const handleEquivalentInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuoteSource("irt");
     let val = e.target.value;
-    val = val.replace(/[^\d۰-۹]/g, "");
+    val = val.replace(/[^\d۰-۹٠-٩]/g, "");
     const normalized = faToEnDigits(val).replace(/[^\d]/g, "");
 
     if (!normalized) {
@@ -315,42 +336,20 @@ export function DashboardRequestHub({
   };
 
 
+  if (!marketActive || isRateOffline || !isApproved) return <article className={`${cardStyles.panelCard} ${styles.unavailable}`}>
+    {!marketActive ? <PauseCircle size={30}/> : isRateOffline ? <ServerCrash size={30}/> : <Lock size={30}/>}
+    <h2>{!marketActive ? t.hub.marketPaused : isRateOffline ? t.hub.rateOfflineTitle : t.hub.accessLimited}</h2>
+    <p>{!marketActive ? pauseMessage || t.hub.marketPausedDefault : isRateOffline ? t.hub.rateOfflineText : t.hub.accessLimitedKyc}</p>
+    {!isApproved && <Link className={cardStyles.primaryButton} href={dashboardHref(locale,"profile")}>{locale === "fa" ? "تکمیل پروفایل" : "Complete your profile"}</Link>}
+  </article>;
+
   return (
     <article className={cardStyles.panelCard}>
-      {!marketActive && (
-        <div className={`${styles.lockOverlay} ${styles.offlineOverlay}`}>
-          <PauseCircle size={48} className={`${styles.lockIcon} ${styles.offlineIcon}`} />
-          <h3 className={styles.lockTitle}>{t.hub.marketPaused}</h3>
-          <p className={styles.lockText}>{pauseMessage || t.hub.marketPausedDefault}</p>
-        </div>
-      )}
-
-      {marketActive && isRateOffline && (
-        <div className={`${styles.lockOverlay} ${styles.offlineOverlay}`}>
-          <ServerCrash size={48} className={`${styles.lockIcon} ${styles.offlineIcon}`} />
-          <h3 className={styles.lockTitle}>{t.hub.rateOfflineTitle}</h3>
-          <p className={styles.lockText}>{t.hub.rateOfflineText}</p>
-        </div>
-      )}
-
-      {marketActive && !isApproved && !isRateOffline && (
-              <div className={styles.lockOverlay}>
-                <Lock size={48} className={styles.lockIcon} />
-                <h3 className={styles.lockTitle}>{t.hub.accessLimited}</h3>
-                <p className={styles.lockText}>
-                  {t.hub.accessLimitedText}
-                  <span style={{ display: "block", marginTop: "1.75rem", fontSize: "0.95em", lineHeight: "1.8" }}>
-                    {t.hub.accessLimitedKyc}
-                  </span>
-                </p>
-              </div>
-            )}
-      
       <div className={cardStyles.panelHeader}>
         <div className={styles.titleWrapper}>
           <h2 className={styles.panelTitle}>
             <Calculator size={26} className={styles.titleIcon} /> 
-            {t.hub.title}
+            {locale === "fa" ? "جزئیات انتقال" : "Transfer details"}
           </h2>
         </div>
       </div>
@@ -360,23 +359,17 @@ export function DashboardRequestHub({
           <div className={styles.labelRow}>
             <label className={styles.label}>{t.hub.txType} <span className={styles.requiredMark}>*</span></label>
           </div>
-            <SelectBox
-              value={txType}
-              onChange={(val) => setTxType(val as "buy_aud" | "sell_aud")}
-              dir={locale === "fa" ? "rtl" : "ltr"}
-              labeledOptions={[
-                { value: "buy_aud",  label: t.hub.buyAud },
-                { value: "sell_aud", label: t.hub.sellAud },
-              ]}
-              disabled={isSubmitting}
-            />
+            <div className={styles.directionPicker} role="group" aria-label={t.hub.txType}>
+              <button type="button" disabled={isSubmitting} aria-pressed={txType === "sell_aud"} onClick={() => setTxType("sell_aud")}>{locale === "fa" ? "استرالیا به ایران" : "Australia to Iran"}<span>AUD → IRT</span></button>
+              <button type="button" disabled={isSubmitting} aria-pressed={txType === "buy_aud"} onClick={() => setTxType("buy_aud")}>{locale === "fa" ? "ایران به استرالیا" : "Iran to Australia"}<span>IRT → AUD</span></button>
+            </div>
         </div>
 
         <div className={`${styles.inputBox} ${styles.quoteColumn}`}>
           <div className={styles.quoteInputStack}>
             <div className={styles.inputBox}>
               <div className={styles.labelRow}>
-                <label className={styles.label} htmlFor="request-amount-aud">{t.hub.amountAud} <span className={styles.requiredMark}>*</span></label>
+                <label className={styles.label} htmlFor="request-amount-aud">{txType === "buy_aud" ? (locale === "fa" ? "مبلغ دریافتی گیرنده · AUD" : "Recipient receives · AUD") : (locale === "fa" ? "مبلغ ارسالی شما · AUD" : "You send · AUD")} <span className={styles.requiredMark}>*</span></label>
                 {appliedFee > 0 && (
                   <span className={styles.feeWarning}>
                     <AlertTriangle size={14} />
@@ -392,7 +385,7 @@ export function DashboardRequestHub({
                   id="request-amount-aud"
                   type="text"
                   inputMode="decimal"
-                  pattern="[0-9۰-۹.,٫]*"
+                  pattern="[0-9۰-۹٠-٩.,٫،]*"
                   value={amountStr}
                   onChange={handleInput}
                   onFocus={keepAmountCaretAtEnd}
@@ -522,7 +515,7 @@ export function DashboardRequestHub({
                 className={`${styles.hubEnInput} ${styles.hubEnInputLtr}`}
                 placeholder="PROMO2026"
                 value={promoInput}
-                onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); resetPromo(); }}
                 dir="ltr"
                 disabled={isSubmitting}
               />

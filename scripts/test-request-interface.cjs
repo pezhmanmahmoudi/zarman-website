@@ -364,7 +364,10 @@ test("main dashboard composes self-service submission and discoverable request h
   const dashboard = fs.readFileSync(path.join(projectRoot, "app/[locale]/dashboard/page.tsx"), "utf8");
   assert.match(hub, /<OnlineRequestSubmit/); assert.match(hub, /institutionName:/); assert.match(hub, /invoiceReference:/);
   assert.doesNotMatch(hub, /buildWhatsAppUrl|whatsappWindow|onSaveTransaction/);
-  assert.match(dashboard, /<RequestList locale=\{locale\} embedded/);
+  assert.match(dashboard, /<DashboardHistoryPanel/);
+  const history = fs.readFileSync(path.join(projectRoot, "components/dashboard/DashboardHistoryPanel.tsx"), "utf8");
+  assert.match(history, /<DashboardActivity/);
+  assert.match(history, /useDashboardRequests/);
   assert.doesNotMatch(dashboard, /processTransactionSecurely/);
 });
 

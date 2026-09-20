@@ -1,4 +1,11 @@
 .workspace { max-width: 1200px; color: #20242c; }
+:global([data-dashboard-shell]) .workspace {padding:0;max-width:none;min-height:0;color:#263149}
+:global([data-dashboard-shell]) .customerLayout {grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:22px}
+:global([data-dashboard-shell]) .column > section {border-color:#e6e9f0;border-radius:20px;padding:24px}
+:global([data-dashboard-shell]) .messageBanner {border-radius:18px;background:#f0edfc;border-color:#e0d9f4}
+:global([data-dashboard-shell]) .stageCard {border-radius:20px;background:#f4f7f5;border-color:#e0eae4}
+@media(max-width:1100px){:global([data-dashboard-shell]) .customerLayout{grid-template-columns:1fr}}
+@media(max-width:760px){:global([data-dashboard-shell]) .column > section{padding:20px}:global([data-dashboard-shell]) .titleRow h1{font-size:24px}}
 .adminWorkspace { max-width: 1380px; padding: clamp(20px, 3vw, 40px); }
 .workspace h2 { font-size: 17px; }
 .header { margin-block-end: 20px; align-items: center; }

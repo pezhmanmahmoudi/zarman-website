@@ -1,3 +1,7 @@
+.unavailable {padding:44px 30px!important;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;min-height:280px;justify-content:center}
+.unavailable>svg{color:#8a7fb5}.unavailable h2{font-size:20px;color:#35415a;margin:0}.unavailable p{max-width:410px;font-size:13px;line-height:1.8;color:#7b8495;margin:0 0 8px}
+.directionPicker{display:grid;grid-template-columns:1fr 1fr;gap:10px}.directionPicker button{display:flex;flex-direction:column;align-items:flex-start;gap:8px;border:1px solid #e3e6ef;border-radius:13px;background:#fff;color:#657087;padding:16px;font-size:12px;font-weight:550;min-height:83px;cursor:pointer;transition:border-color .18s,background .18s}.directionPicker button span{font-size:10px;color:#9b97ad;direction:ltr}.directionPicker button[aria-pressed="true"]{background:#f4f1fc;border-color:#bfb4e3;color:#6a50a9}.directionPicker button[aria-pressed="true"] span{color:#9a88b8}
+
 /* =======================================
    قفل صفحه (برای کاربران تایید نشده)
    ======================================= */
@@ -790,3 +794,10 @@
     display: none;
   }
 }
+
+/* Shared customer workspace: compact, readable transfer fields. */
+.titleWrapper{justify-content:flex-start}.panelTitle{justify-content:flex-start;text-align:start;font-size:18px;margin:0;font-weight:600}.titleIcon{width:19px;height:19px;color:#9682b8}.formRow{justify-items:stretch;gap:16px;margin-bottom:22px}.inputBox,.quoteColumn{width:100%;max-width:none}.quoteInputStack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.quoteFieldGroup{min-height:68px!important;border-radius:13px!important;background:#fafbfe!important;border-color:#e4e6ef!important}.quoteFieldInput{font-size:23px!important;font-weight:550!important;min-width:0;letter-spacing:-.03em}.quoteCurrencyLabel{font-size:11px!important}.label{font-size:11px;line-height:1.7}.labelRow{flex-wrap:wrap;gap:8px}.feeWarning{font-size:10px;line-height:1.6}.summaryBox{border-radius:16px!important;box-shadow:none!important}.summaryRate{font-size:13px!important}.summaryHint{font-size:11px!important}
+@media(max-width:1080px){.quoteInputStack{grid-template-columns:1fr 1fr}.quoteFieldInput{font-size:20px!important}}
+@media(max-width:500px){.quoteInputStack{grid-template-columns:1fr}.directionPicker button{padding:13px;font-size:11px}.quoteFieldInput{font-size:24px!important}.panelTitle{font-size:17px}}
+
+.label{font-size:13px}.feeWarning{font-size:12px}.directionPicker button{min-height:64px}

@@ -1,6 +1,2 @@
-import { RequestList } from "@/components/requests/RequestList";
-
-export default async function MyRequestsPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
-  return <RequestList locale={locale === "fa" ? "fa" : "en"} />;
-}
+import { DashboardHistoryPanel } from "@/components/dashboard/DashboardHistoryPanel";
+export default function MyRequestsPage() { return <DashboardHistoryPanel/>; }
