@@ -5,6 +5,7 @@ import { applyPromoCode } from "@/lib/pricing";
 import type { PromoCodeData } from "@/lib/pricing";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import type { Recipient } from "@/app/[locale]/dashboard/dashboard.types";
+import { normalizeRecipientInput } from "@/lib/dashboard/recipient-input";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -119,17 +120,12 @@ export async function createRecipient(payload: Omit<Recipient, "id" | "user_id" 
   try {
     const authenticatedUserId = await getAuthenticatedUserId();
 
-    // Basic validation
-    if (!payload.direction || !["aud", "irt"].includes(payload.direction)) {
-      return { error: "جهت انتقال نامعتبر است." };
-    }
-    if (!payload.label?.trim()) {
-      return { error: "برچسب گیرنده الزامی است." };
-    }
+    const normalized = normalizeRecipientInput(payload);
+    if (normalized.error) return { error: normalized.error };
 
     const { data, error } = await supabaseAdmin
       .from("recipients")
-      .insert([{ ...payload, user_id: authenticatedUserId }])
+      .insert([{ ...normalized.data, user_id: authenticatedUserId }])
       .select("*")
       .single();
 

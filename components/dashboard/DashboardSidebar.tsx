@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, House, ArrowLeftRight, History, UserRound, MessageSquare, LogOut } from "lucide-react";
+import { ArrowUpRight, House, ArrowLeftRight, History, UserRound, UsersRound, MessageSquare, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -12,7 +12,7 @@ import styles from "@/styles/dashboard/DashboardSidebar.module.css";
 export function DashboardSidebar({ activeTab }: { activeTab: DashboardTab }) {
   const locale = useLocale(), copy = dashboardCopy[locale], router = useRouter();
   const [busy, setBusy] = useState(false), [error, setError] = useState(false);
-  const items = [{ tab: "overview", Icon: House }, { tab: "transfer", Icon: ArrowLeftRight }, { tab: "history", Icon: History }, { tab: "profile", Icon: UserRound }] as const;
+  const items = [{ tab: "overview", Icon: House }, { tab: "transfer", Icon: ArrowLeftRight }, { tab: "history", Icon: History }, { tab: "recipients", Icon: UsersRound }, { tab: "profile", Icon: UserRound }] as const;
   async function signOut() {
     if (busy) return;
     setBusy(true); setError(false);
@@ -37,7 +37,7 @@ export function DashboardSidebar({ activeTab }: { activeTab: DashboardTab }) {
       </div>
     </aside>
     <nav className={styles.mobileNav} aria-label={locale === "fa" ? "ناوبری اصلی" : "Main navigation"}>
-      {items.map(({ tab, Icon }) => <Link key={tab} href={dashboardHref(locale, tab)} aria-current={activeTab === tab ? "page" : undefined}><Icon size={21} aria-hidden="true" /><span>{copy[tab]}</span></Link>)}
+      {items.filter(item=>item.tab !== "profile").map(({ tab, Icon }) => <Link key={tab} href={dashboardHref(locale, tab)} aria-current={activeTab === tab ? "page" : undefined}><Icon size={21} aria-hidden="true" /><span>{copy[tab]}</span></Link>)}
     </nav>
   </>;
 }

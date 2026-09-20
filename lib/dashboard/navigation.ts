@@ -1,10 +1,10 @@
-export type DashboardTab = "overview" | "transfer" | "history" | "profile" | "feedback";
+export type DashboardTab = "overview" | "transfer" | "recipients" | "history" | "profile" | "feedback";
 
 export function dashboardTab(pathname: string, query: Pick<URLSearchParams, "get">): DashboardTab {
   if (/\/dashboard\/requests(?:\/|$)/.test(pathname)) return "history";
   const tab = query.get("tab");
   if (tab === "hub") return "transfer";
-  if (["overview", "transfer", "history", "profile", "feedback"].includes(tab || "")) return tab as DashboardTab;
+  if (["overview", "transfer", "recipients", "history", "profile", "feedback"].includes(tab || "")) return tab as DashboardTab;
   return query.get("requestAmountAud") || query.get("requestDirection") ? "transfer" : "overview";
 }
 
@@ -13,7 +13,7 @@ export function dashboardHref(locale: string, tab: DashboardTab): string {
 }
 
 export const dashboardCopy = {
-  en: { overview: "Overview", transfer: "New transfer", history: "Activity", profile: "Your profile", feedback: "Feedback",
+  en: { overview: "Overview", transfer: "New transfer", recipients: "Recipients", history: "Activity", profile: "Your profile", feedback: "Feedback",
     workspace: "Your money, closer to home.", hello: "Welcome back", newTransfer: "New transfer", allActivity: "View all activity",
     account: "YOUR ZARMAN ACCOUNT", volume: "Completed transfers", volumeHint: "Total transferred · AUD", count: "Transfers completed",
     rate: "Your exchange rate", rateHint: "Indicative rate · final quote at review", attention: "Needs your attention", inProgress: "In progress",
@@ -30,7 +30,7 @@ export const dashboardCopy = {
     pending: "Verification in review", correction: "Verification needs attention", overviewHint: "A clear view of your transfers, from here to there.",
     refreshError: "Couldn’t refresh your account. Showing the last loaded details.",
   },
-  fa: { overview: "نمای کلی", transfer: "انتقال جدید", history: "فعالیت‌ها", profile: "پروفایل شما", feedback: "بازخورد",
+  fa: { overview: "نمای کلی", transfer: "انتقال جدید", recipients: "گیرندگان", history: "فعالیت‌ها", profile: "پروفایل شما", feedback: "بازخورد",
     workspace: "پول شما، نزدیک‌تر به خانه.", hello: "خوش آمدید", newTransfer: "انتقال جدید", allActivity: "همه فعالیت‌ها",
     account: "حساب کاربری زرمان", volume: "انتقال‌های تکمیل‌شده", volumeHint: "مجموع انتقال‌ها · دلار استرالیا", count: "انتقال تکمیل‌شده",
     rate: "نرخ اختصاصی شما", rateHint: "نرخ تقریبی · تأیید نهایی هنگام بررسی", attention: "نیازمند اقدام شما", inProgress: "در حال انجام",

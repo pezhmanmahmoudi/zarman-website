@@ -1,539 +1,100 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
-import { X, AlertCircle } from "lucide-react";
-import styles from "@/styles/dashboard/RecipientModal.module.css";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent, InputHTMLAttributes } from "react";
+import { X, ArrowRight, ArrowLeft, Check, Landmark, UserRound } from "lucide-react";
 import { createRecipient } from "@/app/actions/transaction.actions";
-import type { Recipient, RecipientDirection, BankType, Profile } from "@/app/[locale]/dashboard/dashboard.types";
-import { SelectBox } from "@/components/ui/SelectBox/SelectBox"; 
+import type { Recipient, RecipientDirection, Profile } from "@/app/[locale]/dashboard/dashboard.types";
+import styles from "@/styles/dashboard/RecipientModal.module.css";
 
-// ─── Utility: Convert Persian digits to English before processing ──────────
-function faToEnDigits(input: string) {
-  const fa = "۰۱۲۳۴۵۶۷۸۹";
-  return String(input).replace(/[۰-۹]/g, (d) => String(fa.indexOf(d)));
-}
+const iranianBanks = ["Ayandeh Bank","BlueBank","Dey Bank","Eghtesad Novin Bank","Gardeshgari Bank","Ghavamin Bank","Hekmat Bank","Karafarin Bank","Keshavarzi Bank","Maskan Bank","Parsian Bank","Pasargad Bank","Post Bank of Iran","Refah Bank","Saman Bank","Sanat Va Maadan Bank","Sarmayeh Bank","Shahr Bank","Sina Bank","Tejarat Bank","Tosee Credit Institution","Tosee Saderat Bank","Tosee Taavon Bank","Bank Iran"];
+const digits = (value:string) => value.replace(/[۰-۹٠-٩]/g,c=>String("۰۱۲۳۴۵۶۷۸۹".includes(c) ? "۰۱۲۳۴۵۶۷۸۹".indexOf(c) : "٠١٢٣٤٥٦٧٨٩".indexOf(c)));
+type Props = {direction:RecipientDirection;mode?:"standard"|"self_destination";profile?:Profile|null;locale?:"fa"|"en";onClose:()=>void;onCreated:(recipient:Recipient)=>void};
 
-function composeAddress(parts: Array<string | null | undefined>) {
-  return parts.map((p) => String(p ?? "").trim()).filter(Boolean).join(", ");
-}
-
-// ─── Bank List ────────────────────────────────────────────────────────────────
-const iranianBanks = [
-  { value: "Ayandeh Bank", label: "Ayandeh Bank" },
-  { value: "BlueBank", label: "Blue Bank" },
-  { value: "Dey Bank", label: "Dey Bank" },
-  { value: "Eghtesad Novin Bank", label: "Eghtesad Novin Bank" },
-  { value: "Gardeshgari Bank", label: "Gardeshgari Bank" },
-  { value: "Ghavamin Bank", label: "Ghavamin Bank" },
-  { value: "Hekmat Bank", label: "Hekmat Bank" },
-  { value: "Karafarin Bank", label: "Karafarin Bank" },
-  { value: "Keshavarzi Bank", label: "Keshavarzi Bank" },
-  { value: "Maskan Bank", label: "Maskan Bank" },
-  { value: "Parsian Bank", label: "Parsian Bank" },
-  { value: "Pasargad Bank", label: "Pasargad Bank" },
-  { value: "Post Bank of Iran", label: "Post Bank of Iran" },
-  { value: "Refah Bank", label: "Refah Bank" },
-  { value: "Saman Bank", label: "Saman Bank" },
-  { value: "Sanat Va Maadan Bank", label: "Sanat Va Maadan Bank" },
-  { value: "Sarmayeh Bank", label: "Sarmayeh Bank" },
-  { value: "Shahr Bank", label: "Shahr Bank" },
-  { value: "Sina Bank", label: "Sina Bank" },
-  { value: "Tejarat Bank", label: "Tejarat Bank" },
-  { value: "Tosee Credit Institution", label: "Tosee Credit Institution" },
-  { value: "Tosee Saderat Bank", label: "Tosee Saderat Bank" },
-  { value: "Tosee Taavon Bank", label: "Tosee Taavon Bank" },
-  { value: "Bank Iran", label: "Other" }
-];
-
-// ─── Props ────────────────────────────────────────────────────────────────────
-type RecipientModalProps = {
-  direction: RecipientDirection;
-  mode?: "standard" | "self_destination";
-  profile?: Profile | null;
-  locale?: "fa" | "en";
-  onClose: () => void;
-  onCreated: (recipient: Recipient) => void;
-};
-
-// ─── Component ────────────────────────────────────────────────────────────────
-export function RecipientModal({ direction, mode = "standard", profile, locale = "en", onClose, onCreated }: RecipientModalProps) {
-  const [saving, setSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-
-  // AUD fields
-  const [bankName, setBankName] = useState("");
-  const [accountName, setAccountName] = useState("");
-  const [bsb, setBsb] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [residentialAddress, setResidentialAddress] = useState("");
-  const [residentialCity, setResidentialCity] = useState("");
-  const [residentialState, setResidentialState] = useState("");
-  const [residentialPostcode, setResidentialPostcode] = useState("");
-  const [residentialCountry, setResidentialCountry] = useState("");
-  const [recipientEmail, setRecipientEmail] = useState("");
-  const [recipientPhone, setRecipientPhone] = useState("");
-
-  // IRT shared
-  const [fullName, setFullName] = useState("");
-  const [irtAddress, setIrtAddress] = useState("");
-  const [irtCity, setIrtCity] = useState("");
-  const [irtState, setIrtState] = useState("");
-  const [irtPostcode, setIrtPostcode] = useState("");
-  const [irtCountry, setIrtCountry] = useState("");
-  const [irtCardNumber, setIrtCardNumber] = useState("");
-  const [irtPhone, setIrtPhone] = useState("");
-
-  // IRT Other Banks (Shaba + Bank Name)
-  const [shabaDisplay, setShabaDisplay] = useState("");
-  const [irtBankName, setIrtBankName] = useState("");
-
-  // Scroll lock while modal is open
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
-  const isAud = direction === "aud";
-  const isSelfDestination = mode === "self_destination";
-
-  const profileEmail = String(profile?.email ?? "").trim();
-  const profilePhone = String(profile?.mobile_number ?? profile?.phone_number ?? profile?.telephone ?? "").trim();
-  const profileStreet = composeAddress([
-    String(profile?.address ?? profile?.address_line1 ?? "").trim(),
-    String(profile?.address_line2 ?? "").trim(),
-  ]);
-  const profileCity = String(profile?.suburb ?? profile?.city ?? "").trim();
-  const profileState = String(profile?.state ?? "").trim();
-  const profilePostcode = String(profile?.postcode ?? profile?.post_code ?? "").trim();
-  const profileCountry = String(profile?.country ?? "").trim();
-  const profileAddress = composeAddress([profileStreet, profileCity, profileState, profilePostcode, profileCountry]);
-
-  useEffect(() => {
-    if (!isSelfDestination) return;
-    if (isAud) {
-      setResidentialAddress(profileStreet);
-      setResidentialCity(profileCity);
-      setResidentialState(profileState);
-      setResidentialPostcode(profilePostcode);
-      setResidentialCountry(profileCountry);
-      setRecipientPhone(profilePhone);
-      setRecipientEmail(profileEmail);
-      return;
+export function RecipientModal({direction,mode="standard",profile,locale="en",onClose,onCreated}:Props) {
+  const fa = locale === "fa", aud = direction === "aud", own = mode === "self_destination";
+  const text = (en:string,persian:string) => fa ? persian : en;
+  const dialog = useRef<HTMLDialogElement>(null), heading = useRef<HTMLHeadingElement>(null), savingRef = useRef(false);
+  const [step,setStep] = useState(0), [saving,setSaving] = useState(false), [error,setError] = useState("");
+  const [values,setValues] = useState<Record<string,string>>({});
+  const profileContact = {
+    address:[profile?.address || profile?.address_line1,profile?.address_line2].filter(Boolean).join(", "),
+    city:String(profile?.suburb || profile?.city || ""), state:String(profile?.state || ""),
+    postcode:String(profile?.postcode || profile?.post_code || ""), country:String(profile?.country || ""),
+    phone:String(profile?.mobile_number || profile?.phone_number || profile?.telephone || ""), email:String(profile?.email || ""),
+  };
+  const contactValue = (key:keyof typeof profileContact) => own ? profileContact[key] : values[key] || "";
+  useEffect(()=>{
+    const element = dialog.current, previousFocus = document.activeElement, overflow = document.body.style.overflow;
+    element?.showModal(); document.body.style.overflow = "hidden";
+    return ()=>{element?.close();document.body.style.overflow = overflow;if(previousFocus instanceof HTMLElement) previousFocus.focus();};
+  },[]);
+  function move(next:number) {setStep(next);setError("");requestAnimationFrame(()=>heading.current?.focus());}
+  function close() {if(!savingRef.current) onClose();}
+  const set = (key:string,value:string) => setValues(previous=>({...previous,[key]:value}));
+  function field(key:string,en:string,persian:string,options:InputHTMLAttributes<HTMLInputElement> = {}, contact=false) {
+    return <label className={styles.field} key={key} htmlFor={`recipient-${key}`}><span>{text(en,persian)}{options.required && <small aria-hidden="true"> *</small>}</span><input id={`recipient-${key}`} name={key} value={contact ? contactValue(key as keyof typeof profileContact) : values[key] || ""} onChange={event=>set(key,options.inputMode === "numeric" || options.type === "tel" ? digits(event.target.value) : event.target.value)} maxLength={250} dir="ltr" readOnly={contact && own} {...options}/></label>;
+  }
+  async function submit(event:FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if(savingRef.current) return;
+    if(step === 0) {move(1);return;}
+    setError("");
+    if(own && Object.values(profileContact).some(value=>!value.trim())) {
+      setError(text("Complete your address and contact details in your verified profile first.","ابتدا آدرس و اطلاعات تماس را در پروفایل احراز هویت خود کامل کنید."));return;
     }
-    setIrtAddress(profileStreet);
-    setIrtCity(profileCity);
-    setIrtState(profileState);
-    setIrtPostcode(profilePostcode);
-    setIrtCountry(profileCountry);
-    setIrtPhone(profilePhone);
-  }, [
-    isSelfDestination,
-    isAud,
-    profileStreet,
-    profileCity,
-    profileState,
-    profilePostcode,
-    profileCountry,
-    profilePhone,
-    profileEmail,
-  ]);
-
-  // IBAN strict formatting
-  const handleShabaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let raw = faToEnDigits(e.target.value).replace(/\D/g, "");
-    if (raw.length > 24) raw = raw.slice(0, 24);
-    const parts: string[] = [];
-    if (raw.length > 0)  parts.push(raw.slice(0, 2));
-    if (raw.length > 2)  parts.push(raw.slice(2, 6));
-    if (raw.length > 6)  parts.push(raw.slice(6, 10));
-    if (raw.length > 10) parts.push(raw.slice(10, 14));
-    if (raw.length > 14) parts.push(raw.slice(14, 18));
-    if (raw.length > 18) parts.push(raw.slice(18, 22));
-    if (raw.length > 22) parts.push(raw.slice(22, 24));
-    setShabaDisplay(parts.join("-"));
-  };
-
-  // BSB formatting (3 digits - 3 digits)
-  const handleBsbChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let raw = faToEnDigits(e.target.value).replace(/\D/g, "");
-    if (raw.length > 6) raw = raw.slice(0, 6);
-    if (raw.length > 3) raw = `${raw.slice(0, 3)}-${raw.slice(3)}`;
-    setBsb(raw);
-  };
-
-  // Numeric fields
-  const handleAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => setAccountNumber(faToEnDigits(e.target.value).replace(/\D/g, ""));
-  const handleIrtPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => setIrtPhone(faToEnDigits(e.target.value).replace(/\D/g, ""));
-  const handleIrtCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let raw = faToEnDigits(e.target.value).replace(/\D/g, "");
-    if (raw.length > 16) raw = raw.slice(0, 16);
-    setIrtCardNumber(raw);
-  };
-  
-  const handleRecipientPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let raw = faToEnDigits(e.target.value).replace(/[^\d+]/g, "");
-    setRecipientPhone(raw);
-  };
-
-  const buildPayload = (autoLabel: string): Omit<Recipient, "id" | "user_id" | "created_at"> => {
-    const base = { direction, label: autoLabel };
-    const audStreet = (isSelfDestination ? profileStreet : residentialAddress).trim();
-    const audCity = (isSelfDestination ? profileCity : residentialCity).trim();
-    const audState = (isSelfDestination ? profileState : residentialState).trim();
-    const audPostcode = (isSelfDestination ? profilePostcode : residentialPostcode).trim();
-    const audCountry = (isSelfDestination ? profileCountry : residentialCountry).trim();
-
-    const irtStreet = (isSelfDestination ? profileStreet : irtAddress).trim();
-    const irtCityValue = (isSelfDestination ? profileCity : irtCity).trim();
-    const irtStateValue = (isSelfDestination ? profileState : irtState).trim();
-    const irtPostcodeValue = (isSelfDestination ? profilePostcode : irtPostcode).trim();
-    const irtCountryValue = (isSelfDestination ? profileCountry : irtCountry).trim();
-
-    if (isAud) {
-      return {
-        ...base,
-        bank_name: bankName.trim(),
-        bsb: bsb.trim(),
-        account_number: accountNumber.trim(),
-        account_name: accountName.trim(),
-        residential_address: audStreet,
-        residential_city: audCity,
-        residential_state: audState,
-        residential_postcode: audPostcode,
-        residential_country: audCountry,
-        recipient_email: (isSelfDestination ? profileEmail : recipientEmail).trim(), 
-        recipient_phone: (isSelfDestination ? profilePhone : recipientPhone).trim(),
-      };
-    }
-    
-    // Setting default to "other" to maintain compatibility with the previous database structure
-    return {
-      ...base,
-      full_name: fullName.trim(),
-      irt_address: irtStreet,
-      irt_city: irtCityValue,
-      irt_state: irtStateValue,
-      irt_postcode: irtPostcodeValue,
-      irt_country: irtCountryValue,
-      irt_phone: (isSelfDestination ? profilePhone : irtPhone).trim(),
-      card_number: irtCardNumber.trim() || null,
-      bank_type: "other" as BankType,
-      bank_name: irtBankName.trim(),
-      shaba_number: `IR${shabaDisplay.replace(/[\s-]/g, "")}`,
+    const bank = (values.bank_name || "").trim(), name = (values.name || "").trim();
+    const common = {direction,label:own ? `${text("My account","حساب شخصی من")} — ${bank}` : `${name} — ${bank}`,bank_name:bank};
+    const payload:Omit<Recipient,"id"|"user_id"|"created_at"> = aud ? {
+      ...common,account_name:name,bsb:(values.bsb || "").replace(/\D/g,""),account_number:values.account_number?.trim(),
+      residential_address:contactValue("address").trim(),residential_city:contactValue("city").trim(),residential_state:contactValue("state").trim(),
+      residential_postcode:contactValue("postcode").trim(),residential_country:contactValue("country").trim(),
+      recipient_email:contactValue("email").trim(),recipient_phone:contactValue("phone").trim(),
+    } : {
+      ...common,full_name:name,bank_type:"other",bank_city:values.bank_city?.trim() || null,
+      shaba_number:`IR${(values.shaba || "").replace(/\D/g,"")}`,card_number:values.card_number?.trim() || null,
+      irt_address:contactValue("address").trim(),irt_city:contactValue("city").trim(),irt_state:contactValue("state").trim(),
+      irt_postcode:contactValue("postcode").trim(),irt_country:contactValue("country").trim(),irt_phone:contactValue("phone").trim(),
     };
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault(); 
-    setErrorMsg("");
-
-    if (isSelfDestination && (!profileStreet || !profileCity || !profileState || !profilePostcode || !profileCountry || !profilePhone || !profileEmail)) {
-      setErrorMsg(
-        locale === "fa"
-          ? "برای گزینه حساب شخصی در کشور مقصد، لطفاً ابتدا آدرس، شهر، ایالت، کد پستی، کشور، شماره موبایل و ایمیل خود را در بخش احراز هویت کامل کنید."
-          : "For 'My Account in the Destination Country', please complete your KYC street address, city, state, postcode, country, mobile number, and email first."
-      );
-      return;
-    }
-
-    let autoLabel = "";
-    if (isAud) {
-      autoLabel = isSelfDestination
-        ? `${locale === "fa" ? "حساب شخصی من در کشور مقصد" : "My Account in the Destination Country"} — ${bankName.trim()}`
-        : `${accountName.trim()} — ${bankName.trim()}`;
-    } else {
-      const bankLabel = iranianBanks.find(b => b.value === irtBankName)?.label || "Other";
-      autoLabel = isSelfDestination
-        ? `${locale === "fa" ? "حساب شخصی من در کشور مقصد" : "My Account in the Destination Country"} — ${bankLabel}`
-        : `${fullName.trim()} — ${bankLabel}`;
-    }
-
-    const payload = buildPayload(autoLabel);
-    
-    setSaving(true);
+    savingRef.current = true;setSaving(true);
     try {
       const result = await createRecipient(payload);
-      if ("error" in result && result.error) {
-        setErrorMsg(result.error);
-      } else if ("data" in result && result.data) {
-        onCreated(result.data);
-        onClose();
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className={styles.backdrop} role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={styles.card}>
-
-        {/* ── Header ── */}
-        <div className={styles.header}>
-          <div />{/* grid spacer */}
-          <h3 className={styles.title} dir="ltr" style={{ textAlign: "left", width: "100%", paddingLeft: "8px" }}>
-            {isAud ? "Add Australian Recipient" : "Add Iranian Recipient"}
-          </h3>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close" type="button">
-            <X size={20} />
-          </button>
+      if("data" in result && result.data) {onCreated(result.data);onClose();}
+      else setError(text("We couldn’t save this recipient. Check the details and try again.","ذخیره گیرنده ممکن نشد. اطلاعات را بررسی و دوباره تلاش کنید."));
+    } catch {setError(text("Connection interrupted. Please try again.","ارتباط قطع شد. دوباره تلاش کنید."));}
+    finally {savingRef.current = false;setSaving(false);}
+  }
+  return <dialog ref={dialog} className={styles.dialog} dir={fa ? "rtl":"ltr"} aria-labelledby="recipient-title" onCancel={event=>{event.preventDefault();close();}} onClick={event=>{if(event.target===event.currentTarget)close();}}>
+    <div className={styles.surface}>
+      <header className={styles.header}><span className={styles.country}>{aud ? "AU":"IR"}</span><div><p>{own ? text("YOUR OWN ACCOUNT","حساب شخصی شما"):text("NEW RECIPIENT","گیرنده جدید")}</p><h2 id="recipient-title">{aud ? text("An account in Australia","یک حساب در استرالیا"):text("An account in Iran","یک حساب در ایران")}</h2></div><button type="button" className={styles.close} onClick={close} disabled={saving} aria-label={text("Close","بستن")}><X size={20}/></button></header>
+      <form onSubmit={event=>void submit(event)} className={styles.form}>
+        <div className={styles.body}>
+          <ol className={styles.steps} aria-label={text("Recipient setup","ثبت گیرنده")}><li aria-current={step===0 ? "step":undefined}><span>{step>0 ? <Check size={15}/>:<Landmark size={15}/>}</span>{text("Bank account","حساب بانکی")}</li><li aria-current={step===1 ? "step":undefined}><span><UserRound size={15}/></span>{text("Contact details","اطلاعات تماس")}</li></ol>
+          <div className={styles.panel} key={step}><h3 ref={heading} tabIndex={-1}>{step===0 ? text("Start with the account.","ابتدا، مشخصات حساب.") : text("A few details about the recipient.","چند نکته درباره گیرنده.")}</h3><p className={styles.hint}>{text("Please enter details in English.","لطفاً اطلاعات را به انگلیسی وارد کنید.")}</p>
+            <fieldset disabled={saving}>
+            {step === 0 ? <>
+              {field("name",aud ? "Account holder name":"Full name","نام صاحب حساب",{required:true,autoComplete:"off"})}
+              <div className={styles.grid}>
+                {aud ? field("bank_name","Bank name","نام بانک",{required:true,placeholder:"e.g. Commonwealth Bank"}) : <label className={styles.field} htmlFor="recipient-bank_name"><span>{text("Bank name","نام بانک")} *</span><select id="recipient-bank_name" name="bank_name" required value={values.bank_name||""} onChange={event=>set("bank_name",event.target.value)}><option value="">{text("Choose a bank","انتخاب بانک")}</option>{iranianBanks.map(bank=><option key={bank} value={bank}>{bank==="Bank Iran" ? text("Other","سایر"):bank}</option>)}</select></label>}
+                {aud ? field("bsb","BSB","BSB",{required:true,inputMode:"numeric",pattern:"[0-9]{3}-?[0-9]{3}",placeholder:"123-456",maxLength:7}) : field("bank_city","Bank branch city (optional)","شهر شعبه بانک (اختیاری)",{maxLength:120,placeholder:"e.g. Tehran"})}
+              </div>
+              {aud ? field("account_number","Account number","شماره حساب",{required:true,inputMode:"numeric",pattern:"[0-9]{5,12}",maxLength:12}) : <>
+                {field("shaba","Shaba / IBAN · 24 digits after IR","شماره شبا · ۲۴ رقم بعد از IR",{required:true,inputMode:"numeric",pattern:"[0-9]{24}",maxLength:24,placeholder:"24 digits, without IR"})}
+                {field("card_number","Card number (optional)","شماره کارت (اختیاری)",{inputMode:"numeric",pattern:"[0-9]{16}",maxLength:16})}
+                <details className={styles.notice}><summary>{text("Bank availability","دسترسی بانک‌ها")}</summary><p>{text("Sanctions notice: Bank Saderat Iran, Bank Mellat, Bank Sepah, Bank Melli Iran, Central Bank of Iran, Ansar Bank and Mehr Bank are listed in our existing restrictions. If your only account is with one of these banks, choose Other for review.","اطلاعیه محدودیت‌ها: بانک‌های صادرات، ملت، سپه، ملی، بانک مرکزی، انصار و مهر در فهرست محدودیت‌های فعلی ما هستند. اگر تنها حساب شما در یکی از این بانک‌هاست، گزینه سایر را برای بررسی انتخاب کنید.")}</p></details>
+              </>}
+            </> : <>
+              <div className={styles.accountSummary}><Landmark size={18}/><div><strong>{values.name}</strong><span>{values.bank_name}{!aud && values.bank_city ? ` · ${values.bank_city}`:""}</span></div><button type="button" onClick={()=>move(0)}>{text("Edit","ویرایش")}</button></div>
+              {own && <p className={styles.notice}>{text("Contact details are taken from your verified profile.","اطلاعات تماس از پروفایل احراز هویت شما وارد می‌شود.")}</p>}
+              {field("address","Residential address","آدرس محل سکونت",{required:true,autoComplete:"off",maxLength:500},true)}
+              <div className={styles.grid}>{field("city","Residential city","شهر محل سکونت",{required:true},true)}{field("state",aud ? "State":"Province",aud ? "ایالت":"استان",{required:true},true)}{field("postcode","Postcode","کد پستی",{required:aud},true)}{field("country","Country","کشور",{required:true},true)}</div>
+              <div className={styles.grid}>{field("phone","Phone number","شماره تماس",{required:true,type:"tel"},true)}{aud && field("email","Email","ایمیل",{required:true,type:"email"},true)}</div>
+            </>}
+            </fieldset>
+          </div>
+          {error && <p className={styles.error} role="alert">{error}</p>}
         </div>
-
-        {/* ── Scrollable body ── */}
-        <form className={styles.body} onSubmit={handleSave} dir="ltr">
-
-          {isSelfDestination && (
-            <div
-              dir="ltr"
-              style={{
-                backgroundColor: "rgba(16, 185, 129, 0.1)",
-                color: "#065f46",
-                padding: "12px",
-                borderRadius: "8px",
-                fontSize: "13px",
-                marginBottom: "16px",
-                lineHeight: "1.5",
-                textAlign: "left",
-              }}
-            >
-              {locale === "fa"
-                ? "در این حالت، اطلاعات تماس گیرنده از پروفایل احراز هویت شما به صورت خودکار ثبت می‌شود."
-                : "In this mode, recipient contact details are auto-filled from your KYC profile."}
-            </div>
-          )}
-
-          <div
-            dir="ltr"
-            style={{
-              backgroundColor: "rgba(245, 158, 11, 0.12)",
-              color: "#92400e",
-              padding: "12px",
-              borderRadius: "8px",
-              fontSize: "13px",
-              marginBottom: "16px",
-              lineHeight: "1.5",
-              textAlign: "left",
-            }}
-          >
-            Important: All forms must be completed in English only.
-          </div>
-
-          {/* ══ AUD ══════════════════════════════════════════════════ */}
-          {isAud && (
-            <div className={styles.ltr} dir="ltr" style={{ textAlign: "left" }}>
-              <div className={styles.section}>
-                <p className={styles.sectionTitle}>Banking Information</p>
-                <div className={styles.row}>
-                  <div className={styles.field}>
-                    <label className={styles.label}>Bank Name <span className={styles.req}>*</span></label>
-                    <div className={styles.inputWrap}>
-                      <input required type="text" className={styles.input} placeholder="e.g. Commonwealth Bank" value={bankName} onChange={(e) => setBankName(e.target.value)} dir="ltr" />
-                    </div>
-                  </div>
-                  <div className={styles.field}>
-                    <label className={styles.label}>Account Holder Name <span className={`${styles.req} ${styles.textAlignLtr}`}>*</span></label>
-                    <div className={styles.inputWrap}>
-                      <input required type="text" className={styles.input} placeholder="John Smith" value={accountName} onChange={(e) => setAccountName(e.target.value)} dir="ltr" />
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.row}>
-                  <div className={styles.field}>
-                    <label className={styles.label}> BSB <span className={`${styles.req} ${styles.textAlignLtr}`}>*</span></label>
-                    <div className={styles.inputWrap}>
-                      <input required type="text" inputMode="numeric" className={styles.input} placeholder="123-456" value={bsb} onChange={handleBsbChange} dir="ltr" />
-                    </div>
-                  </div>
-                  <div className={styles.field}>
-                    <label className={styles.label}>Account Number <span className={`${styles.req} ${styles.textAlignLtr}`}>*</span></label>
-                    <div className={styles.inputWrap}>
-                      <input required type="text" inputMode="numeric" className={styles.input} placeholder="123456789" value={accountNumber} onChange={handleAccountNumberChange} dir="ltr" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.section}>
-                <p className={styles.sectionTitle}>Contact and Address Information</p>
-                <div className={styles.field}>
-                  <label className={styles.label}>Residential Address {!isSelfDestination && <span className={styles.req}>*</span>}</label>
-                  <div className={styles.inputWrap}>
-                    <input required={!isSelfDestination} readOnly={isSelfDestination} type="text" className={styles.input} placeholder="Street address" value={residentialAddress} onChange={(e) => setResidentialAddress(e.target.value)} dir="ltr" />
-                  </div>
-                </div>
-                <div className={styles.row}>
-                  <div className={styles.field}>
-                    <label className={styles.label}>City {!isSelfDestination && <span className={`${styles.req} ${styles.textAlignLtr}`}>*</span>}</label>
-                    <div className={styles.inputWrap}>
-                      <input required={!isSelfDestination} readOnly={isSelfDestination} type="text" className={styles.input} placeholder="City" value={residentialCity} onChange={(e) => setResidentialCity(e.target.value)} dir="ltr" />
-                    </div>
-                  </div>
-                  <div className={styles.field}>
-                    <label className={styles.label}>State {!isSelfDestination && <span className={`${styles.req} ${styles.textAlignLtr}`}>*</span>}</label>
-                    <div className={styles.inputWrap}>
-                      <input required={!isSelfDestination} readOnly={isSelfDestination} type="text" className={styles.input} placeholder="State" value={residentialState} onChange={(e) => setResidentialState(e.target.value)} dir="ltr" />
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.row}>
-                  <div className={styles.field}>
-                    <label className={styles.label}>Postcode <span className={`${styles.req} ${styles.textAlignLtr}`}>*</span></label>
-                    <div className={styles.inputWrap}>
-                      <input required readOnly={isSelfDestination} type="text" className={styles.input} placeholder="Postcode" value={residentialPostcode} onChange={(e) => setResidentialPostcode(e.target.value)} dir="ltr" />
-                    </div>
-                  </div>
-                  <div className={styles.field}>
-                    <label className={styles.label}>Country {!isSelfDestination && <span className={`${styles.req} ${styles.textAlignLtr}`}>*</span>}</label>
-                    <div className={styles.inputWrap}>
-                      <input required={!isSelfDestination} readOnly={isSelfDestination} type="text" className={styles.input} placeholder="Country" value={residentialCountry} onChange={(e) => setResidentialCountry(e.target.value)} dir="ltr" />
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.row}>
-                  <div className={styles.field}>
-                    <label className={styles.label}>Recipient Phone {!isSelfDestination && <span className={`${styles.req} ${styles.textAlignLtr}`}>*</span>}</label>
-                    <div className={styles.inputWrap}>
-                      <input required={!isSelfDestination} readOnly={isSelfDestination} type="tel" inputMode="tel" className={styles.input} placeholder="+61412345678" value={recipientPhone} onChange={handleRecipientPhoneChange} dir="ltr" />
-                    </div>
-                  </div>
-                  <div className={styles.field}>
-                    <label className={styles.label}>Recipient Email <span className={`${styles.req} ${styles.textAlignLtr}`}>*</span></label>
-                    <div className={styles.inputWrap}>
-                      <input required readOnly={isSelfDestination} type="email" className={styles.input} placeholder="user@mail.com" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} dir="ltr" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ══ IRT ══════════════════════════════════════════════════ */}
-          {!isAud && (
-            <div className={styles.ltr} dir="ltr" style={{ textAlign: "left" }}>
-              <div className={styles.section}>
-                <p className={styles.sectionTitle}>Account Information</p>
-                
-                {/* ── Sanctions Warning Banner ── */}
-                <div 
-                  dir="ltr"
-                  style={{ 
-                    backgroundColor: "rgba(255, 170, 0, 0.1)", 
-                    color: "#b27b00", 
-                    padding: "12px", 
-                    borderRadius: "8px", 
-                    fontSize: "13px", 
-                    marginBottom: "16px", 
-                    lineHeight: "1.5", 
-                    display: "flex", 
-                    alignItems: "flex-start", 
-                    gap: "8px",
-                    textAlign: "left"
-                  }}
-                >
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "2px" }} />
-                  <span>
-                    <strong>Sanctions Notice:</strong> The following banks are under active sanctions:{" "}
-                    <strong style={{ color: "#ef4444" }}>
-                      Bank Saderat Iran, Bank Mellat, Bank Sepah, Bank Melli Iran, Central Bank of Iran, Ansar Bank, and Mehr Bank
-                    </strong>. If your only accounts are held with these institutions, please select the <strong>Other</strong> option from the list below.
-                  </span>
-                </div>
-
-                <div className={styles.row}>
-                  <div className={styles.field}>
-                    <label className={styles.label}>Bank Name <span className={styles.req}>*</span></label>
-                    <SelectBox
-                      value={irtBankName}
-                      onChange={(val) => setIrtBankName(val)}
-                      placeholder="Select Bank..."
-                      labeledOptions={iranianBanks}
-                      disabled={saving}
-                      dir="ltr"
-                    />
-                  </div>
-                  <div className={styles.field}>
-                    <label className={styles.label}>IBAN (Shaba Number) <span className={styles.req}>*</span></label>
-                    <div className={styles.inputWrap} style={{ direction: "ltr" }}>
-                      <span className={styles.ibanPrefix}>IR</span>
-                      <input required type="text" inputMode="numeric" className={styles.input} placeholder="12-1111-1111-1111-1111-1111-11" value={shabaDisplay} onChange={handleShabaChange} maxLength={30} />
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.field}>
-                  <label className={styles.label}>Card Number (Optional)</label>
-                  <div className={styles.inputWrap}>
-                    <input type="text" inputMode="numeric" className={styles.input} placeholder="6037xxxxxxxxxxxx" value={irtCardNumber} onChange={handleIrtCardNumberChange} dir="ltr" />
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.section}>
-                <p className={styles.sectionTitle}>Account Holder Information</p>
-                <div className={styles.field}>
-                  <label className={styles.label}>Full Name <span className={styles.req}>*</span></label>
-                  <div className={styles.inputWrap}>
-                    <input required type="text" className={styles.input} placeholder="Type valid name in English" value={fullName} onChange={(e) => setFullName(e.target.value)} dir="ltr" />
-                  </div>
-                </div>
-                <div className={styles.field}>
-                  <label className={styles.label}>Full Residential Address <span className={styles.req}>*</span></label>
-                  <div className={styles.inputWrap}>
-                    <input required type="text" readOnly={isSelfDestination} className={styles.input} placeholder="Street address in English" value={irtAddress} onChange={(e) => setIrtAddress(e.target.value)} dir="ltr" />
-                  </div>
-                </div>
-                <div className={styles.row}>
-                  <div className={styles.field}>
-                    <label className={styles.label}>City <span className={styles.req}>*</span></label>
-                    <div className={styles.inputWrap}>
-                      <input required type="text" readOnly={isSelfDestination} className={styles.input} placeholder="City" value={irtCity} onChange={(e) => setIrtCity(e.target.value)} dir="ltr" />
-                    </div>
-                  </div>
-                  <div className={styles.field}>
-                    <label className={styles.label}>Province <span className={styles.req}>*</span></label>
-                    <div className={styles.inputWrap}>
-                      <input required type="text" readOnly={isSelfDestination} className={styles.input} placeholder="Province" value={irtState} onChange={(e) => setIrtState(e.target.value)} dir="ltr" />
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.row}>
-                  <div className={styles.field}>
-                    <label className={styles.label}>Postcode</label>
-                    <div className={styles.inputWrap}>
-                      <input type="text" readOnly={isSelfDestination} className={styles.input} placeholder="Postcode" value={irtPostcode} onChange={(e) => setIrtPostcode(e.target.value)} dir="ltr" />
-                    </div>
-                  </div>
-                  <div className={styles.field}>
-                    <label className={styles.label}>Country <span className={styles.req}>*</span></label>
-                    <div className={styles.inputWrap}>
-                      <input required type="text" readOnly={isSelfDestination} className={styles.input} placeholder="Country" value={irtCountry} onChange={(e) => setIrtCountry(e.target.value)} dir="ltr" />
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.field}>
-                  <label className={styles.label}>Phone Number <span className={styles.req}>*</span></label>
-                  <div className={styles.inputWrap}>
-                    <input required type="tel" readOnly={isSelfDestination} inputMode="tel" className={styles.input} placeholder="Type valid phone number in English" value={irtPhone} onChange={handleIrtPhoneChange} dir="ltr" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {errorMsg && <p className={styles.error} dir="ltr" style={{ textAlign: "left" }}>{errorMsg}</p>}
-
-          {/* ── Footer ── */}
-          <div className={styles.footer} dir="ltr" style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-            <button className={`${styles.saveBtn}${saving ? ` ${styles.loading}` : ""}`} type="submit" disabled={saving || (!isAud && !irtBankName)}>
-              {saving ? <><span className={styles.spinner} aria-hidden="true" /> Saving...</> : "Save Recipient"}
-            </button>
-            <button className={styles.cancelBtn} onClick={onClose} type="button" disabled={saving}>
-              Cancel
-            </button>
-          </div>
-
-        </form>
-      </div>
+        <footer className={styles.footer}><button type="button" className={styles.back} disabled={saving} onClick={()=>step===0 ? close():move(0)}>{step>0 && <ArrowLeft size={16}/>} {step===0 ? text("Cancel","انصراف"):text("Back","بازگشت")}</button><button type="submit" className={styles.save} disabled={saving}>{saving ? <><span className={styles.spinner}/>{text("Saving…","در حال ذخیره…")}</>:step===0 ? <>{text("Continue","ادامه")}<ArrowRight size={17}/></>:<>{text("Save recipient","ذخیره گیرنده")}<Check size={17}/></>}</button></footer>
+      </form>
     </div>
-  );
+  </dialog>;
 }

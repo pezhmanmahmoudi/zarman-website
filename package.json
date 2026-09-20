@@ -11,9 +11,9 @@
     "test:seo": "node scripts/validate-seo.mjs",
     "test:converter": "node scripts/test-public-converter.cjs",
     "test:bank-fees": "node --test scripts/test-bank-fees.mjs",
+    "test:dashboard": "node --test scripts/test-dashboard.cjs scripts/test-dashboard-experience.cjs",
     "test:requests": "node --test scripts/test-customer-requests-db.mjs scripts/test-request-messages-db.mjs scripts/test-request-bank-details-db.mjs scripts/test-request-approval-db.mjs scripts/test-request-customer-actions-db.mjs scripts/test-request-journey.cjs scripts/test-request-service.cjs scripts/test-request-interface.cjs scripts/test-request-notifications.mjs",
-    "test:admin": "node --test scripts/test-admin-reads.mjs scripts/test-admin-overlays.mjs scripts/test-admin-layout.cjs scripts/test-admin-editing.cjs scripts/test-admin-pagination.cjs scripts/test-treasury-workspace.cjs scripts/test-ledger-workspace.cjs scripts/test-austrac-deadlines.mjs scripts/test-austrac-compliance.mjs",
-    "test:dashboard": "node --test scripts/test-dashboard.cjs"
+    "test:admin": "node --test scripts/test-admin-reads.mjs scripts/test-admin-overlays.mjs scripts/test-admin-layout.cjs scripts/test-admin-editing.cjs scripts/test-admin-pagination.cjs scripts/test-treasury-workspace.cjs scripts/test-ledger-workspace.cjs scripts/test-austrac-deadlines.mjs scripts/test-austrac-compliance.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

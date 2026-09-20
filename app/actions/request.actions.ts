@@ -105,7 +105,7 @@ export async function createRequestQuote(input: QuoteInput): Promise<ActionResul
     if (education) {
       recipient = { label: input.institutionName!.trim(), institution_name: input.institutionName!.trim(), invoice_reference: input.invoiceReference!.trim(), direction: input.txType === "buy_aud" ? "aud" : "irt" };
     } else {
-      const lookup = await db.from("recipients").select("id,user_id,direction,label,bank_name,bsb,account_number,account_name,residential_address,residential_city,residential_state,residential_postcode,residential_country,recipient_email,recipient_phone,bank_type,card_number,shaba_number,irt_account_number,full_name,irt_address,irt_city,irt_state,irt_postcode,irt_country,irt_phone,updated_at").eq("id", input.recipientId).eq("user_id", user.id).single();
+      const lookup = await db.from("recipients").select("id,user_id,direction,label,bank_name,bank_city,bsb,account_number,account_name,residential_address,residential_city,residential_state,residential_postcode,residential_country,recipient_email,recipient_phone,bank_type,card_number,shaba_number,irt_account_number,full_name,irt_address,irt_city,irt_state,irt_postcode,irt_country,irt_phone,updated_at").eq("id", input.recipientId).eq("user_id", user.id).single();
       if (lookup.error || !lookup.data) throw new Error("The selected recipient is not available for your account.");
       recipient = lookup.data;
       if (recipient.direction !== (input.txType === "buy_aud" ? "aud" : "irt")) throw new Error("Choose a recipient for the correct destination currency.");

@@ -729,7 +729,8 @@ test("admin approval submits the chosen email policy and customer actions do not
   const customer = render("RequestDetailView", { id: request.id, locale: "en" }, { states: { 0: detail, 1: false } });
   assert.doesNotMatch(customer, /Approval actions|Send email|Confirm funds received|Add payment reference|Bank payment reference/);
   assert.match(customer, /customerLayout/); assert.doesNotMatch(customer, /adminWorkspace/);
-  assert.match(customer, /class="progress"/);
+  assert.match(customer, /class="journey"/);
+  assert.match(customer, /aria-label="Transfer progress"/);
 });
 
 const fundingAccounts = [

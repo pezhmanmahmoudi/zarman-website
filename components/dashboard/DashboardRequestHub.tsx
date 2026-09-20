@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Calculator, AlertTriangle, Lock, ServerCrash, PauseCircle, Tag, Banknote } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, AlertTriangle, Lock, ServerCrash, PauseCircle, Tag, Banknote } from "lucide-react";
 import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
 import { Profile } from "@/app/[locale]/dashboard/dashboard.types";
@@ -22,6 +22,7 @@ import { useT } from "@/hooks/useT";
 import { useLocale } from "@/context/LocaleContext";
 import { requestError } from "@/components/requests/request-labels";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { dashboardHref } from "@/lib/dashboard/navigation";
 
 // Keep the recorded values stable while displaying concise labels in the chosen language.
@@ -84,14 +85,20 @@ type RequestHubProps = {
   loyaltyBonus: number;
   tailoredRate: number | null; 
   baseRate: number | null;     
-  profile: Profile | null;     
+  profile: Profile | null;
+  initialRecipientId?: string | null;
 
 };
 
 export function DashboardRequestHub({ 
   isApproved, txType, setTxType, amountStr, setAmountStr, 
-  loyaltyBonus, tailoredRate, baseRate, profile
+  loyaltyBonus, tailoredRate, baseRate, profile, initialRecipientId
 }: RequestHubProps) { 
+  const [step, setStep] = useState(0);
+  const [stepError, setStepError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const router = useRouter();
+  const stepHeading = React.useRef<HTMLHeadingElement>(null);
   const NEW_RECIPIENT_VALUE = "__new__";
   const EDU_RECIPIENT_VALUE = "__edu_exam__";
   const SELF_DESTINATION_RECIPIENT_VALUE = "__my_destination_account__";
@@ -171,6 +178,13 @@ export function DashboardRequestHub({
   }, [isApproved]);
 
   const recipientDirection = txType === "buy_aud" ? "aud" : "irt";
+  const preselected = React.useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialRecipientId || preselected.current === initialRecipientId) return;
+    if (recipients.some(recipient=>recipient.id === initialRecipientId && recipient.direction === recipientDirection)) {
+      setSelectedRecipientId(initialRecipientId); preselected.current = initialRecipientId;
+    }
+  },[initialRecipientId,recipients,recipientDirection]);
   const filteredRecipients = recipients.filter((r) => r.direction === recipientDirection);
 
   const recipientOptions = [
@@ -336,6 +350,17 @@ export function DashboardRequestHub({
   };
 
 
+  function goToStep(next: number) {
+    if (submitted) return;
+    setStep(next); setStepError("");
+    requestAnimationFrame(()=>{ stepHeading.current?.focus({preventScroll:true}); stepHeading.current?.scrollIntoView({block:"nearest",behavior:"auto"}); });
+  }
+  function nextStep() {
+    if (step === 0 && (!Number.isFinite(rawAmount) || rawAmount <= 0 || isRateOffline)) { setStepError(locale === "fa" ? "مبلغ معتبر وارد کنید." : "Enter a valid amount."); return; }
+    if (step === 1 && (!sourceOfFunds || !reasonForTransfer || !selectedRecipientId || (isEduPayment && (!paymentLink.trim() || !institutionName.trim() || !invoiceReference.trim())))) { setStepError(t.hub.allFieldsRequired); return; }
+    goToStep(Math.min(2,step+1));
+  }
+
   if (!marketActive || isRateOffline || !isApproved) return <article className={`${cardStyles.panelCard} ${styles.unavailable}`}>
     {!marketActive ? <PauseCircle size={30}/> : isRateOffline ? <ServerCrash size={30}/> : <Lock size={30}/>}
     <h2>{!marketActive ? t.hub.marketPaused : isRateOffline ? t.hub.rateOfflineTitle : t.hub.accessLimited}</h2>
@@ -345,15 +370,15 @@ export function DashboardRequestHub({
 
   return (
     <article className={cardStyles.panelCard}>
-      <div className={cardStyles.panelHeader}>
-        <div className={styles.titleWrapper}>
-          <h2 className={styles.panelTitle}>
-            <Calculator size={26} className={styles.titleIcon} /> 
-            {locale === "fa" ? "جزئیات انتقال" : "Transfer details"}
-          </h2>
-        </div>
+      <ol className={styles.wizardSteps} aria-label={locale === "fa" ? "مراحل ثبت انتقال" : "New transfer steps"}>
+        {(locale === "fa" ? ["مبلغ", "گیرنده", "بررسی"] : ["Amount", "Recipient", "Review"]).map((label,index)=><li key={label} data-current={step === index} data-done={step > index}><button type="button" disabled={isSubmitting || submitted || index > step} onClick={()=>goToStep(index)} aria-current={step === index ? "step" : undefined}><span>{step > index ? <Check size={15}/> : index+1}</span>{label}</button></li>)}
+      </ol>
+      <div className={styles.wizardHeading} key={step}>
+        <h2 ref={stepHeading} tabIndex={-1}>{(locale === "fa" ? ["چقدر می‌خواهید ارسال کنید؟", "برای چه کسی می‌فرستید؟", "یک نگاه آخر، پیش از ثبت."] : ["How much would you like to send?", "Who are you sending to?", "One final look. Then you’re set."])[step]}</h2>
+        <p>{(locale === "fa" ? ["مسیر و مبلغ را انتخاب کنید.", "گیرنده را انتخاب کنید یا حساب جدیدی اضافه کنید.", "اطلاعات و نوع خدمت را پیش از ثبت بررسی کنید."] : ["Choose your direction and amount.", "Choose a saved recipient or add a new account.", "Review your details and service before submitting."])[step]}</p>
       </div>
-      
+      <div className={styles.wizardPanel} key={`panel-${step}`}>
+      {step === 0 && <>
       <div className={`${styles.formRow} ${styles.formRowCompact}`}>
         <div className={styles.inputBox}>
           <div className={styles.labelRow}>
@@ -430,6 +455,8 @@ export function DashboardRequestHub({
         </div>
       </div>
       
+      </>}
+      {step === 1 && <>
       <div className={styles.formRow}>
         <div className={styles.inputBox}>
           <label className={styles.label}>{t.hub.recipient} <span className={styles.requiredMark}>*</span></label>
@@ -501,6 +528,9 @@ export function DashboardRequestHub({
         </div>
       </div>
 
+      </>}
+      {step === 2 && <>
+        <div className={styles.reviewRecipient}><span>{locale === "fa" ? "گیرنده" : "Recipient"}</span><strong>{isEduPayment ? institutionName : recipients.find(recipient=>recipient.id === selectedRecipientId)?.label || (locale === "fa" ? "حساب انتخاب‌شده" : "Selected account")}</strong><button type="button" disabled={isSubmitting} onClick={()=>goToStep(1)}>{locale === "fa" ? "ویرایش" : "Edit"}</button></div>
       <div className={styles.formRow}>
         <div className={styles.inputBox}>
           <label className={`${styles.label} ${styles.labelWithIcon}`} htmlFor="request-promo-code">
@@ -534,7 +564,9 @@ export function DashboardRequestHub({
 
       </div>
       
-      <div className={styles.summaryBox}>
+      </>}
+      </div>
+      {step !== 1 && <div className={styles.summaryBox}>
         <div className={styles.summaryText}>
           <strong className={styles.summaryRate}>
             {t.hub.yourRate} {isRateOffline ? t.hub.rateOffline : formatNumberUI(activeRate, locale, true)} {locale === "fa" ? "تومان" : "Toman"}
@@ -578,9 +610,9 @@ export function DashboardRequestHub({
           )}
         </div>
 
-      </div>
+      </div>}
       
-      <OnlineRequestSubmit
+      {step === 2 && <OnlineRequestSubmit
         input={{ rawAmount, txType, sourceOfFunds, reasonForTransfer, recipientId: selectedRecipientId,
           promoCode: appliedPromoCode, paymentLink: isEduPayment ? paymentLink.trim() || null : null,
           institutionName: isEduPayment ? institutionName : undefined,
@@ -590,7 +622,10 @@ export function DashboardRequestHub({
           : isEduPayment && (!paymentLink.trim() || !institutionName.trim() || !invoiceReference.trim())
             ? (locale === "fa" ? "نام موسسه، شماره صورتحساب و لینک پرداخت را وارد کنید." : "Enter the institution name, invoice reference and payment link.") : null}
         onBusyChange={setIsSubmitting}
-      />
+        onSubmitted={request=>{setSubmitted(true);router.push(`/${locale}/dashboard/requests/${request.id}`);}}
+      />}
+      {stepError && <p role="alert" className={styles.promoError}>{stepError}</p>}
+      <div className={styles.wizardFooter}>{!submitted && step > 0 && <button type="button" className={styles.wizardBack} disabled={isSubmitting} onClick={()=>goToStep(step-1)}><ArrowLeft size={16}/>{locale === "fa" ? "بازگشت" : "Back"}</button>}{step < 2 && <button type="button" className={styles.wizardNext} onClick={nextStep}>{locale === "fa" ? (step === 0 ? "انتخاب گیرنده" : "بررسی انتقال") : (step === 0 ? "Choose recipient" : "Review transfer")}<ArrowRight size={17}/></button>}</div>
 
       {showRecipientModal && (
         <RecipientModal

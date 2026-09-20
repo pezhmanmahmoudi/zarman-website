@@ -71,7 +71,7 @@ export function RequestReceiptUpload({ request, receipts, admin = false, locale,
   }
 
   if (!admin && !journey.approved) return null;
-  return <section className={`${styles.card} ${compact.compactCard}`} dir={fa ? "rtl" : "ltr"}>
+  return <section id="request-receipt-upload" className={`${styles.card} ${compact.compactCard}`} dir={fa ? "rtl" : "ltr"}>
     <div className={compact.heading}><h2>{fa ? "رسید واریز" : admin ? "Payment evidence" : "Payment receipt"}</h2>{receipts.length > 0 && <span className={styles.badge}>{receipts.length}</span>}</div>
     {!admin && hasReceipt && !journey.fundsReceived && !journey.closed && <div className={compact.receiptStatus} role="status"><Clock3 size={17} aria-hidden="true" /><p>{fa ? "رسید ارسال شد؛ در حال بررسی واریز شما هستیم." : "Receipt sent — we are checking your payment."}</p></div>}
     {showForm && <form onSubmit={submit} className={`${compact.receiptForm} ${hasReceipt ? compact.additionalReceipt : ""}`}>

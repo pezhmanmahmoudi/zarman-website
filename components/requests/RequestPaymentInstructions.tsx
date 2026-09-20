@@ -43,7 +43,7 @@ export function RequestPaymentInstructions({ request, locale }: { request: Excha
   }
 
   function copyButton(key: string, label: string, value: string) {
-    return <button type="button" className={compact.copy} onClick={() => void copy(key, value)} aria-label={fa ? `کپی ${label}` : `Copy ${label}`}>
+    return <button type="button" className={compact.copy} data-copied={copied === key} onClick={() => void copy(key, value)} aria-label={fa ? `کپی ${label}` : `Copy ${label}`}>
       {copied === key ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
       {copied === key ? (fa ? "کپی شد" : "Copied") : (fa ? "کپی" : "Copy")}
     </button>;
@@ -81,7 +81,7 @@ export function RequestPaymentInstructions({ request, locale }: { request: Excha
     <summary>{fa ? "مشخصات حساب واریز" : "Payment details"}<ChevronDown size={16} aria-hidden="true" /></summary>
     <div className={compact.archiveBody}>{content}</div>
   </details>;
-  return <section className={`${styles.card} ${compact.compactCard}`} dir={fa ? "rtl" : "ltr"}>
+  return <section id="request-payment-details" className={`${styles.card} ${compact.compactCard}`} dir={fa ? "rtl" : "ltr"}>
     <div className={compact.heading}><h2><Landmark size={18} aria-hidden="true" />{fa ? "واریز وجه" : "Make your payment"}</h2></div>
     {content}
   </section>;

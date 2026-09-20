@@ -13,7 +13,7 @@ function events() {
 test("dashboard URLs preserve deep links, legacy transfer links and validated tabs", () => {
   const { dashboardTab, dashboardHref } = dashboardHarness().load("lib/dashboard/navigation.ts");
   for (const locale of ["en","fa"]) {
-    for (const tab of ["overview","transfer","history","profile","feedback"]) assert.equal(dashboardTab(`/${locale}/dashboard`,new URLSearchParams(`tab=${tab}`)),tab);
+    for (const tab of ["overview","transfer","recipients","history","profile","feedback"]) assert.equal(dashboardTab(`/${locale}/dashboard`,new URLSearchParams(`tab=${tab}`)),tab);
     assert.equal(dashboardHref(locale,"history"),`/${locale}/dashboard?tab=history`);
     assert.equal(dashboardTab(`/${locale}/dashboard/requests/abc`,new URLSearchParams()),"history");
     assert.equal(dashboardTab(`/${locale}/dashboard`,new URLSearchParams("tab=hub")),"transfer");
@@ -119,17 +119,25 @@ test("transfer direction and rate changes invalidate recipients and pending prom
   const {DashboardRequestHub} = harness.load("components/dashboard/DashboardRequestHub.tsx");
   const props = {isApproved:true,txType:"buy_aud",setTxType(){},amountStr:"1,000",setAmountStr(value){props.amountStr=value;},loyaltyBonus:0,tailoredRate:100000,baseRate:100000,profile:{id:"fixture"}};
   const render = () => harness.render(DashboardRequestHub,props);
-  render(); harness.effects(); await tick();
-  elements(render(),node=>node.type===SelectBox)[0].props.onChange("recipient-aud");
-  elements(render(),node=>node.props.id==="request-promo-code")[0].props.onChange({target:{value:"SAVE"}});
-  const apply = () => elements(render(),node=>node.type==="button" && String(node.props.className).includes("promoApplyBtn"))[0].props.onClick();
-  const pending = apply(); props.txType = "sell_aud"; render(); harness.effects();
-  resolvePromo({discount_amount:100,effective_rate:99900}); await pending;
-  let submitted = elements(render(),node=>node.type===OnlineRequestSubmit)[0].props.input;
-  assert.equal(submitted.recipientId,""); assert.equal(submitted.promoCode,null); assert.equal(submitted.txType,"sell_aud");
-  const second = apply(); props.tailoredRate = 100100; render(); harness.effects(); resolvePromo({discount_amount:100,effective_rate:99900}); await second;
-  assert.equal(elements(render(),node=>node.type===OnlineRequestSubmit)[0].props.input.promoCode,null);
   const previousRAF = global.requestAnimationFrame; global.requestAnimationFrame = () => 1;
-  try { elements(render(),node=>node.props.id==="request-amount-aud")[0].props.onChange({target:{value:"١٢٣٫٤٥"}}); assert.equal(props.amountStr,"123.45"); }
-  finally {global.requestAnimationFrame = previousRAF;}
+  try {
+    render(); harness.effects(); await tick();
+    const next = () => elements(render(),node=>node.type==="button" && String(node.props.className).includes("wizardNext"))[0].props.onClick();
+    next();
+    elements(render(),node=>node.type===SelectBox)[0].props.onChange("recipient-aud");
+    elements(render(),node=>node.type===SelectBox)[1].props.onChange("Loan");
+    elements(render(),node=>node.type===SelectBox)[2].props.onChange("Support Family");
+    next();
+    elements(render(),node=>node.props.id==="request-promo-code")[0].props.onChange({target:{value:"SAVE"}});
+    const apply = () => elements(render(),node=>node.type==="button" && String(node.props.className).includes("promoApplyBtn"))[0].props.onClick();
+    const pending = apply(); props.txType = "sell_aud"; render(); harness.effects();
+    resolvePromo({discount_amount:100,effective_rate:99900}); await pending;
+    let submitted = elements(render(),node=>node.type===OnlineRequestSubmit)[0].props.input;
+    assert.equal(submitted.recipientId,""); assert.equal(submitted.promoCode,null); assert.equal(submitted.txType,"sell_aud");
+    const second = apply(); props.tailoredRate = 100100; render(); harness.effects(); resolvePromo({discount_amount:100,effective_rate:99900}); await second;
+    assert.equal(elements(render(),node=>node.type===OnlineRequestSubmit)[0].props.input.promoCode,null);
+    const back = () => elements(render(),node=>node.type==="button" && String(node.props.className).includes("wizardBack"))[0].props.onClick();
+    back();back();
+    elements(render(),node=>node.props.id==="request-amount-aud")[0].props.onChange({target:{value:"\u0661\u0662\u0663\u066b\u0664\u0665"}}); assert.equal(props.amountStr,"123.45");
+  } finally {global.requestAnimationFrame = previousRAF;}
 });

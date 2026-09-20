@@ -13,9 +13,9 @@ import { requestDate, requestError, requestMoney } from "./request-labels";
 import styles from "@/styles/requests/Requests.module.css";
 import compact from "@/styles/requests/RequestPayment.module.css";
 
-type Props = { input: Omit<QuoteInput, "serviceTier">; disabled: boolean; validationMessage: string | null; onBusyChange?: (busy: boolean) => void };
+type Props = { input: Omit<QuoteInput, "serviceTier">; disabled: boolean; validationMessage: string | null; onBusyChange?: (busy: boolean) => void; onSubmitted?: (request: ExchangeRequest) => void };
 
-export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusyChange }: Props) {
+export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusyChange, onSubmitted }: Props) {
   const fa = input.locale === "fa";
   const numbers = new Intl.NumberFormat(fa ? "fa-IR" : "en-AU");
   const [policy, setPolicy] = useState<PublicRequestSettings | null>(null);
@@ -81,7 +81,7 @@ export function OnlineRequestSubmit({ input, disabled, validationMessage, onBusy
     try {
       const result = await submitExchangeRequest({ quoteId: activeQuote.id, commandKey: commandKey.current });
       if (result.error) setError(result.error);
-      else if (result.data) setSaved(result.data);
+      else if (result.data) { setSaved(result.data); onSubmitted?.(result.data); }
     } catch { setError(fa ? "تأیید ثبت دریافت نشد. با همین دکمه دوباره تلاش کنید." : "Submission could not be confirmed. Retry using this button."); }
     finally { submitting.current = false; setBusy(false); }
   }

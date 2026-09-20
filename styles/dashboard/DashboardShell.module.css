@@ -1,4 +1,5 @@
 .dashboardWrapper {
+  --color-text-primary:#282337;--color-text-secondary:#645d72;--color-bg-base:#f8f7fc;
   --bg-app:#f6f7fa;--bg-sidebar:#fff;--bg-card:#fff;--bg-soft:#f6f7fa;--bg-input:#fff;--bg-hover:#f0f2f7;
   --text-main:#182133;--text-soft:#5b6576;--text-dim:#71798a;--text-placeholder:#818899;
   --border-soft:#e6e9f0;--border-med:#d5dbe6;--border-input:#d5dbe6;--accent:#5546d9;--accent-hover:#4334bb;
@@ -10,6 +11,8 @@
   -webkit-font-smoothing:antialiased;color-scheme:light;isolation:isolate;
 }
 .dashboardWrapper[dir="rtl"] {font-family:var(--font-fa-stack)}
+.dashboardWrapper :where(h1,h2,h3,h4,h5,h6){color:var(--color-text-primary)}
+.dashboardWrapper[data-motion="off"] *,.dashboardWrapper[data-motion="off"] *::before,.dashboardWrapper[data-motion="off"] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 .dashboardWrapper[dir="ltr"] {--font-fa-stack:var(--font-en-stack)}
 .dashboardWrapper *,.dashboardWrapper *::before,.dashboardWrapper *::after {box-sizing:border-box}
 .dashboardWrapper :where(button,input,textarea,select) {font:inherit}

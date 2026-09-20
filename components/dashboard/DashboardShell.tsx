@@ -26,12 +26,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const data = useDashboardData(), locale = useLocale(), pathname = usePathname(), query = useSearchParams();
   const tab = dashboardTab(pathname, query), copy = dashboardCopy[locale];
   const [privateAmounts, setPrivateAmounts] = useState(false);
+  const [motion, setMotion] = useState(true);
   return <DashboardContext.Provider value={data}>
-    <div className={styles.dashboardWrapper} data-theme="light" data-private-amounts={privateAmounts} data-dashboard-shell dir={locale === "fa" ? "rtl" : "ltr"}>
+    <div className={styles.dashboardWrapper} data-theme="light" data-motion={motion ? "on" : "off"} data-private-amounts={privateAmounts} data-dashboard-shell dir={locale === "fa" ? "rtl" : "ltr"}>
       <a href="#dashboard-content" className={styles.skipLink}>{copy.skip}</a>
       <DashboardSidebar activeTab={tab} />
       <div className={styles.mainArea}>
-        <DashboardHeader activeTab={tab} profile={data.profile} privateAmounts={privateAmounts} onTogglePrivacy={() => setPrivateAmounts(value => !value)} />
+        <DashboardHeader activeTab={tab} profile={data.profile} privateAmounts={privateAmounts} onTogglePrivacy={() => setPrivateAmounts(value => !value)} motion={motion} onToggleMotion={() => setMotion(value => !value)} />
         <div id="dashboard-content" tabIndex={-1} className={styles.content}>
           {data.error && data.sessionChecked && <div className={styles.refreshNotice} role="status"><span>{copy.refreshError}</span><button onClick={() => void data.refresh()} disabled={data.loading}>{copy.retry}</button></div>}
           {data.error && !data.sessionChecked ? <section className={styles.errorState} role="alert"><h1>{copy.loadError}</h1><button onClick={() => void data.refresh()} disabled={data.loading}><RefreshCw size={17} />{copy.retry}</button></section>

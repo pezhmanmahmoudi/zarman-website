@@ -52,6 +52,7 @@ export type Recipient = {
   label: string;
   // AUD fields
   bank_name?: string | null;
+  bank_city?: string | null;
   bsb?: string | null;
   account_number?: string | null;
   account_name?: string | null;
