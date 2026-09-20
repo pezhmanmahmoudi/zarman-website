@@ -43,6 +43,7 @@ test("loyalty, personalised rates and savings use the existing financial configu
     const {DashboardOverview}=h.load("components/dashboard/DashboardOverview.tsx");
     const html=markup(React.createElement(DashboardOverview,{volume:2500,completedCount:2,tailoredRate:99900,baseRate:100000,loyaltyBonus:100}));
     assert.match(html,/aria-valuenow="50"/);assert.match(html,/500 AUD/);assert.match(html,/12,345/);
+    assert.match(html,/<bdi data-private-value="true">500 AUD<\/bdi>/);
     assert.match(html,/99,900/);assert.match(html,/100,000/);assert.match(html,/100 /);
     assert.match(html,locale==="en" ? /discount on the exchange-rate spread/:/تخفیف از فاصله نرخ خرید و فروش/);
     assert.match(html,new RegExp(`/${locale}/dashboard\\?tab=recipients`));
