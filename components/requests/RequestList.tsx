@@ -70,8 +70,8 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
     <header className={`${styles.header} ${workspace.header}`}>
       <div>{embedded ? <h2>{fa ? "درخواست‌های من" : "My requests"}</h2> : <h1>{admin ? "Request queue" : (fa ? "درخواست‌های من" : "My requests")}</h1>}</div>
       <div className={styles.actions}>
-        {!admin && !embedded && <Link className={styles.button} href={`/${locale}/dashboard`}>{fa ? "درخواست جدید" : "New request"}<ArrowRight size={16} /></Link>}
-        <button type="button" className={styles.secondary} onClick={() => void refresh()} disabled={refreshing}><RefreshCw size={16} />{fa ? "به‌روزرسانی" : "Refresh"}</button>
+        {!admin && !embedded && <Link className={`${styles.button} ${workspace.customerPrimary}`} href={`/${locale}/dashboard`}>{fa ? "درخواست جدید" : "New request"}</Link>}
+        <button type="button" className={`${styles.secondary} ${!admin ? workspace.customerSecondary : ""}`} onClick={() => void refresh()} disabled={refreshing}>{admin && <RefreshCw size={16} />}{refreshing ? (fa ? "در حال به‌روزرسانی…" : "Refreshing…") : (fa ? "به‌روزرسانی" : "Refresh")}</button>
       </div>
     </header>
     {admin && <RequestSettingsForm />}
@@ -98,10 +98,10 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
         const presentation = journeyPresentation(request, locale);
         return <Link className={`${styles.request} ${workspace.customerRequest}`} key={request.id} href={`/${locale}/dashboard/requests/${request.id}`}>
           <div><div className={styles.actions}><bdi className={styles.reference}>{request.reference_code}</bdi>{request.service_tier === "priority" && <span className={`${styles.badge} ${styles.priority}`}>{fa ? "اولویت‌دار" : "Priority"}</span>}</div>
-            <p className={workspace.transferAmount}><bdi>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</bdi> <span aria-hidden="true">{fa ? "←" : "→"}</span> <bdi>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</bdi></p>
+            <p className={workspace.transferAmount}><span><small>{fa ? "پرداخت شما" : "You send"}</small><bdi>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</bdi></span><span><small>{fa ? "دریافتی گیرنده" : "Recipient gets"}</small><bdi>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</bdi></span></p>
             <time dir="ltr" className={styles.muted} dateTime={request.created_at}>{requestDate(request.created_at, locale)}</time>
           </div>
-          <div className={workspace.customerRequestStatus}><span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{presentation.status}</span><span className={workspace.nextActor} data-actor={presentation.nextActor}>{fa ? "مرحله بعد" : "Next"} · {presentation.actorLabel}</span>{getRequestJourney(request).customerActionRequired && <span className={workspace.attention}>{fa ? "پیام زرمان را ببینید" : "View Zarman’s message"}</span>}<span className={workspace.openRequest}>{fa ? "مشاهده درخواست" : "View request"}<ArrowRight size={14} /></span></div>
+          <div className={workspace.customerRequestStatus}><span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{presentation.status}</span><span className={workspace.nextActor} data-actor={presentation.nextActor}>{fa ? "اقدام بعدی" : "Next actor"} · {presentation.actorLabel}</span>{getRequestJourney(request).customerActionRequired && <span className={workspace.attention}>{fa ? "پیام زرمان را ببینید" : "View Zarman’s message"}</span>}<span className={workspace.openRequest}>{fa ? "مشاهده درخواست" : "View request"}</span></div>
         </Link>;
       })}
       {!visible.length && !error && <div className={`${styles.card} ${styles.empty}`}>{fa ? "درخواستی در این بخش نیست." : "No requests in this view."}</div>}

@@ -4,9 +4,11 @@ import { useRef, useState } from "react";
 import { Mail, MessageSquare, Send } from "lucide-react";
 import { sendAdminRequestMessage, sendMyRequestMessage } from "@/app/actions/request.actions";
 import type { RequestLocale, RequestMessage } from "@/lib/requests/types";
+import { DashboardButton, StatusBadge, dashboardInputClass } from "@/components/dashboard/dashboard-ui";
 import { requestDate, requestError } from "./request-labels";
 import styles from "@/styles/requests/Requests.module.css";
 import workspace from "@/styles/requests/RequestWorkspace.module.css";
+import compact from "@/styles/requests/RequestPayment.module.css";
 
 export function RequestAdminMessageBanner({ messages, fallbackMessage, locale, replyRequired = false }: { messages: RequestMessage[]; fallbackMessage?: string | null; locale: RequestLocale; replyRequired?: boolean }) {
   const latest = [...messages].reverse().find(message => message.sender_role === "admin" && (!replyRequired || !fallbackMessage || message.body === fallbackMessage));
@@ -23,6 +25,7 @@ export function RequestConversation({ requestId, version, messages, admin = fals
   disabled?: boolean; onUpdated: () => Promise<void>; onSendingChange?: (sending: boolean) => void;
 }) {
   const fa = locale === "fa";
+  const customerInputClass = dashboardInputClass.replace(" disabled:opacity-60", "");
   const [message, setMessage] = useState("");
   const [sendEmail, setSendEmail] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -60,8 +63,8 @@ export function RequestConversation({ requestId, version, messages, admin = fals
     finally { pending.current = false; setBusy(false); onSendingChange?.(false); }
   }
 
-  return <section id="request-conversation" tabIndex={-1} aria-labelledby="request-conversation-title" className={`${styles.card} ${workspace.conversation}`}>
-    <div className={workspace.sectionHeading}><h2 id="request-conversation-title"><MessageSquare size={18} aria-hidden="true" />{admin ? "Customer messages" : (fa ? "پیام به مدیر" : "Message to admin")}</h2>{messages.length > 0 && <span className={styles.badge}>{messages.length}</span>}</div>
+  return <section id="request-conversation" tabIndex={-1} aria-labelledby="request-conversation-title" className={`${styles.card} ${workspace.conversation} ${!admin ? compact.customerConversation : ""}`}>
+    <div className={workspace.sectionHeading}><div className={compact.conversationTitle}>{!admin && <StatusBadge tone="neutral">{fa ? "پشتیبانی" : "Support"}</StatusBadge>}<h2 id="request-conversation-title"><MessageSquare size={18} aria-hidden="true" />{admin ? "Customer messages" : (fa ? "پیام به مدیر" : "Message to admin")}</h2></div>{messages.length > 0 && <span className={styles.badge}>{messages.length}</span>}</div>
     {messages.length > 4 && <button className={workspace.textButton} type="button" onClick={() => setShowAll(value => !value)}>{showAll ? (fa ? "نمایش پیام‌های اخیر" : "Show recent messages") : (fa ? `نمایش ${messages.length - 4} پیام قبلی` : `Show ${messages.length - 4} earlier messages`)}</button>}
     {visible.length > 0 && <ol className={workspace.messages}>{visible.map(item => {
       const own = item.sender_role === (admin ? "admin" : "customer");
@@ -72,8 +75,8 @@ export function RequestConversation({ requestId, version, messages, admin = fals
       </li>;
     })}</ol>}
     <form onSubmit={submit} className={workspace.messageForm}>
-      <label className={styles.field}>{admin ? "Reply to customer" : (fa ? "پیام شما" : "Your message")}<textarea value={message} onChange={event => { setMessage(event.target.value); setNotice(""); }} required minLength={1} maxLength={2000} rows={3} dir="auto" disabled={busy || disabled} placeholder={admin ? "Write a message…" : (fa ? "پیام خود را بنویسید…" : "Write your message…")} /></label>
-      <div className={workspace.messageControls}>{admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} disabled={busy || disabled} /><Mail size={16} aria-hidden="true" /><span>Send email</span></label>}<button className={styles.button} type="submit" disabled={busy || disabled || message.trim().length < 1}><Send size={16} aria-hidden="true" />{busy ? (fa ? "در حال ارسال…" : "Sending…") : (fa ? "ارسال پیام" : "Send message")}</button></div>
+      <label className={styles.field}>{admin ? "Reply to customer" : (fa ? "پیام شما" : "Your message")}<textarea className={!admin ? customerInputClass : undefined} value={message} onChange={event => { setMessage(event.target.value); setNotice(""); }} required minLength={1} maxLength={2000} rows={3} dir="auto" disabled={busy || disabled} placeholder={admin ? "Write a message…" : (fa ? "پیام خود را بنویسید…" : "Write your message…")} /></label>
+      <div className={workspace.messageControls}>{admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} disabled={busy || disabled} /><Mail size={16} aria-hidden="true" /><span>Send email</span></label>}{admin ? <button className={styles.button} type="submit" disabled={busy || disabled || message.trim().length < 1}><Send size={16} aria-hidden="true" />{busy ? (fa ? "در حال ارسال…" : "Sending…") : (fa ? "ارسال پیام" : "Send message")}</button> : <DashboardButton tone="primary" type="submit" disabled={busy || disabled || message.trim().length < 1}>{!busy && <Send size={16} aria-hidden="true" />}{busy ? (fa ? "در حال ارسال…" : "Sending…") : (fa ? "ارسال پیام" : "Send message")}</DashboardButton>}</div>
       {error && <p className={styles.error} role="alert">{requestError(error, locale)}</p>}{notice && <p className={workspace.saved} role="status">{notice}</p>}
     </form>
   </section>;

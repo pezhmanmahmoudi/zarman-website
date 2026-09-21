@@ -43,7 +43,7 @@ function load(file, { states = {}, actions = {}, captureEffects = false } = {}) 
         removeChannel: async () => undefined,
       } };
       if (id === "next/link") return { __esModule: true, default: props => React.createElement("a", props) };
-      if (id === "next/image") return { __esModule: true, default: props => React.createElement("img", props) };
+      if (id === "next/image") return { __esModule: true, default: props => { const attributes = { ...props }; delete attributes.unoptimized; return React.createElement("img", attributes); } };
       if (id.endsWith(".module.css")) {
         const cssPath = path.resolve(projectRoot, id.replace(/^@\//, ""));
         const classes = {};
@@ -55,9 +55,14 @@ function load(file, { states = {}, actions = {}, captureEffects = false } = {}) 
           throw Error(`Missing CSS class ${id}: ${key}`);
         } }) };
       }
+      if (id.endsWith(".css")) {
+        const cssPath = id.startsWith("@/") ? path.resolve(projectRoot, id.slice(2)) : path.resolve(path.dirname(filename), id);
+        postcss.parse(fs.readFileSync(cssPath, "utf8"));
+        return {};
+      }
       if (id.startsWith("./") || id.startsWith("@/")) {
         const base = id.startsWith("@/") ? path.resolve(projectRoot, id.slice(2)) : path.resolve(path.dirname(filename), id);
-        const dependency = [base, `${base}.tsx`, `${base}.ts`].find(candidate => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
+        const dependency = [base, `${base}.tsx`, `${base}.ts`, `${base}.jsx`, `${base}.js`].find(candidate => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
         if (dependency) return compile(dependency);
       }
       return require(id);
@@ -391,9 +396,9 @@ test("destination reconciliation follows confirmed funds and uses supported bank
 test("service selector prices Priority separately and submission waits for approval before exposing payment details", () => {
   const props = { input: { locale: "en" }, disabled: false, validationMessage: null };
   const html = render("OnlineRequestSubmit", props, { states: { 0: policy, 1: false } });
-  assert.match(html, /<legend>Service<\/legend>/); assert.match(html, /value="standard"/); assert.match(html, /value="priority"/);
+  assert.match(html, /<legend[^>]*>Choose your service<\/legend>/); assert.match(html, /value="standard"/); assert.match(html, /value="priority"/);
   assert.match(html, /25 AUD/); assert.match(html, /Priority timing starts after cleared funds and required checks are confirmed/);
-  assert.match(html, /<details[^>]*><summary>Service hours &amp; terms<\/summary>/);
+  assert.match(html, /<details[^>]*><summary[^>]*>Service hours &amp; terms<\/summary>/);
   const saved = render("OnlineRequestSubmit", props, { states: { 0: policy, 1: false, 8: { ...request, status: "submitted", payment_approved_at: null } } });
   assert.match(saved, /Request submitted/); assert.match(saved, /awaiting approval/);
   assert.doesNotMatch(saved, /012-345|0012345678|TEST BANK|Copy BSB|Send receipt/);
@@ -401,7 +406,7 @@ test("service selector prices Priority separately and submission waits for appro
   assert.match(saved, /href="\/en\/dashboard\/requests\/request-test"/);
   assert.doesNotMatch(saved, /will be notified|by email|queued for email/);
   const fa = render("OnlineRequestSubmit", { ...props, input: { locale: "fa" } }, { states: { 0: policy, 1: false } });
-  assert.match(fa, /dir="rtl"/); assert.match(fa, /<legend>سرویس<\/legend>/);
+  assert.match(fa, /dir="rtl"/); assert.match(fa, /<legend[^>]*>انتخاب سرویس<\/legend>/);
   assert.match(fa, /ساعات و شرایط سرویس/); assert.doesNotMatch(fa, /Priority timing|Service hours|Handling target/);
 });
 

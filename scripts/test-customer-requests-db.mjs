@@ -98,7 +98,10 @@ describe('customer request PostgreSQL workflow', { concurrency: false }, () => {
   });
   after(async () => { await db?.close(); });
   beforeEach(async () => {
-    await db.exec('BEGIN');
+    // Production request accounting is UTC (the fee journal function sets it
+    // explicitly). Keep current_date aligned with those canonical timestamps,
+    // including when this suite runs after midnight in a non-UTC host zone.
+    await db.exec("BEGIN; SET LOCAL TIME ZONE 'UTC'");
     await query("INSERT INTO auth.users(id,email,raw_app_meta_data) VALUES($1,'customer@example.invalid','{}'),($2,'other@example.invalid','{}'),($3,'admin@example.invalid','{\"role\":\"admin\"}')", [CUSTOMER, OTHER, ADMIN]);
     await query("INSERT INTO profiles(id,email,kyc_status) SELECT id,email,'approved' FROM auth.users");
     await query("INSERT INTO bank_accounts(id,account_name,currency) VALUES($1,'Synthetic AUD','AUD'),($2,'Synthetic IRT','IRT')", [AUD, IRT]);

@@ -1,8 +1,14 @@
-import type { Recipient } from "@/app/[locale]/dashboard/dashboard.types";
+import type { Recipient, RecipientRelationship } from "@/app/[locale]/dashboard/dashboard.types";
 
 type RecipientInput = Omit<Recipient, "id" | "user_id" | "created_at">;
 
-const commonFields = ["direction", "label", "bank_name"] as const;
+export type RecipientFieldErrors = Record<string, string>;
+export type RecipientInputResult =
+  | { data: RecipientInput; error?: never; fieldErrors?: never }
+  | { error: string; fieldErrors: RecipientFieldErrors; data?: never };
+
+const relationships: readonly RecipientRelationship[] = ["self", "family", "friend", "business", "other"];
+const commonFields = ["direction", "label", "bank_name", "relationship"] as const;
 const audFields = [
   ...commonFields,
   "bsb",
@@ -61,8 +67,15 @@ function isPresent(value: string | null | undefined): value is string {
   return typeof value === "string" && value.length > 0;
 }
 
+/** Keep identifiers as strings so translated numerals never lose leading zeroes. */
+export function normalizeRecipientDigits(value: string): string {
+  return value.replace(/[\u06f0-\u06f9\u0660-\u0669]/g, digit =>
+    String(digit.charCodeAt(0) - (digit.charCodeAt(0) >= 0x06f0 ? 0x06f0 : 0x0660)),
+  );
+}
+
 export function isValidIranianShaba(value: string): boolean {
-  const normalized = value.replace(/\s+/g, "").toUpperCase();
+  const normalized = normalizeRecipientDigits(value).replace(/\s+/g, "").toUpperCase();
   if (!/^IR\d{24}$/.test(normalized)) return false;
   const rearranged = `${normalized.slice(4)}1827${normalized.slice(2, 4)}`;
   let remainder = 0;
@@ -71,11 +84,19 @@ export function isValidIranianShaba(value: string): boolean {
 }
 
 /** Allow only editable fields. Ownership and identifiers always come from the server. */
-export function normalizeRecipientInput(input: unknown): { data: RecipientInput; error?: never } | { error: string; data?: never } {
-  if (!input || typeof input !== "object" || Array.isArray(input)) return { error: "Invalid recipient details." };
+export function normalizeRecipientInput(input: unknown): RecipientInputResult {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return { error: "Invalid recipient details.", fieldErrors: {} };
   const source = input as Record<string, unknown>;
   const data: Record<string, string | null> = {};
-  if (source.direction !== "aud" && source.direction !== "irt") return { error: "Invalid recipient direction." };
+  const fieldErrors: RecipientFieldErrors = {};
+  let error = "";
+  const fail = (field: string, message: string, summary = message) => {
+    if (!fieldErrors[field]) fieldErrors[field] = message;
+    if (!error) error = summary;
+  };
+  if (source.direction !== "aud" && source.direction !== "irt") {
+    return { error: "Invalid recipient direction.", fieldErrors: { direction: "Invalid recipient direction." } };
+  }
 
   const fields = source.direction === "aud" ? audFields : irtFields;
   for (const key of fields) {
@@ -85,34 +106,58 @@ export function normalizeRecipientInput(input: unknown): { data: RecipientInput;
       data[key] = null;
       continue;
     }
-    if (typeof value !== "string") return { error: "Invalid recipient details." };
+    if (typeof value !== "string") {
+      fail(key, "Invalid recipient details.");
+      continue;
+    }
     const limit = key === "bank_city" ? 120 : key.includes("address") ? 500 : 250;
     if (value.trim().length > limit) {
-      return { error: key === "bank_city" ? "Bank branch city must be 120 characters or fewer." : "A recipient field is too long." };
+      fail(key, key === "bank_city" ? "Bank branch city must be 120 characters or fewer." : "A recipient field is too long.");
+      continue;
     }
     data[key] = value.trim();
   }
 
   data.direction = source.direction;
   const required = source.direction === "aud" ? audRequired : irtRequired;
-  if (required.some((key) => !isPresent(data[key]))) return { error: "Complete all required recipient details." };
-
-  if (source.direction === "aud") {
-    if (!/^\d{6}$/.test(data.bsb!)) return { error: "BSB must contain exactly 6 digits." };
-    if (!/^\d{5,12}$/.test(data.account_number!)) return { error: "Account number must contain 5 to 12 digits." };
-    if (!/^\d{4}$/.test(data.residential_postcode!)) return { error: "Australian postcode must contain exactly 4 digits." };
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.recipient_email!)) return { error: "Enter a valid recipient email address." };
-    if (!/^\+?[0-9 ()-]{7,25}$/.test(data.recipient_phone!)) return { error: "Enter a valid recipient phone number." };
-  } else {
-    data.shaba_number = data.shaba_number!.toUpperCase();
-    if (!/^IR\d{24}$/.test(data.shaba_number)) return { error: "Shaba number must start with IR followed by 24 digits." };
-    if (!isValidIranianShaba(data.shaba_number)) return { error: "Enter a valid Iranian Shaba number." };
-    if (isPresent(data.card_number) && !/^\d{16}$/.test(data.card_number)) return { error: "Card number must contain exactly 16 digits." };
-    if ("card_number" in data && !isPresent(data.card_number)) data.card_number = null;
-    if ("bank_city" in data && !isPresent(data.bank_city)) data.bank_city = null;
-    if (isPresent(data.bank_type) && data.bank_type !== "bank_melli" && data.bank_type !== "other") return { error: "Invalid bank type." };
-    if (!/^\+?[0-9 ()-]{7,25}$/.test(data.irt_phone!)) return { error: "Enter a valid recipient phone number." };
+  for (const key of required) {
+    if (!isPresent(data[key])) fail(key, "This field is required.", "Complete all required recipient details.");
   }
 
+  if ("relationship" in data && !isPresent(data.relationship)) data.relationship = null;
+  if (isPresent(data.relationship) && !relationships.includes(data.relationship as RecipientRelationship)) {
+    fail("relationship", "Choose a valid recipient relationship.");
+  }
+
+  // Whitespace in pasted account identifiers is formatting, not part of the identifier.
+  // Other punctuation remains invalid; the UI may explicitly format BSB input.
+  for (const key of ["bsb", "account_number", "card_number", "shaba_number", "residential_postcode", "irt_postcode"] as const) {
+    if (typeof data[key] === "string") data[key] = normalizeRecipientDigits(data[key]).replace(/\s+/g, "");
+  }
+  for (const key of ["recipient_phone", "irt_phone"] as const) {
+    if (typeof data[key] === "string") data[key] = normalizeRecipientDigits(data[key]);
+  }
+  const validate = (key: string, pattern: RegExp, message: string) => {
+    if (isPresent(data[key]) && !pattern.test(data[key])) fail(key, message);
+  };
+
+  if (source.direction === "aud") {
+    validate("bsb", /^\d{6}$/, "BSB must contain exactly 6 digits.");
+    validate("account_number", /^\d{5,12}$/, "Account number must contain 5 to 12 digits.");
+    validate("residential_postcode", /^\d{4}$/, "Australian postcode must contain exactly 4 digits.");
+    validate("recipient_email", /^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Enter a valid recipient email address.");
+    validate("recipient_phone", /^\+?[0-9 ()-]{7,25}$/, "Enter a valid recipient phone number.");
+  } else {
+    if (typeof data.shaba_number === "string") data.shaba_number = data.shaba_number.toUpperCase();
+    validate("shaba_number", /^IR\d{24}$/, "Shaba number must start with IR followed by 24 digits.");
+    if (isPresent(data.shaba_number) && !isValidIranianShaba(data.shaba_number)) fail("shaba_number", "Enter a valid Iranian Shaba number.");
+    validate("card_number", /^\d{16}$/, "Card number must contain exactly 16 digits.");
+    if ("card_number" in data && !isPresent(data.card_number)) data.card_number = null;
+    if ("bank_city" in data && !isPresent(data.bank_city)) data.bank_city = null;
+    if (isPresent(data.bank_type) && data.bank_type !== "bank_melli" && data.bank_type !== "other") fail("bank_type", "Invalid bank type.");
+    validate("irt_phone", /^\+?[0-9 ()-]{7,25}$/, "Enter a valid recipient phone number.");
+  }
+
+  if (error) return { error, fieldErrors };
   return { data: data as RecipientInput };
 }

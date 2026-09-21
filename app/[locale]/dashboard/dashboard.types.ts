@@ -44,12 +44,14 @@ export type Transaction = {
 
 export type RecipientDirection = "aud" | "irt";
 export type BankType = "bank_melli" | "other";
+export type RecipientRelationship = "self" | "family" | "friend" | "business" | "other";
 
 export type Recipient = {
   id: string;
   user_id: string;
   direction: RecipientDirection;
   label: string;
+  relationship?: RecipientRelationship | null;
   // AUD fields
   bank_name?: string | null;
   bank_city?: string | null;

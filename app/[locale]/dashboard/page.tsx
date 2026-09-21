@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { ArrowUpRight, LogOut, MessageSquare, ShieldCheck } from "lucide-react";
+import { LogOut, MessageSquare } from "lucide-react";
 import { useRates } from "@/context/RateContext";
 import { useFinanceConfig } from "@/context/FinanceConfigContext";
 import { useLocale } from "@/context/LocaleContext";
@@ -11,8 +11,8 @@ import { calcLoyaltyDiscount } from "@/lib/pricing";
 import { supabase } from "@/lib/supabase";
 import { dashboardTab, dashboardCopy, dashboardHref } from "@/lib/dashboard/navigation";
 import { useDashboard, DashboardLoading } from "@/components/dashboard/DashboardShell";
-import { DashboardOverview, DashboardRateCard } from "@/components/dashboard/DashboardOverview";
-import styles from "@/styles/dashboard/DashboardHome.module.css";
+import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
+import { DashboardButton } from "@/components/dashboard/dashboard-ui";
 
 const DashboardRequestHub = dynamic(() => import("@/components/dashboard/DashboardRequestHub").then(m => m.DashboardRequestHub), { loading: DashboardLoading });
 const DashboardHistoryPanel = dynamic(() => import("@/components/dashboard/DashboardHistoryPanel").then(m => m.DashboardHistoryPanel), { loading: DashboardLoading });
@@ -21,7 +21,7 @@ const DashboardRecipients = dynamic(() => import("@/components/dashboard/Dashboa
 const DashboardFeedback = dynamic(() => import("@/components/dashboard/DashboardFeedback").then(m => m.DashboardFeedback), { loading: DashboardLoading });
 
 export default function ZarmanDashboard() {
-  const { profile, transactions } = useDashboard(), locale = useLocale(), copy = dashboardCopy[locale], router = useRouter();
+  const { profile, transactions, motionEnabled } = useDashboard(), locale = useLocale(), copy = dashboardCopy[locale], router = useRouter();
   const query = useSearchParams(), pathname = usePathname(), tab = dashboardTab(pathname,query);
   const { currentRates } = useRates(), finance = useFinanceConfig();
   const [amountStr,setAmountStr] = useState("1,000"), [txType,setTxType] = useState<"buy_aud"|"sell_aud">("buy_aud");
@@ -47,13 +47,10 @@ export default function ZarmanDashboard() {
   if (tab === "overview") return <DashboardOverview volume={volume} completedCount={completed.length} tailoredRate={tailoredRate} baseRate={baseRate} loyaltyBonus={loyalty} txType={txType}/>;
   if (tab === "recipients") return <DashboardRecipients key={profile?.id}/>;
   if (tab === "history") return <DashboardHistoryPanel/>;
-  if (tab === "transfer") return <div className={styles.page}>
-    <div className={styles.pageHeading}><div><h1>{copy.newTransfer}</h1><p className={styles.subtitle}>{copy.transferHint}</p></div><Link className={styles.textLink} href={dashboardHref(locale,"history")}>{copy.history}<ArrowUpRight size={15}/></Link></div>
-    <div className={styles.transferLayout}><DashboardRequestHub isApproved={approved} txType={txType} setTxType={setTxType} amountStr={amountStr} setAmountStr={setAmountStr} loyaltyBonus={loyalty} tailoredRate={tailoredRate} baseRate={baseRate} profile={profile} initialRecipientId={query.get("recipient")}/>
-      <aside className={styles.transferAside}><DashboardRateCard tailoredRate={tailoredRate} baseRate={baseRate} loyaltyBonus={loyalty} txType={txType} loyaltySavings={Number(profile?.loyalty_discount_toman||0)}/><div className={styles.helpCard}><ShieldCheck size={24}/><h2>{locale === "fa" ? "هر مرحله، با اطلاع شما." : "Clarity at every step."}</h2><p>{locale === "fa" ? "مشخصات بانکی پس از تأیید درخواست نمایش داده می‌شود. رسید را همان‌جا ارسال و وضعیت انتقال را دنبال کنید." : "Bank details appear after approval. Upload your receipt and follow the transfer in your dashboard."}</p><Link className={styles.textLink} href={dashboardHref(locale,"history")}>{copy.messages}<ArrowUpRight size={14}/></Link></div></aside>
-    </div>
-  </div>;
-  return <div className={styles.page}><div className={styles.pageHeading}><div><h1>{copy[tab]}</h1><p className={styles.subtitle}>{tab === "profile" ? copy.profileHint : locale === "fa" ? "تجربه شما برای ما مهم است." : "Help shape your Zarman experience."}</p></div></div>
-    {tab === "profile" ? <><div className={styles.mobileAccountActions}><Link className={styles.secondary} href={dashboardHref(locale,"feedback")}><MessageSquare size={16}/>{copy.feedback}</Link><button className={styles.secondary} onClick={() => void signOut()} disabled={signingOut}><LogOut size={16}/>{copy.signOut}</button>{signOutError && <p role="alert">{copy.retry}</p>}</div><DashboardProfile key={`${profile?.id}:${profile?.updated_at}:${profile?.kyc_status}`} profile={profile}/></> : <DashboardFeedback profileId={profile?.id||""}/>}
+  if (tab === "transfer") return <DashboardRequestHub isApproved={approved} txType={txType} setTxType={setTxType} amountStr={amountStr} setAmountStr={setAmountStr} loyaltyBonus={loyalty} tailoredRate={tailoredRate} baseRate={baseRate} profile={profile} initialRecipientId={query.get("recipient")} motionEnabled={motionEnabled}/>;
+  return <div className="space-y-7">
+    {tab === "profile" ? <><DashboardProfile key={`${profile?.id}:${profile?.updated_at}:${profile?.kyc_status}`} profile={profile} motionEnabled={motionEnabled}/>
+      <div className="flex flex-wrap items-center gap-2 border-t border-[#e9ecf0] pt-5 min-[900px]:hidden"><DashboardButton tone="quiet" asChild><Link href={dashboardHref(locale,"feedback")}><MessageSquare size={16}/>{copy.feedback}</Link></DashboardButton><DashboardButton tone="quiet" onClick={() => void signOut()} disabled={signingOut}><LogOut size={16}/>{copy.signOut}</DashboardButton>{signOutError && <p role="alert">{copy.retry}</p>}</div>
+    </> : <DashboardFeedback profileId={profile?.id||""} motionEnabled={motionEnabled}/>}
   </div>;
 }

@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { UserCircle2, ShieldCheck, AlertCircle, MessageCircle, Pencil, Check, X } from "lucide-react";
+import { Check, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import Stepper, { Step } from "@/components/Stepper";
+import { DashboardCard, DashboardButton, DashboardPageHeader, DashboardReveal, StatusBadge, dashboardInputClass } from "@/components/dashboard/dashboard-ui";
+import { DashboardMotionIcon } from "@/components/dashboard/DashboardMotionIcon";
+import { dashboardHref } from "@/lib/dashboard/navigation";
+import { cn } from "@/lib/utils";
 import { submitKycData, savePersonalData, updatePersonalIdentityData } from "@/app/actions/kyc.actions";
-import styles from "@/styles/dashboard/DashboardProfile.module.css";
-import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { AustralianLocationFields } from "@/components/dashboard/AustralianLocationFields";
@@ -93,9 +97,11 @@ function buildFormData(profile: DashboardProfileData | null | undefined): FormDa
   };
 }
 
-export function DashboardProfile({ profile }: { profile: DashboardProfileData | null }) {
+export function DashboardProfile({ profile, motionEnabled = true }: { profile: DashboardProfileData | null; motionEnabled?: boolean }) {
   const locale = useLocale();
   const isEn = locale === "en";
+  const [verificationStep, setVerificationStep] = useState(0);
+  const stepTitle = React.useRef<HTMLHeadingElement>(null);
   const hasSubmittedData = Boolean(profile?.document_type && profile?.document_type !== "later" && profile?.document_type !== "");
   const isApproved = profile?.kyc_status === "approved";
   const initialPersonalData = buildPersonalData(profile);
@@ -111,6 +117,7 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: "success" | "error" | ""; msg: string }>({ type: "", msg: "" });
+  const [manualSupportReady, setManualSupportReady] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -170,7 +177,7 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
       first_name: personalDraft.firstName,
       last_name: personalDraft.lastName,
       mobile_number: personalDraft.mobileNumber,
-    });
+    }).catch(() => ({ error: isEn ? "Could not save your details. Please try again." : "ذخیره اطلاعات ممکن نشد. لطفاً دوباره تلاش کنید." }));
 
     if (res.error) {
       setPersonalStatus({ type: "error", msg: res.error });
@@ -222,6 +229,10 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
     }
 
     setErrors(newErrors);
+    if (Object.keys(newErrors).length) {
+      if (["firstName", "lastName", "mobileNumber", "dob"].some(key => newErrors[key])) setVerificationStep(0);
+      else if (["address", "city", "state", "postalCode"].some(key => newErrors[key])) setVerificationStep(1);
+    }
     return Object.keys(newErrors).length === 0;
   };
 
@@ -255,11 +266,12 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
       expiry_date: formData.expiryDate || null,
       consent_notice: isNonAustralian ? true : formData.consentNotice,
       consent_dvs: isNonAustralian ? true : formData.consentDVS,
-    });
+    }).catch(() => ({ error: isEn ? "Could not submit verification. Your details are still here. Please try again." : "ثبت احراز هویت ممکن نشد. اطلاعات شما حفظ شده است؛ دوباره تلاش کنید." }));
 
     if (result.error) {
       setSubmitStatus({ type: "error", msg: result.error });
     } else {
+      setManualSupportReady(false);
       setSubmitStatus({
         type: "success",
         msg: isEn
@@ -290,13 +302,14 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
       city: formData.city,
       state: formData.state,
       postcode: formData.postalCode,
-    });
+    }).catch(() => ({ error: isEn ? "Could not save your details. Please try again." : "ذخیره اطلاعات ممکن نشد. لطفاً دوباره تلاش کنید." }));
 
     if (result.error) {
       win?.close();
       setSubmitStatus({ type: "error", msg: result.error });
     } else {
       if (win) win.location.href = whatsappLink;
+      setManualSupportReady(true);
       setSubmitStatus({ type: "success", msg: isEn ? "Information saved. Redirecting to WhatsApp..." : "اطلاعات ذخیره شد. در حال انتقال به واتس‌اپ..." });
     }
 
@@ -307,7 +320,7 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
     ? "Hello. I do not have an Australian driver's licence or passport. Please help me with identity verification."
     : "سلام. من گواهینامه و پاسپورت استرالیا ندارم، برای احراز هویت به من کمک کنید.";
   const whatsappLink = `https://wa.me/61497851631?text=${encodeURIComponent(whatsappMessage)}`;
-  const showSubmitSuccessOnly = submitStatus.type === "success";
+  const showSubmitSuccessOnly = submitStatus.type === "success" && !manualSupportReady;
   const kycStatus = String(profile?.kyc_status ?? "").toLowerCase();
   const isPendingReview = hasSubmittedData && ["pending", "under_review"].includes(kycStatus);
   const isWaitingStage = !isApproved && (showSubmitSuccessOnly || isPendingReview);
@@ -338,172 +351,8 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
     label: cityName,
   }));
 
-  return (
-    <article className={`${cardStyles.panelCard} ${styles.allowOverflow}`}>
-      <div className={styles.profileHeader}>
-        <h2 className={`${cardStyles.panelTitle} ${styles.persianTitle}`}>
-          <UserCircle2 size={24} /> {isEn ? "Identity & Security Information" : "اطلاعات هویتی و امنیتی"}
-        </h2>
-      </div>
-      
-      <div className={styles.mainContentWrapper}>
-        <div className={styles.formCompact}>
-          <div className={styles.personalEditBar}>
-            
-            <div className={styles.personalEditActions}>
-              {!isEditingPersonal ? (
-                <button
-                  type="button"
-                  className={styles.editBtn}
-                  onClick={startPersonalEdit}
-                  disabled={isSubmitting || isSavingPersonal}
-                >
-                  <Pencil size={14} />
-                  Edit
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className={styles.saveBtn}
-                    onClick={savePersonalEdit}
-                    disabled={isSavingPersonal || isSubmitting}
-                  >
-                    <Check size={14} />
-                    {isSavingPersonal ? "Saving..." : "Save"}
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.cancelBtn}
-                    onClick={cancelPersonalEdit}
-                    disabled={isSavingPersonal || isSubmitting}
-                  >
-                    <X size={14} />
-                    Cancel
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className={styles.row}>
-            <div className={styles.inputGroup}>
-              <label>First Name {profile?.middle_name && "(Middle Name)"}</label>
-              <input
-                type="text"
-                name="firstName"
-                value={isEditingPersonal ? personalDraft.firstName : personalData.firstName}
-                onChange={handlePersonalChange}
-                readOnly={!isEditingPersonal}
-                className={`${!isEditingPersonal ? styles.readOnlyInput : ""} ${errors.firstName ? styles.errorBorder : ""}`}
-              />
-              {errors.firstName && <span className={styles.errorText}>{errors.firstName}</span>}
-            </div>
-            <div className={styles.inputGroup}>
-              <label>Last Name</label>
-              <input
-                type="text"
-                name="lastName"
-                value={isEditingPersonal ? personalDraft.lastName : personalData.lastName}
-                onChange={handlePersonalChange}
-                readOnly={!isEditingPersonal}
-                className={`${!isEditingPersonal ? styles.readOnlyInput : ""} ${errors.lastName ? styles.errorBorder : ""}`}
-              />
-              {errors.lastName && <span className={styles.errorText}>{errors.lastName}</span>}
-            </div>
-          </div>
-
-          <div className={styles.row}>
-            <div className={styles.inputGroup}>
-              <label>Email Address</label>
-              <input type="email" value={profile?.email || "—"} readOnly className={styles.readOnlyInput} />
-            </div>
-            <div className={styles.inputGroup}>
-              <label>Mobile Number</label>
-              <input
-                type="text"
-                name="mobileNumber"
-                value={isEditingPersonal ? personalDraft.mobileNumber : personalData.mobileNumber}
-                onChange={handlePersonalChange}
-                readOnly={!isEditingPersonal}
-                className={`${!isEditingPersonal ? styles.readOnlyInput : ""} ${errors.mobileNumber ? styles.errorBorder : ""}`}
-              />
-              {errors.mobileNumber && <span className={styles.errorText}>{errors.mobileNumber}</span>}
-            </div>
-          </div>
-
-          {personalStatus && (
-            <div className={personalStatus.type === "success" ? styles.successMessage : styles.errorTextFa}>
-              <p style={{ textAlign: "center", width: "100%", margin: 0 }}>{personalStatus.msg}</p>
-            </div>
-          )}
-        </div>
-
-        <div className={styles.divider}></div>
-
-        <div className={styles.kycSection}>
-          {isEntryStage && <h3 className={styles.persianSectionTitle}>{isEn ? "Complete Your Information" : "تکمیل اطلاعات"}</h3>}
-
-          {isEntryStage && (
-            <div className={`${styles.stageBanner} ${styles.stageBannerEntry} ${isEn ? styles.stageBannerLtr : ""}`}>
-              <AlertCircle size={18} aria-hidden="true" />
-              <div>
-                <p>
-                  {isEn
-                    ? <>Please enter your details carefully. <strong>All fields must be completed using English characters only.</strong></>
-                    : <>اطلاعات را کاملاً دقیق ثبت کنید. <strong>تمام فیلدها باید فقط با حروف انگلیسی (English) تکمیل شوند.</strong></>}
-                </p>
-                <p className={styles.stageBannerSubtext}>
-                  {isEn
-                    ? "After submission, identity review usually takes less than 10 minutes. Once approved, your request panel will be activated."
-                    : "پس از ثبت اطلاعات، بررسی هویت معمولاً کمتر از ۱۰ دقیقه زمان می‌برد و پس از تأیید، پنل درخواست‌ها فعال می‌شود."}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {isWaitingStage && (
-            <div className={`${styles.stageBanner} ${styles.stageBannerWaiting} ${isEn ? styles.stageBannerLtr : ""}`}>
-              <ShieldCheck size={18} aria-hidden="true" />
-              <p>{isEn ? "Your identity verification request has been submitted. Review usually takes less than 10 minutes. Please refresh this page shortly." : "درخواست احراز هویت شما ثبت شد. بررسی معمولاً کمتر از ۱۰ دقیقه زمان می‌برد. لطفاً چند دقیقه دیگر صفحه را تازه‌سازی کنید."}</p>
-            </div>
-          )}
-
-          {isVerifiedStage && (
-            <div className={`${styles.stageBanner} ${styles.stageBannerVerified} ${isEn ? styles.stageBannerLtr : ""}`}>
-              <ShieldCheck size={18} aria-hidden="true" />
-              <p>{isEn ? "Your identity verification has been approved successfully. You can now use the request panel." : "احراز هویت شما با موفقیت تأیید شد. اکنون می‌توانید از پنل درخواست‌ها استفاده کنید."}</p>
-            </div>
-          )}
-
-          {isEntryStage && (
-            <div className={styles.formCompact}>
-              
-              <div className={styles.row}>
-                <div className={styles.inputGroup}>
-                  <label>Date of Birth <span className={styles.req}>*</span></label>
-                  <CustomDatePicker
-                    value={formData.dob}
-                    onChange={(val: string) => {
-                      setFormData((prev) => ({ ...prev, dob: val }));
-                      if (errors.dob) setErrors((prev) => ({ ...prev, dob: "" }));
-                    }}
-                    placeholder="dd/mm/yyyy"
-                    disabled={isSubmitting}
-                    className={errors.dob ? styles.errorBorder : ""}
-                  />
-                  {errors.dob && <span className={styles.errorText}>{errors.dob}</span>}
-                </div>
-                <div className={styles.inputGroup}>
-                  <label>Residential Country <span className={styles.req}>*</span></label>
-                  <SelectBox
-                    value={formData.country}
-                    onChange={(val) => {
-                      // در زمان تغییر کشور، فیلدهای آدرس را بازنشانی می‌کنیم
-                      setFormData((prev) => ({ ...prev, country: val, state: "", city: "", postalCode: "" }));
-                    }}
-                    placeholder="Select country..."
-                    groups={[
+  const text = (en: string, fa: string) => isEn ? en : fa;
+  const countryGroups = [
                       {
                         label: "Common",
                         options: [
@@ -532,274 +381,75 @@ export function DashboardProfile({ profile }: { profile: DashboardProfileData | 
                           "Vietnam","Yemen",
                         ],
                       },
-                    ]}
-                  />
-                </div>
-              </div>
+                    ];
+  const fieldClass = "space-y-2";
+  const labelClass = "block text-sm font-medium text-[#182027]";
+  const selectClass = "[&>button]:min-h-12 [&>button]:rounded-2xl [&>button]:border-[#e9ecf0] [&>button]:bg-white [&>button]:text-[#182027]";
+  const fieldError = (name: string) => errors[name] ? <p id={`profile-error-${name}`} role="alert" className="m-0 text-xs leading-relaxed text-rose-700">{isEn || name === "consents" ? errors[name] : "لطفاً این فیلد را تکمیل کنید."}</p> : null;
+  const changeField = (name: keyof FormDataState, value: string) => {
+    setFormData(previous => ({ ...previous, [name]: value }));
+    setErrors(previous => ({ ...previous, [name]: "" }));
+  };
+  function nextVerificationStep() {
+    if (isEditingPersonal) { setPersonalStatus({type:"error",msg:text("Save or cancel your personal details first.", "ابتدا اطلاعات شخصی را ذخیره یا لغو کنید.")}); return; }
+    const invalid: Record<string,string> = {};
+    if (verificationStep === 0) {
+      if (!personalData.firstName.trim()) invalid.firstName = "First Name is required.";
+      if (!personalData.lastName.trim()) invalid.lastName = "Last Name is required.";
+      if (!personalData.mobileNumber.trim()) invalid.mobileNumber = "Mobile Number is required.";
+      if (!formData.dob) invalid.dob = "Date of Birth is required.";
+    } else {
+      for (const name of ["address","city","state","postalCode"] as const) if (!formData[name].trim()) invalid[name] = "This field is required.";
+    }
+    setErrors(invalid);
+    if (Object.keys(invalid).length) return;
+    setVerificationStep(value => Math.min(2,value + 1));
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => stepTitle.current?.focus({preventScroll:true}));
+  }
+  const input = (name: keyof FormDataState, en: string, fa: string) => <div className={fieldClass}><label className={labelClass} htmlFor={`profile-${name}`}>{text(en,fa)}</label><input id={`profile-${name}`} name={name} value={typeof formData[name] === "string" ? formData[name] : ""} onChange={handleChange} disabled={isSubmitting} className={dashboardInputClass} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `profile-error-${name}` : undefined}/>{fieldError(name)}</div>;
+  const date = (name: "dob" | "expiryDate", en: string, fa: string) => <div className={fieldClass}><label className={labelClass}>{text(en,fa)}</label><CustomDatePicker value={formData[name]} onChange={value => changeField(name,value)} placeholder="dd/mm/yyyy" disabled={isSubmitting} className={cn("[&_input]:min-h-12 [&_input]:rounded-2xl [&_input]:border-[#e9ecf0] [&_input]:text-[#182027]",errors[name] && "[&_input]:border-rose-400")}/>{fieldError(name)}</div>;
+  const personalSection = <section aria-label={text("Personal details", "اطلاعات شخصی")} className="space-y-5">
+    <div className="flex items-center justify-between gap-3"><h2 className="m-0! text-base font-semibold text-[#182027]!">{text("Personal details", "اطلاعات شخصی")}</h2>{!isEditingPersonal && <DashboardButton tone="quiet" onClick={startPersonalEdit} disabled={isSubmitting || isSavingPersonal}>{text("Edit", "ویرایش")}</DashboardButton>}</div>
+    {isEditingPersonal ? <><div className="grid gap-4 sm:grid-cols-2">{([{name:"firstName",en:"First name",fa:"نام"},{name:"lastName",en:"Last name",fa:"نام خانوادگی"},{name:"mobileNumber",en:"Mobile number",fa:"شماره همراه"}] as const).map(field => <div key={field.name} className={fieldClass}><label className={labelClass} htmlFor={`personal-${field.name}`}>{text(field.en,field.fa)}</label><input id={`personal-${field.name}`} name={field.name} value={personalDraft[field.name]} onChange={handlePersonalChange} className={dashboardInputClass} disabled={isSavingPersonal || isSubmitting} aria-invalid={Boolean(errors[field.name])} aria-describedby={errors[field.name] ? `profile-error-${field.name}` : undefined}/>{fieldError(field.name)}</div>)}</div><div className="flex flex-wrap gap-3"><DashboardButton onClick={savePersonalEdit} disabled={isSavingPersonal || isSubmitting}>{isSavingPersonal ? text("Saving…", "در حال ذخیره…") : text("Save details", "ذخیره اطلاعات")}</DashboardButton><DashboardButton tone="secondary" onClick={cancelPersonalEdit} disabled={isSavingPersonal || isSubmitting}>{text("Cancel", "لغو")}</DashboardButton></div></> : <dl className="m-0 grid gap-5 sm:grid-cols-2">{[{name:"firstName",label:text("Full name", "نام کامل"),value:[personalData.firstName,profile?.middle_name,personalData.lastName].filter(Boolean).join(" ")},{name:"mobileNumber",label:text("Mobile number", "شماره همراه"),value:personalData.mobileNumber},{name:"email",label:text("Email", "ایمیل"),value:profile?.email}].map(field => <div key={field.name}><dt className="text-xs text-[#626a76]">{field.label}</dt><dd className="m-0 mt-1.5 break-words text-sm font-medium text-[#182027]" data-private-value><bdi>{field.value || "—"}</bdi></dd>{fieldError(field.name)}</div>)}</dl>}
+    {!isEditingPersonal && fieldError("lastName")}
+    {personalStatus && <p role={personalStatus.type === "error" ? "alert" : "status"} className={cn("m-0 text-sm leading-relaxed",personalStatus.type === "success" ? "text-emerald-700" : "text-rose-700")}>{personalStatus.msg}</p>}
+  </section>;
+  const stepLabels = isEn ? ["Your details", "Address", "Verification"] : ["اطلاعات شما", "نشانی", "احراز هویت"];
 
-              <div className={styles.inputGroup}>
-                <label>Residential Address (Street) <span className={styles.req}>*</span></label>
-                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Unit, Street Address" className={errors.address ? styles.errorBorder : ""} />
-                <span className={styles.fieldHint}>
-                  Use your residential address exactly as it appears on your bank record or identity document.
-                </span>
-                {errors.address && <span className={styles.errorText}>{errors.address}</span>}
-              </div>
-
-              <div className={styles.row3}>
-                {formData.country === "Australia" ? (
-                  <AustralianLocationFields
-                    key={normalizeAustralianState(formData.state) || "AU"}
-                    state={normalizeAustralianState(formData.state)}
-                    city={formData.city}
-                    postalCode={formData.postalCode}
-                    disabled={isSubmitting}
-                    errors={{
-                      state: errors.state,
-                      city: errors.city,
-                      postalCode: errors.postalCode,
-                    }}
-                    onStateChange={(value) => {
-                      setFormData((prev) => ({ ...prev, state: value, city: "", postalCode: "" }));
-                      setErrors((prev) => ({ ...prev, state: "", city: "", postalCode: "" }));
-                    }}
-                    onCityChange={(value) => {
-                      setFormData((prev) => ({ ...prev, city: value }));
-                      if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
-                    }}
-                    onPostalCodeChange={(value) => {
-                      setFormData((prev) => ({ ...prev, postalCode: value }));
-                      if (errors.postalCode) setErrors((prev) => ({ ...prev, postalCode: "" }));
-                    }}
-                  />
-                ) : formData.country === "Iran" ? (
-                  <>
-                    <div className={styles.inputGroup}>
-                      <label>State/Province <span className={styles.req}>*</span></label>
-                      <SelectBox
-                        value={formData.state}
-                        onChange={(val) => {
-                          setFormData((prev) => ({ 
-                            ...prev, 
-                            state: val, 
-                            city: ""
-                          }));
-                          if (errors.state) setErrors((prev) => ({ ...prev, state: "" }));
-                          if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
-                        }}
-                        placeholder="Select Province..."
-                        labeledOptions={iranProvinces}
-                        disabled={isSubmitting}
-                      />
-                      {errors.state && <span className={styles.errorText}>{errors.state}</span>}
-                    </div>
-
-                    <div className={styles.inputGroup}>
-                      <label>City / Suburb <span className={styles.req}>*</span></label>
-                      <SelectBox
-                        value={formData.city}
-                        onChange={(val) => {
-                          setFormData((prev) => ({ ...prev, city: val }));
-                          if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
-                        }}
-                        placeholder="Select City..."
-                        labeledOptions={iranCities}
-                        disabled={!formData.state || isSubmitting}
-                      />
-                      {errors.city && <span className={styles.errorText}>{errors.city}</span>}
-                    </div>
-
-                    <div className={styles.inputGroup}>
-                      <label>Postal Code <span className={styles.req}>*</span></label>
-                      <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="Postal code" className={errors.postalCode ? styles.errorBorder : ""} disabled={isSubmitting} />
-                      {errors.postalCode && <span className={styles.errorText}>{errors.postalCode}</span>}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className={styles.inputGroup}>
-                      <label>State/Province <span className={styles.req}>*</span></label>
-                      <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State" className={errors.state ? styles.errorBorder : ""} disabled={isSubmitting} />
-                      {errors.state && <span className={styles.errorText}>{errors.state}</span>}
-                    </div>
-
-                    <div className={styles.inputGroup}>
-                      <label>City / Suburb <span className={styles.req}>*</span></label>
-                      <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City / Suburb" className={errors.city ? styles.errorBorder : ""} disabled={isSubmitting} />
-                      {errors.city && <span className={styles.errorText}>{errors.city}</span>}
-                    </div>
-
-                    <div className={styles.inputGroup}>
-                      <label>Postal Code <span className={styles.req}>*</span></label>
-                      <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} placeholder="Postal code" className={errors.postalCode ? styles.errorBorder : ""} disabled={isSubmitting} />
-                      {errors.postalCode && <span className={styles.errorText}>{errors.postalCode}</span>}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {formData.country === "Australia" && (
-                <>
-                  <div className={styles.inputGroup}>
-                    <label>Identity Document <span className={styles.req}>*</span></label>
-                    <SelectBox
-                      value={formData.docType}
-                      onChange={(val) => {
-                        setFormData((prev) => ({ ...prev, docType: val, stateOfIssue: "" }));
-                        if (errors.docType) setErrors((prev) => ({ ...prev, docType: "" }));
-                      }}
-                      placeholder="Select Identity Document..."
-                      labeledOptions={[
-                        { value: "driver_license", label: "Australian Driver's Licence" },
-                        { value: "passport",       label: "Australian Passport" },
-                        { value: "none",           label: "None of the above" },
-                      ]}
-                      disabled={isSubmitting}
-                    />
-                    {errors.docType && <span className={styles.errorText}>{errors.docType}</span>}
-                  </div>
-
-                  {formData.docType === "driver_license" && (
-                    <>
-                      <div className={styles.inputGroup}>
-                        <label>State of Issue <span className={styles.req}>*</span></label>
-                        <SelectBox
-                          value={formData.stateOfIssue}
-                          onChange={(val) => {
-                            setFormData((prev) => ({ ...prev, stateOfIssue: val }));
-                            if (errors.stateOfIssue) setErrors((prev) => ({ ...prev, stateOfIssue: "" }));
-                          }}
-                          placeholder="Select state..."
-                          labeledOptions={[
-                            { value: "ACT", label: "ACT (Australian Capital Territory)" },
-                            { value: "NSW", label: "NSW (New South Wales)" },
-                            { value: "NT", label: "NT (Northern Territory)" },
-                            { value: "QLD", label: "QLD (Queensland)" },
-                            { value: "SA", label: "SA (South Australia)" },
-                            { value: "TAS", label: "TAS (Tasmania)" },
-                            { value: "VIC", label: "VIC (Victoria)" },
-                            { value: "WA", label: "WA (Western Australia)" },
-                          ]}
-                          disabled={isSubmitting}
-                        />
-                        {errors.stateOfIssue && <span className={styles.errorText}>{errors.stateOfIssue}</span>}
-                      </div>
-                      <div className={styles.row3}>
-                        <div className={styles.inputGroup}>
-                          <label>Licence Number <span className={styles.req}>*</span></label>
-                          <input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} placeholder="Licence number" className={errors.licenseNumber ? styles.errorBorder : ""} />
-                          {errors.licenseNumber && <span className={styles.errorText}>{errors.licenseNumber}</span>}
-                        </div>
-                        <div className={styles.inputGroup}>
-                          <label>Card Number <span className={styles.req}>*</span></label>
-                          <input type="text" name="cardNumber" value={formData.cardNumber} onChange={handleChange} placeholder="Card number (front or back)" className={errors.cardNumber ? styles.errorBorder : ""} />
-                          {errors.cardNumber && <span className={styles.errorText}>{errors.cardNumber}</span>}
-                        </div>
-                        <div className={styles.inputGroup}>
-                          <label>Expiry Date <span className={styles.req}>*</span></label>
-                          <CustomDatePicker
-                            value={formData.expiryDate}
-                            onChange={(val: string) => {
-                              setFormData((prev) => ({ ...prev, expiryDate: val }));
-                              if (errors.expiryDate) setErrors((prev) => ({ ...prev, expiryDate: "" }));
-                            }}
-                            placeholder="dd/mm/yyyy"
-                            disabled={isSubmitting}
-                            className={errors.expiryDate ? styles.errorBorder : ""}
-                          />
-                          {errors.expiryDate && <span className={styles.errorText}>{errors.expiryDate}</span>}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {formData.docType === "passport" && (
-                    <div className={styles.row}>
-                      <div className={styles.inputGroup}>
-                        <label>Document Number <span className={styles.req}>*</span></label>
-                        <input type="text" name="passportNumber" value={formData.passportNumber} onChange={handleChange} placeholder="Passport Number" className={errors.passportNumber ? styles.errorBorder : ""} />
-                        {errors.passportNumber && <span className={styles.errorText}>{errors.passportNumber}</span>}
-                      </div>
-                      <div className={styles.inputGroup}>
-                        <label>Expiry Date <span className={styles.req}>*</span></label>
-                        <CustomDatePicker
-                          value={formData.expiryDate}
-                          onChange={(val: string) => {
-                            setFormData((prev) => ({ ...prev, expiryDate: val }));
-                            if (errors.expiryDate) setErrors((prev) => ({ ...prev, expiryDate: "" }));
-                          }}
-                          placeholder="dd/mm/yyyy"
-                          disabled={isSubmitting}
-                          className={errors.expiryDate ? styles.errorBorder : ""}
-                        />
-                        {errors.expiryDate && <span className={styles.errorText}>{errors.expiryDate}</span>}
-                      </div>
-                    </div>
-                  )}
-
-                  {formData.docType === "none" && (
-                    <div className={styles.whatsappBox}>
-                      <AlertCircle size={28} color="#25d366" style={{ marginBottom: "4px" }} />
-                      <h4 className={styles.persianSectionTitle} style={{ fontSize: '15px', color: '#25d366' }}>{isEn ? "Need guidance?" : "نیاز به راهنمایی دارید؟"}</h4>
-                      <p className={styles.persianSectionSubtitle} style={{ marginBottom: '12px', textAlign: 'center' }}>
-                        {isEn ? "If you do not have an Australian driver's licence or passport, contact us on WhatsApp for alternative document review." : "در صورتی که گواهینامه یا پاسپورت استرالیا ندارید، جهت بررسی مدارک جایگزین در واتس‌اپ پیام دهید."}
-                      </p>
-                      <button type="button" onClick={handleWhatsAppSubmit} disabled={isSubmitting} className={styles.whatsappBtn} style={{ cursor: isSubmitting ? 'not-allowed' : 'pointer' }}>
-                        <MessageCircle size={18} /> {isSubmitting ? (isEn ? "Sending..." : "در حال ارسال...") : (isEn ? "Contact Support on WhatsApp" : "تماس با پشتیبانی در واتس‌اپ")}
-                      </button>
-                    </div>
-                  )}
-
-                  {formData.docType && formData.docType !== "none" && (
-                    <div className={styles.actionSection}>
-                      <div className={`${styles.legalCheckboxes} ${errors.consents ? styles.errorBorder : ""}`}>
-                        <label className={styles.finePrintLabel}>
-                          <input type="checkbox" name="consentNotice" checked={formData.consentNotice} onChange={handleChange} />
-                          <span>
-                            I have read and agree to the <a href={`/${locale}/legal/privacy-policy`} target="_blank">Privacy Policy</a> & <a href={`/${locale}/legal/dvs-notice`} target="_blank">Verification Notice</a>. <span className={styles.req}></span>
-                          </span>
-                        </label>
-
-                        <label className={styles.finePrintLabel}>
-                          <input type="checkbox" name="consentDVS" checked={formData.consentDVS} onChange={handleChange} />
-                          <span>
-                            I consent to Zarman Exchange verifying my personal details and ID documents via official records (DVS) as per the <a href={`/${locale}/legal/dvs-consent`} target="_blank">Identity Verification Consent</a>. <span className={styles.req}></span>
-                          </span>
-                        </label>
-
-                        {errors.consents && <span className={styles.errorTextFa} style={{ marginTop: '8px' }}>{errors.consents}</span>}
-                      </div>
-
-                      <div className={styles.btnWrapperRight}>
-                        <button type="button" onClick={handleSubmit} disabled={isSubmitting} className={cardStyles.primaryButton} style={{ padding: '14px 36px', fontSize: '14px' }}>
-                          {isSubmitting ? <><span className={cardStyles.spinner} aria-hidden="true" /> Submitting...</> : "Submit Verification"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {formData.country !== "Australia" && (
-                <div className={styles.actionSection}>
-                  <div className={styles.btnWrapperRight}>
-                    <button type="button" onClick={handleSubmit} disabled={isSubmitting} className={cardStyles.primaryButton} style={{ padding: '14px 36px', fontSize: '14px' }}>
-                      {isSubmitting ? <><span className={cardStyles.spinner} aria-hidden="true" /> Submitting...</> : "Submit Verification"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {submitStatus.type === "error" && submitStatus.msg && (
-                <div className={styles.errorTextFa} style={{ marginTop: 12, padding: '0 24px' }}>
-                  <p style={{textAlign: 'center', width: '100%', margin: 0}}>{submitStatus.msg}</p>
-                </div>
-              )}
-
-            </div>
-          )}
-        </div>
-      </div>
-    </article>
-  );
+  return <div className="mx-auto w-full max-w-4xl space-y-6" dir={isEn ? "ltr" : "rtl"}>
+    <DashboardPageHeader title={text("Your profile", "پروفایل شما")} description={text("Your details and identity verification, together.", "اطلاعات شما و وضعیت احراز هویت، در یک جا.")}/>
+    {!isEntryStage && <DashboardCard className="p-6 sm:p-8">
+      <div className="mb-5 flex items-center gap-4"><DashboardMotionIcon name={isVerifiedStage ? "complete" : "review"} size={64} motionEnabled={motionEnabled}/><StatusBadge tone={isVerifiedStage ? "success" : "neutral"}>{isVerifiedStage ? text("Identity verified", "هویت تأیید شده") : text("In review", "در حال بررسی")}</StatusBadge></div>
+      <h2 className="m-0! text-2xl! font-semibold text-[#182027]!">{isVerifiedStage ? text("You’re ready to send.", "آماده ارسال وجه هستید.") : text("We’re checking your details.", "در حال بررسی اطلاعات شما هستیم.")}</h2><p className="mb-6 mt-3 max-w-lg text-sm leading-relaxed text-[#626a76]">{isVerifiedStage ? text("Your identity is approved. You can start a new transfer.", "هویت شما تأیید شده است. می‌توانید انتقال جدیدی شروع کنید.") : text("Your verification has been submitted. No action is needed while we review it.", "درخواست احراز هویت ثبت شده است. تا پایان بررسی نیازی به اقدام شما نیست.")}</p>{isVerifiedStage ? <DashboardButton asChild><Link href={dashboardHref(locale,"transfer")}>{text("New transfer", "انتقال جدید")}</Link></DashboardButton> : <DashboardButton tone="secondary" onClick={() => window.location.reload()}><RefreshCw size={16}/>{text("Check status", "بررسی وضعیت")}</DashboardButton>}
+    </DashboardCard>}
+    {!isEntryStage && <DashboardCard>{personalSection}</DashboardCard>}
+    {isEntryStage && <DashboardCard className="p-5 sm:p-8">
+      <div className="mb-6 flex items-center gap-3"><DashboardMotionIcon name={kycStatus === "rejected" ? "attention" : "verify"} size={56} motionEnabled={motionEnabled}/><div className="min-w-0 space-y-2"><StatusBadge tone={kycStatus === "rejected" ? "attention" : "neutral"}>{kycStatus === "rejected" ? text("Details need attention", "نیازمند اصلاح اطلاعات") : text("Verify your identity", "احراز هویت")}</StatusBadge><p className="m-0 text-xs leading-relaxed text-[#626a76]">{text("Complete once, then send with confidence.", "یک بار تکمیل کنید، سپس با اطمینان ارسال کنید.")}</p></div></div>
+      <Stepper currentStep={verificationStep+1} onStepChange={(next:number) => {if(!isSubmitting && next <= verificationStep + 1) setVerificationStep(next-1);}} showNavigation={false} showContent={false} motionEnabled={motionEnabled} dir={isEn ? "ltr" : "rtl"} stepListLabel={text("Identity verification steps", "مراحل احراز هویت")} className="aspect-auto! min-h-0! p-0!" stepCircleContainerClassName="max-w-none! rounded-none! shadow-none!" stepContainerClassName="mb-8! p-0!" renderStepIndicator={({step,currentStep,onStepClick}:{step:number;currentStep:number;onStepClick:(value:number)=>void}) => <li className="shrink-0"><button type="button" disabled={isSubmitting || step > currentStep} onClick={() => onStepClick(step)} aria-current={step === currentStep ? "step" : undefined} className="flex min-h-12 flex-col items-center gap-2 rounded-xl px-1 text-xs font-medium text-[#626a76] outline-none focus-visible:ring-2 focus-visible:ring-[#635bff] sm:flex-row sm:gap-3"><span className={cn("grid size-8 place-items-center rounded-full border text-xs",step <= currentStep ? "border-[#20242c] bg-[#20242c] text-white" : "border-[#e9ecf0] bg-[#f7f8fa]")}>{step < currentStep ? <Check size={14}/> : step}</span>{stepLabels[step-1]}</button></li>}>{stepLabels.map(label => <Step key={label}>{label}</Step>)}</Stepper>
+      <h2 ref={stepTitle} tabIndex={-1} className="m-0! mb-3! text-2xl font-semibold leading-snug! text-[#182027]! outline-none">{stepLabels[verificationStep]}</h2>
+      <p className="mb-7 mt-0 text-sm leading-relaxed text-[#626a76]">{text("Enter details in English, exactly as they appear on your documents.", "اطلاعات را به انگلیسی و دقیقاً مطابق مدارک خود وارد کنید.")}</p>
+      <DashboardReveal key={verificationStep} motionEnabled={motionEnabled} className="space-y-6">
+        {verificationStep === 0 && <>{personalSection}<div className="grid gap-5 border-t border-[#e9ecf0] pt-6 sm:grid-cols-2">{date("dob","Date of birth","تاریخ تولد")}<div className={fieldClass}><label className={labelClass}>{text("Country of residence", "کشور محل سکونت")}</label><SelectBox value={formData.country} onChange={value => {setFormData(previous => ({...previous,country:value,state:"",city:"",postalCode:""}));setErrors({});}} groups={countryGroups} placeholder={text("Select country", "انتخاب کشور")} disabled={isSubmitting} dir={isEn ? "ltr" : "rtl"} className={selectClass}/></div></div></>}
+        {verificationStep === 1 && <>
+          <p className="m-0 rounded-2xl bg-[#f7f8fa] px-4 py-3 text-sm text-[#626a76]">{text("Country", "کشور")}: <strong className="font-medium text-[#182027]">{formData.country}</strong></p>
+          {input("address","Street address","نشانی خیابان")}
+          <div className="grid gap-5 sm:grid-cols-3">{formData.country === "Australia" ? <AustralianLocationFields key={normalizeAustralianState(formData.state) || "Australia"} state={normalizeAustralianState(formData.state)} city={formData.city} postalCode={formData.postalCode} disabled={isSubmitting} errors={{state:errors.state,city:errors.city,postalCode:errors.postalCode}} ui={{fieldGroupClassName:fieldClass,labelClassName:labelClass,inputClassName:dashboardInputClass,errorTextClassName:"text-xs text-rose-700",hintTextClassName:"text-xs text-[#626a76]",requiredMarkClassName:"sr-only"}} onStateChange={value => {setFormData(previous => ({...previous,state:value,city:"",postalCode:""}));setErrors(previous => ({...previous,state:"",city:"",postalCode:""}));}} onCityChange={value => changeField("city",value)} onPostalCodeChange={value => changeField("postalCode",value)}/> : formData.country === "Iran" ? <><div className={fieldClass}><label className={labelClass}>{text("Province", "استان")}</label><SelectBox value={formData.state} onChange={value => {setFormData(previous => ({...previous,state:value,city:""}));setErrors(previous => ({...previous,state:"",city:""}));}} labeledOptions={iranProvinces} disabled={isSubmitting} dir={isEn ? "ltr" : "rtl"} className={selectClass} placeholder={text("Select province", "انتخاب استان")}/>{fieldError("state")}</div><div className={fieldClass}><label className={labelClass}>{text("City", "شهر")}</label><SelectBox value={formData.city} onChange={value => changeField("city",value)} labeledOptions={iranCities} disabled={!formData.state || isSubmitting} dir={isEn ? "ltr" : "rtl"} className={selectClass} placeholder={text("Select city", "انتخاب شهر")}/>{fieldError("city")}</div>{input("postalCode","Postcode","کد پستی")}</> : <>{input("state","State / province","استان")}{input("city","City / suburb","شهر / محله")}{input("postalCode","Postcode","کد پستی")}</>}</div>
+        </>}
+        {verificationStep === 2 && <>
+          {formData.country === "Australia" ? <>
+            <div className={fieldClass}><label className={labelClass}>{text("Identity document", "مدرک هویتی")}</label><SelectBox value={formData.docType} onChange={value => {setFormData(previous => ({...previous,docType:value,stateOfIssue:""}));setErrors(previous => ({...previous,docType:""}));}} placeholder={text("Select a document", "انتخاب مدرک")} labeledOptions={[{value:"driver_license",label:text("Australian driver's licence", "گواهینامه رانندگی استرالیا")},{value:"passport",label:text("Australian passport", "گذرنامه استرالیا")},{value:"none",label:text("None of the above", "هیچ‌کدام")}]} disabled={isSubmitting} dir={isEn ? "ltr" : "rtl"} className={selectClass}/>{fieldError("docType")}</div>
+            {formData.docType === "driver_license" && <><div className={fieldClass}><label className={labelClass}>{text("State of issue", "ایالت صادرکننده")}</label><SelectBox value={formData.stateOfIssue} onChange={value => changeField("stateOfIssue",value)} options={["ACT","NSW","NT","QLD","SA","TAS","VIC","WA"]} disabled={isSubmitting} dir="ltr" className={selectClass} placeholder={text("Select state", "انتخاب ایالت")}/>{fieldError("stateOfIssue")}</div><div className="grid gap-5 sm:grid-cols-2">{input("licenseNumber","Licence number","شماره گواهینامه")}{input("cardNumber","Card number","شماره کارت")}</div>{date("expiryDate","Expiry date","تاریخ انقضا")}</>}
+            {formData.docType === "passport" && <div className="grid gap-5 sm:grid-cols-2">{input("passportNumber","Passport number","شماره گذرنامه")}{date("expiryDate","Expiry date","تاریخ انقضا")}</div>}
+            {formData.docType === "none" && <div className="rounded-2xl bg-[#f7f8fa] p-5">{manualSupportReady && <div className="mb-4" role="status"><StatusBadge tone="attention">{text("Details saved · Verification incomplete", "اطلاعات ذخیره شد · احراز هویت تکمیل نشده")}</StatusBadge></div>}<p className="mb-5 mt-0 text-sm leading-relaxed text-[#626a76]">{manualSupportReady ? text("Continue with our support team to complete your identity verification.", "برای تکمیل احراز هویت، گفتگو با تیم پشتیبانی را ادامه دهید.") : text("Our team can help with an alternative document review.", "تیم ما برای بررسی مدارک جایگزین به شما کمک می‌کند.")}</p>{manualSupportReady ? <DashboardButton asChild><a href={whatsappLink} target="_blank" rel="noopener noreferrer">{text("Continue verification", "ادامه احراز هویت")}</a></DashboardButton> : <DashboardButton onClick={handleWhatsAppSubmit} disabled={isSubmitting}>{isSubmitting ? text("Saving…", "در حال ذخیره…") : text("Contact support on WhatsApp", "تماس با پشتیبانی در واتس‌اپ")}</DashboardButton>}</div>}
+            {formData.docType && formData.docType !== "none" && <div className="space-y-4 border-t border-[#e9ecf0] pt-6" dir="ltr">
+              <label className="flex items-start gap-3 text-sm leading-relaxed text-[#626a76]"><input type="checkbox" name="consentNotice" checked={formData.consentNotice} onChange={handleChange} disabled={isSubmitting} className="mt-1 size-4 shrink-0 accent-[#635bff]"/><span>I have read and agree to the <a className="text-[#5147cc] underline underline-offset-4" href={`/${locale}/legal/privacy-policy`} target="_blank" rel="noopener noreferrer">Privacy Policy</a> & <a className="text-[#5147cc] underline underline-offset-4" href={`/${locale}/legal/dvs-notice`} target="_blank" rel="noopener noreferrer">Verification Notice</a>.</span></label>
+              <label className="flex items-start gap-3 text-sm leading-relaxed text-[#626a76]"><input type="checkbox" name="consentDVS" checked={formData.consentDVS} onChange={handleChange} disabled={isSubmitting} className="mt-1 size-4 shrink-0 accent-[#635bff]"/><span>I consent to Zarman Exchange verifying my personal details and ID documents via official records (DVS) as per the <a className="text-[#5147cc] underline underline-offset-4" href={`/${locale}/legal/dvs-consent`} target="_blank" rel="noopener noreferrer">Identity Verification Consent</a>.</span></label>{fieldError("consents")}
+            </div>}
+          </> : <div className="rounded-2xl bg-[#f7f8fa] p-5"><p className="m-0 text-sm leading-relaxed text-[#626a76]">{text("Submit your personal and address details for our team to review.", "اطلاعات شخصی و نشانی خود را برای بررسی تیم ما ارسال کنید.")}</p></div>}
+        </>}
+      </DashboardReveal>
+      {submitStatus.type === "error" && <p role="alert" className="mt-5 text-sm leading-relaxed text-rose-700">{submitStatus.msg}</p>}
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-[#e9ecf0] pt-6">{verificationStep > 0 ? <DashboardButton tone="secondary" disabled={isSubmitting} onClick={() => setVerificationStep(value => value-1)}>{text("Back", "بازگشت")}</DashboardButton> : <span className="text-xs text-[#626a76]">{text("Step 1 of 3", "مرحله ۱ از ۳")}</span>}{verificationStep < 2 ? <DashboardButton disabled={isSubmitting || isSavingPersonal} onClick={nextVerificationStep}>{text("Continue", "ادامه")}</DashboardButton> : (formData.country !== "Australia" || formData.docType !== "none") && <DashboardButton onClick={handleSubmit} disabled={isSubmitting}>{isSubmitting ? text("Submitting…", "در حال ثبت…") : text("Submit verification", "ثبت احراز هویت")}</DashboardButton>}</div>
+    </DashboardCard>}
+  </div>;
 }

@@ -14,8 +14,10 @@ import { RequestPaymentInstructions } from "./RequestPaymentInstructions";
 import { RequestReceiptUpload } from "./RequestReceiptUpload";
 import { RequestAdminMessageBanner, RequestConversation } from "./RequestConversation";
 import { supabase } from "@/lib/supabase";
+import { DashboardCard } from "@/components/dashboard/dashboard-ui";
 import styles from "@/styles/requests/Requests.module.css";
 import workspace from "@/styles/requests/RequestWorkspace.module.css";
+import customer from "@/styles/requests/RequestCustomerDetail.module.css";
 
 const commandLabels: Record<RequestCommand, [string, string]> = {
   review: ["Start review", "شروع بررسی"], request_info: ["Request information", "درخواست اطلاعات"], respond: ["Send response", "ارسال پاسخ"],
@@ -25,6 +27,11 @@ const commandLabels: Record<RequestCommand, [string, string]> = {
   complete: ["Reconcile & complete", "تطبیق و تکمیل حواله"], reconcile_complete: ["Reconcile & complete", "تطبیق و تکمیل حواله"], cancel: ["Cancel request", "لغو درخواست"], reject: ["Reject request", "رد درخواست"],
   confirm_refund: ["Approve returned refund", "تأیید بازپرداخت"], payment_evidence: ["Add payment reference", "ثبت شماره پیگیری واریز"],
 };
+
+function maskAccount(value: unknown) {
+  const account = String(value || "").replace(/\s+/g, "");
+  return account ? `•••• ${account.slice(-4)}` : "";
+}
 
 function allowedCommands(request: ExchangeRequest, admin: boolean): RequestCommand[] {
   const commands: RequestCommand[] = [];
@@ -335,21 +342,19 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
         </div>
       </div> : <>
         <RequestProgress request={request} events={detail.events} locale={locale} />
-        <div className={workspace.customerLayout}>
-          <div className={workspace.column}>
-            {request.status === "completed" && <section className={`${styles.card} ${workspace.receiptReady}`}><div><Check size={20} /><h2>{fa ? "رسید نهایی آماده است" : "Your receipt is ready"}</h2></div><a className={styles.button} href={`/api/requests/${request.id}/receipt`} target="_blank" rel="noopener noreferrer"><Download size={17} />{fa ? "دریافت رسید" : "Download receipt"}</a></section>}
+        <div className={`${workspace.customerLayout} ${customer.layout}`}>
+          <div className={`${workspace.column} ${customer.column}`}>
             {journey?.canPay && !journey.receiptSubmitted && <RequestPaymentInstructions request={request} locale={locale} />}
             <RequestReceiptUpload request={request} receipts={detail.receipts || []} locale={locale} onUploaded={refresh} />
             <RequestConversation requestId={id} version={request.version} messages={messages} locale={locale} disabled={busy} onUpdated={refresh} onSendingChange={sending => { pending.current = sending; setBusy(sending); }} />
           </div>
-          <div className={workspace.column}>
-            <section className={styles.card}><h2>{fa ? "خلاصه حواله" : "Transfer summary"}</h2><dl className={styles.facts}>
-              <div className={`${styles.fact} ${styles.total}`}><dt>{fa ? "مجموع پرداخت" : "You send"}</dt><dd>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</dd></div>
-              <div className={styles.fact}><dt>{fa ? "دریافتی گیرنده" : "Recipient gets"}</dt><dd>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</dd></div>
-              <div className={styles.fact}><dt>{fa ? "گیرنده" : "Recipient"}</dt><dd>{request.quote.institution_name || String(request.quote.recipient_snapshot.account_name || request.quote.recipient_snapshot.full_name || request.quote.recipient_snapshot.label || "—")}</dd></div>
-              {request.service_tier === "priority" && <div className={styles.fact}><dt>{fa ? "هزینه اولویت" : "Priority fee"}</dt><dd>{requestMoney(request.quote.priority_fee_amount, request.quote.funding_currency, locale)}</dd></div>}
-              {request.handling_due_at && <div className={styles.fact}><dt>{fa ? "مهلت رسیدگی" : "Handling target"}</dt><dd><bdi dir="ltr">{requestDate(request.handling_due_at, locale)}</bdi></dd></div>}
-            </dl><details className={workspace.inlineDisclosure}><summary>{fa ? "جزئیات حواله" : "Transfer details"}<ChevronDown size={15} /></summary><RequestQuoteFacts quote={request.quote} locale={locale} />{request.service_tier === "priority" && <p className={styles.muted}>{fa ? request.quote.policy_snapshot.priority_terms_fa : request.quote.policy_snapshot.priority_terms}</p>}{request.quote.payment_link && <a href={request.quote.payment_link} target="_blank" rel="noopener noreferrer">{fa ? "مشاهده صورتحساب" : "View invoice"}</a>}</details></section>
+          <div className={`${workspace.column} ${customer.column}`}>
+            <DashboardCard className={customer.summary}><h2>{fa ? "گیرنده" : "Recipient"}</h2><dl className={customer.facts}>
+              <div><dt>{fa ? "نام" : "Name"}</dt><dd>{String(request.quote.recipient_snapshot.account_name || request.quote.recipient_snapshot.full_name || request.quote.recipient_snapshot.label || request.quote.institution_name || "—")}</dd></div>
+              {Boolean(request.quote.recipient_snapshot.bank_name || request.quote.institution_name) && <div><dt>{fa ? "بانک" : "Bank"}</dt><dd>{String(request.quote.recipient_snapshot.bank_name || request.quote.institution_name)}</dd></div>}
+              {Boolean(request.quote.recipient_snapshot.bank_city) && <div><dt>{fa ? "شهر شعبه" : "Branch city"}</dt><dd>{String(request.quote.recipient_snapshot.bank_city)}</dd></div>}
+              {Boolean(request.quote.recipient_snapshot.account_number || request.quote.recipient_snapshot.shaba_number || request.quote.recipient_snapshot.irt_account_number) && <div><dt>{fa ? "حساب" : "Account"}</dt><dd><bdi dir="ltr">{maskAccount(request.quote.recipient_snapshot.account_number || request.quote.recipient_snapshot.shaba_number || request.quote.recipient_snapshot.irt_account_number)}</bdi></dd></div>}
+            </dl><details className={customer.details}><summary>{fa ? "جزئیات حواله" : "Transfer details"}<ChevronDown size={15} /></summary><div><RequestQuoteFacts quote={request.quote} locale={locale} />{request.service_tier === "priority" && <p className={styles.muted}>{fa ? request.quote.policy_snapshot.priority_terms_fa : request.quote.policy_snapshot.priority_terms}</p>}{request.quote.payment_link && <a href={request.quote.payment_link} target="_blank" rel="noopener noreferrer">{fa ? "مشاهده صورتحساب" : "View invoice"}</a>}</div></details></DashboardCard>
             {journey?.canPay && journey.receiptSubmitted && <RequestPaymentInstructions request={request} locale={locale} />}
             {actionPanel && <div className={workspace.customerExceptions}>{actionPanel}</div>}
           </div>

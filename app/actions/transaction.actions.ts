@@ -121,7 +121,7 @@ export async function createRecipient(payload: Omit<Recipient, "id" | "user_id" 
     const authenticatedUserId = await getAuthenticatedUserId();
 
     const normalized = normalizeRecipientInput(payload);
-    if (normalized.error) return { error: normalized.error };
+    if (normalized.error) return { error: normalized.error, fieldErrors: normalized.fieldErrors };
 
     const { data, error } = await supabaseAdmin
       .from("recipients")

@@ -21,9 +21,13 @@ export function journeyPresentation(request: ExchangeRequest, locale: RequestLoc
   let href: string | null = journey.canPay && !journey.receiptSubmitted ? "#request-payment-details" : null;
   let action: string | null = href ? text("View payment details", "مشاهده مشخصات واریز") : null;
   let nextActor: "customer" | "zarman" | "complete" | "closed" = request.status === "completed" ? "complete" : "zarman";
-  if (journey.approved && !journey.receiptSubmitted && !journey.fundsReceived && !journey.closed) {
+  if (journey.canPay && !journey.receiptSubmitted) {
     nextActor = "customer";
     mood = "attention";
+  }
+  if (journey.stage === 1 && !journey.canPay && !journey.closed) {
+    heading = text("We’re reviewing your request.", "در حال بررسی درخواست شما هستیم.");
+    description = text("Our team is completing a check before payment. No action needed.", "تیم زرمان در حال بررسی پیش از پرداخت است. نیازی به اقدام شما نیست.");
   }
   if (journey.fundsReceived && (journey.readyForSettlement || request.status === "processing")) description = text("Funds received. Destination settlement is the next step.", "وجه دریافت شد. مرحله بعد، تسویه با گیرنده است.");
   if (request.status === "reconciliation") description = text("Funds received. We’re checking the destination bank settlement.", "وجه دریافت شد. در حال بررسی تسویه بانک مقصد هستیم.");

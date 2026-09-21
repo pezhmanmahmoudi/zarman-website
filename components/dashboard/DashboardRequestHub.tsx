@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { ArrowLeft, ArrowRight, Check, AlertTriangle, Lock, ServerCrash, PauseCircle, Tag, Banknote, Landmark, ShieldCheck } from "lucide-react";
-import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
-import styles from "@/styles/dashboard/DashboardRequestHub.module.css";
+import { Check, Lock, ServerCrash, PauseCircle } from "lucide-react";
+import Stepper, { Step } from "@/components/Stepper";
+import { DashboardCard, DashboardButton, DashboardPageHeader, DashboardReveal, StatusBadge, dashboardInputClass } from "@/components/dashboard/dashboard-ui";
+import { cn } from "@/lib/utils";
 import { Profile } from "@/app/[locale]/dashboard/dashboard.types";
 import type { Recipient } from "@/app/[locale]/dashboard/dashboard.types";
 import { useFinanceConfig } from "@/context/FinanceConfigContext";
@@ -86,12 +87,13 @@ type RequestHubProps = {
   baseRate: number | null;     
   profile: Profile | null;
   initialRecipientId?: string | null;
+  motionEnabled?: boolean;
 
 };
 
 export function DashboardRequestHub({ 
   isApproved, txType, setTxType, amountStr, setAmountStr, 
-  loyaltyBonus, tailoredRate, baseRate, profile, initialRecipientId
+  loyaltyBonus, tailoredRate, baseRate, profile, initialRecipientId, motionEnabled = true
 }: RequestHubProps) { 
   const [step, setStep] = useState(0);
   const [stepError, setStepError] = useState("");
@@ -359,296 +361,61 @@ export function DashboardRequestHub({
     goToStep(Math.min(2,step+1));
   }
 
-  if (!marketActive || isRateOffline || !isApproved) return <article className={`${cardStyles.panelCard} ${styles.unavailable}`}>
-    {!marketActive ? <PauseCircle size={30}/> : isRateOffline ? <ServerCrash size={30}/> : <Lock size={30}/>}
-    <h2>{!marketActive ? t.hub.marketPaused : isRateOffline ? t.hub.rateOfflineTitle : t.hub.accessLimited}</h2>
-    <p>{!marketActive ? pauseMessage || t.hub.marketPausedDefault : isRateOffline ? t.hub.rateOfflineText : t.hub.accessLimitedKyc}</p>
-    {!isApproved && <Link className={cardStyles.primaryButton} href={dashboardHref(locale,"profile")}>{locale === "fa" ? "تکمیل پروفایل" : "Complete your profile"}</Link>}
-  </article>;
+  const fa = locale === "fa";
+  const text = (en: string, persian: string) => fa ? persian : en;
+  const labels = fa ? ["مبلغ", "گیرنده", "بررسی و ثبت"] : ["Amount", "Recipient", "Review"];
+  const formLabel = "mb-2 block text-sm font-medium text-[#182027]";
+  const selectStyle = "[&>button]:min-h-12 [&>button]:rounded-2xl [&>button]:border-[#e9ecf0] [&>button]:bg-white [&>button]:text-[#182027]";
+  const selectedRecipient = recipients.find(recipient => recipient.id === selectedRecipientId);
+
+  if (!marketActive || isRateOffline || !isApproved) return <DashboardCard className="mx-auto max-w-2xl p-6 sm:p-10">
+    <div className="mb-5 text-[#626a76]">{!marketActive ? <PauseCircle size={26}/> : isRateOffline ? <ServerCrash size={26}/> : <Lock size={26}/>}</div>
+    <DashboardPageHeader title={!marketActive ? t.hub.marketPaused : isRateOffline ? t.hub.rateOfflineTitle : t.hub.accessLimited} description={!marketActive ? pauseMessage || t.hub.marketPausedDefault : isRateOffline ? t.hub.rateOfflineText : t.hub.accessLimitedKyc}/>
+    {!isApproved && <DashboardButton asChild className="mt-7"><Link href={dashboardHref(locale,"profile")}>{text("Complete your profile", "تکمیل پروفایل")}</Link></DashboardButton>}
+  </DashboardCard>;
 
   return (
-    <article className={cardStyles.panelCard}>
-      {!submitted && <>
-      <div className={styles.draftMeta}><span>{locale === "fa" ? "پیش‌نویس" : "Draft"}</span><small>{locale === "fa" ? "هنوز ثبت نشده" : "Not submitted yet"}</small></div>
-      <ol className={styles.wizardSteps} aria-label={locale === "fa" ? "مراحل ثبت انتقال" : "New transfer steps"}>
-        {(locale === "fa" ? ["مبلغ و ارز", "گیرنده", "پرداخت و تأیید"] : ["Amount & currency", "Recipient", "Payment & confirmation"]).map((label,index)=><li key={label} data-current={step === index} data-done={step > index}><button type="button" disabled={isSubmitting || submitted || index > step} onClick={()=>goToStep(index)} aria-current={step === index ? "step" : undefined}><span>{step > index ? <Check size={15}/> : index+1}</span>{label}</button></li>)}
-      </ol>
-      <div className={styles.wizardHeading} key={step}>
-        <h2 ref={stepHeading} tabIndex={-1}>{(locale === "fa" ? ["چقدر می‌خواهید ارسال کنید؟", "برای چه کسی می‌فرستید؟", "روش پرداخت و سرویس را تأیید کنید."] : ["How much would you like to send?", "Who are you sending to?", "Confirm payment and service."])[step]}</h2>
-        <p>{(locale === "fa" ? ["مسیر و مبلغ را انتخاب کنید.", "گیرنده را انتخاب کنید یا حساب جدیدی اضافه کنید.", "پس از تأیید زرمان، مشخصات بانکی در همین داشبورد نمایش داده می‌شود."] : ["Choose your direction and amount.", "Choose a saved recipient or add a new account.", "Your bank instructions will appear here after Zarman approves the request."])[step]}</p>
-      </div>
-      <div className={styles.wizardPanel} key={`panel-${step}`}>
-      {step === 0 && <>
-      <div className={`${styles.formRow} ${styles.formRowCompact}`}>
-        <div className={styles.inputBox}>
-          <div className={styles.labelRow}>
-            <label className={styles.label}>{t.hub.txType} <span className={styles.requiredMark}>*</span></label>
-          </div>
-            <div className={styles.directionPicker} role="group" aria-label={t.hub.txType}>
-              <button type="button" disabled={isSubmitting} aria-pressed={txType === "sell_aud"} onClick={() => setTxType("sell_aud")}>{locale === "fa" ? "استرالیا به ایران" : "Australia to Iran"}<span>AUD → IRT</span></button>
-              <button type="button" disabled={isSubmitting} aria-pressed={txType === "buy_aud"} onClick={() => setTxType("buy_aud")}>{locale === "fa" ? "ایران به استرالیا" : "Iran to Australia"}<span>IRT → AUD</span></button>
-            </div>
-        </div>
-
-        <div className={`${styles.inputBox} ${styles.quoteColumn}`}>
-          <div className={styles.quoteInputStack}>
-            <div className={styles.inputBox}>
-              <div className={styles.labelRow}>
-                <label className={styles.label} htmlFor="request-amount-aud">{txType === "buy_aud" ? (locale === "fa" ? "مبلغ دریافتی گیرنده · AUD" : "Recipient receives · AUD") : (locale === "fa" ? "مبلغ ارسالی شما · AUD" : "You send · AUD")} <span className={styles.requiredMark}>*</span></label>
-                {appliedFee > 0 && (
-                  <span className={styles.feeWarning}>
-                    <AlertTriangle size={14} />
-                    {txType === "buy_aud"
-                      ? t.hub.feeAddedBuy.replace("{{fee}}", formatNumberUI(financeConfig.applied_fee, locale))
-                      : t.hub.feeDeductedSell.replace("{{fee}}", formatNumberUI(financeConfig.applied_fee, locale))}
-                  </span>
-                )}
-              </div>
-              <div className={`${styles.hubFieldGroup} ${styles.quoteFieldGroup}`}>
-                <input
-                  ref={amountInputRef}
-                  id="request-amount-aud"
-                  type="text"
-                  inputMode="decimal"
-                  pattern="[0-9۰-۹٠-٩.,٫،]*"
-                  value={amountStr}
-                  onChange={handleInput}
-                  onFocus={keepAmountCaretAtEnd}
-                  onClick={keepAmountCaretAtEnd}
-                  dir="ltr"
-                  className={`${styles.hubFaInput} ${styles.quoteFieldInput} ${styles.quoteAudInput}`}
-                  placeholder={locale === "fa" ? "۰" : "0"}
-                  disabled={isRateOffline || isSubmitting}
-                />
-                <div className={styles.hubDivider}></div>
-                <span className={`${styles.currencyLabelFixed} ${styles.quoteCurrencyLabel}`}>AUD</span>
-              </div>
-            </div>
-
-            <div className={styles.inputBox}>
-              <label className={`${styles.label} ${styles.labelWithIcon}`} htmlFor="request-amount-toman">
-                <Banknote size={14} className={styles.inlineLabelIcon} />
-                {txType === "buy_aud" ? t.hub.amountPayToman : t.hub.amountReceiveToman}
-              </label>
-              <div className={`${styles.hubFieldGroup} ${styles.quoteFieldGroup} ${quoteSource === "irt" ? styles.hubFieldActive : ""}`}>
-                <input
-                  id="request-amount-toman"
-                  type="text"
-                  inputMode="numeric"
-                  value={isRateOffline ? "" : equivalentStr}
-                  onChange={handleEquivalentInput}
-                  dir="ltr"
-                  className={`${styles.hubFaInput} ${styles.hubResultInput} ${styles.quoteFieldInput}`}
-                  placeholder={locale === "fa" ? "۰" : "0"}
-                  disabled={isRateOffline || isSubmitting}
-                />
-                <div className={styles.hubDivider}></div>
-                <span className={`${styles.currencyLabelFixed} ${styles.quoteCurrencyLabel}`}>{locale === "fa" ? "تومان" : "Toman"}</span>
-              </div>
-              {promoDiscount !== null && promoDiscount > 0 && (
-                <p className={styles.promoSuccess}>
-                  {t.hub.promoSavings} {formatNumberUI(promoDiscount, locale, true)} {locale === "fa" ? "تومان" : "Toman"}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      </>}
-      {step === 1 && <>
-      <div className={styles.formRow}>
-        <div className={styles.inputBox}>
-          <label className={styles.label}>{t.hub.recipient} <span className={styles.requiredMark}>*</span></label>
-          <SelectBox
-            value={selectedRecipientId}
-            onChange={handleRecipientChange}
-            placeholder={locale === "fa" ? "— انتخاب کنید —" : "— Select recipient —"}
-            labeledOptions={recipientOptions}
-            disabled={isSubmitting}
-            dir={locale === "fa" ? "rtl" : "ltr"}
-          />
-        </div>
-        {isEduPayment ? (
-          <div className={styles.inputBox}>
-            <label className={styles.label} htmlFor="request-payment-link">{t.hub.paymentLink} <span className={styles.requiredMark}>*</span></label>
-            <div className={styles.hubFieldGroup}>
-              <input
-                id="request-payment-link"
-                type="url"
-                className={`${styles.hubEnInput} ${styles.hubEnInputLtr}`}
-                placeholder="https://..."
-                value={paymentLink}
-                onChange={(e) => setPaymentLink(e.target.value)}
-                dir="ltr"
-                disabled={isSubmitting}
-               />
-            </div>
-            <span className={styles.fieldHint}>{t.hub.paymentLinkHint}</span>
-          </div>
-        ) : (
-          <></>
-        )}
-      </div>
-
-      {isEduPayment && <div className={styles.formRow}>
-        <div className={styles.inputBox}>
-          <label className={styles.label} htmlFor="request-institution">{locale === "fa" ? "نام دانشگاه / موسسه" : "Institution name"} <span className={styles.requiredMark}>*</span></label>
-          <div className={styles.hubFieldGroup}><input id="request-institution" className={styles.hubEnInput} value={institutionName} onChange={event => setInstitutionName(event.target.value)} maxLength={160} disabled={isSubmitting} /></div>
-        </div>
-        <div className={styles.inputBox}>
-          <label className={styles.label} htmlFor="request-invoice">{locale === "fa" ? "شماره صورتحساب" : "Invoice reference"} <span className={styles.requiredMark}>*</span></label>
-          <div className={styles.hubFieldGroup}><input id="request-invoice" className={styles.hubEnInput} value={invoiceReference} onChange={event => setInvoiceReference(event.target.value)} maxLength={120} disabled={isSubmitting} /></div>
-        </div>
-      </div>}
-
-      </>}
-      {step === 2 && <>
-        <div className={styles.reviewRecipient}><span>{locale === "fa" ? "گیرنده" : "Recipient"}</span><strong>{isEduPayment ? institutionName : recipients.find(recipient=>recipient.id === selectedRecipientId)?.label || (locale === "fa" ? "حساب انتخاب‌شده" : "Selected account")}</strong><button type="button" disabled={isSubmitting} onClick={()=>goToStep(1)}>{locale === "fa" ? "ویرایش" : "Edit"}</button></div>
-        <section className={styles.paymentMethod} aria-labelledby="request-payment-method">
-          <div className={styles.paymentMethodIcon}><Landmark size={21} aria-hidden="true" /></div>
-          <div><span id="request-payment-method">{locale === "fa" ? "روش پرداخت" : "Payment method"}</span><strong>{locale === "fa" ? "انتقال بانکی" : "Bank transfer"}</strong><small>{locale === "fa" ? "مشخصات حساب پس از تأیید درخواست نمایش داده می‌شود." : "Account details appear after your request is approved."}</small></div>
-          <span className={styles.methodSelected}><ShieldCheck size={15} aria-hidden="true" />{locale === "fa" ? "ایمن" : "Secure"}</span>
-        </section>
-        <div className={styles.formRow}>
-          <div className={styles.inputBox}>
-            <label className={styles.label}>{t.hub.sourceOfFunds} <span className={styles.requiredMark}>*</span></label>
-            <SelectBox
-              value={sourceOfFunds}
-              onChange={setSourceOfFunds}
-              placeholder={locale === "fa" ? "منبع وجه را انتخاب کنید" : "Select source of funds"}
-              disabled={isSubmitting}
-              dir={locale === "fa" ? "rtl" : "ltr"}
-              labeledOptions={sourceOptions.map(([value, en, fa]) => ({ value, label: locale === "fa" ? fa : en }))}
-            />
-          </div>
-
-          <div className={styles.inputBox}>
-            <label className={styles.label}>{t.hub.reasonForTransfer} <span className={styles.requiredMark}>*</span></label>
-            <SelectBox
-              value={reasonForTransfer}
-              onChange={setReasonForTransfer}
-              placeholder={locale === "fa" ? "دلیل انتقال را انتخاب کنید" : "Select transfer purpose"}
-              disabled={isSubmitting}
-              dir={locale === "fa" ? "rtl" : "ltr"}
-              labeledOptions={purposeOptions.map(([value, fa]) => ({ value, label: locale === "fa" ? fa : value }))}
-            />
-          </div>
-        </div>
-      <div className={styles.formRow}>
-        <div className={styles.inputBox}>
-          <label className={`${styles.label} ${styles.labelWithIcon}`} htmlFor="request-promo-code">
-            <Tag size={14} className={styles.inlineLabelIcon} />
-            {t.hub.promoCode}
-          </label>
-          <div className={styles.promoRow}>
-            <div className={styles.hubFieldGroup}>
-              <input
-                id="request-promo-code"
-                type="text"
-                className={`${styles.hubEnInput} ${styles.hubEnInputLtr}`}
-                placeholder="PROMO2026"
-                value={promoInput}
-                onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); resetPromo(); }}
-                dir="ltr"
-                disabled={isSubmitting}
-              />
-            </div>
-            <button
-              className={styles.promoApplyBtn}
-              type="button"
-              onClick={handleApplyPromo}
-              disabled={promoValidating || isSubmitting || !promoInput.trim() || rawAmount <= 0}
-            >
-              {promoValidating ? <><span className={cardStyles.spinner} aria-hidden="true" /></> : t.hub.promoApply}
-            </button>
-          </div>
-          {promoMsg && <p className={promoMsg.type === "success" ? styles.promoSuccess : styles.promoError}>{promoMsg.text}</p>}
-        </div>
-
-      </div>
-      
-      </>}
-      </div>
-      {step !== 1 && <div className={styles.summaryBox}>
-        <div className={styles.summaryText}>
-          <strong className={styles.summaryRate}>
-            {t.hub.yourRate} {isRateOffline ? t.hub.rateOffline : formatNumberUI(activeRate, locale, true)} {locale === "fa" ? "تومان" : "Toman"}
-          </strong>
-          {promoEffectiveRate && tailoredRate && !isRateOffline && (
-            <span className={styles.summaryHint}>
-              {t.hub.improvedRate} {formatNumberUI(tailoredRate, locale, true)} {locale === "fa" ? "تومان" : "Toman"}
-            </span>
-          )}
-          {(loyaltyBonus > 0 && !isRateOffline) && (
-            <span className={styles.summaryHint}>
-              {rawAmount > 0 
-                ? t.hub.loyaltyThisTx.replace("{{amount}}", formatNumberUI(loyaltyBonus * rawAmount, locale, true))
-                : t.hub.loyaltyPerDollar.replace("{{amount}}", formatNumberUI(loyaltyBonus, locale, true))}
-            </span>
-          )}
-        </div>
-        <div className={styles.summaryFacts}>
-          <div className={styles.summaryFact}>
-            <span>{t.hub.requestedAmount}</span>
-            <strong className={styles.summaryFactValue}>{rawAmount > 0 ? `${formatNumberUI(rawAmount, locale)} AUD` : "—"}</strong>
-          </div>
-          {appliedFee > 0 ? (
-            <>
-              <div className={styles.summaryFact}>
-                <span>{t.hub.fixedFee}</span>
-                <strong className={styles.summaryFactValue}>{`${formatNumberUI(appliedFee, locale)} AUD`}</strong>
-              </div>
-              {txType === "sell_aud" && (
-                <div className={styles.summaryFact}>
-                  <span>{t.hub.netSale}</span>
-                  <strong className={styles.summaryFactValue}>{settlementAud > 0 ? `${formatNumberUI(settlementAud, locale)} AUD` : "—"}</strong>
+    <div className="min-w-0 space-y-6" dir={fa ? "rtl" : "ltr"}>
+      <DashboardPageHeader title={text("New transfer", "انتقال جدید")} description={submitted ? text("Follow your transfer from your dashboard.", "مراحل انتقال را از داشبورد دنبال کنید.") : text("A few details. One clear next step.", "چند جزئیات، و یک قدم روشن برای ادامه.")} />
+      <div className={cn("grid min-w-0 gap-6", !submitted && "xl:grid-cols-[minmax(0,1fr)_320px]")}>
+        <DashboardCard className="min-w-0 p-5 sm:p-8">
+          {!submitted && <>
+            <div className="mb-7 flex items-center justify-between gap-3"><StatusBadge>{text("Draft", "پیش‌نویس")}</StatusBadge><span className="text-xs text-[#626a76]">{text("Not submitted yet", "هنوز ثبت نشده")}</span></div>
+            <Stepper currentStep={step + 1} onStepChange={(next: number) => { if (!isSubmitting && next <= step + 1) goToStep(next - 1); }} showNavigation={false} showContent={false} motionEnabled={motionEnabled} dir={fa ? "rtl" : "ltr"} stepListLabel={text("New transfer steps", "مراحل ثبت انتقال")}
+              className="wizardSteps aspect-auto! min-h-0! p-0!" stepCircleContainerClassName="max-w-none! rounded-none! shadow-none!" stepContainerClassName="mb-8! p-0!"
+              renderStepIndicator={({ step: index, currentStep, onStepClick }: { step: number; currentStep: number; onStepClick: (step: number) => void }) => <li className="shrink-0"><button type="button" disabled={isSubmitting || index > currentStep} onClick={() => onStepClick(index)} aria-current={index === currentStep ? "step" : undefined} className="flex min-h-12 flex-col items-center gap-2 rounded-xl px-1 text-xs font-medium text-[#626a76] outline-none focus-visible:ring-2 focus-visible:ring-[#635bff] sm:flex-row sm:gap-3 sm:px-2"><span className={cn("grid size-8 place-items-center rounded-full border text-xs", index <= currentStep ? "border-[#20242c] bg-[#20242c] text-white" : "border-[#e9ecf0] bg-[#f7f8fa]")}>{index < currentStep ? <Check size={14}/> : index}</span><span className={index === currentStep ? "text-[#182027]" : ""}>{labels[index - 1]}</span></button></li>}>
+              {labels.map(label => <Step key={label}>{label}</Step>)}
+            </Stepper>
+            <div className="mb-7"><h2 ref={stepHeading} tabIndex={-1} className="m-0! text-2xl font-semibold leading-snug! tracking-[-.03em] text-[#182027]! outline-none rtl:tracking-normal">{(fa ? ["چقدر می‌خواهید ارسال کنید؟", "برای چه کسی می‌فرستید؟", "جزئیات را بررسی کنید."] : ["How much would you like to send?", "Who are you sending to?", "Review your transfer."])[step]}</h2><p className="mb-0 mt-2 text-sm leading-relaxed text-[#626a76]">{(fa ? ["مسیر را انتخاب کنید. هر دو مبلغ قابل ویرایش است.", "یک گیرنده انتخاب کنید یا حساب جدید اضافه کنید.", "سرویس را انتخاب کنید و درخواست را برای بررسی بفرستید."] : ["Choose a direction. You can edit either amount.", "Choose a recipient or add a new account.", "Choose your service and submit for review."])[step]}</p></div>
+            <DashboardReveal key={`panel-${step}`} motionEnabled={motionEnabled} className="space-y-6">
+              {step === 0 && <>
+                <div role="group" aria-label={t.hub.txType} className="grid gap-2 rounded-[20px] bg-[#f7f8fa] p-1.5 sm:grid-cols-2">{(["sell_aud", "buy_aud"] as const).map(direction => <button key={direction} type="button" disabled={isSubmitting} aria-pressed={txType === direction} onClick={() => setTxType(direction)} className={cn("min-h-14 rounded-2xl px-4 py-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#635bff]", txType === direction ? "bg-white text-[#182027] shadow-sm" : "text-[#626a76] hover:bg-white/60")}>{direction === "sell_aud" ? text("Australia to Iran", "استرالیا به ایران") : text("Iran to Australia", "ایران به استرالیا")}</button>)}</div>
+                <div className="space-y-3">
+                  <div className="rounded-[20px] border border-[#e9ecf0] px-5 py-5 focus-within:border-[#635bff] focus-within:ring-2 focus-within:ring-[#635bff]/10"><label className={formLabel} htmlFor="request-amount-aud">{txType === "buy_aud" ? text("Recipient gets", "گیرنده دریافت می‌کند") : text("You send", "شما ارسال می‌کنید")}</label><div className="flex min-w-0 items-center gap-3"><input ref={amountInputRef} id="request-amount-aud" type="text" inputMode="decimal" pattern="[0-9۰-۹٠-٩.,٫،]*" value={amountStr} onChange={handleInput} onFocus={keepAmountCaretAtEnd} onClick={keepAmountCaretAtEnd} dir="ltr" className="w-full min-w-0 border-0 bg-transparent py-2 text-start text-[clamp(1.6rem,4vw,2.5rem)] font-semibold tracking-[-.035em] text-[#182027] outline-none placeholder:text-[#a6acb5]" placeholder={fa ? "۰" : "0"} disabled={isRateOffline || isSubmitting}/><span className="text-sm font-medium text-[#626a76]">AUD</span></div></div>
+                  <div className="rounded-[20px] border border-[#e9ecf0] px-5 py-5 focus-within:border-[#635bff] focus-within:ring-2 focus-within:ring-[#635bff]/10"><label className={formLabel} htmlFor="request-amount-toman">{txType === "buy_aud" ? t.hub.amountPayToman : t.hub.amountReceiveToman}</label><div className="flex min-w-0 items-center gap-3"><input id="request-amount-toman" type="text" inputMode="numeric" value={isRateOffline ? "" : equivalentStr} onChange={handleEquivalentInput} dir="ltr" className="w-full min-w-0 border-0 bg-transparent py-2 text-start text-[clamp(1.6rem,4vw,2.5rem)] font-semibold tracking-[-.035em] text-[#182027] outline-none placeholder:text-[#a6acb5]" placeholder={fa ? "۰" : "0"} disabled={isRateOffline || isSubmitting}/><span className="text-sm font-medium text-[#626a76]">{text("Toman", "تومان")}</span></div></div>
                 </div>
-              )}
-            </>
-          ) : (
-            <div className={`${styles.summaryFact} ${styles.summaryFactCalm}`}>
-              <span>{t.hub.feeStatus}</span>
-              <strong className={styles.summaryFactText}>{t.hub.noFeeStatus}</strong>
-            </div>
-          )}
-        </div>
-
-      </div>}
-      </>}
-
-      {submitted && <div className={styles.submittedMeta} role="status">
-        <span><Check size={15} aria-hidden="true" />{locale === "fa" ? "ثبت شد" : "Submitted"}</span>
-        <small>{locale === "fa" ? "درخواست شما دریافت شد و اکنون در انتظار تأیید زرمان است." : "Your request has been received and is awaiting Zarman approval."}</small>
-      </div>}
-      
-      {step === 2 && <OnlineRequestSubmit
-        key="request-submit"
-        input={{ rawAmount, txType, sourceOfFunds, reasonForTransfer, recipientId: selectedRecipientId,
-          promoCode: appliedPromoCode, paymentLink: isEduPayment ? paymentLink.trim() || null : null,
-          institutionName: isEduPayment ? institutionName : undefined,
-          invoiceReference: isEduPayment ? invoiceReference : undefined, locale }}
-        disabled={!isApproved || !profile || rawAmount <= 0 || isRateOffline || !marketActive}
-        validationMessage={!sourceOfFunds || !reasonForTransfer || !selectedRecipientId ? t.hub.allFieldsRequired
-          : isEduPayment && (!paymentLink.trim() || !institutionName.trim() || !invoiceReference.trim())
-            ? (locale === "fa" ? "نام موسسه، شماره صورتحساب و لینک پرداخت را وارد کنید." : "Enter the institution name, invoice reference and payment link.") : null}
-        onBusyChange={setIsSubmitting}
-        onSubmitted={()=>setSubmitted(true)}
-      />}
-      {!submitted && stepError && <p role="alert" className={styles.promoError}>{stepError}</p>}
-      {!submitted && <div className={styles.wizardFooter}>{step > 0 && <button type="button" className={styles.wizardBack} disabled={isSubmitting} onClick={()=>goToStep(step-1)}><ArrowLeft size={16}/>{locale === "fa" ? "بازگشت" : "Back"}</button>}{step < 2 && <button type="button" className={styles.wizardNext} onClick={nextStep}>{locale === "fa" ? (step === 0 ? "انتخاب گیرنده" : "پرداخت و تأیید") : (step === 0 ? "Choose recipient" : "Payment & confirmation")}<ArrowRight size={17}/></button>}</div>}
-
-      {showRecipientModal && (
-        <RecipientModal
-          direction={recipientDirection}
-          mode={recipientModalMode}
-          profile={profile}
-          locale={locale}
-          onClose={() => setShowRecipientModal(false)}
-          onCreated={handleRecipientCreated}
-        />
-      )}
-
-    </article>
+                {appliedFee > 0 && <p className="m-0 text-xs leading-relaxed text-[#626a76]">{txType === "buy_aud" ? t.hub.feeAddedBuy.replace("{{fee}}", formatNumberUI(financeConfig.applied_fee, locale)) : t.hub.feeDeductedSell.replace("{{fee}}", formatNumberUI(financeConfig.applied_fee, locale))}</p>}
+              </>}
+              {step === 1 && <>
+                <div><label className={formLabel}>{t.hub.recipient}</label><SelectBox value={selectedRecipientId} onChange={handleRecipientChange} placeholder={text("Choose recipient", "انتخاب گیرنده")} labeledOptions={recipientOptions} disabled={isSubmitting} dir={fa ? "rtl" : "ltr"} className={selectStyle}/></div>
+                {selectedRecipient && <div className="rounded-2xl bg-[#f7f8fa] p-5"><p className="m-0 text-sm font-semibold text-[#182027]" data-private-value>{selectedRecipient.full_name || selectedRecipient.account_name || selectedRecipient.label}</p><p className="mb-0 mt-2 text-xs text-[#626a76]">{selectedRecipient.bank_name} · {recipientDirection === "aud" ? text("Australia", "استرالیا") : text("Iran", "ایران")}</p></div>}
+                {isEduPayment && <div className="space-y-5">{[{id:"request-institution",label:text("Institution name", "نام دانشگاه / مؤسسه"),value:institutionName,change:setInstitutionName,max:160},{id:"request-invoice",label:text("Invoice reference", "شماره صورتحساب"),value:invoiceReference,change:setInvoiceReference,max:120},{id:"request-payment-link",label:t.hub.paymentLink,value:paymentLink,change:setPaymentLink,max:2000}].map(field => <div key={field.id}><label className={formLabel} htmlFor={field.id}>{field.label}</label><input id={field.id} type={field.id === "request-payment-link" ? "url" : "text"} className={dashboardInputClass} value={field.value} onChange={event => field.change(event.target.value)} maxLength={field.max} disabled={isSubmitting}/></div>)}</div>}
+              </>}
+              {step === 2 && <>
+                <div className="flex items-center justify-between gap-4 rounded-2xl bg-[#f7f8fa] p-4"><div className="min-w-0"><span className="text-xs text-[#626a76]">{t.hub.recipient}</span><p className="mb-0 mt-1 break-words text-sm font-semibold text-[#182027]" data-private-value>{isEduPayment ? institutionName : selectedRecipient?.label || text("Selected account", "حساب انتخاب‌شده")}</p></div><DashboardButton tone="quiet" disabled={isSubmitting} onClick={() => goToStep(1)}>{text("Edit", "ویرایش")}</DashboardButton></div>
+                <div className="space-y-5"><div><label className={formLabel}>{t.hub.sourceOfFunds}</label><SelectBox value={sourceOfFunds} onChange={setSourceOfFunds} placeholder={text("Select source of funds", "انتخاب منبع وجه")} disabled={isSubmitting} dir={fa ? "rtl" : "ltr"} className={selectStyle} labeledOptions={sourceOptions.map(([value,en,fa]) => ({value,label:locale === "fa" ? fa : en}))}/></div><div><label className={formLabel}>{t.hub.reasonForTransfer}</label><SelectBox value={reasonForTransfer} onChange={setReasonForTransfer} placeholder={text("Select transfer purpose", "انتخاب دلیل انتقال")} disabled={isSubmitting} dir={fa ? "rtl" : "ltr"} className={selectStyle} labeledOptions={purposeOptions.map(([value,fa]) => ({value,label:locale === "fa" ? fa : value}))}/></div></div>
+                <details className="rounded-2xl border border-[#e9ecf0] p-4"><summary className="cursor-pointer text-sm font-medium text-[#182027]">{text("Have a promo code?", "کد تخفیف دارید؟")}</summary><div className="mt-4 flex gap-2"><input id="request-promo-code" aria-label={t.hub.promoCode} className={dashboardInputClass} value={promoInput} onChange={event => {setPromoInput(event.target.value.toUpperCase()); resetPromo();}} dir="ltr" disabled={isSubmitting}/><DashboardButton tone="secondary" asChild><button className="promoApplyBtn" type="button" onClick={handleApplyPromo} disabled={promoValidating || isSubmitting || !promoInput.trim() || rawAmount <= 0}>{promoValidating ? text("Checking…", "در حال بررسی…") : t.hub.promoApply}</button></DashboardButton></div>{promoMsg && <p role="status" className={cn("mb-0 mt-3 text-xs", promoMsg.type === "success" ? "text-emerald-700" : "text-rose-700")}>{promoMsg.text}</p>}</details>
+                <p className="m-0 text-xs leading-relaxed text-[#626a76]">{text("Pay by bank transfer after Zarman approves your request. Bank details will appear in your dashboard.", "پس از تأیید درخواست توسط زرمان، مبلغ را بانکی واریز کنید. مشخصات حساب در داشبورد نمایش داده می‌شود.")}</p>
+              </>}
+            </DashboardReveal>
+          </>}
+          {step === 2 && <div className="mt-6"><OnlineRequestSubmit key="request-submit" input={{ rawAmount, txType, sourceOfFunds, reasonForTransfer, recipientId: selectedRecipientId, promoCode: appliedPromoCode, paymentLink: isEduPayment ? paymentLink.trim() || null : null, institutionName: isEduPayment ? institutionName : undefined, invoiceReference: isEduPayment ? invoiceReference : undefined, locale }} disabled={!isApproved || !profile || rawAmount <= 0 || isRateOffline || !marketActive} validationMessage={!sourceOfFunds || !reasonForTransfer || !selectedRecipientId ? t.hub.allFieldsRequired : isEduPayment && (!paymentLink.trim() || !institutionName.trim() || !invoiceReference.trim()) ? text("Enter the institution name, invoice reference and payment link.", "نام مؤسسه، شماره صورتحساب و لینک پرداخت را وارد کنید.") : null} onBusyChange={setIsSubmitting} onSubmitted={() => setSubmitted(true)}/></div>}
+          {!submitted && stepError && <p role="alert" className="mt-5 text-sm text-rose-700">{stepError}</p>}
+          {!submitted && <div className="wizardFooter mt-8 flex items-center justify-between gap-3 border-t border-[#e9ecf0] pt-6">{step > 0 ? <DashboardButton tone="secondary" asChild><button type="button" className="wizardBack" disabled={isSubmitting} onClick={() => goToStep(step - 1)}>{text("Back", "بازگشت")}</button></DashboardButton> : <span className="text-xs text-[#626a76]">{text("Step 1 of 3", "مرحله ۱ از ۳")}</span>}{step < 2 && <DashboardButton asChild><button type="button" className="wizardNext" onClick={nextStep}>{step === 0 ? text("Choose recipient", "انتخاب گیرنده") : text("Review transfer", "بررسی انتقال")}</button></DashboardButton>}</div>}
+        </DashboardCard>
+        {!submitted && <DashboardCard className="h-fit p-6 xl:sticky xl:top-24"><p className="m-0 text-xs font-medium text-[#626a76]">{text("Your transfer estimate", "برآورد انتقال شما")}</p><div className="my-6 space-y-5"><div><span className="text-xs text-[#626a76]">{text("You send", "شما ارسال می‌کنید")}</span><p className="mb-0 mt-2 break-words text-2xl font-semibold tracking-[-.03em] text-[#182027]" data-private-value><bdi>{formatNumberUI(txType === "buy_aud" ? resultNumber : rawAmount, locale, txType === "buy_aud") || "—"}</bdi> <span className="text-sm font-normal text-[#626a76]">{txType === "buy_aud" ? text("Toman", "تومان") : "AUD"}</span></p></div><div><span className="text-xs text-[#626a76]">{text("Recipient gets", "گیرنده دریافت می‌کند")}</span><p className="mb-0 mt-2 break-words text-2xl font-semibold tracking-[-.03em] text-[#182027]" data-private-value><bdi>{formatNumberUI(txType === "buy_aud" ? rawAmount : resultNumber, locale, txType === "sell_aud") || "—"}</bdi> <span className="text-sm font-normal text-[#626a76]">{txType === "buy_aud" ? "AUD" : text("Toman", "تومان")}</span></p></div></div><dl className="m-0 space-y-4 border-t border-[#e9ecf0] pt-5 text-xs"><div className="flex justify-between gap-3"><dt className="text-[#626a76]">{text("Exchange rate", "نرخ تبدیل")}</dt><dd className="m-0 text-end font-medium"><bdi>1 AUD = {formatNumberUI(activeRate,locale,true)}</bdi> {text("Toman", "تومان")}</dd></div><div className="flex justify-between gap-3"><dt className="text-[#626a76]">{t.hub.fixedFee}</dt><dd className="m-0 font-medium"><bdi>{formatNumberUI(appliedFee,locale) || "0"} AUD</bdi></dd></div>{appliedFee > 0 && txType === "sell_aud" && <div className="flex justify-between gap-3"><dt className="text-[#626a76]">{t.hub.netSale}</dt><dd className="m-0"><bdi>{formatNumberUI(settlementAud,locale)} AUD</bdi></dd></div>}</dl>{loyaltyBonus > 0 && <p className="mb-0 mt-5 rounded-xl bg-[#f1efff] p-3 text-xs leading-relaxed text-[#5147cc]">{rawAmount > 0 ? t.hub.loyaltyThisTx.replace("{{amount}}",formatNumberUI(loyaltyBonus * rawAmount,locale,true)) : t.hub.loyaltyPerDollar.replace("{{amount}}",formatNumberUI(loyaltyBonus,locale,true))}</p>}{promoDiscount !== null && promoDiscount > 0 && <p className="mt-4 text-xs text-emerald-700">{t.hub.promoSavings} {formatNumberUI(promoDiscount,locale,true)} {text("Toman", "تومان")}</p>}<p className="mb-0 mt-5 text-[11px] leading-relaxed text-[#626a76]">{text("Priority service, if selected, is added to your final quote.", "در صورت انتخاب سرویس اولویت‌دار، هزینه آن به پیشنهاد نهایی اضافه می‌شود.")}</p></DashboardCard>}
+      </div>
+      {showRecipientModal && <RecipientModal direction={recipientDirection} lockDirection motionEnabled={motionEnabled} mode={recipientModalMode} profile={profile} locale={locale} onClose={() => setShowRecipientModal(false)} onCreated={handleRecipientCreated}/>}
+    </div>
   );
 }

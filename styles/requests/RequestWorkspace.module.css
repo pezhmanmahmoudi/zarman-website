@@ -170,14 +170,27 @@
 .cellDetail { display: block; color: #687181; font-size: 12px; line-height: 1.6; font-weight: 400; margin-block-start: 3px; overflow-wrap: anywhere; }
 .attention { display: block; font-size: 12px; color: #8b641c; margin-block-start: 5px; }
 .openRequest { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-size: 13px; font-weight: 650; color: #365bd6; white-space: nowrap; text-decoration: none; }
-.customerRequest { padding: 18px 20px; }
-.transferAmount { font-size: 15px; margin: 10px 0 4px; color: #3c485a; }
-.transferAmount span { margin-inline: 6px; }
+.customerRequest { padding: 22px 24px; border-color: #e9ecf0; border-radius: 24px; background: #fff; transition: border-color .15s ease, background-color .15s ease; }
+.customerRequest:hover { border-color: #d7dce3; background: #fff; }
+.transferAmount { display: flex; flex-wrap: wrap; gap: 10px 28px; margin: 14px 0 7px; color: #182027; }
+.transferAmount span { display: grid; gap: 3px; margin: 0; }
+.transferAmount small { color: #626a76; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.transferAmount bdi { font-size: 15px; font-weight: 650; }
 .customerRequestStatus { display: grid; justify-items: end; gap: 4px; }
-.nextActor { font-size: 11px; font-weight: 650; color: #667085; }
-.nextActor[data-actor="customer"] { color: #946200; }
+.nextActor { font-size: 11px; font-weight: 650; color: #626a76; }
+.nextActor[data-actor="customer"] { color: #765018; }
 .nextActor[data-actor="complete"] { color: #247553; }
 .nextActor[data-actor="closed"] { color: #9d3d5b; }
+.customerRequest .openRequest { color: #635bff; }
+.customerPrimary { min-height: 48px; border-radius: 999px; background: #20242c; box-shadow: none; }
+.customerPrimary:hover { background: #373d48; transform: none; }
+.customerSecondary { min-height: 48px; border-radius: 999px; border-color: #e9ecf0; color: #3f4752; box-shadow: none; }
+.customerSecondary:hover { border-color: #d7dce3; background: #f7f8fa; transform: none; }
+.workspace:not(.adminWorkspace) .filter { border-radius: 999px; border-color: #e9ecf0; background: #fff; color: #626a76; }
+.workspace:not(.adminWorkspace) .filter[aria-pressed="true"] { border-color: #d9d6ff; background: #f4f3ff; color: #423ba9; }
+.workspace:not(.adminWorkspace) .search { border-color: #e9ecf0; border-radius: 16px; background: #fff; }
+.workspace[dir="rtl"] .transferAmount small { letter-spacing: 0; text-transform: none; }
+@media(prefers-reduced-motion:reduce){.customerRequest,.customerPrimary,.customerSecondary{transition:none!important}}
 .backLink:focus-visible, .actionChoice:focus-visible, .disclosure > summary:focus-visible, .inlineDisclosure > summary:focus-visible, .textButton:focus-visible, .filter:focus-visible, .openRequest:focus-visible, .queueTable:focus-visible, .conversation:focus-visible { outline: 3px solid #8fa7ef; outline-offset: 3px; border-radius: 6px; }
 .exceptionActions > summary:focus-visible, .activityNotes > summary:focus-visible { outline: 3px solid #8fa7ef; outline-offset: 3px; border-radius: 5px; }
 .workspace[dir="rtl"] .backLink > svg, .workspace[dir="rtl"] .openRequest > svg { transform: rotate(180deg); }

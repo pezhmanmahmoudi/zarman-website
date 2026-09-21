@@ -7,7 +7,72 @@ const markup = tree=>renderToStaticMarkup(tree);
 function elements(tree,predicate) {
   const result=[];function walk(node){if(!React.isValidElement(node))return;if(predicate(node))result.push(node);React.Children.forEach(node.props.children,walk);}walk(tree);return result;
 }
+const modalMocks = {
+  "framer-motion": { ...require("framer-motion"), useReducedMotion: () => false },
+  "@/components/ui/dialog": Object.fromEntries(["Dialog", "DialogContent", "DialogTitle", "DialogDescription"].map(name => [name, ({children, dir, className}) => React.createElement(name === "DialogTitle" ? "h2" : name === "DialogDescription" ? "p" : "div", {dir, className, ...(name === "DialogContent" ? {role:"dialog", "aria-modal":true} : {})}, children)])),
+};
 const finance = {discount_step_volume:1000,discount_percent_per_step:.005,max_discount_percent:.25,fee_threshold:1000,applied_fee:30};
+
+test("the React Bits stepper follows controlled updates and read-only indicators cannot advance funds",()=>{
+  const h=dashboardHarness(), {default:Stepper,Step}=h.load("components/Stepper.jsx");
+  const changes=[], indicators=[];let completed=0;
+  const props={currentStep:2,readOnly:true,showContent:false,onStepChange:step=>changes.push(step),onFinalStepCompleted:()=>completed++,
+    backButtonText:"Previous",nextButtonText:"Next",
+    renderStepIndicator:indicator=>{indicators.push(indicator);return React.createElement("li",{"data-step":indicator.step,"data-current":indicator.step===indicator.currentStep});},
+    children:[1,2,3,4,5].map(step=>React.createElement(Step,{key:step},`Step ${step}`)),
+  };
+  let tree=h.render(Stepper,props);
+  assert.equal(elements(tree,e=>e.type==="button").length,0);
+  for(const indicator of indicators){indicator.onStepClick(5);indicator.onStepClick(6);}
+  indicators.length=0;tree=h.render(Stepper,props);
+  assert.deepEqual(changes,[]);assert.equal(completed,0);
+  assert.equal(elements(tree,e=>e.props["data-current"]===true)[0].props["data-step"],2);
+  props.currentStep=4;tree=h.render(Stepper,props);
+  assert.equal(elements(tree,e=>e.props["data-current"]===true)[0].props["data-step"],4);
+  assert.doesNotMatch(markup(tree),/>Previous<|>Next<|>Complete</);
+});
+
+test("an interactive controlled stepper requests changes without inventing a new current step",()=>{
+  const h=dashboardHarness(), {default:Stepper,Step}=h.load("components/Stepper.jsx"), changes=[];
+  const props={currentStep:2,showContent:false,onStepChange:step=>changes.push(step),backButtonText:"Previous",nextButtonText:"Next",
+    children:[1,2,3].map(step=>React.createElement(Step,{key:step},`Step ${step}`)),
+  };
+  const next=elements(h.render(Stepper,props),e=>e.type==="button" && e.props.children==="Next")[0];
+  next.props.onClick();assert.deepEqual(changes,[3]);
+  assert.match(markup(h.render(Stepper,props)),/aria-current="step"/);
+  const before=markup(h.render(Stepper,props));props.currentStep=3;
+  const after=markup(h.render(Stepper,props));
+  assert.notEqual(after,before);assert.match(after,/>Complete</);
+});
+
+test("the customer stepper rerenders confirmed funds, preserves missing receipts and localises its chronology",()=>{
+  const dates={};
+  const approved={...request,status:"awaiting_funds",funding_status:"unpaid",funding_received:0,evidence_submitted_at:null,funds_confirmed_at:null};
+  const received={...approved,status:"ready",funding_status:"confirmed",funding_received:request.funding_received,funds_confirmed_at:request.funds_confirmed_at};
+  const completion={id:"completed-event",event_type:"complete",sequence:8,created_at:"2026-09-16T04:00:00Z"};
+  const rows=html=>[...html.matchAll(/<li\b([^>]*)>([\s\S]*?)<\/li>/g)].filter(([,attrs])=>/class="request-journey-step"/.test(attrs));
+  for(const locale of ["en","fa"]) {
+    const h=dashboardHarness({locale}), {RequestProgress}=h.load("components/requests/RequestProgress.tsx");
+    const render=(value,events=[])=>markup(h.render(RequestProgress,{request:value,events,locale}));
+    const before=render(approved), after=render(received);
+    assert.equal(rows(before).length,5);assert.equal(rows(after).length,5);
+    assert.match(rows(before)[1][1],/aria-current="step"/);
+    assert.match(rows(after)[3][1],/aria-current="step"/);
+    assert.doesNotMatch(rows(after)[1][1],/aria-current="step"/);
+    assert.match(rows(after)[2][1],/data-done="false"/);
+    assert.doesNotMatch(rows(after)[2][2],/<svg|<time/);
+    assert.match(after,new RegExp(`dir="${locale==="fa"?"rtl":"ltr"}"`));
+    assert.doesNotMatch(after,/>Previous<|>Next<|class="(?:next|back)-button"/);
+    const done=render({...received,status:"completed",updated_at:"2026-09-20T00:00:00Z"},[completion]);
+    assert.match(rows(done)[4][1],/data-done="true"/);assert.match(rows(done)[4][1],/aria-current="step"/);
+    assert.match(rows(done)[4][2],/<svg/);assert.match(rows(done)[4][2],new RegExp(completion.created_at));
+    assert.match(rows(done)[2][1],/data-done="false"/);
+    dates[locale]=[...done.matchAll(/<time dir="ltr" dateTime="([^"]+)">([^<]+)<\/time>/g)].map(([,iso,text])=>[iso,text]);
+    assert.equal(dates[locale].length,4);assert.ok(dates[locale].every(([,text])=>/Sept? 2026/.test(text) && !/[\u06f0-\u06f9]/.test(text)));
+    assert.doesNotMatch(render({...approved,status:"cancelled"}),/aria-current="step"/);
+  }
+  assert.deepEqual(dates.fa,dates.en);
+});
 
 test("the animated journey follows financial facts and offers only the correct next action in both languages",()=>{
   const actorLabels={
@@ -85,7 +150,8 @@ test("guided transfer prevents skipping missing details and preserves a selected
   const render=()=>h.render(DashboardRequestHub,props),next=()=>elements(render(),e=>String(e.props.className).includes("wizardNext"))[0].props.onClick();
   try {
     render();h.effects();await tick();render();h.effects();
-    const labels=markup(render());for(const label of ["Amount &amp; currency","Recipient","Payment &amp; confirmation"])assert.match(labels,new RegExp(label));
+    const labels=markup(render());for(const label of ["Amount","Recipient","Review"])assert.match(labels,new RegExp(label));
+    assert.match(labels,/react-bits-stepper/);
     next();assert.equal(elements(render(),e=>e.type===SelectBox).length,0);assert.equal(elements(render(),e=>e.props.role==="alert").length,1);
     props.amountStr="1000";next();assert.equal(elements(render(),e=>e.type===SelectBox)[0].props.value,"saved");
     next();let submit=elements(render(),e=>e.type===OnlineRequestSubmit)[0];assert.ok(submit);assert.ok(submit.props.validationMessage);
@@ -124,8 +190,10 @@ test("successful submission replaces the editable draft shell with a bilingual a
       assert.equal(elements(tree,e=>String(e.props.className).includes("wizardSteps")).length,0);
       assert.equal(elements(tree,e=>String(e.props.className).includes("wizardFooter")).length,0);
       assert.doesNotMatch(html,locale==="fa" ? /پیش‌نویس|هنوز ثبت نشده|ویرایش/ : /Draft|Not submitted yet|Edit/);
-      assert.match(html,locale==="fa" ? /ثبت شد/ : /Submitted/);
-      assert.match(html,locale==="fa" ? /در انتظار تأیید زرمان/ : /awaiting Zarman approval/);
+      // The mounted submission component owns the single receipt/reference acknowledgement.
+      assert.equal(elements(tree,e=>e.type===OnlineRequestSubmit)[0].key,submit.key);
+      assert.equal(elements(tree,e=>e.props.id==="request-amount-aud").length,0);
+      assert.equal(elements(tree,e=>e.type===SelectBox).length,0);
     } finally { global.requestAnimationFrame=previous; }
   }
 });
@@ -170,26 +238,28 @@ test("recipient action saves only validated editable fields under the authentica
   await getRecipients();assert.deepEqual(scopes,[["user_id","authenticated-owner"]]);
 });
 
-test("recipient modal saves Iranian bank city, keeps native validation and retries failed saves",async()=>{
+test("recipient modal validates Iranian bank details inline and preserves values on a failed save",async()=>{
   for(const locale of ["en","fa"]) {
     const calls=[];let closed=0,created=0,fail=true;
-    const h=dashboardHarness({locale,mocks:{"@/app/actions/transaction.actions":{createRecipient:async payload=>{calls.push(payload);if(fail)throw Error("offline");return {data:{...payload,id:"new"}};}}}});
+    const h=dashboardHarness({locale,mocks:{...modalMocks,"@/app/actions/transaction.actions":{createRecipient:async payload=>{calls.push(payload);if(fail)throw Error("offline");return {data:{...payload,id:"new"}};}}}});
     const {RecipientModal}=h.load("components/dashboard/RecipientModal.tsx");
     const props={direction:"irt",locale,onClose(){closed++;},onCreated(){created++;}};
     const render=()=>h.render(RecipientModal,props),change=(id,value)=>elements(render(),e=>e.props.id===`recipient-${id}`)[0].props.onChange({target:{value}});
+    const submit=async()=>{elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();};
+    const persian=value=>value.replace(/\d/g,d=>String.fromCharCode(0x6f0+Number(d)));
     const previous=global.requestAnimationFrame;global.requestAnimationFrame=()=>1;
     try {
-      change("name","Alex");change("bank_name","Saman Bank");change("bank_city","Tehran");change("shaba","۸۲۰۵۴۰۱۰۲۶۸۰۰۲۰۸۱۷۹۰۹۰۰۳");
-      let html=markup(render());assert.match(html,/<dialog[^>]*aria-labelledby="recipient-title"/);assert.match(html,/maxLength="120"/);assert.match(html,/pattern="\[0-9\]\{24\}"/);
-      elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
-      assert.equal(elements(render(),e=>e.props.role==="alert").length,1);
-      change("shaba","۸۲۰۵۴۰۱۰۲۶۸۰۰۲۰۸۱۷۹۰۹۰۰۲");
-      elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
-      change("address","Street");change("city","Shiraz");change("state","Fars");change("country","Iran");change("phone","09123456789");
-      elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
+      await submit();assert.equal(elements(render(),e=>e.props.id==="recipient-name")[0].props["aria-invalid"],true);
+      change("name","Alex");change("relationship","family");await submit();
+      change("bank_name","Saman Bank");change("bank_city","Tehran");change("shaba",persian("820540102680020817909003"));
+      let html=markup(render());assert.match(html,/role="dialog"/);assert.match(html,/maxLength="120"/);assert.match(html,/pattern="\[0-9\]\{24\}"/);
+      change("address","Street");change("city","Shiraz");change("state","Fars");change("residential_country","Iran");change("phone","09123456789");
+      await submit();assert.equal(calls.length,0);assert.equal(elements(render(),e=>e.props.id==="recipient-shaba")[0].props["aria-invalid"],true);
+      change("shaba",persian("820540102680020817909002"));await submit();
       assert.equal(closed,0);assert.equal(elements(render(),e=>e.props.role==="alert").length,1);
-      fail=false;elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
-      assert.equal(created,1);assert.equal(closed,1);assert.equal(calls[1].bank_city,"Tehran");assert.equal(calls[1].irt_city,"Shiraz");assert.equal(calls[1].shaba_number,"IR820540102680020817909002");
+      assert.equal(elements(render(),e=>e.props.id==="recipient-bank_city")[0].props.value,"Tehran");
+      fail=false;await submit();
+      assert.equal(created,1);assert.equal(closed,1);assert.equal(calls[1].bank_city,"Tehran");assert.equal(calls[1].irt_city,"Shiraz");assert.equal(calls[1].shaba_number,"IR820540102680020817909002");assert.equal(calls[1].relationship,"family");
     }finally{global.requestAnimationFrame=previous;}
   }
 });
@@ -197,13 +267,14 @@ test("recipient modal saves Iranian bank city, keeps native validation and retri
 test("recipient directory localises both directions and ignores reads after unmount",async()=>{
   for(const locale of ["en","fa"]) {
     let finish;const h=dashboardHarness({locale,mocks:{
+      "framer-motion": modalMocks["framer-motion"],
       "./DashboardShell":{useDashboard:()=>({profile:{id:"customer"}})},
       "./RecipientModal":{RecipientModal:()=>null},
       "@/app/actions/transaction.actions":{getRecipients:()=>new Promise(resolve=>{finish=resolve;})},
     }});
     const {DashboardRecipients}=h.load("components/dashboard/DashboardRecipients.tsx"),render=()=>h.render(DashboardRecipients);
     render();h.effects();finish({data:[{id:"one",direction:"irt",full_name:"<script>bad</script>",bank_name:"Saman",bank_city:"Tehran",shaba_number:"IR1234567890"}]});await tick();
-    elements(render(),e=>e.type==="button" && e.props["aria-pressed"]===false)[0].props.onClick();
+    elements(render(),e=>e.props["data-recipient-country"]==="irt")[0].props.onClick();
     const html=markup(render());assert.match(html,/Tehran/);assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/IR1234567890/);assert.match(html,/recipient=one/);
     h.cleanup();assert.equal(elements(render(),e=>e.type==="article").length,1);
   }
@@ -224,14 +295,15 @@ test("the new bank city migration preserves existing rows and enforces length on
 
 test("own Iranian account requires only the contact fields used for Iranian recipients",async()=>{
   const calls=[];let created=0,closed=0;
-  const h=dashboardHarness({mocks:{"@/app/actions/transaction.actions":{createRecipient:async payload=>{calls.push(payload);return {data:{...payload,id:"own-irt"}};}}}});
+  const h=dashboardHarness({mocks:{...modalMocks,"@/app/actions/transaction.actions":{createRecipient:async payload=>{calls.push(payload);return {data:{...payload,id:"own-irt"}};}}}});
   const {RecipientModal}=h.load("components/dashboard/RecipientModal.tsx");
   const props={direction:"irt",mode:"self_destination",locale:"en",profile:{address:"Street",suburb:"Shiraz",state:"Fars",country:"Iran",mobile_number:"09123456789",postcode:"",email:""},onClose(){closed++;},onCreated(){created++;}};
   const render=()=>h.render(RecipientModal,props),change=(id,value)=>elements(render(),e=>e.props.id===`recipient-${id}`)[0].props.onChange({target:{value}});
   const previous=global.requestAnimationFrame;global.requestAnimationFrame=()=>1;
   try {
-    change("name","Alex");change("bank_name","Saman Bank");change("shaba","820540102680020817909002");
+    change("name","Alex");
     elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
+    change("bank_name","Saman Bank");change("shaba","820540102680020817909002");
     elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
     assert.equal(created,1);assert.equal(closed,1);assert.equal(calls[0].irt_postcode,"");assert.equal(calls[0].shaba_number,"IR820540102680020817909002");
   }finally{global.requestAnimationFrame=previous;}
@@ -253,9 +325,132 @@ test("the Zarman connection uses the official mark and a single settling motion 
 
 test("bright surface tokens, pause control and reduced-motion rules protect readability and motion preferences",()=>{
   const css=fs.readFileSync("styles/dashboard/DashboardShell.module.css","utf8");
-  assert.match(css,/--color-text-primary:#282337/);assert.match(css,/color-scheme:light/);assert.match(css,/data-motion="off"/);assert.match(css,/prefers-reduced-motion/);
+  assert.match(css,/--color-text-primary:#182027/);assert.match(css,/color-scheme:light/);assert.match(css,/data-motion="off"/);assert.match(css,/prefers-reduced-motion/);
   for(const file of ["TransferJourney","RecipientModal","DashboardRecipients","DashboardRequestHub"])assert.match(fs.readFileSync(`styles/dashboard/${file}.module.css`,"utf8"),/prefers-reduced-motion/);
-  const {DashboardHeader}=dashboardHarness().load("components/dashboard/DashboardHeader.tsx");
-  const html=markup(React.createElement(DashboardHeader,{activeTab:"overview",profile:null,privateAmounts:false,onTogglePrivacy(){},motion:false,onToggleMotion(){}}));
-  assert.match(html,/Play animations/);
+  const h=dashboardHarness(), {DashboardHeader}=h.load("components/dashboard/DashboardHeader.tsx");
+  let toggled=0;
+  const props={activeTab:"overview",profile:null,privateAmounts:false,onTogglePrivacy(){},motion:false,onToggleMotion(){toggled++;}};
+  let tree=h.render(DashboardHeader,props);
+  elements(tree,e=>e.props["aria-label"]==="Display preferences")[0].props.onClick();
+  tree=h.render(DashboardHeader,props);
+  assert.equal(elements(tree,e=>e.props.open===true).length,1);
+  const checkbox=elements(tree,e=>e.type==="input" && e.props.type==="checkbox")[1];
+  assert.equal(checkbox.props.checked,false);checkbox.props.onChange();assert.equal(toggled,1);
+});
+
+test("the transfer hero displays each quoted currency, preserves privacy hooks and escapes recipient text in EN and FA",()=>{
+  for(const locale of ["en","fa"]) {
+    const h=dashboardHarness({locale}), {TransferOverviewCard}=h.load("components/dashboard/TransferOverviewCard.tsx");
+    const render=value=>markup(React.createElement(TransferOverviewCard,{request:value,locale,loading:false,error:false,onRetry(){},motionEnabled:false}));
+    const quote={...request.quote,applied_rate:105000,recipient_snapshot:{full_name:"<script>recipient</script>"}};
+    const html=render({...request,quote});
+    assert.match(html,/ZE36827/);assert.match(html,/&lt;script&gt;recipient&lt;\/script&gt;/);assert.doesNotMatch(html,/<script>/);
+    const privateValues=[...html.matchAll(/<[^>]+data-private-value(?:="true")?[^>]*>([\s\S]*?)<\/[^>]+>/g)].map(([,value])=>value.replace(/<[^>]+>/g,"")).join(" ");
+    assert.match(privateValues,locale==="en" ? /234,675,000/ : /۲۳۴٬۶۷۵٬۰۰۰/);
+    assert.match(privateValues,locale==="en" ? /2,235/ : /۲٬۲۳۵/);
+    assert.match(html,locale==="en" ? /Toman/ : /تومان/);assert.match(html,/AUD/);
+    const reverse=render({...request,reference_code:"ZE99999",quote:{...quote,funding_total:1234.56,funding_currency:"AUD",recipient_amount:129628800,recipient_currency:"IRT"}});
+    assert.match(reverse,/ZE99999/);assert.doesNotMatch(reverse,/ZE36827/);
+    assert.match(reverse,locale==="en" ? /1,234\.56/ : /۱٬۲۳۴٫۵۶/);
+    assert.match(reverse,locale==="en" ? /129,628,800/ : /۱۲۹٬۶۲۸٬۸۰۰/);
+    assert.doesNotMatch(reverse,/NaN|undefined/);
+  }
+});
+
+test("hero state changes follow admin facts and only expose the currently valid customer action",()=>{
+  for(const locale of ["en","fa"]) {
+    const h=dashboardHarness({locale}), {TransferOverviewCard}=h.load("components/dashboard/TransferOverviewCard.tsx");
+    const render=value=>markup(React.createElement(TransferOverviewCard,{request:value,locale,loading:false,error:false,onRetry(){},motionEnabled:false}));
+    const unpaid={...request,status:"submitted",funding_status:"unpaid",funding_received:0,payment_approved_at:null,evidence_submitted_at:null,funds_confirmed_at:null};
+    const pending=render(unpaid);assert.doesNotMatch(pending,/href="[^"]*#request-payment-details/);
+    const approved={...unpaid,status:"awaiting_funds",payment_approved_at:request.payment_approved_at};
+    assert.match(render(approved),new RegExp(`href="/${locale}/dashboard/requests/fixture-request#request-payment-details"`));
+    for(const value of [{...approved,status:"under_review",evidence_submitted_at:request.evidence_submitted_at},request,{...request,status:"processing"}]) {
+      const html=render(value);assert.doesNotMatch(html,/href="[^"]*#request-payment-details|href="[^"]*#request-conversation/);
+      assert.match(html,locale==="en" ? /No action needed/ : /نیازی به اقدام شما نیست/);
+    }
+    const received=render(request);assert.match(received,locale==="en" ? /Funds received/ : /وجه دریافت شد/);
+    assert.match(render({...request,customer_action_required:"Confirm the recipient"}),new RegExp(`href="/${locale}/dashboard/requests/fixture-request#request-conversation"`));
+    assert.match(render({...request,status:"completed"}),/href="\/api\/requests\/fixture-request\/receipt"/);
+    for(const value of [{...unpaid,status:"cancelled"},{...request,funding_status:"refund_pending"},{...request,funding_status:"refunded"},{...request,status:"completed",priority_fee_status:"refund_pending"}]) {
+      assert.doesNotMatch(render(value),/href="[^"]*#request-payment-details|href="\/api\/requests\/fixture-request\/receipt"/);
+    }
+  }
+});
+
+test("an approved request returned to admin review never invites payment before review is cleared",()=>{
+  for(const locale of ["en","fa"]) {
+    const h=dashboardHarness({locale}), {journeyPresentation}=h.load("lib/dashboard/journey-presentation.ts");
+    const {TransferOverviewCard}=h.load("components/dashboard/TransferOverviewCard.tsx");
+    const held={...request,status:"under_review",funding_status:"unpaid",funding_received:0,evidence_submitted_at:null,funds_confirmed_at:null};
+    const state=journeyPresentation(held,locale);
+    assert.equal(state.approved,true);assert.equal(state.stage,1);assert.equal(state.canPay,false);
+    assert.equal(state.nextActor,"zarman");assert.equal(state.href,null);assert.equal(state.action,null);assert.equal(state.mood,"waiting");
+    assert.match(state.heading,locale==="en" ? /reviewing your request/ : /در حال بررسی درخواست شما/);
+    assert.match(state.description,locale==="en" ? /No action needed/ : /نیازی به اقدام شما نیست/);
+    const html=markup(React.createElement(TransferOverviewCard,{request:held,locale,motionEnabled:false}));
+    assert.match(html,/data-next-actor="zarman"/);
+    assert.match(html,locale==="en" ? /No action needed/ : /نیازی به اقدام شما نیست/);
+    assert.doesNotMatch(html,/href="[^"]*#request-payment-details/);
+    assert.doesNotMatch(html,locale==="en" ? /ready to pay|Your turn|Transfer the exact amount/ : /آماده واریز وجه هستید|نوبت شما|مبلغ مشخص‌شده را واریز کنید/);
+  }
+});
+
+test("the transfer hero distinguishes loading and unavailable data from a genuinely empty account",()=>{
+  for(const locale of ["en","fa"]) {
+    const buttons=[];let retried=0;
+    const h=dashboardHarness({locale,mocks:{"@/components/ui/button":{Button:({asChild,children,...props})=>{
+      buttons.push(props);return asChild ? React.cloneElement(React.Children.only(children),props) : React.createElement("button",props,children);
+    }}}});
+    const {TransferOverviewCard}=h.load("components/dashboard/TransferOverviewCard.tsx");
+    const render=props=>markup(React.createElement(TransferOverviewCard,{request:null,locale,loading:false,error:false,onRetry(){retried++;},motionEnabled:false,...props}));
+    const loading=render({loading:true});assert.match(loading,/aria-busy="true"|role="status"/);
+    assert.doesNotMatch(loading,/href="[^"]*#request-payment-details|href="\/api\/requests\//);
+    const empty=render({});assert.match(empty,new RegExp(`href="/${locale}/dashboard\\?tab=transfer"`));
+    for(const value of [null,{...request,status:"awaiting_funds",funding_status:"unpaid",funds_confirmed_at:null,evidence_submitted_at:null}]) {
+      buttons.length=0;const failure=render({request:value,error:true});
+      assert.match(failure,/role="alert"|role="status"/);
+      assert.doesNotMatch(failure,/href="[^"]*#request-payment-details|href="\/api\/requests\//);
+      const retry=buttons.find(props=>typeof props.onClick==="function");assert.ok(retry,"an unavailable or stale feed must offer retry");retry.onClick();
+    }
+    assert.equal(retried,2);
+  }
+});
+
+test("the overview hero stays connected to the request feed and prioritises the customer's next action",()=>{
+  let feed={requests:[],loading:false,error:false,refreshing:false,refresh(){}};
+  const h=dashboardHarness({mocks:{
+    "./DashboardShell":{useDashboard:()=>({profile:{first_name:"Alex",kyc_status:"approved",loyalty_discount_toman:0},motionEnabled:false}),useDashboardMotion:()=>false},
+    "@/hooks/useDashboardRequests":{useDashboardRequests:()=>feed},
+    "@/context/FinanceConfigContext":{useFinanceConfig:()=>finance},
+    "./TransferOverviewCard":{TransferOverviewCard:()=>null},
+  }});
+  const {DashboardOverview}=h.load("components/dashboard/DashboardOverview.tsx");
+  const props={volume:0,completedCount:0,tailoredRate:105000,baseRate:105000};
+  const hero=()=>elements(h.render(DashboardOverview,props),e=>"onRetry" in e.props && "request" in e.props)[0];
+  const attention={...request,id:"attention",reference_code:"ZE00001",status:"awaiting_funds",funding_status:"unpaid",funds_confirmed_at:null,evidence_submitted_at:null,created_at:"2026-09-14T01:20:00Z"};
+  feed={...feed,requests:[request,attention]};assert.equal(hero().props.request.id,"attention");assert.equal(hero().props.motionEnabled,false);
+  const confirmed={...attention,funding_status:"confirmed",funds_confirmed_at:request.funds_confirmed_at};
+  feed={...feed,requests:[confirmed]};assert.equal(hero().props.request,confirmed);
+  feed={...feed,error:true};assert.equal(hero().props.error,true);
+  feed={...feed,requests:[],loading:true,error:false};assert.equal(hero().props.loading,true);assert.ok(hero().props.request == null);
+});
+
+test("hero and stepper honor both the dashboard pause control and the system motion preference",()=>{
+  for(const [motionEnabled,reducedMotion,expected] of [[false,false,false],[true,true,false],[true,false,true]]) {
+    let motif,journeyStepper,baseStepper;
+    const h=dashboardHarness({mocks:{
+      "framer-motion":{...require("framer-motion"),useReducedMotion:()=>reducedMotion},
+      "motion/react":{...require("motion/react"),useReducedMotion:()=>reducedMotion},
+      "./TransferBrandMotif":{__esModule:true,default:props=>{motif=props;return null;}},
+      "@/components/requests/RequestJourneyStepper":{RequestJourneyStepper:props=>{journeyStepper=props;return null;}},
+      "@/components/Stepper":{__esModule:true,default:props=>{baseStepper=props;return null;},Step:()=>null},
+    }});
+    const {TransferOverviewCard}=h.load("components/dashboard/TransferOverviewCard.tsx");
+    markup(React.createElement(TransferOverviewCard,{request,locale:"en",motionEnabled}));
+    assert.equal(motif.motionEnabled,expected);assert.equal(journeyStepper.motionEnabled,expected);
+    const {RequestJourneyStepper}=h.load("components/requests/RequestJourneyStepper.tsx");
+    markup(React.createElement(RequestJourneyStepper,journeyStepper));
+    assert.equal(baseStepper.motionEnabled,expected);assert.equal(baseStepper.readOnly,true);assert.equal(baseStepper.currentStep,4);
+  }
 });

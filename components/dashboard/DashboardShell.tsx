@@ -1,15 +1,16 @@
 "use client";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { RefreshCw, ShieldCheck } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useLocale } from "@/context/LocaleContext";
 import { dashboardCopy, dashboardTab } from "@/lib/dashboard/navigation";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
+import { DashboardMotionProvider } from "./DashboardMotion";
 import styles from "@/styles/dashboard/DashboardShell.module.css";
 
-const DashboardContext = createContext<ReturnType<typeof useDashboardData> | null>(null);
+const DashboardContext = createContext<(ReturnType<typeof useDashboardData> & { motionEnabled: boolean }) | null>(null);
 export function useDashboard() {
   const value = useContext(DashboardContext);
   if (!value) throw new Error("Dashboard provider is required");
@@ -27,19 +28,19 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const tab = dashboardTab(pathname, query), copy = dashboardCopy[locale];
   const [privateAmounts, setPrivateAmounts] = useState(false);
   const [motion, setMotion] = useState(true);
-  return <DashboardContext.Provider value={data}>
+  return <DashboardContext.Provider value={{ ...data, motionEnabled: motion }}><DashboardMotionProvider enabled={motion}>
     <div className={styles.dashboardWrapper} data-theme="light" data-motion={motion ? "on" : "off"} data-private-amounts={privateAmounts} data-dashboard-shell dir={locale === "fa" ? "rtl" : "ltr"}>
       <a href="#dashboard-content" className={styles.skipLink}>{copy.skip}</a>
-      <DashboardSidebar activeTab={tab} />
-      <div className={styles.mainArea}>
+      <DashboardSidebar activeTab={tab} motionEnabled={motion} />
+      <div className="flex min-h-dvh min-w-0 flex-col min-[900px]:ms-[220px] xl:ms-[248px]">
         <DashboardHeader activeTab={tab} profile={data.profile} privateAmounts={privateAmounts} onTogglePrivacy={() => setPrivateAmounts(value => !value)} motion={motion} onToggleMotion={() => setMotion(value => !value)} />
-        <div id="dashboard-content" tabIndex={-1} className={styles.content}>
+        <div id="dashboard-content" tabIndex={-1} className="mx-auto w-full max-w-[1256px] min-w-0 flex-1 px-5 py-7 outline-none sm:px-8 sm:py-9 lg:px-10">
           {data.error && data.sessionChecked && <div className={styles.refreshNotice} role="status"><span>{copy.refreshError}</span><button onClick={() => void data.refresh()} disabled={data.loading}>{copy.retry}</button></div>}
           {data.error && !data.sessionChecked ? <section className={styles.errorState} role="alert"><h1>{copy.loadError}</h1><button onClick={() => void data.refresh()} disabled={data.loading}><RefreshCw size={17} />{copy.retry}</button></section>
             : !data.sessionChecked ? <DashboardLoading /> : children}
         </div>
-        <footer className={styles.footer}><span>Zarman Exchange</span><span><ShieldCheck size={14} aria-hidden="true" />{copy.exchange}</span></footer>
+        <footer className="mx-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#e9ecf0] py-6 pb-28 text-xs text-[#7d8490] sm:mx-8 min-[900px]:pb-6 lg:mx-10"><span>Zarman Exchange</span><span>{copy.exchange}</span></footer>
       </div>
     </div>
-  </DashboardContext.Provider>;
+  </DashboardMotionProvider></DashboardContext.Provider>;
 }

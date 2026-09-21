@@ -22,7 +22,7 @@ function dashboardHarness({ locale = "en", pathname = `/${locale}/dashboard`, qu
       if (id === "react") return hookReact;
       if (id === "next/navigation") return navigation;
       if (id === "next/link") return { __esModule: true, default: ({ children, ...props }) => React.createElement("a",props,children) };
-      if (id === "next/image") return { __esModule: true, default: props => React.createElement("img",props) };
+      if (id === "next/image") return { __esModule: true, default: props => { const attributes = { ...props }; delete attributes.unoptimized; return React.createElement("img",attributes); } };
       if (id === "@/context/LocaleContext") return { useLocale: () => locale };
       if (id === "@/lib/supabase") return { supabase: { auth: { signOut() { throw Error("Unexpected auth mutation"); } } } };
       if (id.endsWith(".module.css")) {
@@ -35,9 +35,14 @@ function dashboardHarness({ locale = "en", pathname = `/${locale}/dashboard`, qu
         css.set(filename,parsed.toString());
         return { __esModule:true, default: new Proxy(classes, { get(target,key) { if (typeof key !== "string" || key in target) return target[key]; throw Error(`Missing CSS class ${id}: ${key}`); } }) };
       }
+      if (id.endsWith(".css")) {
+        const stylesheet = id.startsWith("@/") ? path.resolve(root,id.slice(2)) : path.resolve(path.dirname(filename),id);
+        css.set(stylesheet,postcss.parse(fs.readFileSync(stylesheet,"utf8")).toString());
+        return {};
+      }
       if (id.startsWith("@/") || id.startsWith(".")) {
         const base = id.startsWith("@/") ? path.resolve(root,id.slice(2)) : path.resolve(path.dirname(filename),id);
-        const dependency = [base,`${base}.tsx`,`${base}.ts`,`${base}.json`,path.join(base,"index.ts")].find(candidate => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
+        const dependency = [base,`${base}.tsx`,`${base}.ts`,`${base}.jsx`,`${base}.js`,`${base}.json`,path.join(base,"index.ts")].find(candidate => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
         if (dependency) return dependency.endsWith(".json") ? JSON.parse(fs.readFileSync(dependency,"utf8")) : compile(dependency);
       }
       return require(id);
