@@ -18,7 +18,7 @@ export function DashboardHeader({ activeTab, profile, privateAmounts, onTogglePr
   const targetLocale = fa ? "en" : "fa";
   const switchPath = pathname.replace(/^\/(en|fa)(?=\/|$)/, `/${targetLocale}`) + (query.toString() ? `?${query}` : "");
   return <>
-    <header className="sticky top-0 z-20 flex min-h-[76px] items-center justify-between gap-3 border-b border-[#e9ecf0]/80 bg-[#f7f8fa]/95 px-5 backdrop-blur-md sm:px-8 lg:px-10">
+    <header className="sticky top-0 z-20 flex min-h-[76px] items-center justify-between gap-3 border-b border-[#ded8eb]/80 bg-[#faf8ff]/90 px-5 backdrop-blur-md sm:px-8 lg:px-10">
       <div className="flex min-w-0 items-center gap-3"><Image src="/images/logo-no-text-light.svg" alt="Zarman" width={30} height={30} className="shrink-0 min-[900px]:hidden"/><span className="truncate text-sm font-medium text-[#626a76]">{copy[activeTab]}</span></div>
       <div className="flex shrink-0 items-center gap-2 sm:gap-4">
         <Link className="flex min-h-11 items-center rounded-full px-2.5 text-xs font-medium text-[#626a76] hover:bg-[#eef0f4]" href={switchPath} aria-label={targetLocale === "fa" ? "فارسی" : "English"} lang={targetLocale}>{targetLocale === "fa" ? "فارسی" : "English"}</Link>

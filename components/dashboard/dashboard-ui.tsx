@@ -6,23 +6,34 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDashboardMotion } from "./DashboardMotion";
+import { MagicCard } from "@/components/ui/magic-card";
+import { dashboardPalette, type DashboardTone } from "@/lib/dashboard/palette";
 
 /** Shared customer surfaces. Use the same hierarchy from onboarding to settlement. */
 export function DashboardCard({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <Card data-dashboard-card className={cn("min-w-0 gap-0 rounded-3xl border border-[#e9ecf0] bg-white p-6 text-[#182027] shadow-none ring-0 sm:p-7", className)} {...props}>{children}</Card>;
+  return <Card data-dashboard-card className={cn("min-w-0 gap-0 rounded-3xl border border-[#ded8eb] bg-white/90 p-6 text-[#242137] shadow-[0_3px_0_0_#e9e2f0] ring-0 sm:p-7", className)} {...props}>{children}</Card>;
+}
+
+export function DashboardMagicCard({ tone = "violet", motionEnabled, contentClassName, className, style, children, ...props }: HTMLAttributes<HTMLDivElement> & { tone?: DashboardTone; motionEnabled?: boolean; contentClassName?: string }) {
+  const enabled = useDashboardMotion();
+  const colors = dashboardPalette[tone];
+  return <MagicCard {...props} data-dashboard-card data-card-tone={tone} motionEnabled={(motionEnabled ?? true) && enabled}
+    gradientColor={colors.glow} gradientFrom={colors.accent} gradientTo={colors.glow}
+    className={cn("min-w-0 rounded-3xl text-[#242137]", className)} contentClassName={cn("p-6 sm:p-7", contentClassName)}
+    style={{ background: `linear-gradient(135deg, #ffffffed 12%, ${colors.soft}ed 100%)`, borderColor: colors.border, boxShadow: `0 4px 0 0 ${colors.border}80, inset 0 1px 0 #fff`, ...style }}>{children}</MagicCard>;
 }
 
 export function DashboardButton({ tone = "primary", className, ...props }: ComponentProps<typeof Button> & { tone?: "primary" | "secondary" | "quiet" }) {
   return <Button data-dashboard-button className={cn(
     "h-auto min-h-12 gap-2 rounded-full px-6 py-3 text-sm font-semibold leading-5 whitespace-normal shadow-none transition-[background-color,color,border-color,box-shadow] duration-150 active:translate-y-0! focus-visible:ring-[#635bff]/25 motion-reduce:transition-none",
-    tone === "primary" ? "border-transparent bg-[#20242c] text-white hover:bg-[#373d48]" : tone === "secondary" ? "border-transparent bg-[#f1f3f6] text-[#20242c] hover:bg-[#e7eaf0]" : "border-transparent bg-transparent text-[#626a76] hover:bg-[#f1f3f6] hover:text-[#182027]",
+    tone === "primary" ? "border-[#6240b7] bg-[#7048ca] text-white shadow-[0_3px_0_#513493] hover:bg-[#633bbf]" : tone === "secondary" ? "border-[#ded5ef] bg-white/80 text-[#4f3980] hover:bg-[#f2ebfc]" : "border-transparent bg-transparent text-[#655381] hover:bg-[#f2ebfc] hover:text-[#49318b]",
     className,
   )} {...props}/>;
 }
 
-export function DashboardPageHeader({ eyebrow, title, description, action }: { eyebrow?: string; title: string; description?: string; action?: ReactNode }) {
+export function DashboardPageHeader({ eyebrow, title, description, action }: { eyebrow?: string; title: ReactNode; description?: string; action?: ReactNode }) {
   return <header className="flex flex-col items-start justify-between gap-5 pb-1 sm:flex-row sm:items-end">
-    <div className="min-w-0">{eyebrow && <p className="m-0 mb-2 text-sm text-[#626a76]">{eyebrow}</p>}<h1 className="m-0! text-[clamp(1.75rem,3vw,2.25rem)]! font-semibold leading-tight! tracking-[-.035em] text-[#182027]! rtl:leading-relaxed! rtl:tracking-normal">{title}</h1>{description && <p className="m-0 mt-3 max-w-xl text-sm leading-6 text-[#626a76]">{description}</p>}</div>
+    <div className="min-w-0">{eyebrow && <p className="m-0 mb-2 text-sm text-[#626a76]">{eyebrow}</p>}<h1 className="m-0! [overflow-wrap:anywhere] text-[clamp(1.75rem,3vw,2.25rem)]! font-semibold leading-tight! tracking-[-.035em] text-[#182027]! rtl:leading-relaxed! rtl:tracking-normal">{title}</h1>{description && <p className="m-0 mt-3 max-w-xl text-sm leading-6 text-[#626a76]">{description}</p>}</div>
     {action && <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto">{action}</div>}
   </header>;
 }
@@ -30,7 +41,7 @@ export function DashboardPageHeader({ eyebrow, title, description, action }: { e
 export function DashboardReveal({ children, className, motionEnabled }: { children: ReactNode; className?: string; motionEnabled?: boolean }) {
   const reduced = useReducedMotion();
   const dashboardMotion = useDashboardMotion();
-  const animate = (motionEnabled ?? dashboardMotion) && reduced === false;
+  const animate = (motionEnabled ?? true) && dashboardMotion && reduced === false;
   return <motion.div className={className} initial={animate ? { opacity: 0, filter: "blur(3px)" } : false} animate={{ opacity: 1, filter: "blur(0px)" }} transition={{ duration: animate ? .32 : 0, ease: [.22, 1, .36, 1] }}>{children}</motion.div>;
 }
 

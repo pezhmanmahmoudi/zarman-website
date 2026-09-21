@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Clock3 } from "lucide-react";
+import type { CSSProperties } from "react";
 import type { ExchangeRequest, RequestEvent, RequestLocale } from "@/lib/requests/types";
 import { requestMilestones } from "@/lib/requests/journey";
 import { journeyPresentation } from "@/lib/dashboard/journey-presentation";
-import { requestMotionIcon } from "@/lib/dashboard/request-motion-icon";
-import { DashboardMotionIcon } from "@/components/dashboard/DashboardMotionIcon";
+import { dashboardPalette, dashboardStageTones } from "@/lib/dashboard/palette";
+import TransferBrandMotif from "@/components/dashboard/TransferBrandMotif";
 import { DashboardButton, DashboardCard, DashboardReveal, StatusBadge } from "@/components/dashboard/dashboard-ui";
 import { requestDate, requestMoney } from "./request-labels";
 import { RequestJourneyStepper } from "./RequestJourneyStepper";
@@ -18,11 +19,21 @@ export function RequestProgress({ request, events = [], locale, spotlight = fals
   const action = spotlight ? (journey.href?.startsWith("#") ? journey.action : fa ? "پیگیری انتقال" : "Follow your transfer") : journey.action;
   const statusTone = journey.mood === "attention" ? "attention" : journey.mood === "complete" ? "success" : journey.mood === "failed" ? "danger" : "neutral";
   const actorTone = journey.nextActor === "customer" ? "attention" : journey.nextActor === "complete" ? "success" : journey.nextActor === "closed" ? "neutral" : "brand";
-  return <section className={styles.journey}><DashboardReveal><DashboardCard className={styles.progress} data-mood={journey.mood} data-spotlight={spotlight} data-stage={journey.stage} dir={fa ? "rtl" : "ltr"} role="region" aria-label={fa ? "مراحل حواله" : "Transfer progress"}>
+  const tone = journey.mood === "failed" ? "rose" : journey.mood === "quiet" ? "slate" : journey.mood === "attention" ? "amber" : dashboardStageTones[journey.stage];
+  const colors = dashboardPalette[tone];
+  const surfaceColors = {
+    "--progress-ink": colors.ink,
+    "--progress-accent": colors.accent,
+    "--progress-soft": colors.soft,
+    "--progress-border": colors.border,
+  } as CSSProperties;
+  return <section className={styles.journey}><DashboardReveal><DashboardCard className={styles.progress} style={surfaceColors} data-mood={journey.mood} data-tone={tone} data-spotlight={spotlight} data-stage={journey.stage} dir={fa ? "rtl" : "ltr"} role="region" aria-label={fa ? "مراحل حواله" : "Transfer progress"}>
     <div className={styles.topline}><div className={styles.reference}><span>{fa ? "کد تراکنش" : "Transaction code"}</span><bdi dir="ltr">{request.reference_code}</bdi></div><StatusBadge tone={statusTone}>{journey.status}</StatusBadge></div>
     <div className={styles.statusGrid}>
-      <div className={styles.story}><div className="mb-4 flex items-center gap-3"><DashboardMotionIcon name={requestMotionIcon(journey)} size={56} /><p className={`${styles.stage} mb-0!`}>{fa ? `مرحله ${journey.stage+1} از 5` : `Step ${journey.stage+1} of 5`}</p></div><h2>{journey.heading}</h2><p className={styles.description}>{journey.description}</p></div>
-      <div className={styles.owner} data-next-actor={journey.nextActor}><span>{fa ? "اقدام بعدی" : "Next action"}</span><StatusBadge tone={actorTone}>{journey.actorLabel}</StatusBadge><small>{journey.actorHint}</small></div>
+      <div className={styles.story}><p className={styles.stage}><span aria-hidden="true"/>{fa ? `مرحله ${journey.stage+1} از 5` : `Step ${journey.stage+1} of 5`}</p><h2>{journey.heading}</h2><p className={styles.description}>{journey.description}</p>
+        <div className={styles.owner} data-next-actor={journey.nextActor}><span>{fa ? "اقدام بعدی" : "Next action"}</span><StatusBadge tone={actorTone}>{journey.actorLabel}</StatusBadge><small>{journey.actorHint}</small></div>
+      </div>
+      <div className={styles.brand}><TransferBrandMotif stage={journey.stage} replayKey={request.id} locale={locale} from={request.quote.funding_currency} to={request.quote.recipient_currency} quiet={journey.mood === "quiet" || journey.mood === "failed"} className="h-32 sm:h-48"/></div>
     </div>
     <dl className={styles.amounts}>
       <div><dt>{fa ? "مجموع پرداخت" : "You send"}</dt><dd data-private-value><bdi>{requestMoney(request.quote.funding_total,request.quote.funding_currency,locale)}</bdi></dd></div>

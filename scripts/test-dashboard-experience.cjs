@@ -309,24 +309,27 @@ test("own Iranian account requires only the contact fields used for Iranian reci
   }finally{global.requestAnimationFrame=previous;}
 });
 
-test("the Zarman connection uses the official mark and a single settling motion sequence",()=>{
+test("the circular logo replaces the old ribbon and currency ornaments in both languages",()=>{
   const h=dashboardHarness(), {TransferJourneyVisual}=h.load("components/dashboard/TransferJourneyVisual.tsx");
-  const html=markup(React.createElement(TransferJourneyVisual,{stage:2,from:"AUD",to:"IRT"}));
-  assert.match(html,/data-stage="2"/);assert.match(html,/src="\/images\/logo-no-text-light\.svg"/);
-  assert.match(html,/ZARMAN CONNECTION/);assert.match(html,/>AUD</);assert.match(html,/>IRT</);
-  const css=fs.readFileSync("styles/dashboard/TransferJourney.module.css","utf8");
-  assert.match(css,/animation:\s*ribbonTrace\s+3\.[0-9]+s[^;]*\bboth\b/);
-  assert.match(css,/animation:\s*connectionAura\s+3\.[0-9]+s[^;]*\bboth\b/);
-  assert.doesNotMatch(css,/animation\s*:[^;{}]*\binfinite\b/i);
-  assert.match(css,/:global\(\[dir="rtl"\]\) \.logoImage,[^{]*\.signatureRibbon\s*\{[^}]*transform:\s*none\s*!important/);
-  assert.match(css,/@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*animation:\s*none\s*!important/);
-  assert.doesNotMatch(fs.readFileSync("components/dashboard/TransferJourneyVisual.tsx","utf8"),/connectionCore} key=/);
+  for(const locale of ["en","fa"]){
+    const html=markup(React.createElement(TransferJourneyVisual,{stage:2,from:"AUD",to:"IRT",locale}));
+    assert.match(html,/data-stage="2"/);assert.match(html,/src="\/images\/logo-no-text-light\.svg"/);
+    assert.match(html,/data-logo-orbit="true"/);assert.match(html,/data-duration="7"/);
+    assert.match(html,/dir="ltr"/);assert.match(html,/transform:none/);
+    assert.doesNotMatch(html,/ZARMAN CONNECTION|>AUD<|>IRT<|AUSTRALIA|IRAN|signatureRibbon/);
+  }
+  const source=fs.readFileSync("components/dashboard/TransferBrandMotif.tsx","utf8");
+  assert.match(source,/LOGO_ORBIT_DURATION = 7/);
+  assert.match(source,/motionEnabled && dashboardMotion && systemReducedMotion === false && !quiet/);
+  assert.match(source,/useInView\(ref, \{ once: true/);
+  assert.match(source,/key=\{`\$\{safeStage\}-\$\{replayKey\}`\}/);
+  assert.doesNotMatch(source,/\brepeat\s*:|\bsetInterval\(|\bsetTimeout\(|signatureRibbon|M38 43h87/);
 });
 
 test("bright surface tokens, pause control and reduced-motion rules protect readability and motion preferences",()=>{
   const css=fs.readFileSync("styles/dashboard/DashboardShell.module.css","utf8");
   assert.match(css,/--color-text-primary:#182027/);assert.match(css,/color-scheme:light/);assert.match(css,/data-motion="off"/);assert.match(css,/prefers-reduced-motion/);
-  for(const file of ["TransferJourney","RecipientModal","DashboardRecipients","DashboardRequestHub"])assert.match(fs.readFileSync(`styles/dashboard/${file}.module.css`,"utf8"),/prefers-reduced-motion/);
+  for(const file of ["RecipientModal","DashboardRecipients","DashboardRequestHub"])assert.match(fs.readFileSync(`styles/dashboard/${file}.module.css`,"utf8"),/prefers-reduced-motion/);
   const h=dashboardHarness(), {DashboardHeader}=h.load("components/dashboard/DashboardHeader.tsx");
   let toggled=0;
   const props={activeTab:"overview",profile:null,privateAmounts:false,onTogglePrivacy(){},motion:false,onToggleMotion(){toggled++;}};

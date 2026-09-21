@@ -51,6 +51,24 @@ Validation for this revision: 79 dashboard tests and 158 request workflow tests 
 
 Validation: 87 dashboard tests and 44 request interface tests passed, including animation lifecycle, motion preferences, failure fallbacks and English/Persian state mapping. Asset generation checks, scoped ESLint, TypeScript and the production build passed. All seven local JSON endpoints returned the expected assets. Visual review remains skipped as requested; this phase does not deploy or change financial state.
 
+## Preview release — 22 September 2026
+
+Published the reviewed dashboard files on `codex/request-workflow-preview`, commit `2799d19592c8f10d9408d785b2881f180f04ab48`. Vercel deployment `dpl_CRzb61E5Rf9AruHPCs5VX8Zm9mS9` is READY at [the existing preview](https://zarman-website-git-codex-reque-2746d6-pezhmanmahmoudis-projects.vercel.app/en/dashboard). This updates the earlier local-only status above.
+
+The preview uses isolated Supabase project `mygfujwpnksviqcsykaf`. Migration `20260921_34_recipient_relationship.sql` is now applied to that test project; existing recipient data was verified unchanged. Production deployment and source were verified unchanged. No unrelated treasury changes were included.
+
+All three existing test accounts authenticate, 17 authenticated English/Persian/admin routes return successful responses, and all 14 animation JSON/SVG files match the release. Ownership and private-data checks passed with no financial actions or emails. Existing Vercel preview authentication remains enabled; sign into Vercel first if prompted, then use the application test account. Visual checks remain skipped.
+
+## Colour, glass surfaces and circular logo — 22 September 2026
+
+The customer overview now uses the installed Magic Card, Bento Grid, Animated List and Aurora Text components. Stage colours carry consistently from the hero to the timeline and real activity records: violet review, amber payment, sky receipt review, teal received funds, emerald completion, and rose exceptions. Light translucent surfaces pair with crisp borders and stationary offset shadows; primary buttons stay fixed when hovered.
+
+The original logo remains unmodified inside a layered circular surface. Its surrounding beams and orbit play once for seven seconds on page entry and when the request or stage changes, then settle. The old Z-shaped ribbon and decorative currency blocks are removed. The greeting uses the customer's real first name; loyalty appears as a mint-and-gold reward card with the existing spread-discount calculation and actual savings intact. Recipient cards and form progress indicators use the same palette.
+
+Motion respects the dashboard pause control and the operating system preference. Magic Card lighting only follows a mouse, clears when the tab is hidden, and leaves touch controls stationary. Aurora animates colour, without rotating or resizing the text. English/Persian content, RTL, English dates, privacy hooks, approval actions and realtime bindings are preserved. No financial or database logic changed; browser visual checks remain skipped as requested.
+
+Validation: 94 dashboard tests, 44 request-interface tests and scoped ESLint passed. The isolated preview build passed, including TypeScript. Read-only test-project checks confirmed all three accounts, recipient/request ownership and cross-customer denials, with no financial actions or emails.
+
 ## Earlier workflow validation
 
 - `npm run test:dashboard` — 20/20 passed.

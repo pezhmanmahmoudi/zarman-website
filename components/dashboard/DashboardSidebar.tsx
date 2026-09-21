@@ -27,7 +27,7 @@ export function DashboardSidebar({ activeTab, motionEnabled = true }: { activeTa
   return <>
     <aside className="fixed inset-y-0 start-0 z-30 hidden w-[220px] flex-col border-e border-[#e9ecf0] bg-white px-4 py-7 min-[900px]:flex xl:w-[248px] xl:px-6">
       <Link href={dashboardHref(locale, "overview")} className="mb-12 flex w-fit items-center rounded-xl px-3 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#635bff]" aria-label="Zarman">
-        <Image src="/images/logo-no-text-light.svg" width={58} height={58} alt="Zarman" className="size-[58px] shrink-0 object-contain" style={{ transform: "none" }}/>
+        <span className="grid size-[76px] place-items-center rounded-full border border-[#d8c9f2] bg-[radial-gradient(circle_at_35%_25%,#ffffff,#ede7fa)] shadow-[0_3px_0_#e4dced,inset_0_0_0_5px_#ffffffa6]"><Image src="/images/logo-no-text-light.svg" width={58} height={58} alt="Zarman" className="size-[58px] shrink-0 object-contain" style={{ transform: "none" }}/></span>
       </Link>
       <nav className="grid gap-1.5" aria-label={locale === "fa" ? "داشبورد" : "Dashboard"}>
         {items.map(({ tab, Icon }) => <Link key={tab} href={dashboardHref(locale, tab)} aria-current={activeTab === tab ? "page" : undefined} className={cn("relative isolate flex min-h-[52px] items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium no-underline transition-colors", activeTab === tab ? "text-[#5148c7]" : "text-[#626a76] hover:bg-[#f7f8fa] hover:text-[#182027]")}>

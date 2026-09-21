@@ -9,7 +9,7 @@
   --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:20px;--radius-2xl:24px;--radius-pill:999px;
   --shadow-sm:0 2px 4px #18213304;--shadow-card:0 6px 24px #18213304;--shadow-md:0 12px 36px #18213309;
   --font-en-stack:var(--font-en,Inter),system-ui,sans-serif;--font-fa-stack:IRANSansX,Peyda,system-ui,sans-serif;
-  background:#f7f8fa;color:#182027;min-height:100dvh;font-family:var(--font-en-stack);font-size:14px;line-height:1.55;
+  background:radial-gradient(ellipse 65% 500px at 85% 0%,#ece5fa80,transparent),radial-gradient(ellipse 45% 600px at 0% 40%,#e0f4f380,transparent),#f7f7fb;color:#182027;min-height:100dvh;font-family:var(--font-en-stack);font-size:14px;line-height:1.55;
   -webkit-font-smoothing:antialiased;color-scheme:light;isolation:isolate;
 }
 .dashboardWrapper[dir="rtl"] {font-family:var(--font-fa-stack)}

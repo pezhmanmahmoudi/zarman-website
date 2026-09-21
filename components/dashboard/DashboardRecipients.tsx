@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check, Plus, RefreshCw, Search, X } from "lucide-react";
 import { useLocale } from "@/context/LocaleContext";
-import { DashboardCard, DashboardButton, DashboardPageHeader } from "./dashboard-ui";
+import { DashboardCard, DashboardMagicCard, DashboardButton, DashboardPageHeader } from "./dashboard-ui";
 import { DashboardMotionIcon } from "@/components/dashboard/DashboardMotionIcon";
 
 import { useDashboard } from "./DashboardShell";
@@ -83,13 +83,13 @@ export function DashboardRecipients() {
                 const name = recipient.account_name || recipient.full_name || recipient.label || text("Recipient", "گیرنده");
                 const aud = recipient.direction === "aud", selected = selectedId === recipient.id;
                 return <article key={recipient.id} data-recipient-id={recipient.id} data-selected={selected} className="min-w-0"><motion.div className="h-full" initial={animate ? { opacity: 0, filter: "blur(3px)" } : false} animate={{ opacity: 1, filter: "blur(0px)" }} transition={{ duration: animate ? .3 : 0, delay: animate ? Math.min(index, 5) * .035 : 0 }}>
-                  <DashboardCard className={cn("flex h-full flex-col p-5 sm:p-6", selected && "border-[#b4aff6]")}>
-                    <div className="mb-5 flex items-center justify-between gap-3"><span className="grid size-12 place-items-center rounded-full bg-[#f0eefb] text-lg font-medium text-[#655a95]" aria-hidden="true">{Array.from(name.trim())[0]?.toUpperCase()}</span><span className="text-xs text-[#626a76]">{aud ? text("Australia", "استرالیا") : text("Iran", "ایران")}</span></div>
+                  <DashboardMagicCard tone={aud ? "sky" : "teal"} motionEnabled={motionEnabled} className={cn("h-full", selected && "ring-2 ring-[#a48bd2]")} contentClassName="flex h-full flex-col p-5 sm:p-6">
+                    <div className="mb-5 flex items-center justify-between gap-3"><span className={cn("grid size-12 place-items-center rounded-2xl border text-lg font-semibold shadow-[0_2px_0_#ffffff]", aud ? "border-[#a9cfe5] bg-[#d6edff] text-[#185a82]" : "border-[#aad8cf] bg-[#cdf0e7] text-[#17635e]")} aria-hidden="true">{Array.from(name.trim())[0]?.toUpperCase()}</span><span className="text-xs text-[#626a76]">{aud ? text("Australia", "استرالیا") : text("Iran", "ایران")}</span></div>
                     <h2 className="m-0! break-words text-lg! font-semibold leading-relaxed! text-[#182027]!"><bdi data-private-value>{name}</bdi></h2>
                     <p className="mb-0 mt-1.5 text-sm leading-6 text-[#626a76]">{recipient.bank_name || text("Bank account", "حساب بانکی")}{recipient.bank_city ? ` · ${recipient.bank_city}` : ""}</p>
                     <p className="mb-5 mt-2 text-sm tabular-nums text-[#7d8490]"><bdi data-private-value>{number ? `•••• ${number.slice(-4)}` : "—"}</bdi></p>
                     <DashboardButton tone="secondary" asChild className="mt-auto w-full"><Link href={`${dashboardHref(locale, "transfer")}&requestDirection=${aud ? "buy_aud" : "sell_aud"}&recipient=${encodeURIComponent(recipient.id)}`}>{text("Send money", "ارسال وجه")}</Link></DashboardButton>
-                  </DashboardCard>
+                  </DashboardMagicCard>
                 </motion.div></article>;
               })}</div>}
     </section>

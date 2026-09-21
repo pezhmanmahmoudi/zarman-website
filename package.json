@@ -11,7 +11,7 @@
     "test:seo": "node scripts/validate-seo.mjs",
     "test:converter": "node scripts/test-public-converter.cjs",
     "test:bank-fees": "node --test scripts/test-bank-fees.mjs",
-    "test:dashboard": "node --test scripts/test-dashboard.cjs scripts/test-dashboard-experience.cjs scripts/test-recent-activity.cjs scripts/test-recipients.cjs scripts/test-recipient-modal.cjs scripts/test-dashboard-unified-ui.cjs scripts/test-dashboard-guided-forms.cjs scripts/test-dashboard-motion-icons.cjs",
+    "test:dashboard": "node --test scripts/test-dashboard.cjs scripts/test-dashboard-experience.cjs scripts/test-recent-activity.cjs scripts/test-recipients.cjs scripts/test-recipient-modal.cjs scripts/test-dashboard-unified-ui.cjs scripts/test-dashboard-guided-forms.cjs scripts/test-dashboard-motion-icons.cjs scripts/test-dashboard-color-motion.cjs",
     "test:requests": "node --test scripts/test-customer-requests-db.mjs scripts/test-request-messages-db.mjs scripts/test-request-bank-details-db.mjs scripts/test-request-approval-db.mjs scripts/test-request-customer-actions-db.mjs scripts/test-request-journey.cjs scripts/test-request-service.cjs scripts/test-request-interface.cjs scripts/test-request-notifications.mjs",
     "test:admin": "node --test scripts/test-admin-reads.mjs scripts/test-admin-overlays.mjs scripts/test-admin-layout.cjs scripts/test-admin-editing.cjs scripts/test-admin-pagination.cjs scripts/test-treasury-workspace.cjs scripts/test-ledger-workspace.cjs scripts/test-austrac-deadlines.mjs scripts/test-austrac-compliance.mjs"
   },
@@ -41,6 +41,7 @@
     "lucide-react": "^0.562.0",
     "motion": "^12.43.0",
     "next": "^16.2.10",
+    "next-themes": "^0.4.6",
     "pdf-lib": "^1.17.1",
     "postprocessing": "^6.38.2",
     "radix-ui": "^1.6.7",
