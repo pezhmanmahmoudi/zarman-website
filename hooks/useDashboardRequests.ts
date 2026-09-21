@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listMyRequests } from "@/app/actions/request.actions";
 import type { ExchangeRequest } from "@/lib/requests/types";
+import { supabase } from "@/lib/supabase";
 
 export function useDashboardRequests() {
   const [requests, setRequests] = useState<ExchangeRequest[]>([]);
@@ -27,5 +28,13 @@ export function useDashboardRequests() {
     window.addEventListener("focus", onVisible); document.addEventListener("visibilitychange", onVisible);
     return () => { stop(); window.clearInterval(timer); window.removeEventListener("focus", onVisible); document.removeEventListener("visibilitychange", onVisible); };
   }, [refresh, stop]);
+  useEffect(() => {
+    if (typeof supabase.channel !== "function") return;
+    const channel = supabase
+      .channel("customer-request-status")
+      .on("postgres_changes", { event: "*", schema: "public", table: "exchange_requests" }, () => { void refresh(); })
+      .subscribe();
+    return () => { if (typeof supabase.removeChannel === "function") void supabase.removeChannel(channel); };
+  }, [refresh]);
   return { requests, loading, refreshing, error, refresh };
 }

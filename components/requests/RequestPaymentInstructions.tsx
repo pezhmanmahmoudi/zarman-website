@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, ChevronDown, Copy, Landmark } from "lucide-react";
+import { ArrowDown, Check, ChevronDown, Copy, Landmark } from "lucide-react";
 import type { ExchangeRequest, RequestLocale } from "@/lib/requests/types";
 import { getRequestJourney } from "@/lib/requests/journey";
 import { requestDate, requestMoney } from "./request-labels";
@@ -65,6 +65,7 @@ export function RequestPaymentInstructions({ request, locale }: { request: Excha
       </div>
     </dl>
     {journey.canPay && <p className={compact.hint}>{fa ? "کد تراکنش را دقیقاً در قسمت شرح یا توضیحات انتقال بانکی وارد کنید." : "Enter this transaction code in your bank transfer description or reference."}</p>}
+    {journey.canPay && !journey.receiptSubmitted && <a className={compact.uploadPrompt} href="#request-receipt-upload"><span>{fa ? "واریز را انجام دادم" : "I’ve made the transfer"}<small>{fa ? "رسید را برای بررسی بفرستید" : "Upload the receipt for review"}</small></span><ArrowDown size={17} aria-hidden="true" /></a>}
     {instructions && (fields.length ? <details className={compact.details}>
       <summary>{fa ? "راهنمای واریز" : "Payment instructions"}</summary>
       <p className={compact.bankNote} dir="auto">{instructions}</p>

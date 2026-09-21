@@ -10,6 +10,10 @@ function elements(tree,predicate) {
 const finance = {discount_step_volume:1000,discount_percent_per_step:.005,max_discount_percent:.25,fee_threshold:1000,applied_fee:30};
 
 test("the animated journey follows financial facts and offers only the correct next action in both languages",()=>{
+  const actorLabels={
+    en:{customer:"Your turn",zarman:"With Zarman",complete:"Complete",closed:"Closed"},
+    fa:{customer:"\u0646\u0648\u0628\u062a \u0634\u0645\u0627",zarman:"\u0646\u0632\u062f \u0632\u0631\u0645\u0627\u0646",complete:"\u062a\u06a9\u0645\u06cc\u0644 \u0634\u062f\u0647",closed:"\u0628\u0633\u062a\u0647 \u0634\u062f\u0647"},
+  };
   for(const locale of ["en","fa"]) {
     const h=dashboardHarness({locale}), {journeyPresentation:present}=h.load("lib/dashboard/journey-presentation.ts");
     const {RequestProgress}=h.load("components/requests/RequestProgress.tsx");
@@ -17,17 +21,21 @@ test("the animated journey follows financial facts and offers only the correct n
     const approved={...pending,status:"awaiting_funds",payment_approved_at:request.created_at};
     const reviewed={...approved,status:"under_review",evidence_submitted_at:request.created_at};
     const complete={...request,status:"completed"};
-    for(const [value,stage] of [[pending,0],[approved,1],[reviewed,2],[request,3],[complete,4]]) {
+    const states=[[pending,0,"zarman"],[approved,1,"customer"],[reviewed,2,"zarman"],[request,3,"zarman"],[complete,4,"complete"]];
+    for(const [value,stage,nextActor] of states) {
       const state=present(value,locale), html=markup(React.createElement(RequestProgress,{request:value,locale}));
       assert.equal(state.stage,stage);assert.match(html,new RegExp(`data-stage="${stage}"`));
+      assert.equal(state.nextActor,nextActor);assert.equal(state.actorLabel,actorLabels[locale][nextActor]);
       assert.equal((html.match(/aria-current="step"/g)||[]).length,1);
       assert.equal(Boolean(state.href),stage===1 || stage===4);
       if(stage===3) {assert.match(html,locale==="en" ? /No action needed/:/نیازی به اقدام شما نیست/);assert.doesNotMatch(html,/href="#request-payment-details"/);}
     }
     const question=present({...request,customer_action_required:"Please confirm"},locale);
-    assert.equal(question.href,"#request-conversation");assert.equal(question.mood,"attention");
+    assert.equal(question.href,"#request-conversation");assert.equal(question.mood,"attention");assert.equal(question.nextActor,"customer");assert.equal(question.actorLabel,actorLabels[locale].customer);
+    const rejected=present({...pending,status:"rejected"},locale);
+    assert.equal(rejected.href,null);assert.equal(rejected.mood,"failed");assert.equal(rejected.nextActor,"closed");assert.equal(rejected.actorLabel,actorLabels[locale].closed);
     const refund=present({...request,funding_status:"refund_pending"},locale);
-    assert.equal(refund.href,null);assert.equal(refund.mood,"quiet");
+    assert.equal(refund.href,null);assert.equal(refund.mood,"quiet");assert.equal(refund.nextActor,"zarman");
     const spotlight=markup(React.createElement(RequestProgress,{request:approved,locale,spotlight:true}));
     assert.match(spotlight,new RegExp(`/${locale}/dashboard/requests/fixture-request#request-payment-details`));
   }
@@ -67,24 +75,41 @@ test("guided transfer prevents skipping missing details and preserves a selected
   const render=()=>h.render(DashboardRequestHub,props),next=()=>elements(render(),e=>String(e.props.className).includes("wizardNext"))[0].props.onClick();
   try {
     render();h.effects();await tick();render();h.effects();
+    const labels=markup(render());for(const label of ["Amount &amp; currency","Recipient","Payment &amp; confirmation"])assert.match(labels,new RegExp(label));
     next();assert.equal(elements(render(),e=>e.type===SelectBox).length,0);assert.equal(elements(render(),e=>e.props.role==="alert").length,1);
     props.amountStr="1000";next();assert.equal(elements(render(),e=>e.type===SelectBox)[0].props.value,"saved");
-    next();assert.equal(elements(render(),e=>e.type===OnlineRequestSubmit).length,0);
-    elements(render(),e=>e.type===SelectBox)[1].props.onChange("Loan");
-    elements(render(),e=>e.type===SelectBox)[2].props.onChange("Support Family");
-    next();assert.equal(elements(render(),e=>e.type===OnlineRequestSubmit)[0].props.input.recipientId,"saved");
+    next();let submit=elements(render(),e=>e.type===OnlineRequestSubmit)[0];assert.ok(submit);assert.ok(submit.props.validationMessage);
+    let reviewSelects=elements(render(),e=>e.type===SelectBox);assert.equal(reviewSelects.length,2);
+    reviewSelects[0].props.onChange("Loan");reviewSelects[1].props.onChange("Support Family");
+    submit=elements(render(),e=>e.type===OnlineRequestSubmit)[0];assert.equal(submit.props.input.recipientId,"saved");assert.equal(submit.props.input.sourceOfFunds,"Loan");assert.equal(submit.props.input.reasonForTransfer,"Support Family");assert.equal(submit.props.validationMessage,null);
+    elements(render(),e=>String(e.props.className).includes("wizardBack"))[0].props.onClick();
+    assert.equal(elements(render(),e=>e.type===SelectBox)[0].props.value,"saved");
+    next();submit=elements(render(),e=>e.type===OnlineRequestSubmit)[0];assert.equal(submit.props.input.sourceOfFunds,"Loan");assert.equal(submit.props.input.reasonForTransfer,"Support Family");
   }finally{global.requestAnimationFrame=previous;}
 });
 
 test("bank branch city remains separate from residential city and cannot change recipient ownership",()=>{
   const {normalizeRecipientInput:normalize}=dashboardHarness().load("lib/dashboard/recipient-input.ts");
-  const result=normalize({direction:"irt",label:" Alex ",bank_city:" Tehran ",irt_city:"Shiraz",user_id:"victim",id:"forged",created_at:"forged",extra:"forged"});
-  assert.deepEqual(result.data,{direction:"irt",label:"Alex",bank_city:"Tehran",irt_city:"Shiraz"});
-  assert.ok(normalize({direction:"irt",label:"Alex",bank_city:"x".repeat(121)}).error);
-  assert.ok(normalize({direction:"irt",label:"Alex",bank_city:{sql:"no"}}).error);
+  const irt={direction:"irt",label:" Alex ",bank_name:"Saman Bank",bank_city:" Tehran ",full_name:"Alex",shaba_number:"ir123456789012345678901234",irt_address:"Street",irt_city:"Shiraz",irt_state:"Fars",irt_country:"Iran",irt_phone:"09123456789"};
+  const result=normalize({...irt,user_id:"victim",id:"forged",created_at:"forged",extra:"forged",irt_account_number:"legacy"});
+  assert.deepEqual(result.data,{...irt,label:"Alex",bank_city:"Tehran",shaba_number:"IR123456789012345678901234"});
+  assert.equal(result.data.irt_account_number,undefined);
+  assert.ok(normalize({...irt,bank_city:"x".repeat(121)}).error);
+  assert.ok(normalize({...irt,bank_city:{sql:"no"}}).error);
+  assert.ok(normalize({...irt,shaba_number:"IR123"}).error);
+  assert.ok(normalize({...irt,card_number:"123"}).error);
+  assert.equal(normalize({...irt,card_number:"1234567890123456"}).data.card_number,"1234567890123456");
   assert.ok(normalize(null).error);assert.ok(normalize({direction:"irt",label:123}).error);
-  assert.equal(normalize({direction:"aud",label:"Alex",bank_city:"Tehran"}).data.bank_city,undefined);
-  assert.equal(normalize({direction:"irt",label:"Legacy"}).error,undefined);
+  const aud={direction:"aud",label:"Taylor",bank_name:"Commonwealth Bank",account_name:"Taylor",bsb:"123456",account_number:"12345",residential_address:"1 George Street",residential_city:"Sydney",residential_state:"NSW",residential_postcode:"2000",residential_country:"Australia",recipient_email:"taylor@example.com",recipient_phone:"0412345678"};
+  assert.equal(normalize({...aud,bank_city:"Tehran",shaba_number:"IR123456789012345678901234"}).data.bank_city,undefined);
+  assert.equal(normalize({...aud,bank_city:"Tehran"}).data.shaba_number,undefined);
+  assert.ok(normalize({...aud,bsb:"123-456"}).error);
+  assert.ok(normalize({...aud,account_number:"1234"}).error);
+  assert.ok(normalize({...aud,residential_postcode:"20"}).error);
+  assert.ok(normalize({...aud,recipient_email:"not-an-email"}).error);
+  assert.ok(normalize({...aud,recipient_phone:"abc"}).error);
+  assert.ok(normalize({...irt,irt_phone:"abc"}).error);
+  assert.ok(normalize({direction:"irt",label:"Legacy"}).error);
 });
 
 test("recipient action saves only validated editable fields under the authenticated owner",async()=>{
@@ -94,10 +119,11 @@ test("recipient action saves only validated editable fields under the authentica
     "@/lib/supabase-server":{createSupabaseServerActionClient:async()=>({auth:{getUser:async()=>({data:{user:{id:"authenticated-owner"}},error:null})}})},
   }});
   const {createRecipient,getRecipients}=h.load("app/actions/transaction.actions.ts");
-  const result=await createRecipient({direction:"irt",label:"Alex",bank_city:"Tehran",irt_city:"Shiraz",user_id:"victim",id:"forged"});
+  const valid={direction:"irt",label:"Alex",bank_name:"Saman Bank",bank_city:"Tehran",full_name:"Alex",shaba_number:"IR123456789012345678901234",irt_address:"Street",irt_city:"Shiraz",irt_state:"Fars",irt_country:"Iran",irt_phone:"09123456789"};
+  const result=await createRecipient({...valid,user_id:"victim",id:"forged"});
   assert.equal(result.success,true);assert.equal(inserted[0].user_id,"authenticated-owner");assert.equal(inserted[0].bank_city,"Tehran");
   assert.equal(inserted[0].irt_city,"Shiraz");assert.equal(inserted[0].id,undefined);
-  inserted=null;assert.ok((await createRecipient({direction:"irt",label:"Alex",bank_city:"x".repeat(121)})).error);assert.equal(inserted,null);
+  inserted=null;assert.ok((await createRecipient({...valid,bank_city:"x".repeat(121)})).error);assert.equal(inserted,null);
   await getRecipients();assert.deepEqual(scopes,[["user_id","authenticated-owner"]]);
 });
 
@@ -148,6 +174,19 @@ test("the new bank city migration preserves existing rows and enforces length on
     assert.deepEqual((await db.query("SELECT irt_city,bank_city FROM recipients")).rows,[{irt_city:"Shiraz",bank_city:"Tehran"}]);
     await assert.rejects(db.query("UPDATE recipients SET bank_city=$1",["x".repeat(121)]),/recipients_bank_city_length/);
   }finally{await db.close();}
+});
+
+test("the Zarman connection uses the official mark and a single settling motion sequence",()=>{
+  const h=dashboardHarness(), {TransferJourneyVisual}=h.load("components/dashboard/TransferJourneyVisual.tsx");
+  const html=markup(React.createElement(TransferJourneyVisual,{stage:2,from:"AUD",to:"IRT"}));
+  assert.match(html,/data-stage="2"/);assert.match(html,/src="\/images\/logo-no-text-light\.svg"/);
+  assert.match(html,/ZARMAN CONNECTION/);assert.match(html,/>AUD</);assert.match(html,/>IRT</);
+  const css=fs.readFileSync("styles/dashboard/TransferJourney.module.css","utf8");
+  assert.match(css,/animation:\s*ribbonTrace\s+3\.[0-9]+s[^;]*\bboth\b/);
+  assert.match(css,/animation:\s*connectionAura\s+3\.[0-9]+s[^;]*\bboth\b/);
+  assert.doesNotMatch(css,/animation\s*:[^;{}]*\binfinite\b/i);
+  assert.match(css,/:global\(\[dir="rtl"\]\) \.logoImage,[^{]*\.signatureRibbon\s*\{[^}]*transform:\s*none\s*!important/);
+  assert.match(css,/@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*animation:\s*none\s*!important/);
 });
 
 test("bright surface tokens, pause control and reduced-motion rules protect readability and motion preferences",()=>{

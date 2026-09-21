@@ -13,6 +13,7 @@ import { RequestProgress } from "./RequestProgress";
 import { RequestPaymentInstructions } from "./RequestPaymentInstructions";
 import { RequestReceiptUpload } from "./RequestReceiptUpload";
 import { RequestAdminMessageBanner, RequestConversation } from "./RequestConversation";
+import { supabase } from "@/lib/supabase";
 import styles from "@/styles/requests/Requests.module.css";
 import workspace from "@/styles/requests/RequestWorkspace.module.css";
 
@@ -108,6 +109,20 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
     document.addEventListener("visibilitychange", onVisible);
     return () => { window.clearInterval(timer); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onVisible); };
   }, [refresh]);
+
+  useEffect(() => {
+    if (typeof supabase.channel !== "function") return;
+    const channel = supabase
+      .channel(`request-status:${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "exchange_requests", filter: `id=eq.${id}` }, () => {
+        if (!pending.current) void refresh();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "request_messages", filter: `request_id=eq.${id}` }, () => {
+        if (!pending.current) void refresh();
+      })
+      .subscribe();
+    return () => { if (typeof supabase.removeChannel === "function") void supabase.removeChannel(channel); };
+  }, [id, refresh]);
 
   useEffect(() => {
     if (!admin) return;

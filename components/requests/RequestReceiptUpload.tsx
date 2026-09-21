@@ -21,6 +21,7 @@ export function RequestReceiptUpload({ request, receipts, admin = false, locale,
   const [notice, setNotice] = useState("");
   const [additional, setAdditional] = useState(false);
   const [sent, setSent] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const pending = useRef(false);
   const attempt = useRef<{ requestId: string; file: File; key: string } | null>(null);
@@ -28,6 +29,13 @@ export function RequestReceiptUpload({ request, receipts, admin = false, locale,
   const canUpload = !admin && journey.canUpload;
   const hasReceipt = sent || journey.receiptSubmitted || receipts.length > 0;
   const showForm = canUpload && (!hasReceipt || additional);
+
+  function chooseFile(nextFile: File | null) {
+    setFile(nextFile);
+    attempt.current = null;
+    setError("");
+    setNotice("");
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,10 +83,18 @@ export function RequestReceiptUpload({ request, receipts, admin = false, locale,
     <div className={compact.heading}><h2>{fa ? "رسید واریز" : admin ? "Payment evidence" : "Payment receipt"}</h2>{receipts.length > 0 && <span className={styles.badge}>{receipts.length}</span>}</div>
     {!admin && hasReceipt && !journey.fundsReceived && !journey.closed && <div className={compact.receiptStatus} role="status"><Clock3 size={17} aria-hidden="true" /><p>{fa ? "رسید ارسال شد؛ در حال بررسی واریز شما هستیم." : "Receipt sent — we are checking your payment."}</p></div>}
     {showForm && <form onSubmit={submit} className={`${compact.receiptForm} ${hasReceipt ? compact.additionalReceipt : ""}`}>
-      <label className={compact.filePicker} data-disabled={busy}>
+      <label
+        className={compact.filePicker}
+        data-disabled={busy}
+        data-dragging={dragging}
+        onDragEnter={event => { if (!busy) { event.preventDefault(); setDragging(true); } }}
+        onDragOver={event => { if (!busy) { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; } }}
+        onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }}
+        onDrop={event => { event.preventDefault(); setDragging(false); if (!busy) chooseFile(event.dataTransfer.files?.[0] ?? null); }}
+      >
         <FileUp size={22} aria-hidden="true" />
-        <span><strong>{file ? file.name : (fa ? "انتخاب رسید واریز" : "Choose your bank receipt")}</strong><small>{fa ? "PDF، JPG یا PNG · حداکثر ۴ مگابایت" : "PDF, JPG or PNG · up to 4 MB"}</small></span>
-        <input ref={input} type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" required disabled={busy} onChange={event => { setFile(event.target.files?.[0] ?? null); attempt.current = null; setError(""); setNotice(""); }} />
+        <span><strong>{file ? file.name : (dragging ? (fa ? "رسید را اینجا رها کنید" : "Drop receipt here") : (fa ? "انتخاب یا رها کردن رسید" : "Choose or drop your bank receipt"))}</strong><small>{fa ? "PDF، JPG یا PNG · حداکثر ۴ مگابایت" : "PDF, JPG or PNG · up to 4 MB"}</small></span>
+        <input ref={input} type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" required disabled={busy} onChange={event => chooseFile(event.target.files?.[0] ?? null)} />
       </label>
       <button className={styles.button} type="submit" disabled={!file || busy}>{busy ? (fa ? "در حال ارسال…" : "Sending receipt…") : (fa ? "ارسال رسید برای بررسی" : "Send receipt for review")}</button>
     </form>}

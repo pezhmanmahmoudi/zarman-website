@@ -14,21 +14,33 @@ export function journeyPresentation(request: ExchangeRequest, locale: RequestLoc
   ];
   const row = labels[journey.stage];
   let heading = row[fa ? 1 : 0], description = row[fa ? 3 : 2];
-  let mood: "active" | "attention" | "complete" | "quiet" = request.status === "completed" ? "complete" : "active";
+  let mood: "active" | "attention" | "waiting" | "complete" | "failed" | "quiet" = request.status === "completed" ? "complete" : "waiting";
   let href: string | null = journey.canPay && !journey.receiptSubmitted ? "#request-payment-details" : null;
   let action: string | null = href ? text("View payment details", "مشاهده مشخصات واریز") : null;
+  let nextActor: "customer" | "zarman" | "complete" | "closed" = request.status === "completed" ? "complete" : "zarman";
+  if (journey.approved && !journey.receiptSubmitted && !journey.fundsReceived && !journey.closed) {
+    nextActor = "customer";
+    mood = "attention";
+  }
   if (journey.fundsReceived && (journey.readyForSettlement || request.status === "processing")) description = text("Funds received. Destination settlement is the next step.", "وجه دریافت شد. مرحله بعد، تسویه با گیرنده است.");
   if (request.status === "reconciliation") description = text("Funds received. We’re checking the destination bank settlement.", "وجه دریافت شد. در حال بررسی تسویه بانک مقصد هستیم.");
   if (journey.customerActionRequired) {
     heading = text("Your response is needed.", "پاسخ شما لازم است.");
     description = text("Our team has a question. Reply below to keep things moving.", "تیم ما پرسشی دارد. برای ادامه، پیام زیر را پاسخ دهید.");
-    href = "#request-conversation"; action = text("Reply to the team", "پاسخ به تیم زرمان"); mood = "attention";
+    href = "#request-conversation"; action = text("Reply to the team", "پاسخ به تیم زرمان"); mood = "attention"; nextActor = "customer";
   }
-  if (request.status === "completed") { href = `/api/requests/${request.id}/receipt`; action = text("Download receipt", "دریافت رسید"); }
+  if (request.status === "completed") { href = `/api/requests/${request.id}/receipt`; action = text("Download receipt", "دریافت رسید"); nextActor = "complete"; }
   if (journey.closed || ["refund_pending", "refunded"].includes(request.funding_status)) {
-    heading = requestStageLabel(request, locale); mood = "quiet"; href = null; action = null;
+    heading = requestStageLabel(request, locale); mood = ["rejected", "expired"].includes(request.status) ? "failed" : "quiet"; href = null; action = null;
+    nextActor = request.funding_status === "refund_pending" ? "zarman" : "closed";
     description = request.funding_status === "refund_pending" ? text("Our team is arranging the return of your funds.", "تیم زرمان در حال پیگیری بازپرداخت وجه شماست.")
       : request.funding_status === "refunded" ? text("Your funds have been returned.", "وجه شما بازپرداخت شد.") : text("This request is closed. Please do not send a new payment.", "این درخواست بسته شده است. وجه جدید واریز نکنید.");
   }
-  return { ...journey, heading, description, mood, href, action, status: requestStageLabel(request, locale) };
+  const actorLabel = nextActor === "customer" ? text("Your turn", "نوبت شما")
+    : nextActor === "zarman" ? text("With Zarman", "نزد زرمان")
+      : nextActor === "complete" ? text("Complete", "تکمیل شده") : text("Closed", "بسته شده");
+  const actorHint = nextActor === "customer" ? text("Action needed from you", "اقدام شما لازم است")
+    : nextActor === "zarman" ? text("Our team is handling the next step", "مرحله بعد با تیم زرمان است")
+      : nextActor === "complete" ? text("No further action", "اقدام دیگری لازم نیست") : text("No further action", "اقدام دیگری لازم نیست");
+  return { ...journey, heading, description, mood, href, action, nextActor, actorLabel, actorHint, status: requestStageLabel(request, locale) };
 }

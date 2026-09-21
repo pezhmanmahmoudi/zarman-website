@@ -38,7 +38,12 @@ function load(file, { states = {}, actions = {}, captureEffects = false } = {}) 
     const localRequire = id => {
       if (id === "react") return hookReact;
       if (id === "@/app/actions/request.actions") return new Proxy(actions, { get: (target, key) => target[key] || (() => { throw Error(`Unexpected server action: ${String(key)}`); }) });
+      if (id === "@/lib/supabase") return { supabase: {
+        channel() { return { on() { return this; }, subscribe() { return this; } }; },
+        removeChannel: async () => undefined,
+      } };
       if (id === "next/link") return { __esModule: true, default: props => React.createElement("a", props) };
+      if (id === "next/image") return { __esModule: true, default: props => React.createElement("img", props) };
       if (id.endsWith(".module.css")) {
         const cssPath = path.resolve(projectRoot, id.replace(/^@\//, ""));
         const classes = {};
@@ -112,9 +117,11 @@ const textOf = element => markup(element).replace(/<[^>]*>/g, "");
 
 test("five customer milestones distinguish approval, receipt review, cleared funds and completion", () => {
   const waiting = render("RequestProgress", { request: { ...request, evidence_submitted_at: "2026-09-13T01:00:00Z" }, locale: "en" });
-  for (const label of ["Request submitted", "Approved for payment", "Receipt sent for review", "Funds received", "Transfer completed"]) assert.ok(waiting.includes(label));
+  for (const label of ["Request submitted", "Approved for payment", "Payment under review", "Funds received", "Transfer completed"]) assert.ok(waiting.includes(label));
+  const beforeReceipt = render("RequestProgress", { request, locale: "en" });
+  assert.match(beforeReceipt, /Receipt sent for review/);
   assert.equal((waiting.match(/aria-current="step"/g) || []).length, 1);
-  assert.match(waiting.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1], /Receipt sent for review/);
+  assert.match(waiting.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1], /Payment under review/);
   assert.doesNotMatch(waiting, /Handling target:/);
   const readyRequest = { ...request, status: "ready", funding_status: "confirmed", ready_at: "2026-09-14T01:00:00Z", funds_confirmed_at: "2026-09-14T01:00:00Z", handling_due_at: "2026-09-14T02:00:00Z" };
   const ready = render("RequestProgress", { request: readyRequest, locale: "en" });
@@ -126,7 +133,7 @@ test("five customer milestones distinguish approval, receipt review, cleared fun
   assert.doesNotMatch(closed, /aria-current="step"/);
   const submitted = render("RequestProgress", { request: { ...request, status: "submitted", payment_approved_at: null }, locale: "en" });
   const current = submitted.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1];
-  assert.match(current, /Request submitted/); assert.doesNotMatch(current, /Approved for payment/);
+  assert.match(current, /Awaiting Zarman approval/); assert.doesNotMatch(current, /Approved for payment/);
 });
 
 test("milestone dates remain English in both locales and completion time never follows later chat updates", () => {
@@ -242,6 +249,21 @@ test("bank receipt control accepts constrained files and displays escaped privat
   assert.doesNotMatch(admin, /type="file"/);
   const completed = render("RequestReceiptUpload", { request: { ...request, status: "completed" }, receipts: [], locale: "en", onUploaded: async () => {} });
   assert.doesNotMatch(completed, /type="file"/);
+});
+
+test("dropping a receipt selects it and enables the review submission", () => {
+  const dropped = new File(["%PDF-dropped"], "bank-drop.pdf", { type: "application/pdf" });
+  const harness = load("components/requests/RequestReceiptUpload.tsx");
+  const props = { request, receipts: [], locale: "en", onUploaded: async () => {} };
+  let tree = harness.rerender("RequestReceiptUpload", props);
+  const target = elements(tree, node => node.type === "label" && typeof node.props.onDrop === "function")[0];
+  let prevented = false;
+  target.props.onDrop({ preventDefault() { prevented = true; }, dataTransfer: { files: [dropped] } });
+  tree = harness.rerender("RequestReceiptUpload", props);
+  assert.equal(prevented, true);
+  assert.match(markup(tree), /bank-drop\.pdf/);
+  const submit = elements(tree, node => node.type === "button" && node.props.type === "submit")[0];
+  assert.equal(submit.props.disabled, false);
 });
 
 test("receipt uploads retain their command key after an uncertain result and refresh after success", async () => {

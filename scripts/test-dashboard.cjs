@@ -125,9 +125,9 @@ test("transfer direction and rate changes invalidate recipients and pending prom
     const next = () => elements(render(),node=>node.type==="button" && String(node.props.className).includes("wizardNext"))[0].props.onClick();
     next();
     elements(render(),node=>node.type===SelectBox)[0].props.onChange("recipient-aud");
-    elements(render(),node=>node.type===SelectBox)[1].props.onChange("Loan");
-    elements(render(),node=>node.type===SelectBox)[2].props.onChange("Support Family");
     next();
+    elements(render(),node=>node.type===SelectBox)[0].props.onChange("Loan");
+    elements(render(),node=>node.type===SelectBox)[1].props.onChange("Support Family");
     elements(render(),node=>node.props.id==="request-promo-code")[0].props.onChange({target:{value:"SAVE"}});
     const apply = () => elements(render(),node=>node.type==="button" && String(node.props.className).includes("promoApplyBtn"))[0].props.onClick();
     const pending = apply(); props.txType = "sell_aud"; render(); harness.effects();

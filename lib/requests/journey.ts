@@ -56,11 +56,22 @@ export function requestMilestones(request: ExchangeRequest, events: RequestEvent
   const earliest = (types: string[]) => events.filter(event => types.includes(event.event_type))
     .sort((a, b) => a.sequence - b.sequence)[0]?.created_at || null;
   const completedAt = earliest(["complete", "reconcile_complete"]);
+  const approvalLabel: [string, string] = journey.stage === 0
+    ? ["Awaiting Zarman approval", "در انتظار تأیید زرمان"]
+    : ["Request submitted", "درخواست ثبت شد"];
+  const receiptLabel: [string, string] = journey.stage === 2
+    ? ["Payment under review", "واریز در حال بررسی"]
+    : ["Receipt sent for review", "رسید برای بررسی ارسال شد"];
+  const settlementLabel: [string, string] = journey.stage === 3 && request.status === "processing"
+    ? ["Settlement in progress", "تسویه در حال انجام"]
+    : journey.stage === 3 && request.status === "reconciliation"
+      ? ["Confirming destination settlement", "در حال تأیید تسویه مقصد"]
+      : ["Funds received", "وجه دریافت شد"];
   const rows: Array<[string, [string, string], string | null, boolean]> = [
-    ["submitted", ["Request submitted", "درخواست ثبت شد"], request.created_at, true],
+    ["submitted", approvalLabel, request.created_at, true],
     ["approved", ["Approved for payment", "اجازه پرداخت صادر شد"], request.payment_approved_at || null, journey.approved],
-    ["receipt", ["Receipt sent for review", "رسید برای بررسی ارسال شد"], earliest(["receipt_uploaded", "payment_evidence"]) || request.evidence_submitted_at, journey.receiptSubmitted],
-    ["received", ["Funds received", "وجه دریافت شد"], request.funds_confirmed_at || earliest(["ready", "resume_funded_request"]), journey.fundsReceived],
+    ["receipt", receiptLabel, earliest(["receipt_uploaded", "payment_evidence"]) || request.evidence_submitted_at, journey.receiptSubmitted],
+    ["received", settlementLabel, request.funds_confirmed_at || earliest(["ready", "resume_funded_request"]), journey.fundsReceived],
     ["completed", ["Transfer completed", "انتقال تکمیل شد"], completedAt, request.status === "completed"],
   ];
   return rows.map(([key, label, at, done], index) => ({ key, label, at: at || null, done, current: !journey.closed && index === journey.stage }));
