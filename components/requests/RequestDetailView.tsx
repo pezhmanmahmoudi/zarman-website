@@ -114,10 +114,7 @@ export function RequestDetailView({ id, admin = false, locale = "en" }: { id: st
     if (typeof supabase.channel !== "function") return;
     const channel = supabase
       .channel(`request-status:${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "exchange_requests", filter: `id=eq.${id}` }, () => {
-        if (!pending.current) void refresh();
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "request_messages", filter: `request_id=eq.${id}` }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "exchange_request_realtime_signals", filter: `request_id=eq.${id}` }, () => {
         if (!pending.current) void refresh();
       })
       .subscribe();

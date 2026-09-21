@@ -30,12 +30,22 @@ test("the animated journey follows financial facts and offers only the correct n
       assert.equal(Boolean(state.href),stage===1 || stage===4);
       if(stage===3) {assert.match(html,locale==="en" ? /No action needed/:/نیازی به اقدام شما نیست/);assert.doesNotMatch(html,/href="#request-payment-details"/);}
     }
+    const {DashboardActivity}=h.load("components/dashboard/DashboardActivity.tsx");
+    const activity=markup(React.createElement(DashboardActivity,{requests:[approved,complete],loading:false,refreshing:false,error:false,onRefresh(){}}));
+    assert.match(activity,new RegExp(actorLabels[locale].customer));
+    assert.match(activity,new RegExp(actorLabels[locale].complete));
     const question=present({...request,customer_action_required:"Please confirm"},locale);
     assert.equal(question.href,"#request-conversation");assert.equal(question.mood,"attention");assert.equal(question.nextActor,"customer");assert.equal(question.actorLabel,actorLabels[locale].customer);
     const rejected=present({...pending,status:"rejected"},locale);
     assert.equal(rejected.href,null);assert.equal(rejected.mood,"failed");assert.equal(rejected.nextActor,"closed");assert.equal(rejected.actorLabel,actorLabels[locale].closed);
     const refund=present({...request,funding_status:"refund_pending"},locale);
     assert.equal(refund.href,null);assert.equal(refund.mood,"quiet");assert.equal(refund.nextActor,"zarman");
+    const priorityRefund=present({...complete,priority_fee_status:"refund_pending"},locale);
+    assert.equal(priorityRefund.href,null);assert.equal(priorityRefund.mood,"quiet");assert.equal(priorityRefund.nextActor,"zarman");
+    assert.match(priorityRefund.status,locale==="en" ? /Priority fee refund/:/بازپرداخت هزینه سرویس اولویت‌دار/);
+    const {DashboardTransactionHistory}=h.load("components/dashboard/DashboardTransactionHistory.tsx");
+    const legacy=markup(React.createElement(DashboardTransactionHistory,{transactions:[{id:"legacy",type:"buy_aud",status:"pending",amount_aud:100,equivalent_toman:10000000,created_at:request.created_at,reference_code:"ZE10000",recipients:{label:"Alex"}}],onDeleteTransaction(){}}));
+    assert.match(legacy,new RegExp(actorLabels[locale].zarman));
     const spotlight=markup(React.createElement(RequestProgress,{request:approved,locale,spotlight:true}));
     assert.match(spotlight,new RegExp(`/${locale}/dashboard/requests/fixture-request#request-payment-details`));
   }
@@ -88,15 +98,48 @@ test("guided transfer prevents skipping missing details and preserves a selected
   }finally{global.requestAnimationFrame=previous;}
 });
 
+test("successful submission replaces the editable draft shell with a bilingual acknowledgement",async()=>{
+  for(const locale of ["en","fa"]) {
+    const SelectBox=()=>null, OnlineRequestSubmit=()=>null;
+    const h=dashboardHarness({locale,mocks:{
+      "@/components/ui/SelectBox/SelectBox":{SelectBox},
+      "@/components/dashboard/RecipientModal":{RecipientModal:()=>null},
+      "@/components/requests/OnlineRequestSubmit":{OnlineRequestSubmit},
+      "@/context/FinanceConfigContext":{useFinanceConfig:()=>finance},
+      "@/app/actions/transaction.actions":{getRecipients:async()=>({data:[{id:"saved",direction:"aud",label:"Alex"}]})},
+      "@/lib/supabase":{supabase:{from:()=>({select(){return this;},order(){return this;},limit(){return this;},single:async()=>({data:{market_active:true}})})}},
+    }});
+    const {DashboardRequestHub}=h.load("components/dashboard/DashboardRequestHub.tsx");
+    const props={isApproved:true,txType:"buy_aud",setTxType(){},amountStr:"1000",setAmountStr(){},loyaltyBonus:0,tailoredRate:100000,baseRate:100000,profile:{id:"test"},initialRecipientId:"saved"};
+    const previous=global.requestAnimationFrame;global.requestAnimationFrame=()=>1;
+    const render=()=>h.render(DashboardRequestHub,props);
+    try {
+      render();h.effects();await tick();render();h.effects();
+      elements(render(),e=>String(e.props.className).includes("wizardNext"))[0].props.onClick();
+      elements(render(),e=>String(e.props.className).includes("wizardNext"))[0].props.onClick();
+      const submit=elements(render(),e=>e.type===OnlineRequestSubmit)[0];
+      assert.ok(submit);submit.props.onSubmitted({id:"saved-request",reference_code:"ZE12345"});
+      const tree=render(), html=markup(tree);
+      assert.equal(elements(tree,e=>e.type===OnlineRequestSubmit).length,1);
+      assert.equal(elements(tree,e=>String(e.props.className).includes("wizardSteps")).length,0);
+      assert.equal(elements(tree,e=>String(e.props.className).includes("wizardFooter")).length,0);
+      assert.doesNotMatch(html,locale==="fa" ? /پیش‌نویس|هنوز ثبت نشده|ویرایش/ : /Draft|Not submitted yet|Edit/);
+      assert.match(html,locale==="fa" ? /ثبت شد/ : /Submitted/);
+      assert.match(html,locale==="fa" ? /در انتظار تأیید زرمان/ : /awaiting Zarman approval/);
+    } finally { global.requestAnimationFrame=previous; }
+  }
+});
+
 test("bank branch city remains separate from residential city and cannot change recipient ownership",()=>{
   const {normalizeRecipientInput:normalize}=dashboardHarness().load("lib/dashboard/recipient-input.ts");
-  const irt={direction:"irt",label:" Alex ",bank_name:"Saman Bank",bank_city:" Tehran ",full_name:"Alex",shaba_number:"ir123456789012345678901234",irt_address:"Street",irt_city:"Shiraz",irt_state:"Fars",irt_country:"Iran",irt_phone:"09123456789"};
+  const irt={direction:"irt",label:" Alex ",bank_name:"Saman Bank",bank_city:" Tehran ",full_name:"Alex",shaba_number:"ir820540102680020817909002",irt_address:"Street",irt_city:"Shiraz",irt_state:"Fars",irt_country:"Iran",irt_phone:"09123456789"};
   const result=normalize({...irt,user_id:"victim",id:"forged",created_at:"forged",extra:"forged",irt_account_number:"legacy"});
-  assert.deepEqual(result.data,{...irt,label:"Alex",bank_city:"Tehran",shaba_number:"IR123456789012345678901234"});
+  assert.deepEqual(result.data,{...irt,label:"Alex",bank_city:"Tehran",shaba_number:"IR820540102680020817909002"});
   assert.equal(result.data.irt_account_number,undefined);
   assert.ok(normalize({...irt,bank_city:"x".repeat(121)}).error);
   assert.ok(normalize({...irt,bank_city:{sql:"no"}}).error);
   assert.ok(normalize({...irt,shaba_number:"IR123"}).error);
+  assert.ok(normalize({...irt,shaba_number:"IR820540102680020817909003"}).error);
   assert.ok(normalize({...irt,card_number:"123"}).error);
   assert.equal(normalize({...irt,card_number:"1234567890123456"}).data.card_number,"1234567890123456");
   assert.ok(normalize(null).error);assert.ok(normalize({direction:"irt",label:123}).error);
@@ -119,7 +162,7 @@ test("recipient action saves only validated editable fields under the authentica
     "@/lib/supabase-server":{createSupabaseServerActionClient:async()=>({auth:{getUser:async()=>({data:{user:{id:"authenticated-owner"}},error:null})}})},
   }});
   const {createRecipient,getRecipients}=h.load("app/actions/transaction.actions.ts");
-  const valid={direction:"irt",label:"Alex",bank_name:"Saman Bank",bank_city:"Tehran",full_name:"Alex",shaba_number:"IR123456789012345678901234",irt_address:"Street",irt_city:"Shiraz",irt_state:"Fars",irt_country:"Iran",irt_phone:"09123456789"};
+  const valid={direction:"irt",label:"Alex",bank_name:"Saman Bank",bank_city:"Tehran",full_name:"Alex",shaba_number:"IR820540102680020817909002",irt_address:"Street",irt_city:"Shiraz",irt_state:"Fars",irt_country:"Iran",irt_phone:"09123456789"};
   const result=await createRecipient({...valid,user_id:"victim",id:"forged"});
   assert.equal(result.success,true);assert.equal(inserted[0].user_id,"authenticated-owner");assert.equal(inserted[0].bank_city,"Tehran");
   assert.equal(inserted[0].irt_city,"Shiraz");assert.equal(inserted[0].id,undefined);
@@ -136,14 +179,17 @@ test("recipient modal saves Iranian bank city, keeps native validation and retri
     const render=()=>h.render(RecipientModal,props),change=(id,value)=>elements(render(),e=>e.props.id===`recipient-${id}`)[0].props.onChange({target:{value}});
     const previous=global.requestAnimationFrame;global.requestAnimationFrame=()=>1;
     try {
-      change("name","Alex");change("bank_name","Saman Bank");change("bank_city","Tehran");change("shaba","۱۲۳۴۵۶۷۸۹۰۱۲۳۴۵۶۷۸۹۰۱۲۳۴");
+      change("name","Alex");change("bank_name","Saman Bank");change("bank_city","Tehran");change("shaba","۸۲۰۵۴۰۱۰۲۶۸۰۰۲۰۸۱۷۹۰۹۰۰۳");
       let html=markup(render());assert.match(html,/<dialog[^>]*aria-labelledby="recipient-title"/);assert.match(html,/maxLength="120"/);assert.match(html,/pattern="\[0-9\]\{24\}"/);
+      elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
+      assert.equal(elements(render(),e=>e.props.role==="alert").length,1);
+      change("shaba","۸۲۰۵۴۰۱۰۲۶۸۰۰۲۰۸۱۷۹۰۹۰۰۲");
       elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
       change("address","Street");change("city","Shiraz");change("state","Fars");change("country","Iran");change("phone","09123456789");
       elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
       assert.equal(closed,0);assert.equal(elements(render(),e=>e.props.role==="alert").length,1);
       fail=false;elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
-      assert.equal(created,1);assert.equal(closed,1);assert.equal(calls[1].bank_city,"Tehran");assert.equal(calls[1].irt_city,"Shiraz");assert.equal(calls[1].shaba_number,"IR123456789012345678901234");
+      assert.equal(created,1);assert.equal(closed,1);assert.equal(calls[1].bank_city,"Tehran");assert.equal(calls[1].irt_city,"Shiraz");assert.equal(calls[1].shaba_number,"IR820540102680020817909002");
     }finally{global.requestAnimationFrame=previous;}
   }
 });
@@ -176,6 +222,21 @@ test("the new bank city migration preserves existing rows and enforces length on
   }finally{await db.close();}
 });
 
+test("own Iranian account requires only the contact fields used for Iranian recipients",async()=>{
+  const calls=[];let created=0,closed=0;
+  const h=dashboardHarness({mocks:{"@/app/actions/transaction.actions":{createRecipient:async payload=>{calls.push(payload);return {data:{...payload,id:"own-irt"}};}}}});
+  const {RecipientModal}=h.load("components/dashboard/RecipientModal.tsx");
+  const props={direction:"irt",mode:"self_destination",locale:"en",profile:{address:"Street",suburb:"Shiraz",state:"Fars",country:"Iran",mobile_number:"09123456789",postcode:"",email:""},onClose(){closed++;},onCreated(){created++;}};
+  const render=()=>h.render(RecipientModal,props),change=(id,value)=>elements(render(),e=>e.props.id===`recipient-${id}`)[0].props.onChange({target:{value}});
+  const previous=global.requestAnimationFrame;global.requestAnimationFrame=()=>1;
+  try {
+    change("name","Alex");change("bank_name","Saman Bank");change("shaba","820540102680020817909002");
+    elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
+    elements(render(),e=>e.type==="form")[0].props.onSubmit({preventDefault(){}});await tick();
+    assert.equal(created,1);assert.equal(closed,1);assert.equal(calls[0].irt_postcode,"");assert.equal(calls[0].shaba_number,"IR820540102680020817909002");
+  }finally{global.requestAnimationFrame=previous;}
+});
+
 test("the Zarman connection uses the official mark and a single settling motion sequence",()=>{
   const h=dashboardHarness(), {TransferJourneyVisual}=h.load("components/dashboard/TransferJourneyVisual.tsx");
   const html=markup(React.createElement(TransferJourneyVisual,{stage:2,from:"AUD",to:"IRT"}));
@@ -187,6 +248,7 @@ test("the Zarman connection uses the official mark and a single settling motion 
   assert.doesNotMatch(css,/animation\s*:[^;{}]*\binfinite\b/i);
   assert.match(css,/:global\(\[dir="rtl"\]\) \.logoImage,[^{]*\.signatureRibbon\s*\{[^}]*transform:\s*none\s*!important/);
   assert.match(css,/@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*animation:\s*none\s*!important/);
+  assert.doesNotMatch(fs.readFileSync("components/dashboard/TransferJourneyVisual.tsx","utf8"),/connectionCore} key=/);
 });
 
 test("bright surface tokens, pause control and reduced-motion rules protect readability and motion preferences",()=>{

@@ -61,6 +61,15 @@ function isPresent(value: string | null | undefined): value is string {
   return typeof value === "string" && value.length > 0;
 }
 
+export function isValidIranianShaba(value: string): boolean {
+  const normalized = value.replace(/\s+/g, "").toUpperCase();
+  if (!/^IR\d{24}$/.test(normalized)) return false;
+  const rearranged = `${normalized.slice(4)}1827${normalized.slice(2, 4)}`;
+  let remainder = 0;
+  for (const digit of rearranged) remainder = (remainder * 10 + Number(digit)) % 97;
+  return remainder === 1;
+}
+
 /** Allow only editable fields. Ownership and identifiers always come from the server. */
 export function normalizeRecipientInput(input: unknown): { data: RecipientInput; error?: never } | { error: string; data?: never } {
   if (!input || typeof input !== "object" || Array.isArray(input)) return { error: "Invalid recipient details." };
@@ -97,6 +106,7 @@ export function normalizeRecipientInput(input: unknown): { data: RecipientInput;
   } else {
     data.shaba_number = data.shaba_number!.toUpperCase();
     if (!/^IR\d{24}$/.test(data.shaba_number)) return { error: "Shaba number must start with IR followed by 24 digits." };
+    if (!isValidIranianShaba(data.shaba_number)) return { error: "Enter a valid Iranian Shaba number." };
     if (isPresent(data.card_number) && !/^\d{16}$/.test(data.card_number)) return { error: "Card number must contain exactly 16 digits." };
     if ("card_number" in data && !isPresent(data.card_number)) data.card_number = null;
     if ("bank_city" in data && !isPresent(data.bank_city)) data.bank_city = null;

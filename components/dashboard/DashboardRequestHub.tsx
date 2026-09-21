@@ -368,6 +368,7 @@ export function DashboardRequestHub({
 
   return (
     <article className={cardStyles.panelCard}>
+      {!submitted && <>
       <div className={styles.draftMeta}><span>{locale === "fa" ? "پیش‌نویس" : "Draft"}</span><small>{locale === "fa" ? "هنوز ثبت نشده" : "Not submitted yet"}</small></div>
       <ol className={styles.wizardSteps} aria-label={locale === "fa" ? "مراحل ثبت انتقال" : "New transfer steps"}>
         {(locale === "fa" ? ["مبلغ و ارز", "گیرنده", "پرداخت و تأیید"] : ["Amount & currency", "Recipient", "Payment & confirmation"]).map((label,index)=><li key={label} data-current={step === index} data-done={step > index}><button type="button" disabled={isSubmitting || submitted || index > step} onClick={()=>goToStep(index)} aria-current={step === index ? "step" : undefined}><span>{step > index ? <Check size={15}/> : index+1}</span>{label}</button></li>)}
@@ -614,8 +615,15 @@ export function DashboardRequestHub({
         </div>
 
       </div>}
+      </>}
+
+      {submitted && <div className={styles.submittedMeta} role="status">
+        <span><Check size={15} aria-hidden="true" />{locale === "fa" ? "ثبت شد" : "Submitted"}</span>
+        <small>{locale === "fa" ? "درخواست شما دریافت شد و اکنون در انتظار تأیید زرمان است." : "Your request has been received and is awaiting Zarman approval."}</small>
+      </div>}
       
       {step === 2 && <OnlineRequestSubmit
+        key="request-submit"
         input={{ rawAmount, txType, sourceOfFunds, reasonForTransfer, recipientId: selectedRecipientId,
           promoCode: appliedPromoCode, paymentLink: isEduPayment ? paymentLink.trim() || null : null,
           institutionName: isEduPayment ? institutionName : undefined,
@@ -627,8 +635,8 @@ export function DashboardRequestHub({
         onBusyChange={setIsSubmitting}
         onSubmitted={()=>setSubmitted(true)}
       />}
-      {stepError && <p role="alert" className={styles.promoError}>{stepError}</p>}
-      <div className={styles.wizardFooter}>{!submitted && step > 0 && <button type="button" className={styles.wizardBack} disabled={isSubmitting} onClick={()=>goToStep(step-1)}><ArrowLeft size={16}/>{locale === "fa" ? "بازگشت" : "Back"}</button>}{step < 2 && <button type="button" className={styles.wizardNext} onClick={nextStep}>{locale === "fa" ? (step === 0 ? "انتخاب گیرنده" : "پرداخت و تأیید") : (step === 0 ? "Choose recipient" : "Payment & confirmation")}<ArrowRight size={17}/></button>}</div>
+      {!submitted && stepError && <p role="alert" className={styles.promoError}>{stepError}</p>}
+      {!submitted && <div className={styles.wizardFooter}>{step > 0 && <button type="button" className={styles.wizardBack} disabled={isSubmitting} onClick={()=>goToStep(step-1)}><ArrowLeft size={16}/>{locale === "fa" ? "بازگشت" : "Back"}</button>}{step < 2 && <button type="button" className={styles.wizardNext} onClick={nextStep}>{locale === "fa" ? (step === 0 ? "انتخاب گیرنده" : "پرداخت و تأیید") : (step === 0 ? "Choose recipient" : "Payment & confirmation")}<ArrowRight size={17}/></button>}</div>}
 
       {showRecipientModal && (
         <RecipientModal

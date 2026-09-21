@@ -35,6 +35,7 @@ export function requestStageLabel(request: ExchangeRequest, locale: RequestLocal
   if (request.funding_status === "refunded") return ["Funds returned", "وجه بازپرداخت شد"][index];
   const journey = getRequestJourney(request);
   if (journey.customerActionRequired) return ["Reply needed", "نیاز به پاسخ شما"][index];
+  if (request.priority_fee_status === "refund_pending") return ["Priority fee refund in progress", "بازپرداخت هزینه سرویس اولویت‌دار در حال انجام"][index];
   if (["under_review", "action_required"].includes(request.status) && journey.fundsReceived) return ["Funds received · under admin review", "وجه دریافت شد · در حال بررسی توسط مدیر"][index];
   if (request.status === "action_required" || (request.status === "under_review" && !request.evidence_submitted_at && !journey.fundsReceived)) return ["Admin review in progress", "در حال بررسی توسط مدیر"][index];
   const labels: Record<RequestJourneyStage, [string, string]> = {

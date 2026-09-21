@@ -115,6 +115,30 @@ function elements(element, predicate) {
 }
 const textOf = element => markup(element).replace(/<[^>]*>/g, "");
 
+test("customer realtime uses an owner-scoped signal instead of sensitive request tables", () => {
+  const dashboardHook = fs.readFileSync(path.join(projectRoot, "hooks/useDashboardRequests.ts"), "utf8");
+  const requestDetail = fs.readFileSync(path.join(projectRoot, "components/requests/RequestDetailView.tsx"), "utf8");
+  const migration = fs.readFileSync(path.join(projectRoot, "supabase/migrations/20260921_33_customer_request_realtime_signals.sql"), "utf8");
+
+  assert.match(dashboardHook, /table:\s*["']exchange_request_realtime_signals["']/);
+  assert.doesNotMatch(dashboardHook, /table:\s*["']exchange_requests["']/);
+  assert.match(requestDetail, /table:\s*["']exchange_request_realtime_signals["'][^\n]+filter:\s*`request_id=eq\.\$\{id\}`/);
+  assert.doesNotMatch(requestDetail, /table:\s*["'](?:exchange_requests|exchange_request_messages|request_messages)["']/);
+
+  assert.match(migration, /ENABLE ROW LEVEL SECURITY/i);
+  assert.match(migration, /REVOKE ALL ON public\.exchange_request_realtime_signals FROM PUBLIC, anon, authenticated/i);
+  assert.match(migration, /GRANT SELECT ON public\.exchange_request_realtime_signals TO authenticated/i);
+  assert.match(migration, /FOR SELECT TO authenticated\s+USING \(user_id = auth\.uid\(\)\)/i);
+  assert.doesNotMatch(migration, /GRANT\s+(?:ALL|INSERT|UPDATE|DELETE)[^;]*TO authenticated/i);
+  assert.doesNotMatch(migration, /GRANT SELECT ON public\.(?:exchange_requests|exchange_request_messages)\b[^;]*TO authenticated/i);
+  assert.match(migration, /SECURITY DEFINER\s+SET search_path = pg_catalog, public/i);
+  assert.match(migration, /REVOKE ALL ON FUNCTION public\.touch_exchange_request_realtime_signal\(\) FROM PUBLIC, anon, authenticated/i);
+  assert.match(migration, /AFTER INSERT OR UPDATE OR DELETE ON public\.exchange_requests/i);
+  assert.match(migration, /AFTER INSERT OR UPDATE OR DELETE ON public\.exchange_request_messages/i);
+  assert.match(migration, /FROM public\.exchange_requests\s+ON CONFLICT \(request_id\)/i);
+  assert.match(migration, /ALTER PUBLICATION supabase_realtime ADD TABLE public\.exchange_request_realtime_signals/i);
+});
+
 test("five customer milestones distinguish approval, receipt review, cleared funds and completion", () => {
   const waiting = render("RequestProgress", { request: { ...request, evidence_submitted_at: "2026-09-13T01:00:00Z" }, locale: "en" });
   for (const label of ["Request submitted", "Approved for payment", "Payment under review", "Funds received", "Transfer completed"]) assert.ok(waiting.includes(label));

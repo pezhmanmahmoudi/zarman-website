@@ -4,6 +4,7 @@ import type { FormEvent, InputHTMLAttributes } from "react";
 import { X, ArrowRight, ArrowLeft, Check, Landmark, UserRound } from "lucide-react";
 import { createRecipient } from "@/app/actions/transaction.actions";
 import type { Recipient, RecipientDirection, Profile } from "@/app/[locale]/dashboard/dashboard.types";
+import { isValidIranianShaba } from "@/lib/dashboard/recipient-input";
 import styles from "@/styles/dashboard/RecipientModal.module.css";
 
 const iranianBanks = ["Ayandeh Bank","BlueBank","Dey Bank","Eghtesad Novin Bank","Gardeshgari Bank","Ghavamin Bank","Hekmat Bank","Karafarin Bank","Keshavarzi Bank","Maskan Bank","Parsian Bank","Pasargad Bank","Post Bank of Iran","Refah Bank","Saman Bank","Sanat Va Maadan Bank","Sarmayeh Bank","Shahr Bank","Sina Bank","Tejarat Bank","Tosee Credit Institution","Tosee Saderat Bank","Tosee Taavon Bank","Bank Iran"];
@@ -37,9 +38,14 @@ export function RecipientModal({direction,mode="standard",profile,locale="en",on
   async function submit(event:FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if(savingRef.current) return;
-    if(step === 0) {move(1);return;}
+    if(step === 0) {
+      const shaba = `IR${(values.shaba || "").replace(/\D/g,"")}`;
+      if(!aud && !isValidIranianShaba(shaba)) {setError(text("Enter a valid Iranian Shaba number.","شماره شبای معتبر وارد کنید."));return;}
+      move(1);return;
+    }
     setError("");
-    if(own && Object.values(profileContact).some(value=>!value.trim())) {
+    const requiredProfileContact = aud ? ["address","city","state","postcode","country","phone","email"] as const : ["address","city","state","country","phone"] as const;
+    if(own && requiredProfileContact.some(key=>!profileContact[key].trim())) {
       setError(text("Complete your address and contact details in your verified profile first.","ابتدا آدرس و اطلاعات تماس را در پروفایل احراز هویت خود کامل کنید."));return;
     }
     const bank = (values.bank_name || "").trim(), name = (values.name || "").trim();

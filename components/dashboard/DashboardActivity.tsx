@@ -5,7 +5,8 @@ import { ArrowDownLeft, ArrowUpRight, ArrowRight, Check, ArrowLeftRight, Refresh
 import { useLocale } from "@/context/LocaleContext";
 import { dashboardCopy, dashboardHref } from "@/lib/dashboard/navigation";
 import { filterDashboardRequests, requestNeedsAttention, type ActivityFilter } from "@/lib/dashboard/activity";
-import { getRequestJourney, requestStageLabel } from "@/lib/requests/journey";
+import { journeyPresentation } from "@/lib/dashboard/journey-presentation";
+import { getRequestJourney } from "@/lib/requests/journey";
 import { requestDate, requestMoney } from "@/components/requests/request-labels";
 import type { ExchangeRequest } from "@/lib/requests/types";
 import styles from "@/styles/dashboard/DashboardHome.module.css";
@@ -33,6 +34,7 @@ export function DashboardActivity({ requests, loading, refreshing, error, onRefr
     {loading ? <div className={styles.empty} role="status">{copy.loading}</div> : <>
       {visible.map(request => {
         const journey = getRequestJourney(request), recipient = request.quote.recipient_snapshot;
+        const presentation = journeyPresentation(request, locale);
         const name = request.quote.institution_name || String(recipient.label || recipient.full_name || recipient.account_name || (locale === "fa" ? "انتقال وجه" : "Money transfer"));
         const completed = request.status === "completed", attention = requestNeedsAttention(request);
         const Icon = completed ? Check : request.quote.funding_currency === "AUD" ? ArrowUpRight : ArrowDownLeft;
@@ -43,7 +45,8 @@ export function DashboardActivity({ requests, loading, refreshing, error, onRefr
             {!journey.closed && !completed && <div className={styles.progressRail} aria-hidden="true">{[0,1,2,3,4].map(step => <i key={step} data-done={journey.stage >= step}/>)}</div>}
           </div>
           <div className={styles.activityAmount}><bdi data-private-value>{requestMoney(request.quote.funding_total,request.quote.funding_currency,locale)}</bdi>
-            <span className={styles.status} data-tone={completed ? "complete" : attention ? "attention" : "neutral"}>{requestStageLabel(request,locale)}</span>
+            <span className={styles.status} data-tone={completed ? "complete" : attention ? "attention" : "neutral"}>{presentation.status}</span>
+            <span className={styles.nextActor} data-actor={presentation.nextActor}>{locale === "fa" ? "مرحله بعد" : "Next"} · {presentation.actorLabel}</span>
           </div>
         </Link>;
       })}

@@ -4,6 +4,9 @@ import type { ExchangeRequest, RequestLocale } from "@/lib/requests/types";
 /** Animation represents the recorded stage; it never advances a financial state. */
 export function journeyPresentation(request: ExchangeRequest, locale: RequestLocale) {
   const journey = getRequestJourney(request), fa = locale === "fa";
+  const principalRefundPending = request.funding_status === "refund_pending";
+  const priorityRefundPending = request.priority_fee_status === "refund_pending";
+  const refundPending = principalRefundPending || priorityRefundPending;
   const text = (en: string, faText: string) => fa ? faText : en;
   const labels = [
     ["A great start.", "شروع یک انتقال مطمئن.", "Your request is with our team. Bank details appear after approval.", "درخواست شما در حال بررسی است. پس از تأیید، مشخصات بانکی نمایش داده می‌شود."],
@@ -30,10 +33,11 @@ export function journeyPresentation(request: ExchangeRequest, locale: RequestLoc
     href = "#request-conversation"; action = text("Reply to the team", "پاسخ به تیم زرمان"); mood = "attention"; nextActor = "customer";
   }
   if (request.status === "completed") { href = `/api/requests/${request.id}/receipt`; action = text("Download receipt", "دریافت رسید"); nextActor = "complete"; }
-  if (journey.closed || ["refund_pending", "refunded"].includes(request.funding_status)) {
+  if (journey.closed || ["refund_pending", "refunded"].includes(request.funding_status) || (priorityRefundPending && !journey.customerActionRequired)) {
     heading = requestStageLabel(request, locale); mood = ["rejected", "expired"].includes(request.status) ? "failed" : "quiet"; href = null; action = null;
-    nextActor = request.funding_status === "refund_pending" ? "zarman" : "closed";
-    description = request.funding_status === "refund_pending" ? text("Our team is arranging the return of your funds.", "تیم زرمان در حال پیگیری بازپرداخت وجه شماست.")
+    nextActor = refundPending ? "zarman" : "closed";
+    description = priorityRefundPending ? text("Our team is arranging your priority service fee refund.", "تیم زرمان در حال پیگیری بازپرداخت هزینه سرویس اولویت‌دار شماست.")
+      : principalRefundPending ? text("Our team is arranging the return of your funds.", "تیم زرمان در حال پیگیری بازپرداخت وجه شماست.")
       : request.funding_status === "refunded" ? text("Your funds have been returned.", "وجه شما بازپرداخت شد.") : text("This request is closed. Please do not send a new payment.", "این درخواست بسته شده است. وجه جدید واریز نکنید.");
   }
   const actorLabel = nextActor === "customer" ? text("Your turn", "نوبت شما")

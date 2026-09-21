@@ -12,7 +12,7 @@ export function TransferJourneyVisual({ stage = 0, from = "AUD", to = "IRT", qui
     <div className={styles.connectionRail} aria-hidden="true"><span/><span/></div>
     <div className={styles.currencyOrigin}><span>{from}</span><small>{from === "AUD" ? "AUSTRALIA" : "IRAN"}</small></div>
     <div className={styles.currencyDestination}><span>{to}</span><small>{to === "AUD" ? "AUSTRALIA" : "IRAN"}</small></div>
-    <div className={styles.connectionCore} key={safeStage}>
+    <div className={styles.connectionCore}>
       <span className={styles.connectionAura}/>
       <span className={styles.connectionRing}/>
       <div className={styles.logoFrame}>

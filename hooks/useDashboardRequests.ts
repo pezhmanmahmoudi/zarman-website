@@ -32,7 +32,7 @@ export function useDashboardRequests() {
     if (typeof supabase.channel !== "function") return;
     const channel = supabase
       .channel("customer-request-status")
-      .on("postgres_changes", { event: "*", schema: "public", table: "exchange_requests" }, () => { void refresh(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "exchange_request_realtime_signals" }, () => { void refresh(); })
       .subscribe();
     return () => { if (typeof supabase.removeChannel === "function") void supabase.removeChannel(channel); };
   }, [refresh]);

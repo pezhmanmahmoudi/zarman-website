@@ -21,6 +21,7 @@ export function DashboardTransactionHistory({ transactions, onDeleteTransaction 
       <div><div className={styles.activityName}>{tx.recipients?.label || tx.recipients?.full_name || tx.recipients?.account_name || tx.reference_code || (fa ? "انتقال وجه" : "Money transfer")}</div>
         <div className={styles.activityMeta}><bdi>{tx.reference_code || "—"}</bdi><time dir="ltr" dateTime={tx.created_at}>{requestDate(tx.created_at,locale)}</time></div>
         <span className={styles.status} data-tone={tx.status === "approved" ? "complete" : "neutral"}>{labels[tx.status]}</span>
+        <span className={styles.nextActor} data-actor={tx.status === "pending" ? "zarman" : tx.status === "approved" ? "complete" : "closed"}>{fa ? "مرحله بعد" : "Next"} · {tx.status === "pending" ? (fa ? "نزد زرمان" : "With Zarman") : tx.status === "approved" ? (fa ? "تکمیل شده" : "Complete") : (fa ? "بسته شده" : "Closed")}</span>
       </div>
       <div className={styles.activityAmount}><bdi data-private-value>{requestMoney(tx.amount_aud,"AUD",locale)}</bdi><span className={styles.status} data-private-value>{requestMoney(tx.equivalent_toman,"IRT",locale)}</span>
         {tx.status === "pending" && <button className={styles.textLink} onClick={() => onDeleteTransaction(tx.id)} aria-label={`${fa ? "لغو درخواست" : "Cancel request"} ${tx.reference_code||""}`}><Trash2 size={13}/>{fa ? "لغو" : "Cancel"}</button>}
