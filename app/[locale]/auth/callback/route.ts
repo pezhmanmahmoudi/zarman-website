@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get('type') as 'signup' | 'recovery' | 'email' | null
   // Only allow relative paths to prevent open redirect attacks
   const rawNext = searchParams.get('next') ?? `/${locale}`
-  const next = rawNext.startsWith('/') ? rawNext : `/${locale}`
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') && !/[\\\u0000-\u0020]/.test(rawNext) ? rawNext : `/${locale}`
 
   // Build the redirect response first so we can attach session cookies to it
   const redirectResponse = NextResponse.redirect(new URL(next, origin))

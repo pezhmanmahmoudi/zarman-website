@@ -143,6 +143,17 @@ export async function sendTransactionReceipt(
     return { error: `Transaction not found: ${txError?.message ?? "unknown error"}` };
   }
 
+  if (tx.status !== "approved") {
+    return { error: "A successful transaction receipt can only be sent after financial approval." };
+  }
+  const managed = await db.from("exchange_requests").select("id").eq("transaction_id", tx.id).maybeSingle();
+  if (managed.data) {
+    return { error: "This online request sends its final receipt automatically after settlement. Open Requests to view delivery status or download the receipt." };
+  }
+  if (managed.error && !["42P01", "PGRST205"].includes(managed.error.code)) {
+    return { error: "Could not verify receipt eligibility. Please retry." };
+  }
+
   const profile = (Array.isArray(tx.profiles) ? tx.profiles[0] : tx.profiles) as TxProfile;
   const recipient = (Array.isArray(tx.recipients) ? tx.recipients[0] : tx.recipients) as TxRecipient;
 

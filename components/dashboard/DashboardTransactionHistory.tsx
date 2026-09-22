@@ -1,176 +1,32 @@
-import React, { useState } from "react";
-import { History, Trash2, ChevronLeft, ChevronRight, Tag, Star } from "lucide-react";
-import { formatToman } from "@/app/[locale]/dashboard/dashboard.utils";
-import styles from "@/styles/dashboard/DashboardTransactionHistory.module.css";
-import cardStyles from "@/styles/dashboard/DashboardCards.module.css";
+"use client";
+
+import { useState } from "react";
+import type { Transaction } from "@/app/[locale]/dashboard/dashboard.types";
+import { requestDate, requestMoney } from "@/components/requests/request-labels";
 import { useLocale } from "@/context/LocaleContext";
+import { DashboardButton, DashboardCard, StatusBadge } from "@/components/dashboard/dashboard-ui";
 
-const PAGE_SIZE = 10;
-
-export function DashboardTransactionHistory({ transactions, onDeleteTransaction }: any) {
-  const [page, setPage] = useState(1);
-  const locale = useLocale();
-  const isEn = locale === "en";
-
-  const formatEquivalent = (num: number) => {
-    if (!num) return "—";
-    if (isEn) {
-      return `${Number(num).toLocaleString("en-US", { maximumFractionDigits: 0 })} Toman`;
-    }
-    return formatToman(num);
-  };
-
-  const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
-  const paginated = transactions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const recipientName = (tx: any): string | null => {
-    const r = tx.recipients;
-    if (!r) return null;
-    return r.label || r.full_name || r.account_name || null;
-  };
-
-  // Customer history should show transaction type from the customer's perspective.
-  const customerSideType = (type: string) => (type === "buy_aud" ? "sell_aud" : "buy_aud");
-
-  return (
-    <article className={cardStyles.panelCard}>
-      <div className={`${cardStyles.panelHeader} ${styles.headerWrap}`}>
-        <h2 className={`${cardStyles.panelTitle} ${styles.tableTitle}`}>
-          <History size={24} /> {isEn ? "Financial & Transaction History" : "سوابق مالی و تراکنش‌ها"}
-        </h2>
-      </div>
-      
-      <div className={styles.tableWrap}>
-        <table className={styles.historyTable}>
-          <thead>
-            <tr>
-              <th>{isEn ? "Reference Code" : "کد مرجع"}</th>
-              <th>{isEn ? "Submitted On" : "تاریخ ثبت"}</th>
-              <th>{isEn ? "Transaction Type" : "نوع تراکنش"}</th>
-              <th>{isEn ? "Amount (AUD)" : "مبلغ ارزی (AUD)"}</th>
-              <th>{isEn ? "Equivalent (Toman)" : "معادل (تومان)"}</th>
-              <th>{isEn ? "Recipient" : "گیرنده"}</th>
-              <th>{isEn ? "Discount" : "تخفیف"}</th>
-              <th>{isEn ? "Status" : "وضعیت"}</th>
-              <th>{isEn ? "Delete" : "حذف"}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginated.length === 0 && (
-              <tr>
-                <td colSpan={9} className={styles.emptyTable}>{isEn ? "No transaction history found." : "هیچ سابقه تراکنشی یافت نشد."}</td>
-              </tr>
-            )}
-            {paginated.map((tx: any) => {
-              const displayType = customerSideType(tx.type);
-
-              return (
-              <tr key={tx.id}>
-                <td dir="ltr" className={styles.tableRef}>
-                  {tx.reference_code ?? <span className={styles.noAction}>—</span>}
-                </td>
-                <td dir="ltr" className={styles.tableDate}>
-                  {new Date(tx.created_at).toLocaleDateString("en-GB", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "2-digit"
-                  })}
-                </td>
-                
-                <td>
-                  <span className={displayType === "buy_aud" ? styles.txTypeBuy : styles.txTypeSell}>
-                    {displayType === "buy_aud" ? (isEn ? "Buy AUD" : "خرید دلار") : (isEn ? "Sell AUD" : "فروش دلار")}
-                  </span>
-                </td>
-                
-                <td dir="ltr" className={styles.tableMoney}>${Number(tx.amount_aud).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                
-                <td className={styles.tableToman}>{formatEquivalent(Number(tx.equivalent_toman))}</td>
-
-                <td className={styles.recipientCell}>
-                  {recipientName(tx) ?? <span className={styles.noAction}>—</span>}
-                </td>
-
-                <td>
-                  {!tx.promo_code && !Number(tx.loyalty_discount ?? 0) ? (
-                    <span className={styles.noAction}>—</span>
-                  ) : (
-                    <div className={styles.discountCell}>
-                      {tx.promo_code && (
-                        <span className={styles.promoRow}>
-                          <Tag size={10} />
-                          <span className={styles.discountType}>{isEn ? "Promo" : "پرومو"}</span>
-                          {Number(tx.discount_amount ?? 0) > 0 && (
-                            <span className={styles.discountAmt}>{formatToman(Number(tx.discount_amount))}</span>
-                          )}
-                        </span>
-                      )}
-                      {Number(tx.loyalty_discount ?? 0) > 0 && (
-                        <span className={styles.loyaltyRow}>
-                          <Star size={10} />
-                          <span className={styles.discountType}>{isEn ? "Loyalty" : "وفاداری"}</span>
-                          <span className={styles.discountAmt}>{formatToman(Number(tx.loyalty_discount))}</span>
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </td>
-                
-                <td>
-                  <span className={
-                    tx.status === "approved" ? styles.statusApproved :
-                    tx.status === "rejected" ? styles.statusRejected :
-                    styles.statusPending
-                  }>
-                    {tx.status === "approved" ? (isEn ? "Approved" : "تایید شده") :
-                     tx.status === "rejected" ? (isEn ? "Rejected" : "رد شده") : (isEn ? "Under Review" : "در حال بررسی")}
-                  </span>
-                </td>
-                
-                <td>
-                  {tx.status === "pending" ? (
-                    <button 
-                      onClick={() => onDeleteTransaction(tx.id)} 
-                      className={styles.deleteBtn} 
-                      title={isEn ? "Cancel and delete request" : "لغو و حذف درخواست"}
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  ) : (
-                    <span className={styles.noAction}>-</span>
-                  )}
-                </td>
-              </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className={styles.pagination}>
-          <button
-            className={styles.pageBtn}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            aria-label={isEn ? "Previous page" : "صفحه قبل"}
-          >
-            <ChevronRight size={18} />
-          </button>
-          <span className={styles.pageInfo}>
-            {page} / {totalPages}
-          </span>
-          <button
-            className={styles.pageBtn}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            aria-label={isEn ? "Next page" : "صفحه بعد"}
-          >
-            <ChevronLeft size={18} />
-          </button>
+export function DashboardTransactionHistory({ transactions, onDeleteTransaction }: {
+  transactions: Transaction[]; onDeleteTransaction: (id: string | number) => void;
+}) {
+  const locale = useLocale(), fa = locale === "fa", [page, setPage] = useState(1);
+  const pages = Math.max(1, Math.ceil(transactions.length / 10)), current = Math.min(page, pages);
+  const visible = transactions.slice((current - 1) * 10, current * 10);
+  const labels = { approved: fa ? "تکمیل‌شده" : "Completed", pending: fa ? "در حال بررسی" : "Under review", rejected: fa ? "رد شده" : "Declined", cancelled: fa ? "لغو شده" : "Cancelled" };
+  return <article aria-label={fa ? "سوابق تراکنش‌ها" : "Transaction records"}>
+    <DashboardCard className="overflow-hidden p-0 sm:p-0">
+      <header className="border-b border-[#e9ecf0] px-5 py-5 sm:px-6"><h2 className="m-0! text-lg font-semibold text-[#182027]!">{fa ? "سوابق تراکنش‌ها" : "Transaction records"}</h2></header>
+      {visible.map(tx => <div className="grid min-w-0 gap-3 border-b border-[#e9ecf0] px-5 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:px-6" key={tx.id}>
+        <div className="min-w-0"><p className="m-0 truncate text-sm font-semibold text-[#182027]" data-private-value>{tx.recipients?.full_name || tx.recipients?.account_name || tx.recipients?.label || tx.reference_code || (fa ? "انتقال وجه" : "Money transfer")}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#626a76]"><bdi>{tx.reference_code || "—"}</bdi><time dir="ltr" dateTime={tx.created_at}>{requestDate(tx.created_at, locale)}</time></div>
+          <div className="mt-3 flex flex-wrap items-center gap-3"><StatusBadge tone={tx.status === "approved" ? "success" : tx.status === "rejected" ? "danger" : "neutral"}>{labels[tx.status]}</StatusBadge><span className="text-xs text-[#626a76]" data-actor={tx.status === "pending" ? "zarman" : tx.status === "approved" ? "complete" : "closed"}>{tx.status === "pending" ? fa ? "نزد زرمان" : "With Zarman" : tx.status === "approved" ? fa ? "تکمیل شده" : "Complete" : fa ? "بسته شده" : "Closed"}</span></div>
         </div>
-      )}
-    </article>
-  );
+        <div className="min-w-0 sm:text-end"><bdi data-private-value className="block text-sm font-semibold text-[#182027] tabular-nums">{requestMoney(tx.amount_aud, "AUD", locale)}</bdi><bdi data-private-value className="mt-1 block text-xs text-[#626a76] tabular-nums">{requestMoney(tx.equivalent_toman, "IRT", locale)}</bdi>
+          {tx.status === "pending" && <DashboardButton tone="quiet" onClick={() => onDeleteTransaction(tx.id)} className="mt-2 text-[#aa3545]" aria-label={`${fa ? "لغو درخواست" : "Cancel request"} ${tx.reference_code || ""}`}>{fa ? "لغو" : "Cancel"}</DashboardButton>}
+        </div>
+      </div>)}
+      {!visible.length && <p className="m-0 px-5 py-8 text-sm text-[#626a76] sm:px-6">{fa ? "سابقه‌ای وجود ندارد." : "No transaction records."}</p>}
+      {pages > 1 && <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-6"><DashboardButton tone="quiet" onClick={() => setPage(current - 1)} disabled={current === 1} aria-label={fa ? "صفحه قبل" : "Previous page"}>{fa ? "قبلی" : "Previous"}</DashboardButton><span className="text-xs text-[#626a76]">{current} / {pages}</span><DashboardButton tone="quiet" onClick={() => setPage(current + 1)} disabled={current === pages} aria-label={fa ? "صفحه بعد" : "Next page"}>{fa ? "بعدی" : "Next"}</DashboardButton></div>}
+    </DashboardCard>
+  </article>;
 }

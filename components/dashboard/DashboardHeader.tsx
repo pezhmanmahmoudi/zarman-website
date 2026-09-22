@@ -1,72 +1,42 @@
 "use client";
+import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { SlidersHorizontal, UserRound, X, ShieldCheck } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useLocale } from "@/context/LocaleContext";
+import { dashboardCopy, dashboardHref, type DashboardTab } from "@/lib/dashboard/navigation";
+import type { Profile } from "@/app/[locale]/dashboard/dashboard.types";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { DashboardButton } from "./dashboard-ui";
 
-import React from "react";
-import { ShieldCheck, Clock } from "lucide-react";
-import styles from "@/styles/dashboard/DashboardHeader.module.css";
-import shellStyles from "@/styles/dashboard/DashboardShell.module.css";
-import { useT } from "@/hooks/useT";
-
-type DashboardHeaderProps = {
-  firstName: string;
-  isApproved: boolean;
-  mobileMenuOpen: boolean;
-  setMobileMenuOpen: (open: boolean) => void;
-};
-
-export function DashboardHeader({
-  firstName,
-  isApproved,
-  mobileMenuOpen,
-  setMobileMenuOpen,
-}: DashboardHeaderProps) {
-  const t = useT();
-
-  return (
-    <>
-      <div className={shellStyles.mobileTopbar}>
-        <button
-          type="button"
-          className={`${shellStyles.mobileMenuBtn} ${
-            mobileMenuOpen ? shellStyles.mobileMenuBtnActive : ""
-          }`}
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label={mobileMenuOpen ? t.header.closeMenu : t.header.openMenu}
-          aria-expanded={mobileMenuOpen}
-          aria-controls="dashboard-mobile-sidebar"
-        >
-          <span></span>
-          <span></span>
-        </button>
+export function DashboardHeader({ activeTab, profile, privateAmounts, onTogglePrivacy, motion = true, onToggleMotion }: {
+  activeTab: DashboardTab; profile: Profile | null; privateAmounts: boolean; onTogglePrivacy: () => void; motion?: boolean; onToggleMotion?: () => void;
+}) {
+  const locale = useLocale(), fa = locale === "fa", copy = dashboardCopy[locale], pathname = usePathname(), query = useSearchParams();
+  const [preferences, setPreferences] = useState(false);
+  const targetLocale = fa ? "en" : "fa";
+  const switchPath = pathname.replace(/^\/(en|fa)(?=\/|$)/, `/${targetLocale}`) + (query.toString() ? `?${query}` : "");
+  return <>
+    <header className="sticky top-0 z-20 mx-auto w-full max-w-[1256px] px-5 pt-4 sm:px-8 sm:pt-5 lg:px-10">
+      <div className="flex min-h-[72px] items-center justify-between gap-3 rounded-3xl border border-white/90 bg-white/65 px-4 py-3 shadow-[0_8px_32px_-22px_#8c79af50,inset_0_1px_0_#fff] ring-1 ring-[#ded8ec]/35 backdrop-blur-xl sm:px-5">
+      <div className="flex min-w-0 items-center gap-3"><Image src="/images/logo-no-text-light.svg" alt="Zarman" width={32} height={32} className="shrink-0 min-[900px]:hidden"/><div className="min-w-0"><p className="m-0 hidden text-[11px] leading-5 text-[#8a7a9f] sm:block">{fa ? "فضای شخصی شما" : "Your personal space"}</p><span className="block truncate text-sm font-medium text-[#453854]">{copy[activeTab]}</span></div></div>
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        {profile?.kyc_status === "approved" && <span className="me-2 hidden items-center gap-1.5 rounded-full bg-[#e6f6f0]/70 px-3 py-2 text-[11px] text-[#347963] lg:inline-flex"><ShieldCheck size={14} aria-hidden="true"/>{fa ? "هویت تأیید شده" : "Identity verified"}</span>}
+        <Link className="flex min-h-11 items-center rounded-full border border-white/75 bg-white/40 px-3 text-xs font-medium text-[#655381] hover:bg-white/90" href={switchPath} aria-label={targetLocale === "fa" ? "فارسی" : "English"} lang={targetLocale}>{targetLocale === "fa" ? "فارسی" : "English"}</Link>
+        <button type="button" className="grid size-11 place-items-center rounded-full border border-white/75 bg-white/40 text-[#655381] hover:bg-white/90" onClick={() => setPreferences(true)} aria-label={fa ? "تنظیمات نمایش" : "Display preferences"}><SlidersHorizontal size={18} aria-hidden="true"/></button>
+        <Link className="grid size-11 place-items-center rounded-full border border-white bg-linear-to-br from-[#eee5ff] to-[#e1f4f2] text-sm font-semibold text-[#655083] shadow-[inset_0_1px_0_#fff]" href={dashboardHref(locale, "profile")} aria-label={copy.profile}>{profile?.first_name?.trim().slice(0, 1).toLocaleUpperCase() || <UserRound size={18} aria-hidden="true"/>}</Link>
       </div>
-
-      <header className={styles.headerCard}>
-        <div className={styles.headerContent}>
-          <span className={styles.headerEyebrow}>{t.dashboard.title}</span>
-
-          <h1 className={styles.headerTitle} dir="ltr">
-            Hi <span className={styles.textAccent}>{firstName}</span>!
-          </h1>
-
-          <p className={styles.headerDescription}>
-            {t.dashboard.welcome}
-            <br />
-            {t.dashboard.welcomeDetail}
-          </p>
-        </div>
-
-        <div className={styles.headerStatus}>
-          <div
-            className={`${styles.kycBadge} ${
-              isApproved ? styles.kyc_success : styles.kyc_warning
-            }`}
-          >
-            {isApproved ? <ShieldCheck size={20} /> : <Clock size={20} />}
-            <strong>
-              {isApproved ? t.dashboard.kycApproved : t.dashboard.kycPending}
-            </strong>
-          </div>
-        </div>
-      </header>
-    </>
-  );
+      </div>
+    </header>
+    <Dialog open={preferences} onOpenChange={setPreferences}>
+      <DialogContent showCloseButton={false} dir={fa ? "rtl" : "ltr"} className={`gap-0 rounded-3xl border-[#e9ecf0] bg-white p-6 text-[#182027] sm:max-w-sm ${!motion ? "animate-none!" : ""}`} overlayClassName={!motion ? "animate-none!" : undefined}>
+        <div className="mb-1 flex items-center justify-between gap-4"><DialogTitle className="m-0! text-xl! leading-snug! text-[#182027]!">{fa ? "تنظیمات نمایش" : "Display preferences"}</DialogTitle><button className="grid size-11 place-items-center rounded-full hover:bg-[#f1f3f6]" onClick={() => setPreferences(false)} aria-label={fa ? "بستن" : "Close"}><X size={18}/></button></div>
+        <DialogDescription className="mb-5 text-sm text-[#626a76]">{fa ? "نمایش داشبورد را مطابق سلیقه خود تنظیم کنید." : "Make this dashboard comfortable for you."}</DialogDescription>
+        <label className="flex min-h-16 cursor-pointer items-center justify-between gap-4 border-b border-[#e9ecf0] py-3 text-sm"><span>{copy.privacy}</span><input type="checkbox" className="size-5 accent-[#635bff]" checked={privateAmounts} onChange={onTogglePrivacy}/></label>
+        {onToggleMotion && <label className="flex min-h-16 cursor-pointer items-center justify-between gap-4 py-3 text-sm"><span>{fa ? "انیمیشن‌ها" : "Animations"}</span><input type="checkbox" className="size-5 accent-[#635bff]" checked={motion} onChange={onToggleMotion}/></label>}
+        <DashboardButton className="mt-5 w-full" onClick={() => setPreferences(false)}>{fa ? "انجام شد" : "Done"}</DashboardButton>
+      </DialogContent>
+    </Dialog>
+  </>;
 }

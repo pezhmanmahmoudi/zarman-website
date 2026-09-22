@@ -265,7 +265,7 @@ BEGIN
      OR (q->>'equivalent_toman')::numeric<=0 OR (q->>'applied_rate')::numeric<=0
      OR q->>'service_tier' NOT IN ('standard','priority') OR q->>'locale' NOT IN ('en','fa')
      OR q->>'customer_request_type' NOT IN ('buy_aud','sell_aud')
-     OR q->>'company_trade_type' IS DISTINCT FROM CASE WHEN q->>'customer_request_type'='buy_aud' THEN 'sell_aud' ELSE 'buy_aud' END
+     OR q->>'company_trade_type' IS DISTINCT FROM (CASE WHEN q->>'customer_request_type'='buy_aud' THEN 'sell_aud' ELSE 'buy_aud' END)
      OR COALESCE(btrim(q->>'source_of_funds'),'')='' OR COALESCE(btrim(q->>'reason_for_transfer'),'')='' THEN
     RAISE EXCEPTION 'Invalid authoritative quote';
   END IF;
@@ -273,7 +273,7 @@ BEGIN
     SELECT to_jsonb(recipient) INTO v_recipient FROM public.recipients recipient
     WHERE recipient.id=(q->>'recipient_id')::uuid AND recipient.user_id=p_actor_id FOR SHARE;
     IF NOT FOUND OR NOT v_recipient @> (q->'recipient_snapshot')
-      OR v_recipient->>'direction' IS DISTINCT FROM CASE WHEN q->>'customer_request_type'='buy_aud' THEN 'aud' ELSE 'irt' END THEN
+      OR v_recipient->>'direction' IS DISTINCT FROM (CASE WHEN q->>'customer_request_type'='buy_aud' THEN 'aud' ELSE 'irt' END) THEN
       RAISE EXCEPTION 'RECIPIENT_CHANGED: Accept a new quote';
     END IF;
   ELSIF COALESCE(q->>'payment_link','') !~ '^https://' OR COALESCE(btrim(q->>'institution_name'),'')='' OR COALESCE(btrim(q->>'invoice_reference'),'')='' THEN
@@ -295,10 +295,10 @@ BEGIN
   IF (q->>'base_fee_aud')::numeric<0 OR (q->>'priority_fee_aud')::numeric<0
     OR (q->>'equivalent_toman')::numeric IS DISTINCT FROM round(((q->>'raw_amount_aud')::numeric+
       CASE WHEN q->>'customer_request_type'='buy_aud' THEN (q->>'base_fee_aud')::numeric ELSE -(q->>'base_fee_aud')::numeric END)*(q->>'applied_rate')::numeric)
-    OR q->>'funding_currency' IS DISTINCT FROM CASE WHEN q->>'customer_request_type'='buy_aud' THEN 'IRT' ELSE 'AUD' END
-    OR q->>'recipient_currency' IS DISTINCT FROM CASE WHEN q->>'customer_request_type'='buy_aud' THEN 'AUD' ELSE 'IRT' END
-    OR (q->>'recipient_amount')::numeric IS DISTINCT FROM CASE WHEN q->>'customer_request_type'='buy_aud' THEN (q->>'raw_amount_aud')::numeric ELSE (q->>'equivalent_toman')::numeric END
-    OR (q->>'priority_fee_amount')::numeric IS DISTINCT FROM CASE WHEN q->>'funding_currency'='IRT' THEN round((q->>'priority_fee_aud')::numeric*(q->>'applied_rate')::numeric) ELSE (q->>'priority_fee_aud')::numeric END
+    OR q->>'funding_currency' IS DISTINCT FROM (CASE WHEN q->>'customer_request_type'='buy_aud' THEN 'IRT' ELSE 'AUD' END)
+    OR q->>'recipient_currency' IS DISTINCT FROM (CASE WHEN q->>'customer_request_type'='buy_aud' THEN 'AUD' ELSE 'IRT' END)
+    OR (q->>'recipient_amount')::numeric IS DISTINCT FROM (CASE WHEN q->>'customer_request_type'='buy_aud' THEN (q->>'raw_amount_aud')::numeric ELSE (q->>'equivalent_toman')::numeric END)
+    OR (q->>'priority_fee_amount')::numeric IS DISTINCT FROM (CASE WHEN q->>'funding_currency'='IRT' THEN round((q->>'priority_fee_aud')::numeric*(q->>'applied_rate')::numeric) ELSE (q->>'priority_fee_aud')::numeric END)
     OR (q->>'funding_total')::numeric IS DISTINCT FROM ((CASE WHEN q->>'funding_currency'='IRT' THEN (q->>'equivalent_toman')::numeric ELSE (q->>'raw_amount_aud')::numeric END)+(q->>'priority_fee_amount')::numeric) THEN
     RAISE EXCEPTION 'Invalid authoritative quote amounts';
   END IF;

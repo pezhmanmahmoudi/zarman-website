@@ -354,7 +354,8 @@ export function calcAccountingSnapshot(
   expenses: ExpenseRowInput[],
   ownerLoans: OwnerLoanRowInput[],
   accountsMeta: AccountMeta[], // ورودی جدید: لیست تمام کشوها از دیتابیس
-  currentBuyRate: number
+  currentBuyRate: number,
+  additionalServiceFeeIncomeIRT = 0
 ): AccountingSnapshot {
   const warnings: string[] = [];
   const safeRate = currentBuyRate > 0 ? currentBuyRate : 0;
@@ -369,7 +370,7 @@ export function calcAccountingSnapshot(
   // ۳. درآمد کارمزدها
   const feeIncomeIRT = sortedRows
     .filter(r => (r.entry_type ?? "trade") === "trade")
-    .reduce((sum, r) => sum + calcFeeIncomeToman(n(r.fee_aud), executionRate(r)), 0);
+    .reduce((sum, r) => sum + calcFeeIncomeToman(n(r.fee_aud), executionRate(r)), n(additionalServiceFeeIncomeIRT));
 
   // ۴. هزینه‌ها + وام‌ها + محاسبه تسعیر ارز (FX Gain/Loss)
   const expCalc = calcExpensesWithFX(expenses, safeRate);

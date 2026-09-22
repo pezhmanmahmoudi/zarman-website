@@ -23,6 +23,9 @@ const nextConfig: NextConfig = {
     return config;
   },
   transpilePackages: [],
+  experimental: {
+    serverActions: { bodySizeLimit: "5mb" },
+  },
   async headers() {
     const noindexHeaders = [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }];
     return [
