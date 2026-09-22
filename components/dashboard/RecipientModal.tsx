@@ -10,6 +10,7 @@ import { createRecipient } from "@/app/actions/transaction.actions";
 import type { Recipient, RecipientDirection, RecipientRelationship, Profile } from "@/app/[locale]/dashboard/dashboard.types";
 import { normalizeRecipientDigits, normalizeRecipientInput } from "@/lib/dashboard/recipient-input";
 import { cn } from "@/lib/utils";
+import { dashboardNumber } from "@/lib/dashboard/numbers";
 import { dashboardPalette } from "@/lib/dashboard/palette";
 
 const formStepColors = [dashboardPalette.violet, dashboardPalette.sky];
@@ -176,7 +177,7 @@ export function RecipientModal({ direction, mode = "standard", profile, locale =
             className="[&_.step-circle-container]:max-w-none! [&_.step-circle-container]:rounded-none! [&_.step-circle-container]:border-0! [&_.step-circle-container]:shadow-none! [&_.step-indicator-row]:p-0! [&_.step-connector]:bg-[#e9ecf0]!"
             renderStepIndicator={({ step: number, onStepClick }) => <li aria-current={number === step ? "step" : undefined} className="shrink-0">
               <button type="button" disabled={saving || discarding} onClick={() => onStepClick(number)} className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-start outline-none focus-visible:ring-4 focus-visible:ring-[#635bff]/20">
-                <motion.span animate={{ backgroundColor: number <= step ? formStepColors[number-1].soft : "#eef0f4", color: number <= step ? formStepColors[number-1].ink : "#626a76", borderColor: number <= step ? formStepColors[number-1].accent : "#e9ecf0" }} transition={{ duration: animate ? .2 : 0 }} className={cn("flex size-8 items-center justify-center rounded-full border text-sm font-semibold", number === step && "border-2")} aria-hidden="true">{number < step ? <Check size={15}/> : number}</motion.span>
+                <motion.span animate={{ backgroundColor: number <= step ? formStepColors[number-1].soft : "#eef0f4", color: number <= step ? formStepColors[number-1].ink : "#626a76", borderColor: number <= step ? formStepColors[number-1].accent : "#e9ecf0" }} transition={{ duration: animate ? .2 : 0 }} className={cn("flex size-8 items-center justify-center rounded-full border text-sm font-semibold", number === step && "border-2")} aria-hidden="true">{number < step ? <Check size={15}/> : dashboardNumber(number,locale)}</motion.span>
                 <span className="text-xs font-medium text-[#626a76] sm:text-sm" style={number <= step ? { color: formStepColors[number-1].ink } : undefined}>{number === 1 ? text("Basic details", "مشخصات اولیه") : text("Banking details", "اطلاعات بانکی")}</span>
               </button></li>}><Step/><Step/></AnimatedStepper>
         </div>

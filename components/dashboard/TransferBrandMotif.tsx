@@ -35,13 +35,13 @@ function LogoOrbit({ stage, animate, compact, quiet }: { stage: number; animate:
   const tone = dashboardPalette[dashboardStageTones[stage]];
   const play = animate && inView;
 
-  return <div ref={ref} className="relative grid size-full place-items-center" data-orbit-motion={play ? "playing" : "still"}>
-    <div className="absolute inset-0 rounded-full opacity-75" style={{ background: `radial-gradient(ellipse at center, ${tone.soft} 0%, ${tone.glow} 28%, transparent 68%)` }} />
-    <motion.div className="absolute aspect-square w-[92%] max-w-72 rounded-full"
+  return <div ref={ref} className="relative grid h-full aspect-[4/3] max-w-full place-items-center" data-orbit-motion={play ? "playing" : "still"}>
+    <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse at center, ${tone.glow}70 0%, ${tone.glow}35 35%, ${tone.glow}00 70%)` }} />
+    <motion.div className="absolute aspect-square w-[68%] rounded-full"
       initial={false}
       animate={play ? { opacity: [0.2, 0.85, 0.5, 0.22], scale: [0.82, 1.06, 1, 1] } : { opacity: 0.22, scale: 1 }}
       transition={play ? flourish : { duration: 0 }}
-      style={{ background: `conic-gradient(from 15deg, transparent 0deg, ${tone.glow} 25deg, transparent 55deg, transparent 95deg, #a5f3fc66 123deg, transparent 158deg, transparent 220deg, ${tone.glow} 252deg, transparent 286deg, transparent 310deg, #fcd34d33 340deg, transparent 360deg)` }} />
+      style={{ maskImage: "radial-gradient(circle, #000 25%, #0009 48%, transparent 70%)", WebkitMaskImage: "radial-gradient(circle, #000 25%, #0009 48%, transparent 70%)", background: `conic-gradient(from 15deg, transparent 0deg, ${tone.glow} 25deg, transparent 55deg, transparent 95deg, #a5f3fc66 123deg, transparent 158deg, transparent 220deg, ${tone.glow} 252deg, transparent 286deg, transparent 310deg, #fcd34d33 340deg, transparent 360deg)` }} />
     <svg className="absolute inset-0 size-full overflow-visible" viewBox="0 0 320 240" fill="none" focusable="false">
       <defs>
         <radialGradient id={`orbit-rays-${id}`} gradientUnits="userSpaceOnUse" cx="160" cy="120" r="125">
@@ -75,7 +75,7 @@ function LogoOrbit({ stage, animate, compact, quiet }: { stage: number; animate:
       </motion.g>
     </svg>
     <div className={cn("relative grid aspect-square place-items-center rounded-full border border-white/95 bg-white/75 backdrop-blur-sm", compact ? "w-[48%]" : "w-[45%] max-w-36")}
-      style={{ boxShadow: `0 0 0 1px ${tone.border}, 0 0 0 9px #ffffff80, 3px 5px 0 ${tone.border}, 0 18px 35px ${tone.glow}`, opacity: quiet ? 0.75 : 1 }}>
+      style={{ boxShadow: `0 0 0 1px ${tone.border}80, 0 0 0 8px #ffffff35, 0 8px 28px ${tone.glow}55, inset 0 1px 0 #fff`, opacity: quiet ? 0.75 : 1 }}>
       <div className="absolute inset-2 rounded-full border border-white" />
       <Image src="/images/logo-no-text-light.svg" alt="" width={112} height={112} draggable={false}
         className="relative block h-auto w-[76%] object-contain" style={{ transform: "none" }} />
@@ -91,7 +91,7 @@ export default function TransferBrandMotif({ stage = 0, motionEnabled = true, qu
   const animate = motionEnabled && dashboardMotion && systemReducedMotion === false && !quiet;
 
   return <div aria-hidden="true" dir="ltr" data-stage={safeStage} data-quiet={quiet} data-logo-orbit="true" data-duration={LOGO_ORBIT_DURATION}
-    className={cn("pointer-events-none relative isolate min-w-0 select-none overflow-hidden", compact ? "size-20" : "h-52 w-full sm:h-60", className)}>
+    className={cn("pointer-events-none relative isolate grid min-w-0 select-none place-items-center", compact ? "size-20" : "h-52 w-full sm:h-60", className)}>
     <LogoOrbit key={`${safeStage}-${replayKey}`} stage={safeStage} animate={animate} compact={compact} quiet={quiet} />
   </div>;
 }

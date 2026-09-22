@@ -212,3 +212,40 @@ test("logo motion is decorative and respects every pause preference while retain
   for (const props of [{ motionEnabled: false }, { quiet: true }]) assert.equal(orbitHarness().render(props).art.props["data-orbit-motion"], "still");
   for (const [stage, safe] of [[-1, 0], [99, 4], [NaN, 0]]) assert.equal(orbitHarness().render({ stage }).tree.props["data-stage"], safe);
 });
+
+test("Persian monetary drafts use proper separators and round-trip without changing quoted values", () => {
+  const { dashboardNumber, normaliseAmountDigits, localiseAmountDraft } = dashboardHarness().load("lib/dashboard/numbers.ts");
+  assert.equal(dashboardNumber(104650000,"fa"),"۱۰۴٬۶۵۰٬۰۰۰");
+  assert.equal(dashboardNumber(1000.05,"fa",2),"۱٬۰۰۰٫۰۵");
+  assert.equal(localiseAmountDraft("1,000.05","fa"),"۱٬۰۰۰٫۰۵");
+  assert.equal(localiseAmountDraft("۱٬۰۰۰٫۰۵","en"),"1,000.05");
+  assert.equal(localiseAmountDraft("0.","fa"),"۰٫");
+  assert.equal(localiseAmountDraft("0.0","fa"),"۰٫۰");
+  assert.equal(localiseAmountDraft("","fa"),"");
+  assert.equal(localiseAmountDraft("1.2.3","fa"),"1.2.3");
+  for (const amount of [0,0.01,1.05,999.99,1000.05,104650000]) for(const locale of ["en","fa"]) {
+    assert.equal(Number(normaliseAmountDigits(dashboardNumber(amount,locale,2))),amount);
+  }
+  assert.equal(normaliseAmountDigits("١٬٠٠٠٫٠٥"),"1000.05");
+  assert.equal(normaliseAmountDigits("۱۰۴،۶۵۰،۰۰۰"),"104650000");
+});
+
+test("Persian number display does not localise English Gregorian audit dates or bank identifiers", () => {
+  const h=dashboardHarness();
+  const {requestDate}=h.load("components/requests/request-labels.ts");
+  const at="2026-09-15T01:20:00Z";
+  assert.equal(requestDate(at,"fa"),requestDate(at,"en"));
+  assert.match(requestDate(at,"fa"),/2026/);
+  // Bank-input validation has its own string-preserving normalization path.
+  const source=fs.readFileSync("components/dashboard/RecipientModal.tsx","utf8");
+  assert.doesNotMatch(source,/localiseAmountDraft/);
+});
+
+test("halo beams fade radially before the canvas edge instead of clipping a broad glow", () => {
+  const {tree,art}=orbitHarness().render({stage:2});
+  assert.doesNotMatch(tree.props.className,/overflow-hidden/);
+  assert.match(art.props.className,/aspect-\[4\/3\]/);
+  const beam=descendants(art,node=>node.props.style?.maskImage)[0];
+  assert.match(beam.props.style.maskImage,/radial-gradient.*transparent 70%/);
+  assert.equal(beam.props.style.WebkitMaskImage,beam.props.style.maskImage);
+});

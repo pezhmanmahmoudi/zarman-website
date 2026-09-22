@@ -6,6 +6,7 @@ import { useLocale } from "@/context/LocaleContext";
 import { dashboardCopy, dashboardHref } from "@/lib/dashboard/navigation";
 import { filterDashboardRequests, type ActivityFilter } from "@/lib/dashboard/activity";
 import { AnimatedList } from "@/components/ui/animated-list";
+import { dashboardNumber } from "@/lib/dashboard/numbers";
 import { DashboardButton, DashboardCard, dashboardInputClass } from "@/components/dashboard/dashboard-ui";
 import { TransferActivityRow } from "./recent-activity-list";
 import { cn } from "@/lib/utils";
@@ -32,7 +33,7 @@ export function DashboardActivity({ requests, loading, refreshing, error, onRefr
       {loading && !visible.length ? <div className="px-5 py-9 text-sm text-[#626a76] sm:px-6" role="status">{copy.loading}</div> : <>
         {!!visible.length && <AnimatedList mode="live" motionEnabled={motionEnabled} role="list" aria-label={copy.history} className="gap-3 px-4 py-4 sm:px-5">{visible.map(request => <TransferActivityRow key={request.id} request={request} locale={locale} createdDate />)}</AnimatedList>}
         {!visible.length && !error && <div className="px-5 py-8 sm:px-6"><h3 className="m-0! text-base font-medium text-[#182027]!">{requests.length ? copy.emptySearch : fa ? "هنوز انتقالی ندارید" : "No transfers yet"}</h3><p className="mb-5 mt-2 max-w-md text-sm leading-relaxed text-[#626a76]">{requests.length ? copy.emptySearchHint : copy.noTransfersHint}</p>{requests.length ? <DashboardButton tone="secondary" onClick={() => { setFilter("all"); setSearch(""); setLimit(20); }}>{fa ? "پاک کردن فیلترها" : "Reset filters"}</DashboardButton> : <DashboardButton asChild><Link href={dashboardHref(locale, "transfer")}>{copy.newTransfer}</Link></DashboardButton>}</div>}
-        {!compact && visible.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e9ecf0] px-5 py-4 sm:px-6"><span className="text-xs text-[#626a76]">{visible.length} {fa ? "از" : "of"} {filtered.length} {fa ? "انتقال" : "transfers"}</span>{filtered.length > visible.length && <DashboardButton tone="secondary" onClick={() => setLimit(value => value + 20)}>{copy.more}</DashboardButton>}</div>}
+        {!compact && visible.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e9ecf0] px-5 py-4 sm:px-6"><span className="text-xs text-[#626a76]">{dashboardNumber(visible.length,locale)} {fa ? "از" : "of"} {dashboardNumber(filtered.length,locale)} {fa ? "انتقال" : "transfers"}</span>{filtered.length > visible.length && <DashboardButton tone="secondary" onClick={() => setLimit(value => value + 20)}>{copy.more}</DashboardButton>}</div>}
       </>}
     </DashboardCard>
   </section>;

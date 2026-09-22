@@ -150,5 +150,5 @@ test("new guided forms retain actual Persian text and the amount character white
     assert.doesNotMatch(source, /\?{3,}/); assert.match(source, /[\u0600-\u06ff]/);
   }
   const hub = fs.readFileSync("components/dashboard/DashboardRequestHub.tsx", "utf8");
-  assert.match(hub, /pattern="\[0-9۰-۹٠-٩\.,٫،\]\*"/);
+  assert.match(hub, /pattern="\[0-9۰-۹٠-٩\.,٫،٬\]\*"/);
 });

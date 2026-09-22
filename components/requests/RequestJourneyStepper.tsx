@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { CSSProperties } from "react";
 import Stepper, { Step } from "@/components/Stepper";
 import { useDashboardMotion } from "@/components/dashboard/DashboardMotion";
+import { dashboardNumber } from "@/lib/dashboard/numbers";
 import { dashboardPalette, dashboardStageTones } from "@/lib/dashboard/palette";
 import type { RequestMilestone } from "@/lib/requests/journey";
 import type { RequestLocale } from "@/lib/requests/types";
@@ -85,7 +86,7 @@ export function RequestJourneyStepper({ milestones, stage, locale, actorLabel, m
                       transition={{ duration: reducedMotion ? 0 : 0.4, ease: "easeOut" }}
                     />
                   </svg>
-                ) : <span>{step}</span>}
+                ) : <span>{dashboardNumber(step,locale)}</span>}
               </motion.span>
               {milestone.current && (
                 <motion.span

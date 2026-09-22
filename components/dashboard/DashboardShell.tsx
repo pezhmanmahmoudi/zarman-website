@@ -1,10 +1,11 @@
 "use client";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, MessageCircle } from "lucide-react";
+import Link from "next/link";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useLocale } from "@/context/LocaleContext";
-import { dashboardCopy, dashboardTab } from "@/lib/dashboard/navigation";
+import { dashboardCopy, dashboardTab, dashboardHref } from "@/lib/dashboard/navigation";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { DashboardMotionProvider } from "./DashboardMotion";
@@ -39,7 +40,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           {data.error && !data.sessionChecked ? <section className={styles.errorState} role="alert"><h1>{copy.loadError}</h1><button onClick={() => void data.refresh()} disabled={data.loading}><RefreshCw size={17} />{copy.retry}</button></section>
             : !data.sessionChecked ? <DashboardLoading /> : children}
         </div>
-        <footer className="mx-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#e9ecf0] py-6 pb-28 text-xs text-[#7d8490] sm:mx-8 min-[900px]:pb-6 lg:mx-10"><span>Zarman Exchange</span><span>{copy.exchange}</span></footer>
+        <footer className="mx-auto w-full max-w-[1256px] px-5 pb-28 pt-3 sm:px-8 min-[900px]:pb-7 lg:px-10">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-white/80 bg-linear-to-br from-white/65 to-[#eaf6f5]/60 px-5 py-5 shadow-[0_8px_32px_-24px_#88749f40,inset_0_1px_0_#fff] backdrop-blur-lg sm:px-6">
+            <div className="min-w-0"><p className="m-0 text-sm font-medium text-[#56436e]">{locale === "fa" ? "در هر قدم، کنار شما." : "Here for every step."}</p><p className="mb-0 mt-1.5 text-xs text-[#84748f]">{locale === "fa" ? "صرافی زرمان" : "Zarman Exchange"}<span className="mx-2 text-[#b5a6c3]" aria-hidden="true">·</span>{copy.exchange}</p></div>
+            <Link href={dashboardHref(locale,"feedback")} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/90 bg-white/65 px-4 text-xs font-medium text-[#655083] no-underline transition-colors hover:bg-white"><MessageCircle size={16} aria-hidden="true"/>{locale === "fa" ? "گفتگو با زرمان" : "Talk to Zarman"}</Link>
+          </div>
+        </footer>
       </div>
     </div>
   </DashboardMotionProvider></DashboardContext.Provider>;

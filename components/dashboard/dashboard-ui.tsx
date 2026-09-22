@@ -11,7 +11,7 @@ import { dashboardPalette, type DashboardTone } from "@/lib/dashboard/palette";
 
 /** Shared customer surfaces. Use the same hierarchy from onboarding to settlement. */
 export function DashboardCard({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <Card data-dashboard-card className={cn("min-w-0 gap-0 rounded-3xl border border-[#ded8eb] bg-white/90 p-6 text-[#242137] shadow-[0_3px_0_0_#e9e2f0] ring-0 sm:p-7", className)} {...props}>{children}</Card>;
+  return <Card data-dashboard-card className={cn("min-w-0 gap-0 rounded-3xl border border-white/90 bg-white/65 p-6 text-[#242137] shadow-[0_12px_40px_-24px_#796a9d40,inset_0_1px_0_#ffffff] ring-1 ring-[#dcd6ec]/40 backdrop-blur-xl sm:p-7", className)} {...props}>{children}</Card>;
 }
 
 export function DashboardMagicCard({ tone = "violet", motionEnabled, contentClassName, className, style, children, ...props }: HTMLAttributes<HTMLDivElement> & { tone?: DashboardTone; motionEnabled?: boolean; contentClassName?: string }) {
@@ -19,14 +19,14 @@ export function DashboardMagicCard({ tone = "violet", motionEnabled, contentClas
   const colors = dashboardPalette[tone];
   return <MagicCard {...props} data-dashboard-card data-card-tone={tone} motionEnabled={(motionEnabled ?? true) && enabled}
     gradientColor={colors.glow} gradientFrom={colors.accent} gradientTo={colors.glow}
-    className={cn("min-w-0 rounded-3xl text-[#242137]", className)} contentClassName={cn("p-6 sm:p-7", contentClassName)}
-    style={{ background: `linear-gradient(135deg, #ffffffed 12%, ${colors.soft}ed 100%)`, borderColor: colors.border, boxShadow: `0 4px 0 0 ${colors.border}80, inset 0 1px 0 #fff`, ...style }}>{children}</MagicCard>;
+    className={cn("min-w-0 rounded-3xl text-[#242137] backdrop-blur-xl", className)} contentClassName={cn("p-6 sm:p-7", contentClassName)}
+    style={{ background: `linear-gradient(135deg, #ffffffc9 12%, ${colors.soft}b8 100%)`, borderColor: `${colors.border}85`, boxShadow: `0 16px 48px -28px ${colors.accent}35, inset 0 1px 0 #ffffff`, ...style }}>{children}</MagicCard>;
 }
 
 export function DashboardButton({ tone = "primary", className, ...props }: ComponentProps<typeof Button> & { tone?: "primary" | "secondary" | "quiet" }) {
   return <Button data-dashboard-button className={cn(
     "h-auto min-h-12 gap-2 rounded-full px-6 py-3 text-sm font-semibold leading-5 whitespace-normal shadow-none transition-[background-color,color,border-color,box-shadow] duration-150 active:translate-y-0! focus-visible:ring-[#635bff]/25 motion-reduce:transition-none",
-    tone === "primary" ? "border-[#6240b7] bg-[#7048ca] text-white shadow-[0_3px_0_#513493] hover:bg-[#633bbf]" : tone === "secondary" ? "border-[#ded5ef] bg-white/80 text-[#4f3980] hover:bg-[#f2ebfc]" : "border-transparent bg-transparent text-[#655381] hover:bg-[#f2ebfc] hover:text-[#49318b]",
+    tone === "primary" ? "border-white/20 bg-[#7048ca] bg-linear-to-b from-white/10 to-transparent text-white shadow-[0_6px_20px_-8px_#7048ca70,inset_0_1px_0_#ffffff30] hover:bg-[#633bbf]" : tone === "secondary" ? "border-white/80 bg-white/65 text-[#4f3980] shadow-[0_3px_14px_-8px_#796a9d40] hover:bg-white/90" : "border-transparent bg-transparent text-[#655381] hover:bg-[#f2ebfc] hover:text-[#49318b]",
     className,
   )} {...props}/>;
 }

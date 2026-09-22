@@ -69,6 +69,18 @@ Motion respects the dashboard pause control and the operating system preference.
 
 Validation: 94 dashboard tests, 44 request-interface tests and scoped ESLint passed. The isolated preview build passed, including TypeScript. Read-only test-project checks confirmed all three accounts, recipient/request ownership and cross-customer denials, with no financial actions or emails.
 
+Published to the existing preview in commit `302f842b82eb531a1466dacd2fdc712af6f83a5e`; Vercel deployment `dpl_B6hYXSvohaF8evS9w3io7rcX8yQ4` is READY. All 17 authenticated English/Persian/admin page checks passed, along with 14 local animation asset checks. Production remains unchanged. The preview continues to require Vercel sign-in before the existing application test login.
+
+## Glass surfaces, shared chrome and Persian amounts — 22 September 2026
+
+Removed the hard offset shadows from buttons, cards, stage indicators and the logo. Translucent surfaces now use soft diffused shadows and white edge highlights. The header and footer align with the main content width and share the glass treatment; display preferences, locale switching, profile access and support remain accessible.
+
+The logo artwork now has a bounded 4:3 canvas and radial transparency on its beams. The halo fades before reaching the canvas edges, without the earlier rectangular clipping. The original mark, seven-second sequence and motion preferences remain intact.
+
+The transfer form and quote summary use the same Magic Card surfaces as the overview, consistent padding, responsive amount columns and a borderless stepper. Corrected a shared font shorthand that overrode input typography, and removed the doubled inner focus outline while retaining the outer focus ring. Persian amounts use Persian digits with U+066C thousands and U+066B decimal separators, including partial decimal input; monetary LTR fields use the Persian font explicitly. Dates remain English Gregorian, and bank identifiers retain their string-based validation and leading zeros.
+
+Validation: 98 dashboard tests, 44 request-interface tests, scoped ESLint and the isolated preview build passed. New coverage verifies localised amount round trips and the exact numeric value passed to the existing submission component. Visual checks remain skipped as requested.
+
 ## Earlier workflow validation
 
 - `npm run test:dashboard` — 20/20 passed.

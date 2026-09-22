@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
 import { DashboardButton, DashboardMagicCard, StatusBadge } from "@/components/dashboard/dashboard-ui";
+import { dashboardNumber } from "@/lib/dashboard/numbers";
 import { dashboardPalette, dashboardStageTones } from "@/lib/dashboard/palette";
 import { journeyPresentation } from "@/lib/dashboard/journey-presentation";
 import { requestMilestones } from "@/lib/requests/journey";
@@ -26,7 +27,7 @@ function TransferAmount({ label, amount, currency, locale, motionEnabled }: { la
   const formatted = requestMoney(amount, currency, locale), separator = formatted.lastIndexOf(" ");
   return <div className="min-w-0">
     <dt className="mb-2 text-xs font-medium text-[#66617a]">{label}</dt>
-    <dd className="m-0 min-w-0 font-semibold text-[#25213e]"><motion.bdi key={`${amount}-${currency}`} initial={motionEnabled ? { opacity: 0, filter: "blur(3px)" } : false} animate={{ opacity: 1, filter: "blur(0px)" }} transition={{ duration: motionEnabled ? .32 : 0 }} data-private-value className="block break-words text-[clamp(1.65rem,2.8vw,2.3rem)] leading-[1.2] tracking-[-.035em] tabular-nums rtl:tracking-normal">{formatted.slice(0, separator)}{" "}<span className="text-sm font-medium tracking-normal text-[#66617a]">{formatted.slice(separator + 1)}</span></motion.bdi></dd>
+    <dd className="m-0 min-w-0 font-medium text-[#25213e]"><motion.bdi key={`${amount}-${currency}`} initial={motionEnabled ? { opacity: 0, filter: "blur(3px)" } : false} animate={{ opacity: 1, filter: "blur(0px)" }} transition={{ duration: motionEnabled ? .32 : 0 }} data-private-value data-number-locale={locale} className="block break-words text-[clamp(1.65rem,2.8vw,2.3rem)] leading-[1.2] tracking-[-.035em] tabular-nums rtl:tracking-normal">{formatted.slice(0, separator)}{" "}<span className="text-sm font-medium tracking-normal text-[#66617a]">{formatted.slice(separator + 1)}</span></motion.bdi></dd>
   </div>;
 }
 
@@ -59,7 +60,7 @@ export function TransferOverviewCard({ request = null, locale, loading = false, 
                 <div className="min-w-0">
                   <div className="mb-4 flex flex-wrap items-center gap-2" data-next-actor={journey.nextActor}>
                     <span className="inline-flex items-center gap-2 rounded-full border bg-white/75 px-3 py-1.5 text-xs font-semibold" style={{ color: palette.ink, borderColor: palette.border }}><span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: palette.accent }} />{error ? text("Refresh to continue", "برای ادامه تازه‌سازی کنید") : journey.actorLabel}</span>
-                    <span className="text-xs text-[#66617a]">{text(`Stage ${journey.stage + 1} of 5`, `مرحله ${journey.stage + 1} از 5`)}</span>
+                    <span className="text-xs text-[#66617a]">{text(`Stage ${journey.stage + 1} of 5`, `مرحله ${dashboardNumber(journey.stage + 1,locale)} از ۵`)}</span>
                   </div>
                   <motion.div key={`${request.id}:${journey.status}:${error}`} initial={animate ? { opacity: 0, filter: "blur(3px)" } : false} animate={{ opacity: 1, filter: "blur(0px)" }} transition={{ duration: animate ? .28 : 0 }}>
                     <h2 className="m-0! max-w-[23ch] text-[clamp(1.75rem,3.2vw,2.65rem)]! font-semibold leading-[1.18]! tracking-[-.04em] text-[#25213e]! rtl:leading-relaxed! rtl:tracking-normal">{error ? text("Let’s get your latest update.", "آخرین وضعیت را دریافت کنیم.") : journey.heading}</h2>

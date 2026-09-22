@@ -4,8 +4,8 @@
   overflow: hidden;
   color: #182027;
   border: 1px solid var(--progress-border) !important;
-  background: linear-gradient(115deg, #fff 5%, var(--progress-soft) 100%) !important;
-  box-shadow: 0 4px 0 var(--progress-border), 0 16px 40px -30px var(--progress-ink) !important;
+  background: linear-gradient(115deg, #ffffffb8 5%, var(--progress-soft) 100%) !important;
+  box-shadow: 0 16px 48px -32px var(--progress-border), inset 0 1px 0 #fff !important;
 }
 .topline {
   display: flex;
@@ -42,7 +42,7 @@
   border: 1px solid var(--progress-border);
   border-radius: 16px;
   background: rgb(255 255 255 / 78%);
-  box-shadow: 0 2px 0 var(--progress-border);
+  box-shadow: inset 0 1px 0 #fff;
 }
 .owner>span { color: #596273; font-size: 11px; font-weight: 650; }
 .owner small { flex-basis: 100%; color: #626a76; font-size: 12px; line-height: 1.55; }

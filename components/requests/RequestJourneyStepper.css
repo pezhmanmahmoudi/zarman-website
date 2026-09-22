@@ -60,7 +60,7 @@
 }
 .request-journey-stepper .request-journey-step[data-current="true"] .request-journey-node {
   border-width: 2px;
-  box-shadow: 0 3px 0 var(--journey-border);
+  box-shadow: 0 4px 14px -6px var(--journey-border);
 }
 .request-journey-stepper .request-journey-focus-ring {
   position: absolute;

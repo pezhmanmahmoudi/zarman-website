@@ -125,9 +125,9 @@ test("loyalty, personalised rates and savings use the existing financial configu
     }});
     const {DashboardOverview}=h.load("components/dashboard/DashboardOverview.tsx");
     const html=markup(React.createElement(DashboardOverview,{volume:2500,completedCount:2,tailoredRate:99900,baseRate:100000,loyaltyBonus:100}));
-    assert.match(html,/aria-valuenow="50"/);assert.match(html,/500 AUD/);assert.match(html,/12,345/);
-    assert.match(html,/<bdi data-private-value="true">500 AUD<\/bdi>/);
-    assert.match(html,/99,900/);assert.match(html,/100,000/);assert.match(html,/100 /);
+    assert.match(html,/aria-valuenow="50"/);assert.match(html,locale === "fa" ? /۵۰۰ AUD/ : /500 AUD/);assert.match(html,locale === "fa" ? /۱۲٬۳۴۵/ : /12,345/);
+    assert.match(html,locale === "fa" ? /<bdi data-private-value="true">۵۰۰ AUD<\/bdi>/ : /<bdi data-private-value="true">500 AUD<\/bdi>/);
+    assert.match(html,locale === "fa" ? /۹۹٬۹۰۰/ : /99,900/);assert.match(html,locale === "fa" ? /۱۰۰٬۰۰۰/ : /100,000/);assert.match(html,locale === "fa" ? /۱۰۰ / : /100 /);
     assert.match(html,locale==="en" ? /discount on the exchange-rate spread/:/تخفیف از فاصله نرخ خرید و فروش/);
     assert.match(html,new RegExp(`/${locale}/dashboard\\?tab=recipients`));
     assert.doesNotMatch(html,/undefined|NaN/);
@@ -162,6 +162,32 @@ test("guided transfer prevents skipping missing details and preserves a selected
     assert.equal(elements(render(),e=>e.type===SelectBox)[0].props.value,"saved");
     next();submit=elements(render(),e=>e.type===OnlineRequestSubmit)[0];assert.equal(submit.props.input.sourceOfFunds,"Loan");assert.equal(submit.props.input.reasonForTransfer,"Support Family");
   }finally{global.requestAnimationFrame=previous;}
+});
+
+test("bilingual amount inputs keep Persian formatting separate from the actual submitted AUD value",()=>{
+  const previous=global.requestAnimationFrame;global.requestAnimationFrame=()=>1;
+  try { for(const locale of ["en","fa"]) {
+    const OnlineRequestSubmit=()=>null;
+    const h=dashboardHarness({locale,mocks:{
+      "@/components/ui/SelectBox/SelectBox":{SelectBox:()=>null},
+      "@/components/dashboard/RecipientModal":{RecipientModal:()=>null},
+      "@/components/requests/OnlineRequestSubmit":{OnlineRequestSubmit},
+      "@/context/FinanceConfigContext":{useFinanceConfig:()=>finance},
+      "@/app/actions/transaction.actions":{getRecipients:async()=>({data:[]})},
+    }});
+    const {DashboardRequestHub}=h.load("components/dashboard/DashboardRequestHub.tsx");
+    const props={isApproved:true,txType:"buy_aud",setTxType(){},amountStr:"1,000.05",setAmountStr(value){props.amountStr=value;},loyaltyBonus:0,tailoredRate:100000,baseRate:100000,profile:{id:"test"}};
+    const render=()=>h.render(DashboardRequestHub,props);
+    const input=()=>elements(render(),e=>e.props.id==="request-amount-aud")[0];
+    assert.equal(input().props.value,locale==="fa" ? "۱٬۰۰۰٫۰۵" : "1,000.05");
+    assert.equal(input().props.dir,"ltr");assert.equal(input().props["data-number-locale"],locale);
+    input().props.onChange({target:{value:"۱٬۲۳۴٫۰۵"}});
+    assert.equal(input().props.value,locale==="fa" ? "۱٬۲۳۴٫۰۵" : "1,234.05");
+    // Review mounts the existing submit component; no network or write is performed.
+    h.values[0]=2;
+    const submit=elements(render(),e=>e.type===OnlineRequestSubmit)[0];
+    assert.equal(submit.props.input.rawAmount,1234.05);
+  }} finally {global.requestAnimationFrame=previous;}
 });
 
 test("successful submission replaces the editable draft shell with a bilingual acknowledgement",async()=>{

@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import type { ExchangeRequest, RequestEvent, RequestLocale } from "@/lib/requests/types";
 import { requestMilestones } from "@/lib/requests/journey";
 import { journeyPresentation } from "@/lib/dashboard/journey-presentation";
+import { dashboardNumber } from "@/lib/dashboard/numbers";
 import { dashboardPalette, dashboardStageTones } from "@/lib/dashboard/palette";
 import TransferBrandMotif from "@/components/dashboard/TransferBrandMotif";
 import { DashboardButton, DashboardCard, DashboardReveal, StatusBadge } from "@/components/dashboard/dashboard-ui";
@@ -30,7 +31,7 @@ export function RequestProgress({ request, events = [], locale, spotlight = fals
   return <section className={styles.journey}><DashboardReveal><DashboardCard className={styles.progress} style={surfaceColors} data-mood={journey.mood} data-tone={tone} data-spotlight={spotlight} data-stage={journey.stage} dir={fa ? "rtl" : "ltr"} role="region" aria-label={fa ? "مراحل حواله" : "Transfer progress"}>
     <div className={styles.topline}><div className={styles.reference}><span>{fa ? "کد تراکنش" : "Transaction code"}</span><bdi dir="ltr">{request.reference_code}</bdi></div><StatusBadge tone={statusTone}>{journey.status}</StatusBadge></div>
     <div className={styles.statusGrid}>
-      <div className={styles.story}><p className={styles.stage}><span aria-hidden="true"/>{fa ? `مرحله ${journey.stage+1} از 5` : `Step ${journey.stage+1} of 5`}</p><h2>{journey.heading}</h2><p className={styles.description}>{journey.description}</p>
+      <div className={styles.story}><p className={styles.stage}><span aria-hidden="true"/>{fa ? `مرحله ${dashboardNumber(journey.stage+1,locale)} از ۵` : `Step ${journey.stage+1} of 5`}</p><h2>{journey.heading}</h2><p className={styles.description}>{journey.description}</p>
         <div className={styles.owner} data-next-actor={journey.nextActor}><span>{fa ? "اقدام بعدی" : "Next action"}</span><StatusBadge tone={actorTone}>{journey.actorLabel}</StatusBadge><small>{journey.actorHint}</small></div>
       </div>
       <div className={styles.brand}><TransferBrandMotif stage={journey.stage} replayKey={request.id} locale={locale} from={request.quote.funding_currency} to={request.quote.recipient_currency} quiet={journey.mood === "quiet" || journey.mood === "failed"} className="h-32 sm:h-48"/></div>
@@ -38,7 +39,7 @@ export function RequestProgress({ request, events = [], locale, spotlight = fals
     <dl className={styles.amounts}>
       <div><dt>{fa ? "مجموع پرداخت" : "You send"}</dt><dd data-private-value><bdi>{requestMoney(request.quote.funding_total,request.quote.funding_currency,locale)}</bdi></dd></div>
       <div><dt>{fa ? "دریافتی گیرنده" : "Recipient gets"}</dt><dd data-private-value><bdi>{requestMoney(request.quote.recipient_amount,request.quote.recipient_currency,locale)}</bdi></dd></div>
-      <div><dt>{fa ? "نرخ ثبت‌شده" : "Locked rate"}</dt><dd data-private-value><bdi dir="ltr">1 AUD = {requestMoney(request.quote.applied_rate,"IRT",locale)}</bdi></dd></div>
+      <div><dt>{fa ? "نرخ ثبت‌شده" : "Locked rate"}</dt><dd data-private-value><bdi dir="ltr" data-number-locale={locale}>{dashboardNumber(1,locale)} AUD = {requestMoney(request.quote.applied_rate,"IRT",locale)}</bdi></dd></div>
     </dl>
     <div className={styles.actionRow}>{href && action ? <DashboardButton asChild tone="primary"><Link href={href} {...(!spotlight && request.status === "completed" ? {target:"_blank",rel:"noopener noreferrer"} : {})}>{action}</Link></DashboardButton> : !journey.closed && <p className={styles.noAction}>{fa ? "نیازی به اقدام شما نیست" : "No action needed"}</p>}</div>
     <RequestJourneyStepper milestones={milestones} stage={journey.stage} locale={locale} actorLabel={journey.actorLabel}/>

@@ -17,7 +17,10 @@
 .dashboardWrapper[data-motion="off"] *,.dashboardWrapper[data-motion="off"] *::before,.dashboardWrapper[data-motion="off"] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 .dashboardWrapper[dir="ltr"] {--font-fa-stack:var(--font-en-stack)}
 .dashboardWrapper *,.dashboardWrapper *::before,.dashboardWrapper *::after {box-sizing:border-box}
-.dashboardWrapper :where(button,input,textarea,select) {font:inherit}
+.dashboardWrapper :where(button,input,textarea,select) {font-family:inherit}
+.dashboardWrapper [data-number-locale="fa"] {font-family:var(--font-fa-stack)!important;letter-spacing:0!important;font-variant-numeric:tabular-nums;line-height:1.6}
+.dashboardWrapper [data-number-locale="en"] {font-family:var(--font-en-stack)!important;font-variant-numeric:tabular-nums}
+.dashboardWrapper input[data-amount-input] {font-size:clamp(1.5rem,3vw,2rem)!important;font-weight:500;outline:none!important;box-shadow:none!important;line-height:1.5}
 .dashboardWrapper :where(a,button,input,textarea,select,summary):focus-visible {outline:3px solid #a49afb;outline-offset:4px}
 .dashboardWrapper :where(button,a) {-webkit-tap-highlight-color:transparent}
 .mainArea {margin-inline-start:240px;min-width:0;min-height:100dvh;display:flex;flex-direction:column}

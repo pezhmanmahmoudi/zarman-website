@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { SlidersHorizontal, UserRound, X } from "lucide-react";
+import { SlidersHorizontal, UserRound, X, ShieldCheck } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useLocale } from "@/context/LocaleContext";
 import { dashboardCopy, dashboardHref, type DashboardTab } from "@/lib/dashboard/navigation";
@@ -18,12 +18,15 @@ export function DashboardHeader({ activeTab, profile, privateAmounts, onTogglePr
   const targetLocale = fa ? "en" : "fa";
   const switchPath = pathname.replace(/^\/(en|fa)(?=\/|$)/, `/${targetLocale}`) + (query.toString() ? `?${query}` : "");
   return <>
-    <header className="sticky top-0 z-20 flex min-h-[76px] items-center justify-between gap-3 border-b border-[#ded8eb]/80 bg-[#faf8ff]/90 px-5 backdrop-blur-md sm:px-8 lg:px-10">
-      <div className="flex min-w-0 items-center gap-3"><Image src="/images/logo-no-text-light.svg" alt="Zarman" width={30} height={30} className="shrink-0 min-[900px]:hidden"/><span className="truncate text-sm font-medium text-[#626a76]">{copy[activeTab]}</span></div>
-      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-        <Link className="flex min-h-11 items-center rounded-full px-2.5 text-xs font-medium text-[#626a76] hover:bg-[#eef0f4]" href={switchPath} aria-label={targetLocale === "fa" ? "فارسی" : "English"} lang={targetLocale}>{targetLocale === "fa" ? "فارسی" : "English"}</Link>
-        <button type="button" className="grid size-11 place-items-center rounded-full text-[#626a76] hover:bg-[#eef0f4]" onClick={() => setPreferences(true)} aria-label={fa ? "تنظیمات نمایش" : "Display preferences"}><SlidersHorizontal size={18} aria-hidden="true"/></button>
-        <Link className="grid size-11 place-items-center rounded-full border border-[#e1e4eb] bg-white text-sm font-semibold text-[#20242c]" href={dashboardHref(locale, "profile")} aria-label={copy.profile}>{profile?.first_name?.trim().slice(0, 1).toLocaleUpperCase() || <UserRound size={18} aria-hidden="true"/>}</Link>
+    <header className="sticky top-0 z-20 mx-auto w-full max-w-[1256px] px-5 pt-4 sm:px-8 sm:pt-5 lg:px-10">
+      <div className="flex min-h-[72px] items-center justify-between gap-3 rounded-3xl border border-white/90 bg-white/65 px-4 py-3 shadow-[0_8px_32px_-22px_#8c79af50,inset_0_1px_0_#fff] ring-1 ring-[#ded8ec]/35 backdrop-blur-xl sm:px-5">
+      <div className="flex min-w-0 items-center gap-3"><Image src="/images/logo-no-text-light.svg" alt="Zarman" width={32} height={32} className="shrink-0 min-[900px]:hidden"/><div className="min-w-0"><p className="m-0 hidden text-[11px] leading-5 text-[#8a7a9f] sm:block">{fa ? "فضای شخصی شما" : "Your personal space"}</p><span className="block truncate text-sm font-medium text-[#453854]">{copy[activeTab]}</span></div></div>
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        {profile?.kyc_status === "approved" && <span className="me-2 hidden items-center gap-1.5 rounded-full bg-[#e6f6f0]/70 px-3 py-2 text-[11px] text-[#347963] lg:inline-flex"><ShieldCheck size={14} aria-hidden="true"/>{fa ? "هویت تأیید شده" : "Identity verified"}</span>}
+        <Link className="flex min-h-11 items-center rounded-full border border-white/75 bg-white/40 px-3 text-xs font-medium text-[#655381] hover:bg-white/90" href={switchPath} aria-label={targetLocale === "fa" ? "فارسی" : "English"} lang={targetLocale}>{targetLocale === "fa" ? "فارسی" : "English"}</Link>
+        <button type="button" className="grid size-11 place-items-center rounded-full border border-white/75 bg-white/40 text-[#655381] hover:bg-white/90" onClick={() => setPreferences(true)} aria-label={fa ? "تنظیمات نمایش" : "Display preferences"}><SlidersHorizontal size={18} aria-hidden="true"/></button>
+        <Link className="grid size-11 place-items-center rounded-full border border-white bg-linear-to-br from-[#eee5ff] to-[#e1f4f2] text-sm font-semibold text-[#655083] shadow-[inset_0_1px_0_#fff]" href={dashboardHref(locale, "profile")} aria-label={copy.profile}>{profile?.first_name?.trim().slice(0, 1).toLocaleUpperCase() || <UserRound size={18} aria-hidden="true"/>}</Link>
+      </div>
       </div>
     </header>
     <Dialog open={preferences} onOpenChange={setPreferences}>
