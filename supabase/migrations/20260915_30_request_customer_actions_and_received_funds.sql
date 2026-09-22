@@ -63,13 +63,16 @@ REVOKE ALL ON FUNCTION public.exchange_request_has_finance_hold(uuid) FROM PUBLI
 -- entire migration rather than silently installing an incomplete correction.
 CREATE FUNCTION pg_temp.patch_request_function(p_function regprocedure,p_before text,p_after text)
 RETURNS void LANGUAGE plpgsql AS $$
-DECLARE v_definition text;
+DECLARE
+  v_definition text;
+  v_before text:=replace(p_before,E'\r\n',E'\n');
+  v_after text:=replace(p_after,E'\r\n',E'\n');
 BEGIN
   v_definition:=replace(pg_get_functiondef(p_function),E'\r\n',E'\n');
-  IF length(v_definition)-length(replace(v_definition,p_before,''))<>length(p_before) THEN
+  IF length(v_definition)-length(replace(v_definition,v_before,''))<>length(v_before) THEN
     RAISE EXCEPTION 'Request function requires migration review: %',p_function;
   END IF;
-  EXECUTE replace(v_definition,p_before,p_after);
+  EXECUTE replace(v_definition,v_before,v_after);
 END;
 $$;
 

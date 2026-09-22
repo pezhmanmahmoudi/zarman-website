@@ -104,7 +104,9 @@ describe('received funds and explicit customer action boundaries', { concurrency
     // The deployed audit schema requires an explicit actor label even for a
     // system migration; do not let the lightweight baseline hide that contract.
     await db.exec('ALTER TABLE audit_logs ALTER COLUMN actor_email SET NOT NULL');
-    await db.exec(read('supabase/migrations/20260915_30_request_customer_actions_and_received_funds.sql'));
+    // Supabase SQL Editor can preserve Windows CRLF when a migration is pasted.
+    // The guarded source patches must behave the same under either line ending.
+    await db.exec(read('supabase/migrations/20260915_30_request_customer_actions_and_received_funds.sql').replaceAll('\n', '\r\n'));
   });
   after(async () => db?.close());
   beforeEach(async () => db.exec('BEGIN'));
