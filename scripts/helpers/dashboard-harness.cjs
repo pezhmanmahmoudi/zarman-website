@@ -8,7 +8,7 @@ function dashboardHarness({ locale = "en", pathname = `/${locale}/dashboard`, qu
   const hookReact = { ...React,
     useState(initial) { const i = index++; if (!(i in values)) values[i] = typeof initial === "function" ? initial() : initial; return [values[i], value => { values[i] = typeof value === "function" ? value(values[i]) : value; }]; },
     useRef(initial) { const i = refIndex++; return refs[i] ||= { current: initial }; },
-    useCallback: fn => fn, useMemo: fn => fn(),
+    useCallback: fn => fn, useMemo: fn => fn(), useId: () => ":harness:",
     useEffect(fn, deps) { const i = effectIndex++; if (!dependencies[i] || !deps || deps.some((value,j) => !Object.is(value, dependencies[i][j]))) { effects.push(() => { cleanups[i]?.(); cleanups[i] = fn(); }); dependencies[i] = deps; } },
   };
   const navigation = { usePathname: () => pathname, useSearchParams: () => new URLSearchParams(query), useRouter: () => ({ replace() {}, refresh() {}, push() {} }) };
@@ -26,13 +26,13 @@ function dashboardHarness({ locale = "en", pathname = `/${locale}/dashboard`, qu
       if (id === "@/context/LocaleContext") return { useLocale: () => locale };
       if (id === "@/lib/supabase") return { supabase: { auth: { signOut() { throw Error("Unexpected auth mutation"); } } } };
       if (id.endsWith(".module.css")) {
-        const filename = path.resolve(root,id.replace(/^@\//,""));
-        const prefix = path.basename(filename,".module.css"), classes = {};
-        const parsed = postcss.parse(fs.readFileSync(filename,"utf8"));
+        const cssFile = id.startsWith(".") ? path.resolve(path.dirname(filename),id) : path.resolve(root,id.replace(/^@\//,""));
+        const prefix = path.basename(cssFile,".module.css"), classes = {};
+        const parsed = postcss.parse(fs.readFileSync(cssFile,"utf8"));
         parsed.walkRules(rule => {
           rule.selector = rule.selector.replace(/\.([a-zA-Z_][\w-]*)/g, (_,key) => { classes[key] = `${prefix}_${key}`; return `.${classes[key]}`; }).replace(/:global\(([^)]+)\)/g,"$1");
         });
-        css.set(filename,parsed.toString());
+        css.set(cssFile,parsed.toString());
         return { __esModule:true, default: new Proxy(classes, { get(target,key) { if (typeof key !== "string" || key in target) return target[key]; throw Error(`Missing CSS class ${id}: ${key}`); } }) };
       }
       if (id.endsWith(".css")) {

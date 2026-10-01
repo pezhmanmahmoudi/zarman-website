@@ -14,7 +14,7 @@ export function DashboardSidebar({ activeTab, motionEnabled = true }: { activeTa
   const locale = useLocale(), copy = dashboardCopy[locale], router = useRouter();
   const [busy, setBusy] = useState(false), [error, setError] = useState(false);
   const id = useId(), reduced = useReducedMotion(), animate = motionEnabled && reduced === false;
-  const items = [{ tab: "overview", Icon: House }, { tab: "transfer", Icon: Send }, { tab: "history", Icon: History }, { tab: "recipients", Icon: UsersRound }, { tab: "profile", Icon: UserRound }] as const;
+  const items = [{ tab: "overview", Icon: House }, { tab: "transfer", Icon: Send }, { tab: "history", Icon: History }, { tab: "recipients", Icon: UsersRound }, { tab: "profile", Icon: UserRound }, { tab: "feedback", Icon: MessageCircle }] as const;
   async function signOut() {
     if (busy) return;
     setBusy(true); setError(false);
@@ -35,13 +35,12 @@ export function DashboardSidebar({ activeTab, motionEnabled = true }: { activeTa
         </Link>)}
       </nav>
       <div className="mt-auto grid gap-1 border-t border-[#eef0f3] pt-5">
-        <Link className="flex min-h-12 items-center gap-3 rounded-2xl px-4 text-sm text-[#626a76] hover:bg-[#f7f8fa]" href={dashboardHref(locale, "feedback")} aria-current={activeTab === "feedback" ? "page" : undefined}><MessageCircle size={18} aria-hidden="true"/>{copy.feedback}</Link>
-        <button className="flex min-h-12 items-center gap-3 rounded-2xl px-4 text-start text-sm text-[#626a76] hover:bg-[#f7f8fa] disabled:opacity-50" onClick={() => void signOut()} disabled={busy}><LogOut size={18} aria-hidden="true"/>{copy.signOut}</button>
+        <button className="flex min-h-12 items-center gap-3 rounded-2xl px-4 text-start text-sm text-[#626a76] transition-colors hover:bg-[#f7f8fa] disabled:opacity-50" onClick={() => void signOut()} disabled={busy}><LogOut size={18} aria-hidden="true"/>{copy.signOut}</button>
         {error && <p role="alert" className="px-4 text-xs text-rose-700">{locale === "fa" ? "خروج ناموفق بود. دوباره تلاش کنید." : "Sign out failed. Please retry."}</p>}
       </div>
     </aside>
-    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 gap-1 border-t border-white/80 bg-white/80 backdrop-blur-xl px-2 pt-2 pb-[max(.5rem,env(safe-area-inset-bottom))] min-[900px]:hidden" aria-label={locale === "fa" ? "ناوبری اصلی" : "Main navigation"}>
-      {items.filter(item => item.tab !== "profile").map(({ tab, Icon }) => <Link key={tab} href={dashboardHref(locale, tab)} aria-current={activeTab === tab ? "page" : undefined} className={cn("relative isolate flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-medium no-underline", activeTab === tab ? "text-[#5148c7]" : "text-[#626a76]")}>{activeTab === tab && activeSurface(true)}<Icon size={20} strokeWidth={1.8} aria-hidden="true"/><span>{copy[tab]}</span></Link>)}
+    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 gap-1 border-t border-white/80 bg-white/80 backdrop-blur-xl px-2 pt-2 pb-[max(.5rem,env(safe-area-inset-bottom))] min-[900px]:hidden" aria-label={locale === "fa" ? "ناوبری اصلی" : "Main navigation"}>
+      {items.filter(item => item.tab !== "profile").map(({ tab, Icon }) => <Link key={tab} href={dashboardHref(locale, tab)} aria-current={activeTab === tab ? "page" : undefined} className={cn("relative isolate flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[11px] font-medium no-underline transition-colors [&_svg]:transition-transform [&_svg]:duration-300", activeTab === tab ? "text-[#5148c7] [&_svg]:scale-110" : "text-[#626a76]")}>{activeTab === tab && activeSurface(true)}<Icon size={20} strokeWidth={1.8} aria-hidden="true"/><span>{copy[tab]}</span></Link>)}
     </nav>
   </>;
 }

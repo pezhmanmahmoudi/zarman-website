@@ -66,10 +66,26 @@ describe('immutable structured funding instructions', { concurrency: false }, ()
     historical = await submit(await quote());
     historicalDeliveries = await deliveries(historical.id);
     await db.exec(read('supabase/migrations/20260913_28_request_bank_details.sql'));
+    await db.exec(read('supabase/migrations/20260930_41_optional_banking_notices.APPLY_MANUALLY.sql'));
   });
   after(async () => db?.close());
   beforeEach(async () => db.exec('BEGIN'));
   afterEach(async () => db.exec('ROLLBACK'));
+
+  test('banking notices can be empty independently while length limits still apply', async () => {
+    for (const notices of [
+      { iran_banking_notice: '', iran_banking_notice_fa: '' },
+      { iran_banking_notice: 'Bank notice', iran_banking_notice_fa: '' },
+      { iran_banking_notice: '', iran_banking_notice_fa: 'اطلاعیه بانک' },
+    ]) {
+      await save({ enabled: false, ...notices });
+      const current = await settings();
+      assert.equal(current.settings.iran_banking_notice, notices.iran_banking_notice);
+      assert.equal(current.settings.iran_banking_notice_fa, notices.iran_banking_notice_fa);
+    }
+    await rejects(() => save({ enabled: false, iran_banking_notice: 'x'.repeat(2001) }), /Invalid request settings/);
+    await rejects(() => save({ enabled: false, iran_banking_notice_fa: 'x'.repeat(2001) }), /Invalid Persian instructions/);
+  });
 
   test('upgrade leaves historical instructions and queued email payloads unchanged', async () => {
     const r = await get(historical.id);

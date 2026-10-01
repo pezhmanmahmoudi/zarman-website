@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { AMC_PROFILE, OET_PROFILE } from "../payments/institutions";
 
 export const IFTI_DRA_IN_SHEET_NAME = "IFTI-DRA IN";
 
@@ -202,6 +203,7 @@ export type IftiSourceRecord = {
     shaba_number?: string | null;
     irt_account_number?: string | null;
     bank_name?: string | null;
+    bank_city?: string | null;
   } | null;
 };
 
@@ -296,25 +298,6 @@ function fullName(first?: string | null, last?: string | null): string {
   return [first, last].map((v) => asString(v)).filter(Boolean).join(" ");
 }
 
-const AMC_PROFILE = {
-  legalName: "Australian Medical Council Limited",
-  businessName: "Australian Medical Council",
-  streetAddress: "Kingston ACT 2604",
-  city: "Kingston",
-  state: "ACT",
-  postcode: "2604",
-  country: "Australia",
-  postalAddress: "PO Box 4810",
-  postalCity: "Kingston",
-  postalState: "ACT",
-  postalPostcode: "2604",
-  postalCountry: "Australia",
-  phone: "+61 2 6270 9777",
-  email: "communications@amc.org.au",
-  principalActivity: "",
-  abn: "97 131 796 980",
-  businessStructure: "",
-};
 
 function createDataRow(record: IftiSourceRecord): Array<string | number> {
   const profile = record.profiles ?? null;
@@ -322,12 +305,18 @@ function createDataRow(record: IftiSourceRecord): Array<string | number> {
   const paymentLink = asString(record.payment_link).toLowerCase();
   const isInternationalPaymentReceiver = !recipient && !!paymentLink;
   const looksLikeAmcPayment = isInternationalPaymentReceiver && paymentLink.includes("amc");
+  const looksLikeOetPayment = isInternationalPaymentReceiver && (
+    paymentLink.includes("registration.myoet.com") ||
+    paymentLink.includes("booking.oet-global.com")
+  );
+  const paymentReceiver = looksLikeAmcPayment ? AMC_PROFILE : looksLikeOetPayment ? OET_PROFILE : null;
   const orderingName = fullName(profile?.first_name, profile?.last_name);
   const beneficiaryName =
     asString(recipient?.full_name) ||
     asString(recipient?.account_name) ||
     asString(recipient?.label) ||
-    (looksLikeAmcPayment ? AMC_PROFILE.legalName : "");
+    paymentReceiver?.legalName ||
+    "";
   const orderingCountry = asString(profile?.country) || "Australia";
   const beneficiaryAddress = asString(recipient?.residential_address) || asString(recipient?.irt_address);
   const parsedAddress = splitBeneficiaryAddress(beneficiaryAddress);
@@ -336,7 +325,7 @@ function createDataRow(record: IftiSourceRecord): Array<string | number> {
   const inferredState = inferAustralianStateFromPostcode(beneficiaryPostcode);
   const beneficiaryState = asString(recipient?.residential_state) || asString(recipient?.irt_state) || parsedAddress.state || inferredState;
   const beneficiaryCountryValue = asString(recipient?.residential_country) || asString(recipient?.irt_country);
-  const beneficiaryCountry = beneficiaryCountryValue || (looksLikeAmcPayment ? "Australia" : "");
+  const beneficiaryCountry = beneficiaryCountryValue || paymentReceiver?.country || "";
 
   const row: Array<string | number> = new Array(TEMPLATE_COLUMN_COUNT).fill("");
 
@@ -362,29 +351,29 @@ function createDataRow(record: IftiSourceRecord): Array<string | number> {
   row[25] = "";
   row[26] = "Individual";
 
-  row[27] = looksLikeAmcPayment ? AMC_PROFILE.legalName : beneficiaryName;
-  row[29] = looksLikeAmcPayment ? AMC_PROFILE.businessName : "";
-  row[30] = looksLikeAmcPayment ? AMC_PROFILE.streetAddress : (parsedAddress.street || beneficiaryAddress);
-  row[31] = looksLikeAmcPayment ? AMC_PROFILE.city : beneficiaryCity;
-  row[32] = looksLikeAmcPayment ? AMC_PROFILE.state : beneficiaryState;
-  row[33] = looksLikeAmcPayment ? AMC_PROFILE.postcode : beneficiaryPostcode;
-  row[34] = looksLikeAmcPayment ? AMC_PROFILE.country : beneficiaryCountry;
-  row[35] = looksLikeAmcPayment ? AMC_PROFILE.postalAddress : "";
-  row[36] = looksLikeAmcPayment ? AMC_PROFILE.postalCity : "";
-  row[37] = looksLikeAmcPayment ? AMC_PROFILE.postalState : "";
-  row[38] = looksLikeAmcPayment ? AMC_PROFILE.postalPostcode : "";
-  row[39] = looksLikeAmcPayment ? AMC_PROFILE.postalCountry : "";
-  row[40] = looksLikeAmcPayment
-    ? AMC_PROFILE.phone
+  row[27] = paymentReceiver?.legalName || beneficiaryName;
+  row[29] = paymentReceiver?.businessName || "";
+  row[30] = paymentReceiver?.streetAddress || parsedAddress.street || beneficiaryAddress;
+  row[31] = paymentReceiver?.city || beneficiaryCity;
+  row[32] = paymentReceiver?.state || beneficiaryState;
+  row[33] = paymentReceiver?.postcode || beneficiaryPostcode;
+  row[34] = paymentReceiver?.country || beneficiaryCountry;
+  row[35] = paymentReceiver?.postalAddress || "";
+  row[36] = paymentReceiver?.postalCity || "";
+  row[37] = paymentReceiver?.postalState || "";
+  row[38] = paymentReceiver?.postalPostcode || "";
+  row[39] = paymentReceiver?.postalCountry || "";
+  row[40] = paymentReceiver
+    ? paymentReceiver.phone
     : (asString(recipient?.recipient_phone) || asString(recipient?.irt_phone));
-  row[41] = looksLikeAmcPayment ? AMC_PROFILE.email : asString(recipient?.recipient_email);
-  row[42] = "";
-  row[43] = looksLikeAmcPayment ? AMC_PROFILE.abn : "";
-  row[44] = "";
+  row[41] = paymentReceiver?.email || asString(recipient?.recipient_email);
+  row[42] = paymentReceiver?.principalActivity || "";
+  row[43] = paymentReceiver?.abn || "";
+  row[44] = paymentReceiver?.businessStructure || "";
   row[45] = asString(recipient?.account_number) || asString(recipient?.irt_account_number) || asString(recipient?.card_number) || asString(recipient?.shaba_number);
-  row[46] = looksLikeAmcPayment ? AMC_PROFILE.legalName : asString(recipient?.bank_name);
-  row[47] = looksLikeAmcPayment ? AMC_PROFILE.city : beneficiaryCity;
-  row[48] = looksLikeAmcPayment ? AMC_PROFILE.country : beneficiaryCountry;
+  row[46] = paymentReceiver?.accountInstitution || asString(recipient?.bank_name);
+  row[47] = paymentReceiver?.accountInstitution ? paymentReceiver.city : asString(recipient?.bank_city) || beneficiaryCity;
+  row[48] = paymentReceiver?.accountInstitution ? paymentReceiver.country : beneficiaryCountry;
 
   // Person/organisation accepting the transfer instruction from the ordering customer — Zarman's Iranian agent
   row[49] = "ZARMAN EXCHANGE PTY LTD (AGENT) - Nahid BabaeiLakeh";
@@ -408,7 +397,7 @@ function createDataRow(record: IftiSourceRecord): Array<string | number> {
   row[97] = "Yes";
   row[98] = "No";
 
-  row[110] = asString(record.reason_for_transfer) || asString(record.source_of_funds);
+  row[110] = asString(record.reason_for_transfer) || (looksLikeOetPayment ? "OET test booking fee" : asString(record.source_of_funds));
   // Person completing this report — always Zarman's compliance officer
   row[111] = "PEZHMAN MAHMOUDI";
   row[112] = "AML/CTF Compliance Officer";

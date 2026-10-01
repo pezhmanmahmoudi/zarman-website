@@ -6,6 +6,8 @@ import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { revalidateTag } from "next/cache";
 import { getRatesSnapshot } from "@/lib/rates";
 import { calcExecutionRateFromSettlement, toCompanyTradeType } from "@/lib/pricing";
+import { toJalaliStr } from "@/lib/jalali";
+import { REQUEST_RECEIPTS_BUCKET } from "@/lib/requests/receipt-upload";
 import {
   calcIranBankTransferFee,
   getIranBankTransferFeeError,
@@ -66,6 +68,26 @@ function makeServiceRoleClient() {
   );
 }
 
+type HardDeleteRpcResult = {
+  transaction_id?: string;
+  request_id?: string | null;
+  deleted_count?: number;
+  receipt_paths?: string[];
+};
+
+async function removeHardDeletedReceiptFiles(
+  db: ReturnType<typeof makeServiceRoleClient>,
+  paths: unknown,
+): Promise<string | null> {
+  const uniquePaths = Array.from(new Set(
+    Array.isArray(paths) ? paths.filter((path): path is string => typeof path === "string" && path.length > 0) : [],
+  ));
+  if (uniquePaths.length === 0) return null;
+
+  const { error } = await db.storage.from(REQUEST_RECEIPTS_BUCKET).remove(uniquePaths);
+  return error ? `Database records were deleted, but ${uniquePaths.length} receipt file(s) could not be removed: ${error.message}` : null;
+}
+
 function clampInt(value: number, min: number, max: number, fallback: number) {
   if (!Number.isFinite(value)) return fallback;
   const normalized = Math.trunc(value);
@@ -119,26 +141,8 @@ function toDbTimestamp(value: unknown): string | null {
   return parsed.toISOString();
 }
 
-// ---------------------------------------------------------------------------
-// Jalali (Shamsi) date helper — returns "YYYY/MM/DD" with zero-padded parts
-// ---------------------------------------------------------------------------
-function toJalaliStr(date: Date): string {
-  const gy = date.getUTCFullYear(), gm = date.getUTCMonth() + 1, gd = date.getUTCDate();
-  const gy1 = gy - 1600, gm1 = gm - 1, gd1 = gd - 1;
-  let g_d_no = 365 * gy1 + Math.floor((gy1 + 3) / 4) - Math.floor((gy1 + 99) / 100) + Math.floor((gy1 + 399) / 400);
-  const mDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  if (gy % 4 === 0 && (gy % 100 !== 0 || gy % 400 === 0)) mDays[1] = 29;
-  for (let i = 0; i < gm1; i++) g_d_no += mDays[i];
-  g_d_no += gd1;
-  let j_d_no = g_d_no - 79;
-  const j_np = Math.floor(j_d_no / 12053); j_d_no %= 12053;
-  let jy = 979 + 33 * j_np + 4 * Math.floor(j_d_no / 1461); j_d_no %= 1461;
-  if (j_d_no >= 366) { jy += Math.floor((j_d_no - 1) / 365); j_d_no = (j_d_no - 1) % 365; }
-  const jm2 = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
-  let jm = 0;
-  for (jm = 0; jm < 11 && j_d_no >= jm2[jm]; jm++) j_d_no -= jm2[jm];
-  return `${jy}/${String(jm + 1).padStart(2, "0")}/${String(j_d_no + 1).padStart(2, "0")}`;
-}
+// Jalali (Shamsi) date helper lives in lib/jalali.ts — this file is "use server"
+// and every export here must be an async server action.
 
 function resolveTradeExecutionRate(
   tradeType: "buy_aud" | "sell_aud",
@@ -319,12 +323,15 @@ export async function getAdminStats() {
 // ===========================================================================
 // KYC QUEUE
 // ===========================================================================
+// Both lists feed the same identity drawer; keep its fields identical across statuses.
+const KYC_PROFILE_FIELDS = "id, first_name, last_name, email, mobile_number, dob, address, city, state, postcode, country, kyc_status, customer_code, created_at, document_type, license_number, card_number, passport_number, state_of_issue, expiry_date";
+
 export async function getKycQueue() {
   const db = await getAuthorizedServerClient();
 
   const { data, error } = await db
     .from("profiles")
-    .select("*")
+    .select(KYC_PROFILE_FIELDS)
     .in("kyc_status", ["pending", "under_review"])
     .order("created_at", { ascending: true });
 
@@ -346,7 +353,7 @@ export async function getKycHistory(page: number = 1, pageSize: number = 10) {
       .neq("kyc_status", "under_review"),
     db
       .from("profiles")
-      .select("id, first_name, last_name, email, kyc_status, document_type, created_at, customer_code")
+      .select(KYC_PROFILE_FIELDS)
       .neq("kyc_status", "pending")
       .neq("kyc_status", "under_review")
       .order("created_at", { ascending: false })
@@ -1651,26 +1658,9 @@ export async function updateAssistedTransactionForUser(payload: any) {
 }
 
 export async function deleteAssistedTransactionForUser(payload: any) {
-  const admin = await requireAdmin();
   const transactionId = payload.id || payload.transactionId;
   if (!transactionId) return { error: "Missing transaction ID." };
-
-  const db = makeServiceRoleClient();
-  const { data: before } = await db.from("transactions").select("user_id, type, amount_aud").eq("id", transactionId).maybeSingle();
-
-  const { error } = await db.from("transactions").delete().eq("id", transactionId);
-  if (error) return { error: error.message };
-
-  await writeAuditLog({
-    actorId: admin.id,
-    actorEmail: admin.email ?? "",
-    action: "ASSISTED_TRANSACTION_DELETED",
-    targetType: "transaction",
-    targetId: String(transactionId),
-    oldValue: before,
-  }).catch(() => {});
-
-  return { success: true };
+  return hardDeleteTransaction(String(transactionId));
 }
 
 export async function getPromoCodes() {
@@ -1738,20 +1728,55 @@ export async function deletePromoCode(id: string) {
 export async function getPendingTransactionsWithDetails() {
   await requireAdmin(); // auth + role check only
   const db = makeServiceRoleClient(); // service role bypasses RLS on recipients
-  const { data, error } = await db
-    .from("transactions")
-    .select(`
+  const selection = `
       id, user_id, recipient_id, type, amount_aud, equivalent_toman, status, created_at,
       reference_code, payment_link, reason_for_transfer, receipt_sent,
+      request:exchange_requests(*),
       profiles(first_name, last_name, email, customer_code),
       recipients(label, full_name, account_name, bank_name, bsb, account_number,
                  card_number, shaba_number, bank_type, direction)
-    `)
-    .eq("status", "pending")
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
+    `;
+  // Read bounded batches so the API row limit cannot silently hide queued work.
+  const rows: any[] = [];
+  let pendingTotal = 0;
+  do {
+    const { data, count, error } = await db.from("transactions").select(selection, { count: "exact" })
+      .eq("status", "pending").order("created_at", { ascending: true }).order("id", { ascending: true })
+      .range(rows.length, rows.length + 199);
+    if (error) throw new Error(error.message);
+    pendingTotal = count ?? 0;
+    if (!data?.length && rows.length < pendingTotal) throw new Error("The transaction queue changed. Please refresh.");
+    rows.push(...(data ?? []));
+  } while (rows.length < pendingTotal);
 
-  const rows = data ?? [];
+  // Rejected/cancelled requests can still require a refund. Keep that work active.
+  const refundIds: string[] = [];
+  let refundTotal = 0;
+  do {
+    const { data, count, error } = await db.from("exchange_requests").select("transaction_id", { count: "exact" })
+      .or("funding_status.eq.refund_pending,priority_fee_status.eq.refund_pending")
+      .order("id", { ascending: true }).range(refundIds.length, refundIds.length + 199);
+    if (error) throw new Error(error.message);
+    refundTotal = count ?? 0;
+    if (!data?.length && refundIds.length < refundTotal) throw new Error("The refund queue changed. Please refresh.");
+    refundIds.push(...(data ?? []).map(row => String(row.transaction_id)));
+  } while (refundIds.length < refundTotal);
+  const existing = new Set(rows.map(row => String(row.id)));
+  const missingRefunds = [...new Set(refundIds)].filter(id => !existing.has(id));
+  for (let offset = 0; offset < missingRefunds.length; offset += 100) {
+    const batch = missingRefunds.slice(offset, offset + 100);
+    let read = 0;
+    let total = 0;
+    do {
+      const { data, count, error } = await db.from("transactions").select(selection, { count: "exact" }).in("id", batch)
+        .order("id", { ascending: true }).range(read, read + 99);
+      if (error) throw new Error(error.message);
+      total = count ?? 0;
+      if (!data?.length && read < total) throw new Error("The refund queue changed. Please refresh.");
+      rows.push(...(data ?? []));
+      read += data?.length ?? 0;
+    } while (read < total);
+  }
   const missingRecipientIds = Array.from(
     new Set(
       rows
@@ -1793,6 +1818,7 @@ type TransactionHistoryFilters = {
   startDate?: string;
   endDate?: string;
   direction?: "all" | "incoming" | "outgoing";
+  search?: string;
 };
 
 export async function getTransactionHistoryWithDetails(
@@ -1807,17 +1833,21 @@ export async function getTransactionHistoryWithDetails(
   const offset = (safePage - 1) * safePageSize;
 
   const specificStatus = filters.status && filters.status !== "all" ? filters.status : null;
+  const search = sanitizeSearchQuery(filters.search ?? "").replace(/["\\*]/g, "");
+  // Separate, empty embeds filter the parent rows without hiding their display data.
+  const searchEmbeds = search ? ",search_customer:profiles(),search_request:exchange_requests()" : "";
 
-  const countBaseQuery = db.from("transactions").select("id", { count: "exact", head: true });
+  const countBaseQuery = db.from("transactions").select(`id${searchEmbeds}`, { count: "exact", head: true });
   const dataBaseQuery = db
     .from("transactions")
     .select(`
       id, user_id, recipient_id, type, amount_aud, equivalent_toman, status, created_at,
       reference_code, payment_link, reason_for_transfer, receipt_sent,
+      request:exchange_requests(*),
       profiles(first_name, last_name, email, customer_code),
       recipients(label, full_name, account_name, bank_name, bsb, account_number,
                  card_number, shaba_number, bank_type, direction)
-    `);
+    ` + searchEmbeds);
 
   let countQuery = specificStatus
     ? countBaseQuery.eq("status", specificStatus)
@@ -1826,6 +1856,15 @@ export async function getTransactionHistoryWithDetails(
   let dataQuery = specificStatus
     ? dataBaseQuery.eq("status", specificStatus)
     : dataBaseQuery.neq("status", "pending");
+
+  if (search) {
+    const customerTerms = search.split(/\s+/).map(term => `or(first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%,customer_code.ilike.%${term}%)`);
+    const customerMatch = `and(${customerTerms.join(",")})`;
+    const requestMatch = `quote->sender_snapshot->>name.ilike.%${search}%,quote->sender_snapshot->>email.ilike.%${search}%`;
+    const match = `reference_code.ilike.%${search}%,search_customer.not.is.null,search_request.not.is.null`;
+    countQuery = countQuery.or(customerMatch, { referencedTable: "search_customer" }).or(requestMatch, { referencedTable: "search_request" }).or(match);
+    dataQuery = dataQuery.or(customerMatch, { referencedTable: "search_customer" }).or(requestMatch, { referencedTable: "search_request" }).or(match);
+  }
 
   if (filters.startDate) {
     countQuery = countQuery.gte("created_at", `${filters.startDate}T00:00:00.000Z`);
@@ -1845,8 +1884,9 @@ export async function getTransactionHistoryWithDetails(
 
   const [countRes, dataRes] = await Promise.all([
     countQuery,
-    dataQuery.order("created_at", { ascending: false }).range(offset, offset + safePageSize - 1),
+    dataQuery.order("created_at", { ascending: false }).order("id", { ascending: false }).range(offset, offset + safePageSize - 1),
   ]);
+  if (countRes.error) throw new Error(countRes.error.message);
   if (dataRes.error) throw new Error(dataRes.error.message);
 
   const rows = dataRes.data ?? [];
@@ -1876,6 +1916,29 @@ export async function getTransactionHistoryWithDetails(
   return { data: enrichedRows, total: countRes.count ?? 0 };
 }
 
+export async function hardDeleteTransaction(transactionId: string) {
+  const admin = await requireAdmin();
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  if (!uuidPattern.test(transactionId)) return { error: "Invalid transaction ID." };
+
+  const db = makeServiceRoleClient();
+  const { data, error } = await db.rpc("admin_hard_delete_transaction", {
+    p_actor_id: admin.id,
+    p_transaction_id: transactionId,
+  });
+  if (error) return { error: error.message };
+
+  const deleted = (data ?? {}) as HardDeleteRpcResult;
+  const warning = await removeHardDeletedReceiptFiles(db, deleted.receipt_paths);
+  return {
+    success: true,
+    transactionId: deleted.transaction_id ?? transactionId,
+    requestId: deleted.request_id ?? null,
+    ...(warning ? { warning } : {}),
+  };
+}
+
 export async function bulkDeleteTransactions(transactionIds: string[]) {
   const admin = await requireAdmin();
   const uniqueIds = Array.from(new Set(transactionIds));
@@ -1886,31 +1949,19 @@ export async function bulkDeleteTransactions(transactionIds: string[]) {
   if (uniqueIds.some((id) => !uuidPattern.test(id))) return { error: "One or more transaction IDs are invalid." };
 
   const db = makeServiceRoleClient();
-  const { data: transactions, error: fetchError } = await db
-    .from("transactions")
-    .select("id, user_id, type, status, amount_aud, reference_code, created_at")
-    .in("id", uniqueIds);
+  const { data, error } = await db.rpc("admin_hard_delete_transactions", {
+    p_actor_id: admin.id,
+    p_transaction_ids: uniqueIds,
+  });
+  if (error) return { error: error.message };
 
-  if (fetchError) return { error: fetchError.message };
-  if ((transactions ?? []).length !== uniqueIds.length) return { error: "One or more transactions no longer exist." };
-
-  const invalid = (transactions ?? []).filter((transaction) => !["rejected", "archived"].includes(transaction.status ?? ""));
-  if (invalid.length > 0) return { error: "Only rejected or archived transactions can be deleted." };
-
-  const { error: deleteError } = await db.from("transactions").delete().in("id", uniqueIds);
-  if (deleteError) return { error: deleteError.message };
-
-  await writeAuditLog({
-    actorId: admin.id,
-    actorEmail: admin.email ?? "",
-    action: "TRANSACTIONS_BULK_DELETED",
-    targetType: "transaction_batch",
-    targetId: null,
-    oldValue: transactions,
-    newValue: { deletedCount: uniqueIds.length, transactionIds: uniqueIds },
-  }).catch(() => {});
-
-  return { success: true, deletedCount: uniqueIds.length };
+  const deleted = (data ?? {}) as HardDeleteRpcResult;
+  const warning = await removeHardDeletedReceiptFiles(db, deleted.receipt_paths);
+  return {
+    success: true,
+    deletedCount: deleted.deleted_count ?? uniqueIds.length,
+    ...(warning ? { warning } : {}),
+  };
 }
 
 export async function getTransactionHistoryStatusCounts() {
@@ -1922,6 +1973,8 @@ export async function getTransactionHistoryStatusCounts() {
     db.from("transactions").select("id", { count: "exact", head: true }).eq("status", "rejected"),
     db.from("transactions").select("id", { count: "exact", head: true }).eq("status", "archived"),
   ]);
+  const error = approvedRes.error ?? rejectedRes.error ?? archivedRes.error;
+  if (error) throw new Error(error.message);
 
   const approved = approvedRes.count ?? 0;
   const rejected = rejectedRes.count ?? 0;

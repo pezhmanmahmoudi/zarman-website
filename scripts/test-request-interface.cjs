@@ -45,7 +45,7 @@ function load(file, { states = {}, actions = {}, captureEffects = false } = {}) 
       if (id === "next/link") return { __esModule: true, default: props => React.createElement("a", props) };
       if (id === "next/image") return { __esModule: true, default: props => { const attributes = { ...props }; delete attributes.unoptimized; return React.createElement("img", attributes); } };
       if (id.endsWith(".module.css")) {
-        const cssPath = path.resolve(projectRoot, id.replace(/^@\//, ""));
+        const cssPath = id.startsWith("@/") ? path.resolve(projectRoot, id.slice(2)) : path.resolve(path.dirname(filename), id);
         const classes = {};
         postcss.parse(fs.readFileSync(cssPath, "utf8")).walkRules(rule => {
           for (const match of rule.selector.matchAll(/\.([a-zA-Z_][\w-]*)/g)) classes[match[1]] = match[1];
@@ -60,7 +60,7 @@ function load(file, { states = {}, actions = {}, captureEffects = false } = {}) 
         postcss.parse(fs.readFileSync(cssPath, "utf8"));
         return {};
       }
-      if (id.startsWith("./") || id.startsWith("@/")) {
+      if (id.startsWith(".") || id.startsWith("@/")) {
         const base = id.startsWith("@/") ? path.resolve(projectRoot, id.slice(2)) : path.resolve(path.dirname(filename), id);
         const dependency = [base, `${base}.tsx`, `${base}.ts`, `${base}.jsx`, `${base}.js`].find(candidate => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
         if (dependency) return compile(dependency);
@@ -74,7 +74,9 @@ function load(file, { states = {}, actions = {}, captureEffects = false } = {}) 
   const exported = compile(path.resolve(projectRoot, file));
   return { ...exported, rerender(name, props) {
     stateIndex = 0; refIndex = 0;
-    return exported[name](props);
+    const tree = exported[name](props);
+    for (const key of Object.keys(values)) if (Number(key) >= stateIndex) delete values[key];
+    return tree;
   }, runEffects() { return effects.splice(0).map(effect => effect()).filter(cleanup => typeof cleanup === "function"); } };
 }
 
@@ -146,23 +148,23 @@ test("customer realtime uses an owner-scoped signal instead of sensitive request
 
 test("five customer milestones distinguish approval, receipt review, cleared funds and completion", () => {
   const waiting = render("RequestProgress", { request: { ...request, evidence_submitted_at: "2026-09-13T01:00:00Z" }, locale: "en" });
-  for (const label of ["Request submitted", "Approved for payment", "Payment under review", "Funds received", "Transfer completed"]) assert.ok(waiting.includes(label));
+  for (const label of ["Request Review", "Approved (Ready to Pay)", "Receipt Review", "Funds Confirmed", "Transfer Completed"]) assert.ok(waiting.includes(label));
   const beforeReceipt = render("RequestProgress", { request, locale: "en" });
-  assert.match(beforeReceipt, /Receipt sent for review/);
+  assert.match(beforeReceipt, /Receipt Review/);
   assert.equal((waiting.match(/aria-current="step"/g) || []).length, 1);
-  assert.match(waiting.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1], /Payment under review/);
+  assert.match(waiting.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1], /Receipt Review/);
   assert.doesNotMatch(waiting, /Handling target:/);
   const readyRequest = { ...request, status: "ready", funding_status: "confirmed", ready_at: "2026-09-14T01:00:00Z", funds_confirmed_at: "2026-09-14T01:00:00Z", handling_due_at: "2026-09-14T02:00:00Z" };
   const ready = render("RequestProgress", { request: readyRequest, locale: "en" });
   assert.match(ready, /Handling target:/);
-  assert.match(ready.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1], /Funds received/);
+  assert.match(ready.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1], /Funds Confirmed/);
   const held = render("RequestProgress", { request: { ...readyRequest, status: "under_review" }, locale: "en" });
-  assert.match(held.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1], /Funds received/);
+  assert.match(held.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1], /Funds Confirmed/);
   const closed = render("RequestProgress", { request: { ...request, status: "cancelled" }, locale: "en" });
   assert.doesNotMatch(closed, /aria-current="step"/);
   const submitted = render("RequestProgress", { request: { ...request, status: "submitted", payment_approved_at: null }, locale: "en" });
   const current = submitted.match(/<li[^>]*aria-current="step"[^>]*>(.*?)<\/li>/s)?.[1];
-  assert.match(current, /Awaiting Zarman approval/); assert.doesNotMatch(current, /Approved for payment/);
+  assert.match(current, /Request Review/); assert.doesNotMatch(current, /Approved \(Ready to Pay\)/);
 });
 
 test("milestone dates remain English in both locales and completion time never follows later chat updates", () => {
@@ -180,30 +182,51 @@ test("milestone dates remain English in both locales and completion time never f
 test("payment instructions expose real account details, reference description requirement and clearance timing", () => {
   const html = render("RequestPaymentInstructions", { request, locale: "en" });
   assert.match(html, /012-345/); assert.match(html, /0012345678/);
-  assert.match(html, /1,025 AUD/); assert.match(html, /Enter this transaction code in your bank transfer description or reference/);
-  assert.match(html, /aria-label="Copy transaction code"/); assert.match(html, /Pay by/);
-  assert.match(html, /up to 24 hours, or longer/);
-  assert.match(html, /Paya cycles, Satna hours/);
+  assert.match(html, /aria-label="Copy Account name"/);
+  assert.match(html, /aria-label="Copy BSB"/);
+  assert.match(html, /aria-label="Copy Account number"/);
+  assert.doesNotMatch(html, /aria-label="Copy Bank"/);
+  assert.doesNotMatch(html, /I’ve paid|upload receipt<\/a>|data-lottie-scene="bank-card"|lucide-landmark/);
+  assert.match(html, /data-lottie-scene="mobile-payment"/);
+  assert.match(html, /After transferring the funds, please upload your bank receipt below/);
+  assert.match(html, /1,025 AUD/); assert.match(html, /Amount you need to transfer/);
+  assert.match(html, /<strong>Description<\/strong> and <strong>Reference<\/strong>/);
+  assert.match(html, /aria-label="Copy transaction code"/); assert.doesNotMatch(html, /Pay by/);
+  assert.match(html, /may take 24 hours or more/);
+  assert.match(html, /Paya and Satna clearing cycles/);
   assert.match(html, /Settlement follows the receiving bank operating calendar/);
-  assert.match(html, /Priority timing starts after cleared funds and required checks are confirmed/);
-  assert.match(html, /A receipt does not confirm cleared funds/);
-  assert.match(html, /<details[^>]*><summary>Bank timing<\/summary>/);
+  assert.match(html, /Processing starts only after funds settle/);
+  assert.match(html, /A bank receipt does not guarantee cleared funds/);
+  assert.match(html, /<details class="reviewDisclosure"><summary class="reviewTitle">/);
+  assert.match(html, /Important Bank Timing Notes/);
   const uploaded = render("RequestPaymentInstructions", { request: { ...request, evidence_submitted_at: request.created_at }, locale: "en" });
   assert.match(uploaded, /^<details/); assert.doesNotMatch(uploaded, /Pay by/);
   const fa = render("RequestPaymentInstructions", { request, locale: "fa" });
   assert.match(fa, /کد تراکنش/); assert.match(fa, /پایا/); assert.doesNotMatch(fa, /\?{3}/);
+  assert.match(fa, /مبلغی که باید واریز کنید/);
+  assert.match(fa, /Description<\/bdi> و <bdi dir="ltr">Reference/);
   assert.match(fa, /dir="rtl"/); assert.match(fa, /واریز فقط از حساب شخصی خودتان/);
   assert.match(fa, /تسویه طبق تقویم کاری بانک گیرنده/);
   assert.doesNotMatch(fa, /Settlement follows|Bank timing|Payment instructions|Copy transaction code/);
+  const iran = render("RequestPaymentInstructions", { request: { ...request,
+    quote: { ...request.quote, funding_currency: "IRT", recipient_currency: "AUD" },
+    payment_details: { account_name: "Iran Account", bank_name: "Iran Bank", iban: "IR123456789", card_number: "1234567890123456" },
+  }, locale: "en" });
+  assert.doesNotMatch(iran, /aria-label="Copy Account name"|aria-label="Copy Bank"/);
+  assert.match(iran, /aria-label="Copy SHABA\/IBAN"/);
+  assert.match(iran, /aria-label="Copy Card number"/);
+  assert.doesNotMatch(iran, /aria-label="Copy transaction code"/);
+  assert.match(iran, /SHABA\/IBAN/);
+  assert.doesNotMatch(render("RequestPaymentInstructions", { request: { ...request, quote: { ...request.quote, funding_currency: "IRT" }, payment_details: { iban: "IR123456789" } }, locale: "fa" }), /شماره شبا \/ IBAN/);
 });
 
-test("bank timing distinguishes incoming currency and describes possible delays without a compulsory wait", () => {
+test("bank timing distinguishes incoming currencies and describes Australian bank delays", () => {
   for (const locale of ["en", "fa"]) {
     const aud = render("RequestBankTiming", { request, locale });
-    assert.match(aud, locale === "fa" ? /انتظار اجباری ۲۴ ساعته نداریم/ : /do not impose a 24-hour wait/);
+    assert.match(aud, locale === "fa" ? /۲۴ ساعت یا بیشتر/ : /24 hours or longer/);
     const irt = render("RequestBankTiming", { request: { ...request, quote: { ...request.quote, funding_currency: "IRT", recipient_currency: "AUD" } }, locale });
-    assert.doesNotMatch(irt, /24|۲۴|Paya cycles|چرخه‌های پایا/);
-    assert.match(irt, locale === "fa" ? /وصول پرداخت تومانی/ : /Incoming Toman payments/);
+    assert.match(irt, locale === "fa" ? /حساب استرالیایی گیرنده/ : /AUD payout to the recipient/);
+    assert.match(irt, locale === "fa" ? /وصول پرداخت تومانی/ : /Incoming Toman deposits/);
     assert.doesNotMatch(irt, /700|۷۰۰/);
   }
 });
@@ -268,7 +291,10 @@ test("legacy payment details remain unchanged and never infer individual account
 test("bank receipt control accepts constrained files and displays escaped private attachment metadata", () => {
   const empty = render("RequestReceiptUpload", { request, receipts: [], locale: "en", onUploaded: async () => {} });
   assert.match(empty, /type="file"/); assert.match(empty, /application\/pdf,image\/jpeg,image\/png/);
-  assert.match(empty, /up to 4 MB/); assert.match(empty, /Send receipt for review/);
+  assert.match(empty, /class="upload receiptDropzone"/);
+  assert.match(empty, /class="fileButton"/);
+  assert.match(empty, /data-lottie-scene="document-upload-idle"/);
+  assert.match(empty, /up to 4 MB/); assert.match(empty, /Submit and finalize receipt/);
   const html = render("RequestReceiptUpload", { request, receipts: [{ id: "r1", original_name: "<invoice>.pdf", size_bytes: 2048, created_at: request.created_at }], locale: "en", onUploaded: async () => {} });
   assert.doesNotMatch(html, /type="file"/); assert.match(html, /Add another receipt/);
   assert.match(html, /Receipt sent — we are checking your payment/);
@@ -285,7 +311,7 @@ test("dropping a receipt selects it and enables the review submission", () => {
   const harness = load("components/requests/RequestReceiptUpload.tsx");
   const props = { request, receipts: [], locale: "en", onUploaded: async () => {} };
   let tree = harness.rerender("RequestReceiptUpload", props);
-  const target = elements(tree, node => node.type === "label" && typeof node.props.onDrop === "function")[0];
+  const target = elements(tree, node => node.type === "div" && typeof node.props.onDrop === "function")[0];
   let prevented = false;
   target.props.onDrop({ preventDefault() { prevented = true; }, dataTransfer: { files: [dropped] } });
   tree = harness.rerender("RequestReceiptUpload", props);
@@ -334,7 +360,7 @@ test("bank details and receipt submission stay unavailable until admin payment a
     assert.match(approved, /012-345/); assert.match(approved, /0012345678/); assert.match(approved, /ZE01234/);
     const form = render("RequestReceiptUpload", { request, receipts: [], locale, onUploaded: async () => {} });
     assert.match(form, /type="file"/);
-    assert.match(form, locale === "fa" ? /ارسال رسید برای بررسی/ : /Send receipt for review/);
+    assert.match(form, locale === "fa" ? /ارسال و ثبت نهایی رسید/ : /Submit and finalize receipt/);
   }
 });
 
@@ -348,16 +374,20 @@ test("one receipt submission moves to bank review and additional receipts use a 
     } } });
     const props = { request, receipts: [], locale, onUploaded: async () => { refreshed++; } };
     let tree = harness.rerender("RequestReceiptUpload", props);
+    assert.match(markup(tree), /data-lottie-scene="document-upload-idle"/);
     elements(tree, node => node.type === "input" && node.props.type === "file")[0].props.onChange({ target: { files: [file] } });
     tree = harness.rerender("RequestReceiptUpload", props);
     const submit = elements(tree, node => node.type === "button" && node.props.type === "submit");
     assert.equal(submit.length, 1); assert.equal(submit[0].props.disabled, false);
-    await elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });
+    const sending = elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });
+    assert.match(markup(harness.rerender("RequestReceiptUpload", props)), /data-lottie-scene="document-upload"/);
+    await sending;
     assert.equal(calls.length, 1); assert.equal(calls[0].requestId, request.id); assert.equal(calls[0].file.name, "payment.pdf");
     assert.match(calls[0].key, /^[\da-f-]{36}$/); assert.equal(refreshed, 1);
     tree = harness.rerender("RequestReceiptUpload", props);
     const html = markup(tree);
     assert.match(html, locale === "fa" ? /در حال بررسی واریز شما/ : /we are checking your payment/);
+    assert.match(html, /data-lottie-scene="document-upload-success"/);
     assert.doesNotMatch(html, /type="file"|type="submit"|Bank payment reference/);
     const additional = elements(tree, node => node.type === "button" && (locale === "fa" ? /افزودن رسید دیگر/ : /Add another receipt/).test(textOf(node)))[0];
     assert.ok(additional); additional.props.onClick();
@@ -382,10 +412,10 @@ test("destination reconciliation follows confirmed funds and uses supported bank
   const html = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: detail, 1: false, 6: "complete", 22: [
     { id: "aud-account", account_name: "AUD collection", currency: "AUD" }, { id: "irt-account", account_name: "Iran payout", currency: "IRT" },
   ] } });
-  for (const method of ["free", "pol", "paya", "satna"]) assert.ok(html.includes(`value="${method}"`));
-  assert.doesNotMatch(html, /value="bank_transfer"/); assert.match(html, /I verified the destination account, amount and successful settlement/);
+  assert.match(html, /Transfer method/); assert.match(html, /Free transfer/);
+  assert.doesNotMatch(html, /bank_transfer/); assert.match(html, /I verified the destination account, amount and successful settlement/);
   const ready = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: { ...detail, request: { ...detail.request, status: "ready" } }, 1: false } });
-  assert.match(ready, /Reconcile &amp; complete/); assert.match(ready, /Settlement reference/);
+  assert.match(ready, /Reconcile &amp; complete/); assert.doesNotMatch(ready, /Settlement reference/);
   const unfunded = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: { ...detail, request }, 1: false } });
   assert.doesNotMatch(unfunded, /Reconcile &amp; complete|Settlement reference/);
   const customer = render("RequestDetailView", { id: request.id, locale: "en" }, { states: { 0: { ...detail, request: { ...detail.request, status: "completed" } }, 1: false } });
@@ -396,24 +426,73 @@ test("destination reconciliation follows confirmed funds and uses supported bank
 test("service selector prices Priority separately and submission waits for approval before exposing payment details", () => {
   const props = { input: { locale: "en" }, disabled: false, validationMessage: null };
   const html = render("OnlineRequestSubmit", props, { states: { 0: policy, 1: false } });
-  assert.match(html, /<legend[^>]*>Choose your service<\/legend>/); assert.match(html, /value="standard"/); assert.match(html, /value="priority"/);
-  assert.match(html, /25 AUD/); assert.match(html, /Priority timing starts after cleared funds and required checks are confirmed/);
-  assert.match(html, /<details[^>]*><summary[^>]*>Service hours &amp; terms<\/summary>/);
+  assert.match(html, /<legend[^>]*>Select Service Type<\/legend>/); assert.match(html, /value="standard"/); assert.match(html, /value="priority"/);
+  assert.match(html, /25 AUD/); assert.match(html, /Est\. Processing Time: 4 hours/);
+  assert.match(html, /Important Bank Timing Notes/); assert.match(html, /Origin \(Australia\)/);
+  assert.match(html, /Service Business Hours/); assert.match(html, /Business Hours \(Sydney Time\)/);
+  assert.equal((html.match(/<details class="reviewDisclosure">/g) || []).length, 2);
+  assert.equal((html.match(/<summary class="reviewTitle">/g) || []).length, 2);
+  assert.equal((html.match(/<ul class="timingList">/g) || []).length, 2);
+  assert.equal((html.match(/data-lottie-scene="announcement"/g) || []).length, 2);
+  assert.match(html, /<section class="reviewFlow"/);
+  assert.match(html, /Review Final Summary/);
   const saved = render("OnlineRequestSubmit", props, { states: { 0: policy, 1: false, 8: { ...request, status: "submitted", payment_approved_at: null } } });
-  assert.match(saved, /Request submitted/); assert.match(saved, /awaiting approval/);
+  assert.match(saved, /Your request is submitted/); assert.match(saved, /awaiting approval/i);
   assert.doesNotMatch(saved, /012-345|0012345678|TEST BANK|Copy BSB|Send receipt/);
   assert.match(saved, /ZE01234/);
   assert.match(saved, /href="\/en\/dashboard\/requests\/request-test"/);
   assert.doesNotMatch(saved, /will be notified|by email|queued for email/);
   const fa = render("OnlineRequestSubmit", { ...props, input: { locale: "fa" } }, { states: { 0: policy, 1: false } });
-  assert.match(fa, /dir="rtl"/); assert.match(fa, /<legend[^>]*>انتخاب سرویس<\/legend>/);
-  assert.match(fa, /ساعات و شرایط سرویس/); assert.doesNotMatch(fa, /Priority timing|Service hours|Handling target/);
+  assert.match(fa, /dir="rtl"/); assert.match(fa, /<legend[^>]*>انتخاب نوع سرویس<\/legend>/);
+  assert.match(fa, /ساعات کاری سرویس/); assert.match(fa, /زمان تقریبی پردازش: ۴ ساعت/);
+  assert.doesNotMatch(fa, /Priority timing|Service hours|Handling target/);
+  const reverse = render("OnlineRequestSubmit", { ...props, input: { locale: "en", txType: "buy_aud" } }, { states: { 0: policy, 1: false } });
+  assert.match(reverse, /Important Bank Timing Notes/);
+  assert.match(reverse, /Origin \(Iran\)/); assert.match(reverse, /Destination \(Australia\)/);
+  assert.doesNotMatch(reverse, /Origin \(Australia\)/);
+  const custom = render("OnlineRequestSubmit", props, { states: { 0: { ...policy, standard_minutes: 800, opening_hour: 10, closing_hour: 18, holidays: ["2026-12-20"] }, 1: false } });
+  assert.match(custom, /Est\. Processing Time: 13\.33 hours/);
+  assert.match(custom, /10:00–18:00/);
+  assert.match(custom, /2026-12-20/);
+});
+
+test("final quote shows saved loyalty and promo benefits in Toman without deducting them twice", () => {
+  const quote = { ...request.quote, loyalty_discount: 150000, discount_amount: 250000, promo_code: "WELCOME" };
+  for (const locale of ["en", "fa"]) {
+    const html = render("RequestQuoteFacts", { quote, locale, receipt: true });
+    const { requestMoney } = load("components/requests/request-labels.ts");
+    const money = (amount, currency) => requestMoney(amount, currency, locale).replace(/ AUD$/, locale === "fa" ? " دلار استرالیا" : " AUD").replace(/ Toman$/, " Tomans");
+    const plain = html.replace(/<[^>]*>/g, "");
+    assert.ok(plain.includes(money(150000, "IRT")));
+    assert.ok(plain.includes(money(250000, "IRT")));
+    assert.ok(plain.includes(money(quote.funding_total, "AUD")));
+    assert.match(html, /WELCOME/);
+    assert.match(html, locale === "fa" ? /تخفیف وفاداری این انتقال/ : /Loyalty savings on this transfer/);
+    const reverse = render("RequestQuoteFacts", { quote: { ...quote, funding_currency: "IRT", funding_total: 53300000, recipient_currency: "AUD", recipient_amount: 1000 }, locale, receipt: true });
+    assert.ok(reverse.replace(/<[^>]*>/g, "").includes(money(53300000, "IRT")));
+    assert.ok(reverse.replace(/<[^>]*>/g, "").includes(money(150000, "IRT")));
+    const noPromo = render("RequestQuoteFacts", { quote: { ...quote, promo_code: null, discount_amount: 0 }, locale, receipt: true });
+    assert.doesNotMatch(noPromo, /Promo code savings|تخفیف با کد|WELCOME/);
+  }
+});
+
+test("final quote presents its actual one-hour validity and locks submission after expiry", () => {
+  const input = { locale: "en", serviceTier: "standard" };
+  const quote = { id: "quote-preview", created_at: "2026-09-30T02:00:00.000Z", expires_at: "2026-09-30T03:00:00.000Z", snapshot: { ...request.quote, policy_snapshot: { ...policy, quote_minutes: 60 } } };
+  const states = { 0: policy, 1: false, 3: quote, 4: JSON.stringify(input), 5: true, 9: Date.parse("2026-09-30T02:30:00.000Z") };
+  const html = render("OnlineRequestSubmit", { input: { locale: "en" }, disabled: false, validationMessage: null }, { states });
+  assert.match(html, /Valid for 1 hour/);
+  assert.match(html, /data-lottie-scene="receipt-upload"/);
+  assert.match(html, /Submit request/);
+  const expired = render("OnlineRequestSubmit", { input: { locale: "en" }, disabled: false, validationMessage: null }, { states: { ...states, 9: Date.parse(quote.expires_at) } });
+  assert.match(expired, /Quote expired/);
+  assert.doesNotMatch(expired, /Submit request/);
 });
 
 test("main dashboard composes self-service submission and discoverable request history", () => {
   const hub = fs.readFileSync(path.join(projectRoot, "components/dashboard/DashboardRequestHub.tsx"), "utf8");
   const dashboard = fs.readFileSync(path.join(projectRoot, "app/[locale]/dashboard/page.tsx"), "utf8");
-  assert.match(hub, /<OnlineRequestSubmit/); assert.match(hub, /institutionName:/); assert.match(hub, /invoiceReference:/);
+  assert.match(hub, /<OnlineRequestSubmit/); assert.match(hub, /institutionName:/); assert.doesNotMatch(hub, /invoiceReference:/);
   assert.doesNotMatch(hub, /buildWhatsAppUrl|whatsappWindow|onSaveTransaction/);
   assert.match(dashboard, /<DashboardHistoryPanel/);
   const history = fs.readFileSync(path.join(projectRoot, "components/dashboard/DashboardHistoryPanel.tsx"), "utf8");
@@ -424,15 +503,35 @@ test("main dashboard composes self-service submission and discoverable request h
 
 test("management settings keep payment initiation and Australian bank clearance as separate windows", () => {
   const html = render("RequestSettingsForm", {}, { states: { 0: { version: 1, settings: policy }, 3: false } });
-  assert.match(html, /Payment window · minutes/);
-  assert.match(html, /AU bank review allowance · minutes \(1440 = 24h\)/);
+  assert.match(html, /Payment window · hours/);
+  assert.match(html, /AU bank review allowance · hours/);
   assert.match(html, /review deadline, not a required wait/);
-  assert.match(html, /min="1440" max="10080" step="1" value="1440"/);
+  assert.match(html, /min="24" max="168" step="any"[^>]*value="24"/);
   assert.match(html, /Handling starts after cleared funds and checks/);
   assert.match(html, /Iran bank notice · English/); assert.match(html, /Iran bank notice · فارسی/);
   assert.match(html, /maxLength="2000"/i);
   assert.match(html, /id="request-timing"[^>]*hidden=""/);
   assert.match(html, /aria-controls="request-timing"/);
+});
+
+test("hour edits save the correct minute values and fractional hours render in both customer languages", async () => {
+  let saved;
+  const h = load("components/requests/RequestSettingsForm.tsx", { states: { 0: { version: 1, settings: policy }, 1: policy.management_emails.join("\n"), 3: false }, actions: {
+    saveRequestSettings: async input => { saved = input; return { data: { version: 2, settings: input.settings } }; },
+  } });
+  let tree = h.rerender("RequestSettingsForm", {});
+  elements(tree, node => node.type === "input" && node.props.name === "standard_minutes")[0].props.onChange({ target: { valueAsNumber: 13.33 } });
+  elements(tree, node => node.type === "input" && node.props.name === "quote_minutes")[0].props.onChange({ target: { valueAsNumber: 0.5 } });
+  tree = h.rerender("RequestSettingsForm", {});
+  await elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });
+  assert.equal(saved.settings.standard_minutes, 800);
+  assert.equal(saved.settings.quote_minutes, 30);
+  assert.equal(saved.settings.australian_clearance_minutes, 1440);
+  for (const locale of ["en", "fa"]) {
+    const html = render("OnlineRequestSubmit", { input: { locale }, disabled: false, validationMessage: null }, { states: { 0: { ...policy, standard_minutes: 800, priority_minutes: 30 }, 1: false } });
+    assert.match(html, locale === "fa" ? /۱۳٫۳۳ ساعت/ : /13\.33 hours/);
+    assert.match(html, locale === "fa" ? /۰٫۵ ساعت/ : /0\.5 hours/);
+  }
 });
 
 test("settings sections retain structured bank fields and separate English and Persian notes during editing", async () => {
@@ -560,8 +659,13 @@ test("ordinary admin messages remain visible while reply links require an explic
     assert.match(required, locale === "fa" ? /ارسال پاسخ/ : /Reply/);
     const thread = render("RequestConversation", { requestId: request.id, version: request.version, messages, locale, onUpdated: async () => {} });
     assert.match(thread, /id="request-conversation"/);
+    assert.match(thread, /data-lottie-scene="chat"/);
     assert.match(thread, locale === "fa" ? /پیام به مدیر/ : /Message to admin/);
-    assert.match(thread, /dir="auto"/); assert.match(thread, /maxLength="2000"/i);
+    const direction = locale === "fa" ? "rtl" : "ltr";
+    assert.match(thread, new RegExp(`<textarea[^>]*dir="${direction}"`));
+    assert.match(thread, new RegExp(`<p dir="${direction}">`));
+    assert.match(thread, /role="log" aria-live="polite"/);
+    assert.match(thread, /maxLength="2000"/i);
     assert.match(thread, /&lt;script&gt;/); assert.doesNotMatch(thread, /<script>|Send email|Email requested|Website only/);
   }
   const fallback = markup(RequestAdminMessageBanner({ messages: [], fallbackMessage: "Existing request requires a reply.", replyRequired: true, locale: "en" }));
@@ -673,7 +777,7 @@ test("a committed partial-funds approval does not create a second payment when r
   let latest = { request, events: [], receipts: [], messages: [] };
   const calls = []; const payments = new Map();
   const harness = load("components/requests/RequestDetailView.tsx", { states: {
-    0: latest, 1: false, 6: "confirm_funds", 8: false, 9: "bank-payment-1", 10: "100", 11: "AUD", 15: "aud-account", 21: true,
+    0: latest, 1: false, 6: "confirm_funds", 8: false, 9: "100", 12: "AUD", 15: "aud-account", 21: true,
   }, actions: {
     mutateAdminRequest: async input => {
       calls.push(input);
@@ -700,7 +804,7 @@ test("a definite stale approval conflict can be retried using the refreshed requ
   const detail = { request, events: [], receipts: [], messages: [] };
   const calls = [];
   const harness = load("components/requests/RequestDetailView.tsx", { states: {
-    0: detail, 1: false, 6: "confirm_funds", 8: false, 9: "bank-payment-2", 10: "100", 11: "AUD", 15: "aud-account", 21: true,
+    0: detail, 1: false, 6: "confirm_funds", 8: false, 9: "100", 12: "AUD", 15: "aud-account", 21: true,
   }, actions: {
     mutateAdminRequest: async input => {
       calls.push(input);
@@ -730,7 +834,7 @@ test("admin approval steps remain actionable and validate the explicit approval 
     const calls = [];
     const harness = load("components/requests/RequestDetailView.tsx", { states: {
       0: { request: { ...request, status, payment_approved_at: status === "submitted" ? null : request.payment_approved_at, funding_status: ["ready", "processing"].includes(status) ? "confirmed" : "unpaid" }, events: [], receipts: [], messages: [] },
-      1: false, 6: action, 9: "BANK-CONSENT-CHECK", 10: "1025", 12: "SETTLEMENT-CONSENT-CHECK", 13: "irt-account", 14: "aud-account", 15: "aud-account",
+      1: false, 6: action, 9: "1025", 13: "irt-account", 14: "aud-account", 15: "aud-account",
       22: [{ id: "aud-account", account_name: "AUD collection", currency: "AUD" }, { id: "irt-account", account_name: "IRT payout", currency: "IRT" }],
     }, actions: { mutateAdminRequest: async input => { calls.push(input); return { error: "Unexpected mutation without confirmation" }; } } });
     const props = { id: request.id, admin: true, locale: "en" };
@@ -780,7 +884,9 @@ test("admin approval submits the chosen email policy and customer actions do not
   const customer = render("RequestDetailView", { id: request.id, locale: "en" }, { states: { 0: detail, 1: false } });
   assert.doesNotMatch(customer, /Approval actions|Send email|Confirm funds received|Add payment reference|Bank payment reference/);
   assert.match(customer, /customerLayout/); assert.doesNotMatch(customer, /adminWorkspace/);
-  assert.match(customer, /class="journey"/);
+  assert.match(customer, /data-transfer-overview/);
+  assert.match(customer, /href="#request-transfer-details"/);
+  assert.match(customer, /id="request-transfer-details"/);
   assert.match(customer, /aria-label="Transfer progress"/);
 });
 
@@ -816,16 +922,24 @@ test("incoming payment validation explains and focuses each missing value before
     const feedback = requiredField(tree, "request-form-feedback");
     assert.equal(feedback.props.role, "alert");
     assert.match(textOf(feedback), explanation);
-    assert.equal(requiredField(tree, fieldId).props["aria-invalid"], true);
-    assert.ok(requiredField(tree, fieldId).props["aria-describedby"].split(/\s+/).includes("request-form-feedback"));
+    const field = requiredField(tree, fieldId);
+    if (typeof field.type === "string") {
+      assert.equal(field.props["aria-invalid"], true);
+      assert.ok(field.props["aria-describedby"].split(/\s+/).includes("request-form-feedback"));
+    } else {
+      assert.ok(elements(tree, node => node.props["data-invalid"] === true && elements(node, child => child.props.id === fieldId).length > 0).length > 0);
+    }
     assert.equal(focused.at(-1), `#${fieldId}`);
   }
   const change = (id, value) => {
-    requiredField(tree, id).props.onChange({ target: { value } });
+    const field = requiredField(tree, id);
+    if (typeof field.type === "string") field.props.onChange({ target: { value } });
+    else field.props.onChange(value);
     tree = harness.rerender("RequestDetailView", props);
   };
-  await submitWithFeedback("request-payment-reference", /payment reference from the bank statement/);
-  change("request-payment-reference", "BANK-VERIFIED-123");
+  assert.equal(elements(tree, node => node.props.id === "request-payment-reference").length, 0);
+  assert.equal(requiredField(tree, "request-received-amount").props.value, "1025.00");
+  change("request-received-amount", "");
   await submitWithFeedback("request-received-amount", /cleared amount in AUD/);
   change("request-received-amount", "1000.001");
   await submitWithFeedback("request-received-amount", /up to two decimal places/);
@@ -848,14 +962,14 @@ test("normal funds verification locks the incoming currency independently from t
     const calls = [];
     const account = currency === "AUD" ? "aud-account" : "irt-account";
     const harness = load("components/requests/RequestDetailView.tsx", { states: {
-      0: detail, 1: false, 9: "BANK-CURRENCY-CHECK", 10: String(detail.request.quote.funding_total),
-      11: currency === "AUD" ? "IRT" : "AUD", 15: account, 21: true, 22: fundingAccounts,
+      0: detail, 1: false, 9: String(detail.request.quote.funding_total),
+      12: currency === "AUD" ? "IRT" : "AUD", 15: account, 21: true, 22: fundingAccounts,
     }, actions: { mutateAdminRequest: async input => { calls.push(input); return { error: "Synthetic review hold" }; } } });
     const tree = harness.rerender("RequestDetailView", { id: request.id, admin: true, locale: "en" });
     const form = elements(tree, node => node.type === "form")[0];
     assert.equal(elements(form, node => node.type === "select" && node.props.id === "request-received-currency").length, 0);
-    const accountValues = elements(requiredField(tree, "request-funding-account"), node => node.type === "option").map(node => node.props.value);
-    assert.deepEqual(accountValues, ["", account]);
+    const accountValues = requiredField(tree, "request-funding-account").props.labeledOptions.map(option => option.value);
+    assert.deepEqual(accountValues, [account]);
     assert.equal(Number(requiredField(tree, "request-received-amount").props.step), currency === "IRT" ? 1 : 0.01);
     assert.match(textOf(form), currency === "IRT" ? /120,000,000 Toman/ : /1,025 AUD/);
     assert.match(textOf(form), currency === "IRT" ? /2,235 AUD/ : /55,000,000 Toman/);
@@ -874,7 +988,7 @@ test("successful cleared funds immediately show destination reconciliation when 
       funds_confirmed_at: "2026-09-16T02:00:00Z", ready_at: "2026-09-16T02:00:00Z", handling_due_at: "2026-09-16T03:00:00Z" };
     const calls = [];
     const harness = load("components/requests/RequestDetailView.tsx", { states: {
-      0: detail, 1: false, 9: "BANK-FULL-PAYMENT", 10: "1025", 15: "aud-account", 21: true, 22: fundingAccounts,
+      0: detail, 1: false, 9: "1025", 15: "aud-account", 21: true, 22: fundingAccounts,
     }, actions: {
       mutateAdminRequest: async input => { calls.push(input); return { data: updated }; },
       getAdminRequest: async () => {
@@ -890,7 +1004,7 @@ test("successful cleared funds immediately show destination reconciliation when 
     assert.match(markup(tree), /Funds received\. Ready for destination reconciliation/);
     assert.match(markup(tree), /Reconcile destination payment/);
     assert.equal(elements(tree, node => node.props.id === "request-payment-reference").length, 0);
-    assert.ok(requiredField(tree, "request-settlement-reference"));
+    assert.equal(elements(tree, node => node.props.id === "request-settlement-reference").length, 0);
     assert.doesNotMatch(markup(tree), /The update was not confirmed/);
   }
 });
@@ -900,7 +1014,7 @@ test("an existing AUD deposit against an IRT quote stays visible to management a
   const detail = { ...base, request: { ...base.request, status: "action_required", action_required: "Finance must review the received currency." }, payments: [
     { id: "saved-deposit", request_id: request.id, amount: "2235.00", currency: "AUD", payment_reference: "BANK-MISMATCH-2235", account_id: "aud-account", created_at: "2026-09-16T02:00:00Z" },
   ] };
-  const harness = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false, 6: "confirm_funds", 9: "OLD-AMBIGUOUS-DEPOSIT", 10: "2235", 15: "aud-account", 21: true, 22: fundingAccounts } });
+  const harness = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false, 6: "confirm_funds", 9: "2235", 15: "aud-account", 21: true, 22: fundingAccounts } });
   const props = { id: request.id, admin: true, locale: "en" };
   let tree = harness.rerender("RequestDetailView", props);
   const html = markup(tree);
@@ -914,7 +1028,7 @@ test("an existing AUD deposit against an IRT quote stays visible to management a
   assert.equal(separate.props.type, "button");
   separate.props.onClick();
   tree = harness.rerender("RequestDetailView", props);
-  assert.equal(requiredField(tree, "request-payment-reference").props.value, "");
+  assert.equal(elements(tree, node => node.props.id === "request-payment-reference").length, 0);
   assert.equal(requiredField(tree, "request-received-amount").props.value, "");
   assert.equal(requiredField(tree, "request-funding-account").props.value, "");
   assert.equal(requiredField(tree, "request-confirmation").props.checked, false);
@@ -931,7 +1045,7 @@ test("recording a different-currency deposit is explicit and its saved review st
     const amount = actualCurrency === "AUD" ? 2235 : 1000000;
     const calls = [];
     const harness = load("components/requests/RequestDetailView.tsx", { states: {
-      0: detail, 1: false, 8: false, 9: "ACTUAL-DEPOSIT-456", 10: String(detail.request.quote.funding_total), 15: originalAccount, 21: true, 22: fundingAccounts,
+      0: detail, 1: false, 8: false, 9: String(detail.request.quote.funding_total), 15: originalAccount, 21: true, 22: fundingAccounts,
     }, actions: {
       mutateAdminRequest: async input => {
         calls.push(input);
@@ -954,11 +1068,11 @@ test("recording a different-currency deposit is explicit and its saved review st
     assert.equal(requiredField(tree, "request-confirmation").props.checked, false);
     let form = elements(tree, node => node.type === "form")[0];
     assert.match(textOf(form), /It does not confirm the expected/);
-    const options = elements(requiredField(tree, "request-funding-account"), node => node.type === "option").map(node => node.props.value);
-    assert.deepEqual(options, ["", actualAccount]);
+    const options = requiredField(tree, "request-funding-account").props.labeledOptions.map(option => option.value);
+    assert.deepEqual(options, [actualAccount]);
     assert.equal(textOf(elements(form, node => node.type === "button" && node.props.type === "submit")[0]), "Record deposit for review");
     requiredField(tree, "request-received-amount").props.onChange({ target: { value: String(amount) } });
-    requiredField(tree, "request-funding-account").props.onChange({ target: { value: actualAccount } });
+    requiredField(tree, "request-funding-account").props.onChange(actualAccount);
     requiredField(tree, "request-confirmation").props.onChange({ target: { checked: true } });
     tree = harness.rerender("RequestDetailView", props);
     form = elements(tree, node => node.type === "form")[0];
@@ -972,7 +1086,7 @@ test("recording a different-currency deposit is explicit and its saved review st
     assert.equal(calls[0].sendEmail, false);
     const html = markup(tree);
     assert.match(html, /Recorded deposits|Finance review required/);
-    assert.match(html, /ACTUAL-DEPOSIT-456/);
+    assert.doesNotMatch(html, /ACTUAL-DEPOSIT-456|AUTO-/);
     assert.match(html, /Saved\. Refresh to load the bank record details/);
     assert.match(html, /Deposit recorded in .*finance review is required/);
     assert.doesNotMatch(html, /Funds received\. Ready|The update was not confirmed/);
@@ -992,8 +1106,8 @@ test("fully received funds under internal review never ask the customer to pay, 
         messages: [{ id: "historic-admin-message", sender_role: "admin", body: "Your request is being reviewed by our team.", created_at: request.created_at }] };
       const html = render("RequestDetailView", { id: request.id, locale }, { states: { 0: detail, 1: false } });
       assert.match(html, locale === "fa" ? /وجه دریافت شد/ : /Funds received/);
-      assert.match(html, locale === "fa" ? /در حال بررسی توسط مدیر/ : /Under admin review/);
-      assert.match(html, locale === "fa" ? /نیازی به اقدام شما نیست/ : /No action needed/);
+      assert.match(html, locale === "fa" ? /در حال بررسی توسط مدیر/ : /under admin review/i);
+      assert.match(html, locale === "fa" ? /در این مرحله نیازی به اقدام از سوی شما نیست/ : /No action required at this stage/);
       assert.match(html, locale === "fa" ? /پیام به مدیر/ : /Message to admin/);
       assert.match(html, /Your request is being reviewed by our team/);
       assert.doesNotMatch(html, /PRIVATE: finance|href="#request-conversation"|type="file"|request-payment-reference/);
@@ -1135,7 +1249,42 @@ test("after a customer reply staff can resume fully funded transfers during a Pr
   }
 });
 
-test("customer tracking refreshes automatically on visible polling, focus and return to the tab", async () => {
+test("customer receipt uses matching accordions and snapshot amounts with localised money and English bank identifiers", () => {
+  for (const locale of ["fa", "en"]) {
+    const sample = { ...request, quote: { ...request.quote, loyalty_discount: 20000, promo_code: "WELCOME", discount_amount: 10000,
+      recipient_snapshot: { full_name: "Test Recipient", bank_name: "Test Bank", bsb: "012345", account_number: "0012345678" } } };
+    const html = render("RequestTransactionSummary", { request: sample, locale });
+    assert.equal((html.match(/<details class="accordion"/g) || []).length, 2);
+    assert.equal((html.match(/Test Recipient/g) || []).length, 1);
+    assert.equal((html.match(/0012345678/g) || []).length, 1);
+    assert.match(html, /<bdi lang="en" dir="ltr">BSB<\/bdi>/);
+    assert.match(html, /<bdi lang="en" dir="ltr" data-number-locale="en">012345<\/bdi>/);
+    assert.match(html, /<bdi lang="en" dir="ltr">Account number<\/bdi>/);
+    assert.match(html, /WELCOME/);
+    assert.match(html, locale === "fa" ? /۲۰٬۰۰۰/ : /20,000/);
+    assert.match(html, locale === "fa" ? /۱٬۰۲۵/ : /1,025/);
+    assert.match(html, new RegExp(`data-number-locale="${locale}"`));
+    assert.doesNotMatch(html, /undefined|NaN|ZARMAN EXCHANGE|Source of funds/);
+  }
+});
+
+test("customer header has only a requests button and retains one consistent other-actions accordion", () => {
+  for (const locale of ["fa", "en"]) {
+    const html = render("RequestDetailView", { id: request.id, locale }, { states: { 0: incomingDetail(), 1: false } });
+    const nav = html.match(/<nav class="pageNav"[\s\S]*?<\/nav>/)?.[0];
+    assert.ok(nav);
+    assert.match(nav, new RegExp(`href="/${locale}/dashboard/requests"`));
+    assert.match(nav, /data-dashboard-button="true"/);
+    assert.doesNotMatch(nav, /ZE01234|Refresh|Pending|در انتظار|به‌روزرسانی/);
+    assert.match(html, /<details class="accordion exceptionPanel"/);
+    assert.doesNotMatch(html, /class="exceptionActions"/);
+  }
+});
+
+test("customer tracking uses five-minute automatic refresh and keeps manual refresh immediate", async () => {
+  const originalNow = Date.now;
+  let now = 1000000;
+  Date.now = () => now;
   const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
   const windowEvents = new Map(); const documentEvents = new Map();
@@ -1158,7 +1307,12 @@ test("customer tracking refreshes automatically on visible polling, focus and re
     cleanups = harness.runEffects();
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(reads, 1);
-    assert.equal(timerDelay, 20000);
+    assert.equal(timerDelay, 300000);
+    now += 299999;
+    timer(); windowEvents.get("focus")(); documentEvents.get("visibilitychange")();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(reads, 1);
+    now += 1;
     visibility.visibilityState = "hidden";
     timer(); documentEvents.get("visibilitychange")();
     await new Promise(resolve => setImmediate(resolve));
@@ -1175,12 +1329,21 @@ test("customer tracking refreshes automatically on visible polling, focus and re
     await new Promise(resolve => setImmediate(resolve));
     windowEvents.get("focus")();
     await new Promise(resolve => setImmediate(resolve));
+    assert.equal(reads, 2);
+    now += 300000;
+    timer();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(reads, 3);
+    const tree = harness.rerender("RequestDetailView", props);
+    const progress = elements(tree, node => node.type?.name === "RequestProgress")[0];
+    await progress.props.onRefresh();
     assert.equal(reads, 4);
     cleanups.forEach(cleanup => cleanup()); cleanups = [];
     assert.equal(cleared, true);
     assert.equal(windowEvents.has("focus"), false);
     assert.equal(documentEvents.has("visibilitychange"), false);
   } finally {
+    Date.now = originalNow;
     cleanups.forEach(cleanup => cleanup());
     if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow); else delete globalThis.window;
     if (originalDocument) Object.defineProperty(globalThis, "document", originalDocument); else delete globalThis.document;

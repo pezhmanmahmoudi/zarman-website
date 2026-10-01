@@ -48,6 +48,7 @@ export type QuoteInput = {
   promoCode?: string | null;
   paymentLink?: string | null;
   institutionName?: string;
+  institutionId?: string;
   invoiceReference?: string;
   serviceTier: ServiceTier;
   locale: RequestLocale;
@@ -148,5 +149,8 @@ export type RequestMutationInput = {
     refund_reference?: string;
     refund_kind?: "priority" | "principal";
     honour_quote?: boolean;
+    /** Admin-only accounting terms recorded with confirm_funds; customer amounts stay unchanged. */
+    accounting_rate?: number;
+    accounting_fee_aud?: number;
   };
 };

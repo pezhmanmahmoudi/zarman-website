@@ -50,9 +50,9 @@ const snapshot = {
     alerts: [], accountingWarnings: [], criticalAlertCount: 0,
     healthScore: { score: 72 }, recommendation: { titleFA: "وضعیت خزانه" },
   },
-  bankAccounts: [], expenses: [], recurringExpenses: [], ownerLoans: [], settings: {},
+  bankAccounts: [], allBankAccounts: [], expenses: [], recurringExpenses: [], ownerLoans: [], reconciliations: [], settings: {},
 };
-const paneNames = ["AlertsSection", "StrategyCenter", "MarketInventory", "LiquidityAccounts", "ReconciliationGrid", "ExposureSection", "ProfitabilitySection", "BankAccountManager", "BankTransferFees", "ExpenseForm", "RecurringExpenseForm", "OwnerLoanForm", "TreasurySettings"];
+const paneNames = ["AlertsSection", "StrategyCenter", "MarketInventory", "LiquidityAccounts", "ReconciliationGrid", "ReconciliationAudit", "ExposureSection", "ProfitabilitySection", "BankAccountManager", "BankTransferFees", "ExpenseForm", "RecurringExpenseForm", "OwnerLoanForm", "TreasurySettings"];
 
 function createWorkspace() {
   const mounted = [];
@@ -84,7 +84,7 @@ test("overview exposes compact metrics and direct task destinations without moun
   assert.equal((html.match(/class="metric"/g) || []).length, 4);
   assert.match(html, /No treasury alerts/);
   assert.match(html, /Health score 72\/100/);
-  for (const view of ["reconciliation", "expenses", "recurring", "bank-fees", "capital", "bank-accounts", "inventory", "profitability", "alerts", "strategy"]) {
+  for (const view of ["reconciliation", "audit", "expenses", "recurring", "bank-fees", "capital", "bank-accounts", "inventory", "profitability", "alerts", "strategy"]) {
     assert.ok(html.includes(`href="/admin/treasury?view=${view}"`), `Missing ${view} link`);
   }
   assert.doesNotMatch(html, /<main[ >]/);
@@ -92,7 +92,7 @@ test("overview exposes compact metrics and direct task destinations without moun
 
 test("each treasury workspace mounts only its selected pane and keeps its section links reachable", () => {
   const expected = {
-    accounts: "LiquidityAccounts", reconciliation: "ReconciliationGrid", "bank-accounts": "BankAccountManager",
+    accounts: "LiquidityAccounts", reconciliation: "ReconciliationGrid", audit: "ReconciliationAudit", "bank-accounts": "BankAccountManager",
     expenses: "ExpenseForm", recurring: "RecurringExpenseForm", "bank-fees": "BankTransferFees", capital: "OwnerLoanForm",
     strategy: "StrategyCenter", inventory: "MarketInventory", exposure: "ExposureSection", profitability: "ProfitabilitySection", settings: "TreasurySettings",
   };

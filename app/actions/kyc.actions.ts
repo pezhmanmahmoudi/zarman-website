@@ -1,5 +1,6 @@
 "use server";
 
+import { submitCustomerKycEvidence, type CustomerKycSubmission } from "@/app/actions/kyc-evidence.actions";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 
@@ -208,11 +209,11 @@ async function sendTelegramKycNotification({
 }
 
 // ---------------------------------------------------------------------------
-// submitKycData — AUSTRAC-compliant identity submission (no document images).
+// submitKycData — Identity submission with required private document evidence.
 // Must run server-side: uses service role to bypass RLS so that kyc_status
 // is set atomically and can never be forged from the browser.
 // ---------------------------------------------------------------------------
-const ALLOWED_DOC_TYPES = new Set(["driver_license", "passport", "none"]);
+
 
 function isUuidLocal(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -220,152 +221,19 @@ function isUuidLocal(value: string) {
   );
 }
 
-export async function submitKycData(payload: {
-  first_name?: string;
-  last_name?: string;
-  mobile_number?: string;
-  dob: string;
-  country: string;
-  address: string;
-  city: string;
-  state: string;
-  postcode: string;
-  document_type: string;
-  license_number?: string | null;
-  card_number?: string | null;
-  state_of_issue?: string | null;
-  passport_number?: string | null;
-  expiry_date?: string | null;
-  consent_notice: boolean;
-  consent_dvs: boolean;
-}) {
-  // 1. Authenticate — get the user from the server-side session.
-  const supabaseServer = await createSupabaseServerActionClient();
-  const { data: authData, error: authError } = await supabaseServer.auth.getUser();
-  if (authError || !authData.user) {
-    return { error: "Unauthorized: no active session." };
+export async function submitKycData(payload: CustomerKycSubmission) {
+  const result = await submitCustomerKycEvidence(payload);
+  if ("success" in result && result.success) {
+    try {
+      await sendTelegramKycNotification({ firstName: payload.first_name ?? null, lastName: payload.last_name ?? null, email: null });
+    } catch { console.error("[submitKycData] Admin notification unavailable"); }
   }
-  const userId = authData.user.id;
-  if (!isUuidLocal(userId)) {
-    return { error: "Invalid session identifier." };
-  }
-
-  // 2. Server-side validation.
-  if (
-    !payload.dob ||
-    !payload.address ||
-    !payload.city ||
-    !payload.state ||
-    !payload.postcode
-  ) {
-    return { error: "Missing required address or date-of-birth fields." };
-  }
-  if (!ALLOWED_DOC_TYPES.has(payload.document_type)) {
-    return { error: "Invalid document type." };
-  }
-  if (payload.document_type === "driver_license") {
-    if (!payload.license_number || !payload.card_number) {
-      return { error: "Licence number and card number are required." };
-    }
-    if (!payload.state_of_issue) {
-      return { error: "State of issue is required for driver licence." };
-    }
-  }
-  if (payload.document_type === "passport" && !payload.passport_number) {
-    return { error: "Passport number is required." };
-  }
-  if ((payload.document_type === "driver_license" || payload.document_type === "passport") && !payload.expiry_date) {
-    return { error: "Document expiry date is required." };
-  }
-  if (payload.document_type !== "none" && (!payload.consent_notice || !payload.consent_dvs)) {
-    return { error: "DVS consent is required before submission." };
-  }
-
-  // 3. Immutability guard — approved profiles cannot be re-submitted.
-  const { data: current, error: fetchError } = await supabaseAdmin
-    .from("profiles")
-    .select("kyc_status, first_name, last_name, email, mobile_number")
-    .eq("id", userId)
-    .single();
-  if (fetchError) {
-    return { error: "Could not verify account status." };
-  }
-  if (current?.kyc_status === "approved") {
-    return { error: "Your identity has already been approved and cannot be modified." };
-  }
-
-  // 4. Persist identity data. Service role bypasses RLS so kyc_status cannot
-  //    be escalated by the user directly — only this action sets it to "pending".
-  const { error: updateError } = await supabaseAdmin
-    .from("profiles")
-    .update({
-      first_name: payload.first_name?.trim() || null,
-      last_name: payload.last_name?.trim() || null,
-      mobile_number: payload.mobile_number?.trim() || null,
-      dob: payload.dob,
-      country: payload.country,
-      address: payload.address,
-      city: payload.city,
-      state: payload.state,
-      postcode: payload.postcode,
-      document_type: payload.document_type,
-      license_number:
-        payload.document_type === "driver_license" ? (payload.license_number ?? null) : null,
-      card_number:
-        payload.document_type === "driver_license" ? (payload.card_number ?? null) : null,
-      state_of_issue:
-        payload.document_type === "driver_license" ? (payload.state_of_issue ?? null) : null,
-      passport_number:
-        payload.document_type === "passport" ? (payload.passport_number ?? null) : null,
-      expiry_date: payload.expiry_date ?? null,
-      kyc_status: "pending",
-    })
-    .eq("id", userId);
-
-  if (updateError) {
-    return { error: `Failed to save identity data: ${updateError.message}` };
-  }
-
-  // 5. Send Telegram admin notification — non-fatal if it fails.
-  try {
-    await sendTelegramKycNotification({
-      firstName: current?.first_name ?? null,
-      lastName: current?.last_name ?? null,
-      email: authData.user.email ?? null,
-    });
-  } catch (err) {
-    console.error("[submitKycData] Telegram notification failed:", err);
-  }
-
-  // 7. Audit-log the DVS consent — non-fatal if it fails.
-  try {
-    await supabaseAdmin.from("audit_logs").insert([
-      {
-        actor_id: userId,
-        actor_email: authData.user.email ?? "",
-        action: "KYC_DVS_CONSENT_GRANTED",
-        target_type: "profile",
-        target_id: userId,
-        new_value: {
-          document_type: payload.document_type,
-          consent_notice: payload.consent_notice,
-          consent_dvs: payload.consent_dvs,
-          submitted_at: new Date().toISOString(),
-        },
-      },
-    ]);
-  } catch {
-    // Consent is saved on the profile row; audit log failure is non-fatal.
-  }
-
-  return { success: true };
+  return result;
 }
 
 // ---------------------------------------------------------------------------
 // savePersonalData — persists basic personal info (DOB, address, country)
-// for users who select "None of the above" for identity document. Sets
-// kyc_status to "pending" and fires a Telegram admin notification so the
-// admin panel and alerts work identically to the standard submitKycData flow.
+// for legacy clients. Saving a draft never submits or approves verification.
 // ---------------------------------------------------------------------------
 export async function savePersonalData(payload: {
   first_name?: string;
@@ -416,24 +284,11 @@ export async function savePersonalData(payload: {
       city: payload.city,
       state: payload.state,
       postcode: payload.postcode,
-      document_type: "none",
-      kyc_status: "pending",
     })
     .eq("id", userId);
 
   if (updateError) {
     return { error: `Failed to save personal data: ${updateError.message}` };
-  }
-
-  // Send Telegram admin notification — non-fatal if it fails.
-  try {
-    await sendTelegramKycNotification({
-      firstName: current?.first_name ?? null,
-      lastName: current?.last_name ?? null,
-      email: authData.user.email ?? null,
-    });
-  } catch (err) {
-    console.error("[savePersonalData] Telegram notification failed:", err);
   }
 
   return { success: true };

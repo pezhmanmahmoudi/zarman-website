@@ -1,14 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, RefreshCw, Search } from "lucide-react";
 import { listAdminRequests, listMyRequests } from "@/app/actions/request.actions";
 import type { ExchangeRequest } from "@/lib/requests/types";
 import { requestDate, requestMoney, requestError, isRequestTerminal, type RequestLocale } from "./request-labels";
-import { RequestSettingsForm } from "./RequestSettingsForm";
 import { getRequestJourney, requestStageLabel } from "@/lib/requests/journey";
 import { journeyPresentation } from "@/lib/dashboard/journey-presentation";
+import { DASHBOARD_AUTO_REFRESH_MS, dashboardRefreshDue } from "@/lib/dashboard/refresh-policy";
 import styles from "@/styles/requests/Requests.module.css";
 import workspace from "@/styles/requests/RequestWorkspace.module.css";
 
@@ -20,36 +20,58 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("active");
   const [search, setSearch] = useState("");
+  const lastRefresh = useRef(0), refreshPending = useRef(false);
   const refresh = useCallback(async () => {
+    if (refreshPending.current) return;
+    refreshPending.current = true; lastRefresh.current = Date.now();
     setRefreshing(true);
     try {
       const result = await (admin ? listAdminRequests() : listMyRequests());
       if (result.error) setError(result.error);
       else if (result.data) { setRequests(result.data); setError(""); }
     } catch { setError(fa ? "دریافت درخواست‌ها ممکن نشد. دوباره تلاش کنید." : "Could not load requests. Please try again."); }
-    finally { setLoading(false); setRefreshing(false); }
+    finally { refreshPending.current = false; setLoading(false); setRefreshing(false); }
   }, [admin, fa]);
 
   useEffect(() => {
     void refresh();
-    const timer = window.setInterval(() => { if (document.visibilityState === "visible") void refresh(); }, 30000);
-    const onFocus = () => { void refresh(); };
+    const onFocus = () => { if (document.visibilityState === "visible" && dashboardRefreshDue(lastRefresh.current)) void refresh(); };
+    const timer = window.setInterval(onFocus, DASHBOARD_AUTO_REFRESH_MS);
     window.addEventListener("focus", onFocus);
-    return () => { window.clearInterval(timer); window.removeEventListener("focus", onFocus); };
+    document.addEventListener("visibilitychange", onFocus);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
   }, [refresh]);
 
   const filters = [
     { id: "active", label: fa ? "فعال" : "Active" },
-    ...(admin ? [{ id: "review", label: "Review" }, { id: "funding", label: "Check payment" }, { id: "ready", label: "To complete" }] : []),
+    ...(admin ? [
+      { id: "review", label: fa ? "بررسی" : "Review" },
+      { id: "funding", label: fa ? "بررسی واریزی" : "Check payment" },
+      { id: "ready", label: fa ? "آماده تکمیل" : "To complete" },
+    ] : []),
     { id: "closed", label: fa ? "بسته‌شده" : "Closed" },
     { id: "all", label: fa ? "همه" : "All" },
   ];
+  const isReviewPending = (request: ExchangeRequest) => {
+    if (isRequestTerminal(request.status)) return false;
+    const journey = getRequestJourney(request);
+    if (!journey.approved) return true;
+    return journey.fundsReceived && (journey.customerActionRequired || ["under_review", "action_required"].includes(request.status));
+  };
+  const isFundingPending = (request: ExchangeRequest) => {
+    const journey = getRequestJourney(request);
+    return journey.receiptSubmitted && !journey.fundsReceived && !isRequestTerminal(request.status);
+  };
+  const isReadyForCompletion = (request: ExchangeRequest) => {
+    const journey = getRequestJourney(request);
+    return journey.readyForSettlement || ["processing", "reconciliation"].includes(request.status);
+  };
   const matchesFilter = (request: ExchangeRequest, value: string) => value === "all"
     || (value === "active" && !isRequestTerminal(request.status))
     || (value === "closed" && isRequestTerminal(request.status))
-    || (value === "review" && (!getRequestJourney(request).approved || (getRequestJourney(request).fundsReceived && (getRequestJourney(request).customerActionRequired || ["under_review", "action_required"].includes(request.status)))) && !isRequestTerminal(request.status))
-    || (value === "funding" && getRequestJourney(request).receiptSubmitted && !getRequestJourney(request).fundsReceived && !isRequestTerminal(request.status))
-    || (value === "ready" && (getRequestJourney(request).readyForSettlement || ["processing", "reconciliation"].includes(request.status)));
+    || (value === "review" && isReviewPending(request))
+    || (value === "funding" && isFundingPending(request))
+    || (value === "ready" && isReadyForCompletion(request));
   const nextAction = (request: ExchangeRequest) => {
     const journey = getRequestJourney(request);
     if (request.funding_status === "refund_pending" || request.priority_fee_status === "refund_pending") return "Confirm refund";
@@ -74,23 +96,22 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
         <button type="button" className={`${styles.secondary} ${!admin ? workspace.customerSecondary : ""}`} onClick={() => void refresh()} disabled={refreshing}>{admin && <RefreshCw size={16} />}{refreshing ? (fa ? "در حال به‌روزرسانی…" : "Refreshing…") : (fa ? "به‌روزرسانی" : "Refresh")}</button>
       </div>
     </header>
-    {admin && <RequestSettingsForm />}
     <div className={workspace.queueToolbar}>
       <div className={workspace.filters} role="group" aria-label={fa ? "فیلتر درخواست‌ها" : "Filter requests"}>
-        {filters.map(item => <button key={item.id} type="button" className={workspace.filter} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}<span>{requests.filter(request => matchesFilter(request, item.id)).length}</span></button>)}
+        {filters.map(item => { const count = requests.filter(request => matchesFilter(request, item.id)).length; return <button key={item.id} type="button" className={workspace.filter} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}<span aria-label={`${item.label}: ${count} ${fa ? "درخواست" : "requests"}`}>{count}</span></button>; })}
       </div>
       <label className={workspace.search}><Search size={16} aria-hidden="true" /><span className={styles.srOnly}>{fa ? "جستجوی درخواست" : "Search requests"}</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder={admin ? "Code or customer" : (fa ? "کد تراکنش" : "Transaction code")} /></label>
     </div>
-    {error && <p className={styles.error} role="alert">{requestError(error, locale)}</p>}
+    {error && <p className={styles.error} role="alert">{requestError(error, locale)} <button type="button" className={styles.secondary} onClick={() => void refresh()} disabled={refreshing}>{fa ? "تلاش دوباره" : "Retry"}</button></p>}
     {loading ? <p className={styles.loading} role="status">{fa ? "در حال بارگذاری…" : "Loading…"}</p> : admin ? <div className={`${styles.tableWrap} ${workspace.queueTable}`} role="region" aria-label="Request queue" tabIndex={0}>
       <table className={styles.table}><thead><tr><th>Request</th><th>Transfer</th><th>Progress</th><th>Next step</th><th>Due</th><th><span className={styles.srOnly}>Open request</span></th></tr></thead><tbody>
         {visible.map(request => <tr key={request.id}>
-          <td><Link href={`/admin/requests/${request.id}`}><bdi className={styles.reference}>{request.reference_code}</bdi></Link><span className={workspace.cellDetail}>{request.quote.sender_snapshot.name}</span></td>
+          <td><Link href={`/admin/transactions/requests/${request.id}`}><bdi className={styles.reference}>{request.reference_code}</bdi></Link><span className={workspace.cellDetail}>{request.quote.sender_snapshot.name}</span></td>
           <td><strong>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</strong><span className={workspace.cellDetail}>→ {requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</span>{request.service_tier === "priority" && <span className={`${styles.badge} ${styles.priority}`}>Priority</span>}</td>
           <td><span className={`${styles.badge} ${request.status === "completed" ? styles.success : ""}`}>{requestStageLabel(request, locale)}</span>{request.funding_status === "partial" && <span className={workspace.cellDetail}>{requestMoney(request.funding_received, request.quote.funding_currency, locale)} received</span>}</td>
           <td>{nextAction(request)}</td>
           <td><span dir="ltr">{request.handling_due_at && !isRequestTerminal(request.status) ? requestDate(request.handling_due_at, locale) : "—"}</span></td>
-          <td><Link className={workspace.openRequest} href={`/admin/requests/${request.id}`} aria-label={`Open ${request.reference_code}`}>Open <ArrowRight size={14} /></Link></td>
+          <td><Link className={workspace.openRequest} href={`/admin/transactions/requests/${request.id}`} aria-label={`Open ${request.reference_code}`}>Open <ArrowRight size={14} /></Link></td>
         </tr>)}
       </tbody></table>{!visible.length && !error && <p className={styles.empty}>No requests in this view.</p>}
     </div> : <div className={styles.list}>

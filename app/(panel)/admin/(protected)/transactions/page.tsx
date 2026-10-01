@@ -4,8 +4,8 @@ import {
   getPendingTransactionsWithDetails,
   getTransactionHistoryWithDetails,
   getTransactionHistoryStatusCounts,
+  getActiveBankAccountsForAdmin,
 } from "@/app/actions/admin.actions";
-import { createClient } from "@supabase/supabase-js";
 import {
   TransactionsManager,
   type BankAccountOption,
@@ -22,6 +22,8 @@ export default async function TransactionsPage({
 }: {
   searchParams: Promise<{
     page?: string;
+    view?: string;
+    q?: string;
     pageSize?: string;
     status?: string;
     direction?: string;
@@ -30,6 +32,8 @@ export default async function TransactionsPage({
   }>;
 }) {
   const params = await searchParams;
+  const view = params.view === "history" || (params.view !== "active" && (params.status || params.page || params.direction || params.start || params.end || params.q)) ? "history" : "active";
+  const search = params.q?.slice(0, 64) ?? "";
   const currentPage = parseAdminPage(params.page);
   const pageSize = parseAdminPageSize(params.pageSize);
   const normalizedStatus = (params.status ?? "all").toLowerCase();
@@ -45,31 +49,31 @@ export default async function TransactionsPage({
   const startDate = params.start && datePattern.test(params.start) ? params.start : "";
   const endDate = params.end && datePattern.test(params.end) ? params.end : "";
 
-  // تعریف کلاینت دیتابیس برای خواندن حساب‌های بانکی
-  const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-
-  // اجرای موازی و سریع ۳ کوئری دیتابیس
-  const [pending, { data: history, total }, statusCounts, { data: bankAccounts }] = await Promise.all([
+  const [pending, { data: history, total }, statusCounts, bankAccounts] = await Promise.all([
     getPendingTransactionsWithDetails(),
     getTransactionHistoryWithDetails(currentPage, pageSize, {
       status: historyStatus,
       direction: historyDirection,
       startDate,
       endDate,
+      search,
     }),
     getTransactionHistoryStatusCounts(),
-    db.from("bank_accounts").select("*").eq("is_active", true)
+    getActiveBankAccountsForAdmin(),
   ]);
 
   const statusTabs: Array<{ key: HistoryStatusFilter; label: string; count: number }> = [
     { key: "all", label: "All", count: statusCounts.all },
-    { key: "approved", label: "Approved", count: statusCounts.approved },
+    { key: "approved", label: "Completed / approved", count: statusCounts.approved },
     { key: "rejected", label: "Rejected", count: statusCounts.rejected },
     { key: "archived", label: "Archived", count: statusCounts.archived },
   ];
 
   return (
     <TransactionsManager
+      key={`${view}-${currentPage}-${pageSize}-${historyStatus}-${historyDirection}-${startDate}-${endDate}-${search}`}
+      view={view}
+      search={search}
       pending={pending as TransactionRow[]}
       history={history as TransactionRow[]}
       total={total}

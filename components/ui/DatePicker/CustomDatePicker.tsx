@@ -175,6 +175,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
               <SelectBox 
                 variant="ghost"
                 placeholder="Month"
+                className={s.calendarSelect}
                 dir="ltr"
                 labeledOptions={monthOptions}
                 value={currentMonth.toString()}
@@ -183,6 +184,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
               <SelectBox 
                 variant="ghost"
                 placeholder="Year"
+                className={s.calendarSelect}
                 dir="ltr"
                 options={yearOptions}
                 value={currentYear.toString()}

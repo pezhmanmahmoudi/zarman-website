@@ -1,6 +1,7 @@
 "use client";
 
-import type { ComponentProps, HTMLAttributes, ReactNode } from "react";
+import { useState, type ComponentProps, type HTMLAttributes, type ReactNode } from "react";
+import { DashboardLottieReplay } from "./DashboardLottieReplay";
 import { motion, useReducedMotion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,22 +12,39 @@ import { dashboardPalette, type DashboardTone } from "@/lib/dashboard/palette";
 
 /** Shared customer surfaces. Use the same hierarchy from onboarding to settlement. */
 export function DashboardCard({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <Card data-dashboard-card className={cn("min-w-0 gap-0 rounded-3xl border border-white/90 bg-white/65 p-6 text-[#242137] shadow-[0_12px_40px_-24px_#796a9d40,inset_0_1px_0_#ffffff] ring-1 ring-[#dcd6ec]/40 backdrop-blur-xl sm:p-7", className)} {...props}>{children}</Card>;
+  return <Card data-dashboard-card className={cn("min-w-0 gap-0 rounded-3xl border border-[#eae8f2] bg-white p-6 text-[#242137] shadow-[0_1px_2px_#1a1a2e08,0_10px_28px_-20px_#1a1a2e26] sm:p-7", className)} {...props}>{children}</Card>;
 }
 
-export function DashboardMagicCard({ tone = "violet", motionEnabled, contentClassName, className, style, children, ...props }: HTMLAttributes<HTMLDivElement> & { tone?: DashboardTone; motionEnabled?: boolean; contentClassName?: string }) {
+/** Hover depth for clickable cards, without moving them; `!` beats the card's inline resting shadow. */
+export const dashboardCardHover = "transition-shadow duration-300 ease-[cubic-bezier(.22,1,.36,1)] hover:shadow-[0_2px_6px_#1a1a2e0a,0_22px_44px_-28px_#1a1a2e52]! motion-reduce:transition-none";
+
+/** Text-link action inside a card (Transaction details, Send money). */
+export const dashboardCardLink = "inline-flex min-h-10 items-center gap-1 rounded-lg text-sm font-semibold text-[#4f46c8] no-underline outline-none transition-colors duration-150 hover:text-[#3730a3] focus-visible:ring-2 focus-visible:ring-[#635bff]/40 motion-reduce:transition-none";
+
+export function DashboardMagicCard({ tone = "violet", motionEnabled, pointerEffect = true, contentClassName, className, style, children, replayLottieOnHover = false, onPointerEnter, ...props }: HTMLAttributes<HTMLDivElement> & { tone?: DashboardTone; motionEnabled?: boolean; pointerEffect?: boolean; contentClassName?: string; replayLottieOnHover?: boolean }) {
   const enabled = useDashboardMotion();
+  const reduced = useReducedMotion();
+  const [replay, setReplay] = useState(0);
   const colors = dashboardPalette[tone];
-  return <MagicCard {...props} data-dashboard-card data-card-tone={tone} motionEnabled={(motionEnabled ?? true) && enabled}
+  return <MagicCard {...props} data-dashboard-card data-card-tone={tone} motionEnabled={pointerEffect && enabled && motionEnabled !== false && reduced === false}
+    mode="gradient" gradientSize={260} gradientOpacity={.20} edgeOpacity={.10}
     gradientColor={colors.glow} gradientFrom={colors.accent} gradientTo={colors.glow}
-    className={cn("min-w-0 rounded-3xl text-[#242137] backdrop-blur-xl", className)} contentClassName={cn("p-6 sm:p-7", contentClassName)}
-    style={{ background: `linear-gradient(135deg, #ffffffc9 12%, ${colors.soft}b8 100%)`, borderColor: `${colors.border}85`, boxShadow: `0 16px 48px -28px ${colors.accent}35, inset 0 1px 0 #ffffff`, ...style }}>{children}</MagicCard>;
+    onPointerEnter={event => {
+      if (replayLottieOnHover && enabled && motionEnabled !== false && reduced === false && event.pointerType === "mouse") setReplay(value => value + 1);
+      onPointerEnter?.(event);
+    }}
+    className={cn("min-w-0 rounded-3xl text-[#242137]", className)} contentClassName={cn("p-6 sm:p-7", contentClassName)}
+    style={{ background: `linear-gradient(160deg, #ffffff 22%, ${colors.soft} 100%)`, borderColor: colors.border, boxShadow: `0 1px 2px #1a1a2e08, 0 10px 28px -22px ${colors.accent}2e`, ...style }}><DashboardLottieReplay.Provider value={replay}>{children}</DashboardLottieReplay.Provider></MagicCard>;
 }
 
 export function DashboardButton({ tone = "primary", className, ...props }: ComponentProps<typeof Button> & { tone?: "primary" | "secondary" | "quiet" }) {
   return <Button data-dashboard-button className={cn(
-    "h-auto min-h-12 gap-2 rounded-full px-6 py-3 text-sm font-semibold leading-5 whitespace-normal shadow-none transition-[background-color,color,border-color,box-shadow] duration-150 active:translate-y-0! focus-visible:ring-[#635bff]/25 motion-reduce:transition-none",
-    tone === "primary" ? "border-white/20 bg-[#7048ca] bg-linear-to-b from-white/10 to-transparent text-white shadow-[0_6px_20px_-8px_#7048ca70,inset_0_1px_0_#ffffff30] hover:bg-[#633bbf]" : tone === "secondary" ? "border-white/80 bg-white/65 text-[#4f3980] shadow-[0_3px_14px_-8px_#796a9d40] hover:bg-white/90" : "border-transparent bg-transparent text-[#655381] hover:bg-[#f2ebfc] hover:text-[#49318b]",
+    "h-auto min-h-11 gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold leading-5 whitespace-normal shadow-none transition-[background-color,color,border-color,box-shadow] duration-150 ease-out focus-visible:ring-[#635bff]/30 motion-reduce:transition-none",
+    tone === "primary"
+      ? "border border-transparent bg-[#635bff] text-white shadow-[0_1px_2px_#1a1a2e0d,0_1px_3px_#1a1a2e1a] hover:bg-[#584fef] hover:shadow-[0_1px_2px_#1a1a2e0d,0_6px_16px_-4px_#4338ca4d] active:bg-[#4c44d1]"
+      : tone === "secondary"
+      ? "border border-[#e2e6ec] bg-white text-[#32363f] shadow-[0_1px_2px_#1a1a2e0a] hover:border-[#c8cdd8] hover:bg-[#fafbfc] active:bg-[#f3f4f6]"
+      : "border border-transparent bg-transparent text-[#586270] hover:bg-[#f1f3f6] hover:text-[#182027] active:bg-[#e9ecf0]",
     className,
   )} {...props}/>;
 }
@@ -50,4 +68,4 @@ export function StatusBadge({ tone = "neutral", children, className }: { tone?: 
   return <span data-status-tone={tone} className={cn("inline-flex w-fit max-w-full items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium leading-5", tones[tone], className)}>{children}</span>;
 }
 
-export const dashboardInputClass = "min-h-12 w-full min-w-0 rounded-2xl border border-[#e2e6ec] bg-white px-4 py-3 text-base text-[#182027] outline-none transition-[border-color,box-shadow] placeholder:text-[#8a919c] focus:border-[#635bff] focus:ring-4 focus:ring-[#635bff]/10 read-only:bg-[#f7f8fa] disabled:opacity-60 aria-invalid:border-rose-400 aria-invalid:bg-rose-50/40";
+export const dashboardInputClass = "min-h-12 w-full min-w-0 rounded-2xl border border-[#e2e6ec] bg-white px-4 py-3 text-base text-[#182027] outline-none transition-[border-color,box-shadow] placeholder:text-[#8a919c] focus:border-[#8970b6] focus:ring-2 focus:ring-[#7667bd]/10 read-only:bg-[#f7f8fa] disabled:opacity-60 aria-invalid:border-rose-400 aria-invalid:bg-rose-50/40";

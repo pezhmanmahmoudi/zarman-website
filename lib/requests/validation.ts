@@ -2,7 +2,7 @@ import type { FundingBankDetails, PublicRequestSettings, QuoteInput, RequestMess
 
 export const DEFAULT_REQUEST_SETTINGS: RequestSettings = {
   enabled: false, priority_enabled: false, priority_fee_aud: 0, priority_capacity: 0,
-  standard_minutes: 240, priority_minutes: 30, quote_minutes: 10, funding_minutes: 120,
+  standard_minutes: 240, priority_minutes: 30, quote_minutes: 60, funding_minutes: 120,
   australian_clearance_minutes: 1440,
   iran_banking_notice: "Iranian payouts follow SATNA/PAYA banking cycles, bank operating hours and holidays. Processing is not confirmation of settlement.",
   iran_banking_notice_fa: "واریز تومان تابع چرخه‌های ساتنا و پایا، ساعات کاری و تعطیلات بانک است.",
@@ -48,7 +48,8 @@ export function quoteInputError(input: QuoteInput, settings: RequestSettings): s
   if (!boundedText(input.sourceOfFunds, 200) || !boundedText(input.reasonForTransfer, 200)) return "Confirm your source of funds and reason for transfer.";
   if (input.promoCode != null && (typeof input.promoCode !== "string" || !/^[a-zA-Z0-9_-]{0,50}$/.test(input.promoCode.trim()))) return "Enter a valid promotion code.";
   if (input.recipientId === "__edu_exam__") {
-    if (!boundedText(input.institutionName, 200) || !boundedText(input.invoiceReference, 200)) return "Enter the institution name and invoice or student reference.";
+    if (!boundedText(input.institutionName, 200)) return "Enter the institution name.";
+    if (input.invoiceReference != null && input.invoiceReference !== "" && !boundedText(input.invoiceReference, 200)) return "Invalid invoice reference.";
     try {
       const url = new URL(input.paymentLink || "");
       if (url.protocol !== "https:" || url.username || url.password || url.href.length > 2000) return "Enter a valid HTTPS institution payment link.";
@@ -67,7 +68,7 @@ export function settingsInputError(input: RequestSettings): string | null {
   if (input.closing_hour <= input.opening_hour || input.timezone !== "Australia/Sydney") return "Choose valid Sydney business hours.";
   if (!isMoney(input.max_amount_aud, 1_000_000) || input.max_amount_aud < 1) return "Choose a maximum AUD amount between 1 and 1,000,000.";
   if (typeof input.priority_fee_aud !== "number" || (input.priority_fee_aud !== 0 && !isMoney(input.priority_fee_aud, 1_000))) return "Enter a valid priority fee up to AUD 1,000.";
-  if (!boundedText(input.iran_banking_notice, 2000) || !boundedText(input.iran_banking_notice_fa, 2000)) return "Enter banking notices in both languages, up to 2,000 characters.";
+  if (!boundedText(input.iran_banking_notice, 2000, false) || !boundedText(input.iran_banking_notice_fa, 2000, false)) return "Banking notices must be plain text, up to 2,000 characters each.";
   if (!Array.isArray(input.business_days) || !input.business_days.length || input.business_days.length > 7
       || new Set(input.business_days).size !== input.business_days.length || input.business_days.some(day => !Number.isInteger(day) || day < 0 || day > 6)) return "Choose at least one business day.";
   if (!Array.isArray(input.holidays) || input.holidays.length > 366 || input.holidays.some(day => {
@@ -106,12 +107,17 @@ export function mutationInputError(input: RequestMutationInput, admin: boolean):
   if (typeof payload !== "object" || Array.isArray(payload)) return "Invalid action details.";
   if (["request_info", "respond", "record_uncertain_payout", "reject"].includes(input.action) && !boundedText(payload.message, 2000)) return "Enter the reason or requested information.";
   if (payload.message !== undefined && !boundedText(payload.message, 2000, false)) return "Your message must be at most 2,000 characters.";
-  if (["confirm_funds", "payment_evidence"].includes(input.action) && !boundedText(payload.payment_reference, 200)) return "Enter the payment reference.";
+  if (input.action === "payment_evidence" && !boundedText(payload.payment_reference, 200)) return "Enter the payment reference.";
+  // Admin references are optional; the server records a generated reference when omitted.
+  if (["confirm_funds", "complete", "reconcile_complete"].includes(input.action)
+      && [payload.payment_reference, payload.settlement_reference].some(value => value !== undefined && !boundedText(value, 200, false))) return "References must be plain text, up to 200 characters.";
+  if (payload.accounting_rate !== undefined && (input.action !== "confirm_funds" || !isMoney(payload.accounting_rate, 100_000_000))) return "Enter a valid exchange rate.";
+  if (payload.accounting_fee_aud !== undefined && (input.action !== "confirm_funds" || !(payload.accounting_fee_aud === 0 || isMoney(payload.accounting_fee_aud, 100_000)))) return "Enter a valid fee in AUD.";
   if (input.action === "confirm_funds" && (!isMoney(payload.received_amount) || !["AUD", "IRT"].includes(payload.received_currency || "")
       || (payload.received_currency === "IRT" && !Number.isInteger(payload.received_amount)))) return "Enter the reconciled amount and currency (whole Toman).";
   if (input.action === "confirm_funds" && !isUuid(payload.receiver_account_id)) return "Choose the account where the cleared funds were received.";
-  if (["complete", "reconcile_complete"].includes(input.action) && (!boundedText(payload.settlement_reference, 200) || !isUuid(payload.payer_account_id)
-      || !isUuid(payload.receiver_account_id) || payload.payer_account_id === payload.receiver_account_id)) return "Enter the settlement reference and distinct payer and receiver accounts.";
+  if (["complete", "reconcile_complete"].includes(input.action) && (!isUuid(payload.payer_account_id)
+      || !isUuid(payload.receiver_account_id) || payload.payer_account_id === payload.receiver_account_id)) return "Choose distinct payout and collection accounts.";
   if (payload.transfer_method && !["free", "pol", "paya", "satna"].includes(payload.transfer_method)) return "Choose a valid bank transfer method.";
   if (input.action === "confirm_refund" && (!boundedText(payload.refund_reference, 200) || !["priority", "principal"].includes(payload.refund_kind || ""))) return "Enter the refund reference and refund kind.";
   if (input.action === "confirm_refund" && !isUuid(payload.payer_account_id)) return "Choose the account used to return the refund.";

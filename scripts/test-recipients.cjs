@@ -31,7 +31,7 @@ function deferred() {
 }
 
 const aud = {
-  direction: "aud", label: "Taylor", bank_name: "Test Australia Bank", account_name: "Taylor",
+  direction: "aud", label: "Taylor", bank_name: "Test Australia Bank", bank_city: "Sydney", account_name: "Taylor",
   bsb: "000123", account_number: "00012345", residential_address: "1 Test Street", residential_city: "Sydney",
   residential_state: "NSW", residential_postcode: "2000", residential_country: "Australia",
   recipient_email: "taylor@example.com", recipient_phone: "0412345678",
@@ -43,29 +43,68 @@ const irt = {
 };
 const stored = (id, details = aud) => ({ ...details, id, user_id: "owner-a" });
 
-function directoryHarness({ locale = "en", getRecipients = async () => ({ data: [] }) } = {}) {
+test("overview recipient preview keeps at most two names and never exposes bank numbers", async () => {
+  const h = dashboardHarness({ mocks: {
+    "@/app/actions/transaction.actions": { getRecentRecipients: async () => ({ data: [stored("a", { ...aud, account_name: "Newest" }), stored("b", { ...irt, full_name: "Next" }), stored("c", { ...aud, account_name: "Oldest" })] }) },
+  } });
+  const { DashboardOverviewRecipients } = h.load("components/dashboard/DashboardOverviewRecipients.tsx");
+  const props = { locale: "en", ownerId: "owner-a", motionEnabled: false };
+  h.render(DashboardOverviewRecipients, props); h.effects(); await tick();
+  const html = markup(h.render(DashboardOverviewRecipients, props));
+  assert.match(html, /Newest/); assert.match(html, /Next/);
+  assert.doesNotMatch(html, /Oldest|00012345|IR820540102680020817909002/);
+  assert.match(html, /href="\/en\/dashboard\?tab=recipients"/);
+  assert.match(html, /requestDirection=buy_aud&amp;recipient=a/);
+  assert.match(html, /requestDirection=sell_aud&amp;recipient=b/);
+  assert.equal((html.match(/Send money/g) || []).length, 2);
+  assert.match(html, /data-lottie-scene="recipient-avatar"/);
+});
+
+test("empty and single-recipient previews never add placeholder fields", async () => {
+  for (const rows of [[], [stored("one")]]) {
+    const h = dashboardHarness({ mocks: { "@/app/actions/transaction.actions": { getRecentRecipients: async () => ({ data: rows }) } } });
+    const { DashboardOverviewRecipients } = h.load("components/dashboard/DashboardOverviewRecipients.tsx");
+    const props = { locale: "fa", ownerId: "owner-a", motionEnabled: false };
+    h.render(DashboardOverviewRecipients, props); h.effects(); await tick();
+    const html = markup(h.render(DashboardOverviewRecipients, props));
+    assert.equal((html.match(/data-recipient-id=/g) || []).length, rows.length);
+    assert.doesNotMatch(html, /h-14 rounded-2xl/);
+    if (!rows.length) assert.match(html, /هنوز گیرنده‌ای/);
+    h.cleanup();
+  }
+});
+
+const page = (rows, extra = {}) => ({ success: true, data: rows, total: rows.length, page: 1, counts: {
+  all: rows.length, aud: rows.filter(row => row.direction === "aud").length, irt: rows.filter(row => row.direction === "irt").length,
+}, ...extra });
+
+function directoryHarness({ locale = "en", getRecipientPage = async () => page([]) } = {}) {
   let profile = { id: "owner-a" };
+  const calls = [], timers = [];
+  const previousWindow = global.window;
+  global.window = { setTimeout: fn => timers.push(fn), clearTimeout() {} };
   const RecipientModal = () => null;
-  const MotionDiv = ({ children, initial, animate, transition, ...props }) => {
-    void initial; void animate; void transition;
-    return React.createElement("div", props, children);
-  };
   const harness = dashboardHarness({ locale, mocks: {
     "./DashboardShell": { useDashboard: () => ({ profile, motionEnabled: false }) },
     "./RecipientModal": { RecipientModal },
-    "@/app/actions/transaction.actions": { getRecipients },
-    "framer-motion": { useReducedMotion: () => true, motion: { div: MotionDiv, span: require("framer-motion").motion.span } },
+    "@/app/actions/transaction.actions": {
+      getRecipientPage: input => { calls.push(input); return getRecipientPage(input); },
+      deleteRecipient: async () => ({ success: true }),
+    },
   } });
   const { DashboardRecipients } = harness.load("components/dashboard/DashboardRecipients.tsx");
+  const cleanup = harness.cleanup;
+  harness.cleanup = () => { cleanup(); global.window = previousWindow; };
   const render = () => harness.render(DashboardRecipients);
   const cards = () => elements(render(), element => element.props["data-recipient-id"] !== undefined);
   const button = label => elements(render(), element => typeof element.props.onClick === "function" && textOf(element) === label)[0];
-  const country = value => elements(render(), element => element.props["data-recipient-country"] === value)[0];
-  const search = value => elements(render(), element => element.type === "input" && element.props.type === "search")[0].props.onChange({ target: { value } });
-  return { harness, render, cards, button, country, search, RecipientModal,
+  const country = value => elements(render(), element => element.props.dataKey === "data-recipient-country")[0].props.onChange(value);
+  const search = value => elements(render(), element => typeof element.props.onChange === "function" && element.props.clearLabel !== undefined)[0].props.onChange(value);
+  return { harness, render, cards, button, country, search, RecipientModal, calls,
     owner(id) { profile = { id }; },
     modal() { return elements(render(), element => element.type === RecipientModal)[0]; },
-    async load() { render(); harness.effects(); await tick(); },
+    // Runs queued effects and the search debounce until the directory request settles.
+    async load() { for (let round = 0; round < 3; round++) { render(); harness.effects(); timers.splice(0).forEach(fn => fn()); await tick(); } },
   };
 }
 
@@ -118,11 +157,11 @@ test("Iranian bank city remains independent of residential city with its own len
   const { normalizeRecipientInput: normalize } = dashboardHarness().load("lib/dashboard/recipient-input.ts");
   const result = normalize({ ...irt, bank_city: " Tehran ", irt_city: " Shiraz " });
   assert.equal(result.data.bank_city, "Tehran"); assert.equal(result.data.irt_city, "Shiraz");
-  assert.equal(normalize({ ...irt, bank_city: " " }).data.bank_city, null);
+  assert.equal(normalize({ ...irt, bank_city: " " }).fieldErrors.bank_city, "This field is required.");
   assert.equal(normalize({ ...irt, bank_city: "x".repeat(120) }).error, undefined);
   const tooLong = normalize({ ...irt, bank_city: "x".repeat(121) });
   assert.equal(tooLong.fieldErrors.bank_city, "Bank branch city must be 120 characters or fewer.");
-  assert.equal(normalize({ ...aud, bank_city: "Tehran" }).data.bank_city, undefined);
+  assert.equal(normalize({ ...aud, bank_city: "" }).fieldErrors.bank_city, "This field is required.");
 });
 
 test("recipient create action forwards field errors without writing invalid input or exposing database errors", async () => {
@@ -144,11 +183,11 @@ test("recipient create action forwards field errors without writing invalid inpu
 
 test("directory distinguishes loading from zero recipients in both languages", async () => {
   for (const locale of ["en", "fa"]) {
-    const request = deferred(), h = directoryHarness({ locale, getRecipients: () => request.promise });
+    const request = deferred(), h = directoryHarness({ locale, getRecipientPage: () => request.promise });
     let html = markup(h.render());
     assert.match(html, /role="status"/); assert.equal(h.cards().length, 0);
     assert.doesNotMatch(html, /Your recipients will live here|گیرندگان شما اینجا نمایش داده می‌شوند/);
-    h.harness.effects(); request.resolve({ data: [] }); await tick();
+    h.harness.effects(); request.resolve(page([])); await tick();
     html = markup(h.render());
     assert.match(html, locale === "fa" ? /dir="rtl"/ : /dir="ltr"/);
     assert.match(html, locale === "fa" ? /افزودن اولین گیرنده/ : /Add your first recipient/);
@@ -160,7 +199,7 @@ test("directory distinguishes loading from zero recipients in both languages", a
 test("a single recipient card masks account details and retains the correct transfer direction", async () => {
   for (const locale of ["en", "fa"]) {
     const row = stored("iran-account", { ...irt, full_name: "<script>Alex</script>" });
-    const h = directoryHarness({ locale, getRecipients: async () => ({ data: [row] }) });
+    const h = directoryHarness({ locale, getRecipientPage: async () => page([row]) });
     await h.load();
     const html = markup(h.render());
     assert.equal(h.cards().length, 1); assert.match(html, /&lt;script&gt;Alex&lt;\/script&gt;/);
@@ -171,28 +210,36 @@ test("a single recipient card masks account details and retains the correct tran
   }
 });
 
-test("many recipient cards filter by country and normalized name or bank without altering source records", async () => {
-  const rows = Array.from({ length: 24 }, (_, index) => stored(`recipient-${index}`, index % 2 ? { ...irt, full_name: `Person ${index}` } : { ...aud, account_name: `Person ${index}` }));
-  rows[1] = stored("persian-name", { ...irt, full_name: "کیمیا", bank_name: "بانک کیان" });
-  const h = directoryHarness({ getRecipients: async () => ({ data: rows }) });
-  await h.load(); assert.equal(h.cards().length, 24);
-  h.country("aud").props.onClick(); assert.equal(h.cards().length, 12);
-  assert.ok(h.cards().every(card => Number(card.props["data-recipient-id"].split("-")[1]) % 2 === 0));
-  h.country("irt").props.onClick(); assert.equal(h.cards().length, 12);
-  h.search("كيميا"); assert.deepEqual(h.cards().map(card => card.props["data-recipient-id"]), ["persian-name"]);
-  h.search("بانك كيان"); assert.equal(h.cards().length, 1);
-  h.search("unknown"); assert.equal(h.cards().length, 0); assert.match(markup(h.render()), /No matching recipients/);
-  h.button("Reset filters").props.onClick(); assert.equal(h.cards().length, 24);
-  h.search("TEST AUSTRALIA BANK"); assert.equal(h.cards().length, 12);
-  assert.equal(rows.length, 24); assert.equal(rows[1].full_name, "کیمیا");
+test("country filters and debounced search are sent to the paged directory and render only server results", async () => {
+  const rows = Array.from({ length: 6 }, (_, index) => stored(`recipient-${index}`, index % 2 ? { ...irt, full_name: `Person ${index}` } : { ...aud, account_name: `Person ${index}` }));
+  const h = directoryHarness({ getRecipientPage: async ({ direction, search }) => {
+    const matches = rows.filter(row => (direction === "all" || row.direction === direction) && (!search || (row.account_name || row.full_name).includes(search)));
+    return page(matches, { counts: { all: 6, aud: 3, irt: 3 } });
+  } });
+  await h.load(); assert.equal(h.cards().length, 6);
+  assert.deepEqual(h.calls.at(-1), { direction: "all", search: "", page: 1 });
+  h.country("aud"); await h.load();
+  assert.deepEqual(h.calls.at(-1), { direction: "aud", search: "", page: 1 });
+  assert.deepEqual(h.cards().map(card => card.props["data-recipient-id"]), ["recipient-0", "recipient-2", "recipient-4"]);
+  const calls = h.calls.length;
+  h.search("Person 2");
+  assert.equal(h.calls.length, calls);
+  await h.load();
+  assert.deepEqual(h.calls.at(-1), { direction: "aud", search: "Person 2", page: 1 });
+  assert.deepEqual(h.cards().map(card => card.props["data-recipient-id"]), ["recipient-2"]);
+  h.search("unknown"); await h.load();
+  assert.equal(h.cards().length, 0); assert.match(markup(h.render()), /No Recipients Found/);
+  h.search(""); h.country("irt"); await h.load();
+  assert.deepEqual(h.cards().map(card => card.props["data-recipient-id"]), ["recipient-1", "recipient-3", "recipient-5"]);
+  assert.equal(rows.length, 6);
   h.harness.cleanup();
 });
 
 test("directory network failures provide a retry without presenting a false empty address book", async () => {
   let attempts = 0;
-  const h = directoryHarness({ getRecipients: async () => {
+  const h = directoryHarness({ getRecipientPage: async () => {
     if (++attempts === 1) throw Error("private transport detail");
-    return { data: [stored("recovered")] };
+    return page([stored("recovered")]);
   } });
   await h.load();
   let html = markup(h.render());
@@ -204,30 +251,35 @@ test("directory network failures provide a retry without presenting a false empt
   h.harness.cleanup();
 });
 
-test("a newly saved recipient survives a stale directory response and is not duplicated", async () => {
-  const request = deferred(), h = directoryHarness({ getRecipients: () => request.promise });
+test("a newly saved recipient refetches the directory, ignores the stale response and is selected once", async () => {
+  const reads = [deferred(), deferred()]; let calls = 0;
+  const h = directoryHarness({ getRecipientPage: () => reads[calls++].promise });
   h.render(); h.harness.effects();
   h.button("Add recipient").props.onClick();
   const callback = h.modal().props.onCreated, saved = stored("new-recipient");
-  callback(saved); callback(saved);
-  assert.equal(h.cards().length, 1); assert.equal(h.cards()[0].props["data-selected"], true);
-  request.resolve({ data: [stored("stale")] }); await tick();
-  assert.deepEqual(h.cards().map(card => card.props["data-recipient-id"]), ["new-recipient"]);
+  callback(saved);
+  h.render(); h.harness.effects();
+  assert.equal(calls, 2);
+  reads[0].resolve(page([stored("stale")])); await tick();
+  assert.equal(h.cards().length, 0);
+  reads[1].resolve(page([saved, stored("older")])); await tick();
+  assert.deepEqual(h.cards().map(card => card.props["data-recipient-id"]), ["new-recipient", "older"]);
+  assert.equal(h.cards()[0].props["data-selected"], true);
   assert.match(markup(h.render()), /Recipient saved/);
   h.harness.cleanup();
 });
 
 test("account changes hide previous records immediately and ignore old reads and save callbacks", async () => {
   const reads = [deferred(), deferred()]; let calls = 0;
-  const h = directoryHarness({ getRecipients: () => reads[calls++].promise });
+  const h = directoryHarness({ getRecipientPage: () => reads[calls++].promise });
   h.render(); h.harness.effects(); h.button("Add recipient").props.onClick();
   const staleSave = h.modal().props.onCreated;
   h.owner("owner-b");
   assert.equal(h.modal(), undefined); assert.equal(h.cards().length, 0);
   assert.match(markup(h.render()), /Loading your recipients/);
   h.harness.effects();
-  reads[1].resolve({ data: [{ ...stored("owner-b-account"), user_id: "owner-b" }] }); await tick();
-  reads[0].resolve({ data: [stored("owner-a-account")] }); staleSave(stored("late-save")); await tick();
+  reads[1].resolve(page([{ ...stored("owner-b-account"), user_id: "owner-b" }])); await tick();
+  reads[0].resolve(page([stored("owner-a-account")])); staleSave(stored("late-save")); await tick();
   assert.deepEqual(h.cards().map(card => card.props["data-recipient-id"]), ["owner-b-account"]);
   h.button("Add recipient").props.onClick(); h.modal().props.onCreated(stored("wrong-owner"));
   assert.deepEqual(h.cards().map(card => card.props["data-recipient-id"]), ["owner-b-account"]);
@@ -235,12 +287,12 @@ test("account changes hide previous records immediately and ignore old reads and
 });
 
 test("unmount cancels pending directory reads and blocks late recipient creation callbacks", async () => {
-  const request = deferred(), h = directoryHarness({ getRecipients: () => request.promise });
+  const request = deferred(), h = directoryHarness({ getRecipientPage: () => request.promise });
   h.render(); h.harness.effects(); h.button("Add recipient").props.onClick();
   const lateSave = h.modal().props.onCreated;
   h.harness.cleanup();
   const stateBefore = JSON.stringify(h.harness.values);
-  request.resolve({ data: [stored("late-read")] }); lateSave(stored("late-created")); await tick();
+  request.resolve(page([stored("late-read")])); lateSave(stored("late-created")); await tick();
   assert.equal(JSON.stringify(h.harness.values), stateBefore);
 });
 

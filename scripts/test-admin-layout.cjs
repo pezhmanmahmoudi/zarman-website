@@ -87,6 +87,23 @@ function renderSidebar(pathname, counts = {}) {
   }));
 }
 
+test("the admin route's outermost layout renders a complete document", () => {
+  const routeDirectories = ["app", "app/(panel)", "app/(panel)/admin", "app/(panel)/admin/login"];
+  const rootLayout = routeDirectories.map(directory => `${directory}/layout.tsx`)
+    .find(file => fs.existsSync(path.join(projectRoot, file)));
+  assert.ok(rootLayout, "Admin routes need a root layout");
+  const Layout = compile(rootLayout, {
+    "next/font/google": { Inter: () => ({ variable: "font-en" }) },
+    "@/app/globals.css": {},
+  }).default;
+  const html = renderToStaticMarkup(React.createElement(Layout, null, React.createElement("main", null, "Admin content")));
+  assert.equal((html.match(/<html\b/g) || []).length, 1);
+  assert.equal((html.match(/<body\b/g) || []).length, 1);
+  assert.match(html, /<html[^>]*lang="en"[^>]*dir="ltr"/);
+  assert.match(html, /<body[^>]*class="[^"]*theme/);
+  assert.match(html, /<main>Admin content<\/main>/);
+});
+
 test("dashboard displays the returned queue counts, their total, and useful destinations", async () => {
   const { html, calls } = await renderDashboard({
     pendingKycCount: 3, pendingTxCount: 12, pendingFeedbackCount: 1,
@@ -161,6 +178,62 @@ test("admin errors recover stale deployments with a full document navigation", (
   assert.match(errorSource, /window\.location\.reload\(\)/);
   assert.match(errorSource, /window\.location\.assign\("\/admin\/dashboard"\)/);
   assert.match(configSource, /deploymentId:\s*process\.env\.VERCEL_DEPLOYMENT_ID\s*\?\?\s*process\.env\.VERCEL_GIT_COMMIT_SHA/);
+});
+
+function mountAdminError() {
+  const slots = [];
+  let cursor = 0;
+  const effects = [];
+  const react = {
+    ...React,
+    useState: initial => {
+      const index = cursor++;
+      if (!(index in slots)) slots[index] = typeof initial === "function" ? initial() : initial;
+      return [slots[index], next => { slots[index] = typeof next === "function" ? next(slots[index]) : next; }];
+    },
+    useEffect: fn => { effects.push(fn); },
+  };
+  const AdminError = compile("app/(panel)/admin/(protected)/error.tsx", { react }).default;
+  const fakeError = Object.assign(new Error("Synthetic render failure"), { digest: "test-digest-123" });
+  return {
+    render: () => { cursor = 0; return renderToStaticMarkup(AdminError({ error: fakeError, reset: () => {} })); },
+    runEffects: () => effects.splice(0).forEach(fn => fn()),
+    fakeError,
+  };
+}
+
+test("an admin render error auto-reloads once instead of leaving a stuck error card, then stops looping", () => {
+  const reloadCalls = [];
+  const store = {};
+  const previousWindow = global.window;
+  const previousSessionStorage = global.sessionStorage;
+  global.window = { location: { reload: () => reloadCalls.push(Date.now()), assign: () => {} } };
+  global.sessionStorage = {
+    getItem: key => (key in store ? store[key] : null),
+    setItem: (key, value) => { store[key] = value; },
+  };
+  try {
+    const first = mountAdminError();
+    assert.match(first.render(), /Refreshing…/);
+    const loggedErrors = [];
+    const previousConsoleError = console.error;
+    console.error = (...args) => loggedErrors.push(args);
+    first.runEffects();
+    console.error = previousConsoleError;
+    assert.equal(reloadCalls.length, 1);
+    assert.ok(loggedErrors.some(args => args.includes(first.fakeError)), "the caught error must be logged for diagnosis");
+
+    // A second, independent mount shortly after (the underlying failure is
+    // persistent) must not auto-reload again — it should fall back to the
+    // manual recovery card instead of looping forever.
+    const second = mountAdminError();
+    assert.match(second.render(), /This page couldn.t load/);
+    second.runEffects();
+    assert.equal(reloadCalls.length, 1);
+  } finally {
+    global.window = previousWindow;
+    global.sessionStorage = previousSessionStorage;
+  }
 });
 
 test("admin mutations reload a fresh document instead of refreshing the RSC tree", () => {

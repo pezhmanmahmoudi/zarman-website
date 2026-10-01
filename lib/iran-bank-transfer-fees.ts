@@ -7,6 +7,7 @@ export type IranBankTransferMethodOption = {
   descriptionFA: string;
   maxAmountToman: number | null;
   feeRate: number;
+  feeFloorToman: number;
   feeCapToman: number | null;
 };
 
@@ -18,6 +19,7 @@ export const IRAN_BANK_TRANSFER_METHOD_OPTIONS: IranBankTransferMethodOption[] =
     descriptionFA: "بدون کارمزد",
     maxAmountToman: null,
     feeRate: 0,
+    feeFloorToman: 0,
     feeCapToman: 0,
   },
   {
@@ -27,6 +29,7 @@ export const IRAN_BANK_TRANSFER_METHOD_OPTIONS: IranBankTransferMethodOption[] =
     descriptionFA: "فقط تا ۵۰,۰۰۰,۰۰۰ تومان",
     maxAmountToman: 50_000_000,
     feeRate: 0.0002,
+    feeFloorToman: 800,
     feeCapToman: null,
   },
   {
@@ -36,7 +39,8 @@ export const IRAN_BANK_TRANSFER_METHOD_OPTIONS: IranBankTransferMethodOption[] =
     descriptionFA: "فقط تا ۲۰۰,۰۰۰,۰۰۰ تومان",
     maxAmountToman: 200_000_000,
     feeRate: 0.0001,
-    feeCapToman: 7_500,
+    feeFloorToman: 400,
+    feeCapToman: 12_000,
   },
   {
     value: "satna",
@@ -45,7 +49,8 @@ export const IRAN_BANK_TRANSFER_METHOD_OPTIONS: IranBankTransferMethodOption[] =
     descriptionFA: "بدون سقف مبلغ",
     maxAmountToman: null,
     feeRate: 0.0002,
-    feeCapToman: 35_000,
+    feeFloorToman: 0,
+    feeCapToman: 50_000,
   },
 ];
 
@@ -72,8 +77,8 @@ export function calcIranBankTransferFee(amountToman: number, method: IranBankTra
   if (option.maxAmountToman !== null && amountToman > option.maxAmountToman) return 0;
   if (option.value === "free") return 0;
 
-  const rawFee = Math.round(amountToman * option.feeRate);
-  return option.feeCapToman === null ? rawFee : Math.min(rawFee, option.feeCapToman);
+  const feeWithFloor = Math.max(Math.round(amountToman * option.feeRate), option.feeFloorToman);
+  return option.feeCapToman === null ? feeWithFloor : Math.min(feeWithFloor, option.feeCapToman);
 }
 
 export function formatIranBankTransferFee(amountToman: number, method: IranBankTransferMethod): string {

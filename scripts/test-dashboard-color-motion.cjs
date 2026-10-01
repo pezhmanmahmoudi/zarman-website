@@ -32,7 +32,7 @@ function magicHarness({ reduced = false, enabled = true } = {}) {
   let valueIndex = 0, boundsReads = 0;
   const useMotionValue = initial => {
     const index = valueIndex++;
-    return values[index] ||= { value: initial, set(next) { this.value = next; }, jump(next) { this.value = next; } };
+    return values[index] ||= { value: initial, get() { return this.value; }, set(next) { this.value = next; }, jump(next) { this.value = next; } };
   };
   const h = dashboardHarness({ mocks: { "motion/react": {
     motion, useReducedMotion: () => reduced, useMotionValue,
@@ -83,7 +83,7 @@ test("Magic Card keeps real controls on a light surface and tracks only mouse po
     assert.deepEqual(events, ["touch", "pen", "mouse"], "Consumer pointer handlers remain intact");
     tree.props.onPointerLeave(h.event("mouse"));
     assert.equal(h.values[2].value, 0);
-    assert.ok(h.values[0].value < 0 && h.values[1].value < 0);
+    assert.deepEqual(h.values.slice(0, 2).map(value => value.value), [100, 65], "the glow fades out where the pointer left");
   } finally { h.cleanup(); }
 });
 
@@ -128,16 +128,44 @@ test("Magic Card clears stale lighting on background or blur and removes listene
   } finally { h.cleanup(); }
 });
 
-test("a card's local preference cannot override the dashboard pause control", () => {
+test("dashboard pointer lighting is restored but forms can opt out independently of Lottie motion", () => {
+  for (const reduced of [false, true, null]) for (const enabled of [true, false]) {
+    const h = dashboardHarness({ mocks: {
+      "framer-motion": { useReducedMotion: () => reduced },
+      "./DashboardMotion": { useDashboardMotion: () => enabled },
+      "@/components/ui/magic-card": { MagicCard: () => null },
+    } });
+    const { DashboardMagicCard } = h.load("components/dashboard/dashboard-ui.tsx");
+    for (const props of [{}, { motionEnabled: false }, { pointerEffect: false }]) {
+      const tree = h.render(DashboardMagicCard, { ...props, tone: "amber", children: "Payment details", replayLottieOnHover: true });
+      assert.equal(tree.props.motionEnabled, enabled && reduced === false && props.motionEnabled !== false && props.pointerEffect !== false);
+      assert.equal(tree.props.pointerEffect, undefined, "do not leak custom props to the DOM");
+      assert.equal(tree.props.children.props.children, "Payment details");
+      assert.equal(tree.props["data-card-tone"], "amber");
+    }
+    h.cleanup();
+  }
+});
+
+test("dashboard lighting retains the original palette and spread with slightly softer intensity", () => {
   const h = dashboardHarness({ mocks: {
-    "./DashboardMotion": { useDashboardMotion: () => false },
+    "framer-motion": { useReducedMotion: () => false },
+    "./DashboardMotion": { useDashboardMotion: () => true },
     "@/components/ui/magic-card": { MagicCard: () => null },
   } });
   const { DashboardMagicCard } = h.load("components/dashboard/dashboard-ui.tsx");
-  const tree = h.render(DashboardMagicCard, { motionEnabled: true, tone: "amber", children: "Payment details" });
-  assert.equal(tree.props.motionEnabled, false);
-  assert.equal(tree.props.children, "Payment details");
-  assert.equal(tree.props["data-card-tone"], "amber");
+  const { dashboardPalette } = h.load("lib/dashboard/palette.ts");
+  for (const [tone, colors] of Object.entries(dashboardPalette)) {
+    const { props } = h.render(DashboardMagicCard, { tone });
+    assert.equal(props.mode, "gradient");
+    assert.equal(props.gradientSize, 260);
+    assert.equal(props.gradientOpacity, .20);
+    assert.equal(props.edgeOpacity, .10);
+    assert.equal(props.gradientColor, colors.glow);
+    assert.equal(props.gradientFrom, colors.accent);
+    assert.equal(props.gradientTo, colors.glow);
+  }
+  h.cleanup();
 });
 
 test("Aurora greeting keeps one accessible name and seven-second colour motion without moving letters", () => {
@@ -177,20 +205,26 @@ function orbitHarness({ dashboardMotion = true, reduced = false, visible = true 
   return { render, visible(value) { visible = value; } };
 }
 
-test("the circular logo runs one seven-second flourish when visible and only stage or process changes reset its key", () => {
+test("the circular logo runs one flourish within seven seconds when visible and only stage, process or loading changes reset its key", () => {
   const h = orbitHarness({ visible: false });
   const hidden = h.render({ stage: 1, replayKey: "ZE19345" });
   assert.equal(hidden.art.props["data-orbit-motion"], "still");
   h.visible(true);
   const first = h.render({ stage: 1, replayKey: "ZE19345" });
   assert.equal(first.art.props["data-orbit-motion"], "playing");
+  assert.equal(first.tree.props["data-duration"], 7);
   const animated = descendants(first.art, node => String(node.type).startsWith("motion."));
-  assert.equal(animated.length, 4);
+  assert.ok(animated.length > 0);
   for (const node of animated) {
-    assert.equal(node.props.transition.duration, 7);
-    assert.equal(node.props.transition.repeat, undefined);
-    assert.equal(node.props.initial, false);
+    const { duration, delay = 0, repeat } = node.props.transition;
+    assert.ok(duration > 0 && duration + delay <= 7, "the intro flourish settles within the seven-second budget");
+    assert.equal(repeat, undefined);
   }
+  // Loading is the only state allowed to loop.
+  const loading = h.render({ stage: 1, replayKey: "ZE19345", loading: true });
+  assert.equal(loading.art.props["data-orbit-motion"], "loading");
+  assert.ok(descendants(loading.art, node => String(node.type).startsWith("motion.")).every(node => node.props.transition.repeat === Infinity));
+  assert.notEqual(first.orbit.key, loading.orbit.key);
   assert.equal(first.orbit.key, h.render({ stage: 1, replayKey: "ZE19345" }).orbit.key);
   assert.notEqual(first.orbit.key, h.render({ stage: 2, replayKey: "ZE19345" }).orbit.key);
   assert.notEqual(first.orbit.key, h.render({ stage: 1, replayKey: "ZE88495" }).orbit.key);

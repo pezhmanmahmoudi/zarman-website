@@ -2159,6 +2159,160 @@
   border-radius: 0 0 calc(1rem - 1px) calc(1rem - 1px);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   RECONCILIATION AUDIT (monthly bank-statement matching)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.auditToolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1.25rem 0;
+  direction: rtl;
+}
+
+.auditSummaryRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.auditChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--bg-soft, #f4f6f8);
+  color: var(--text-soft, #4b5563);
+  border: 1px solid var(--border-soft, #eaecf0);
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+}
+
+.auditChipSuccess { background: rgba(16, 185, 129, 0.1); color: #047857; border-color: rgba(16, 185, 129, 0.25); }
+.auditChipWarning { background: rgba(239, 68, 68, 0.1); color: #b91c1c; border-color: rgba(239, 68, 68, 0.25); }
+
+.auditGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 1rem;
+}
+
+.auditCard {
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-soft, #eaecf0);
+  border-radius: 1rem;
+  padding: 1.125rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  direction: rtl;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+  min-width: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.auditCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.auditCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main, #172033);
+  min-width: 0;
+}
+
+.auditCardTitle svg { flex-shrink: 0; color: var(--accent, #4338ca); }
+
+.auditStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-soft, #f4f6f8);
+  border-radius: 0.65rem;
+}
+
+.auditStatLabel {
+  font-size: 0.68rem;
+  color: var(--text-dim, #6b7280);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.auditStatValue {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main, #111827);
+  font-family: var(--font-en-stack, "Inter", sans-serif);
+}
+
+.auditGapPreview {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.auditGapPreview svg { flex-shrink: 0; }
+
+.auditGapNeutral { background: rgba(16, 185, 129, 0.1); color: #047857; }
+.auditGapPositive { background: rgba(37, 99, 235, 0.1); color: #1d4ed8; }
+.auditGapNegative { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+
+.auditCardFooter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--border-soft, #eaecf0);
+  font-size: 0.75rem;
+  color: var(--text-dim, #6b7280);
+}
+
+.auditNeverBadge {
+  font-style: italic;
+  color: var(--text-dim, #6b7280);
+}
+
+.auditBadgeAdjusted {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.18rem 0.52rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+}
+
+.auditEmptyHint {
+  font-size: 0.82rem;
+  color: var(--text-dim, #6b7280);
+  text-align: center;
+  padding: 1.5rem 0;
+  direction: rtl;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+}
+
+
 .formSummary:focus-visible,
 .settingsSummary:focus-visible,
 .warnBannerSummary:focus-visible,

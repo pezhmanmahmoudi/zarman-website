@@ -4,15 +4,15 @@ import { redirect } from "next/navigation";
 import { ArrowUpRight, ChartNoAxesCombined, ListFilter } from "lucide-react";
 import { getLedgerData, getActiveBankAccountsForAdmin } from "@/app/actions/admin.actions";
 import { AdminPagination } from "@/components/admin/AdminPagination";
-import { EditableLedgerTable, type LedgerRow } from "@/components/admin/EditableLedgerTable";
+import { LedgerEntriesTable, type LedgerRow } from "@/components/admin/ledger/LedgerEntriesTable";
 import { AdminRefreshButton } from "@/components/admin/ui/AdminRefreshButton";
 import LedgerToolbar from "@/components/admin/ledger/LedgerToolbar";
-import LedgerDrillDown from "@/components/admin/ledger/LedgerDrillDown";
 import LedgerInsights from "@/components/admin/ledger/LedgerInsights";
 import { ledgerFiltersForView, ledgerViewHref, type LedgerSearchParams } from "@/lib/admin-ledger-view";
 import { parseAdminPage, parseAdminPageSize } from "@/lib/admin-pagination";
 import shell from "@/styles/admin/AdminShell.module.css";
 import styles from "@/styles/admin/LedgerWorkspace.module.css";
+import shared from "@/styles/admin/AdminWorkspace.module.css";
 
 export const metadata = { title: "Ledger | Zarman Admin" };
 export const dynamic = "force-dynamic";
@@ -32,7 +32,6 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
     redirect(ledgerViewHref(next, "entries"));
   }
   const rows = (records?.pageLedgerRows ?? []) as LedgerRow[];
-  const rowDataMap = Object.fromEntries(rows.map(row => [row.id, row]));
   const total = records?.total ?? 0;
   const filterKey = JSON.stringify(params);
 
@@ -43,25 +42,23 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
     </header>
     <div className={shell.pageContent}>
       <div className={styles.workspace}>
-        <div className={styles.heading}>
+        <div className={shared.header}>
           <div><h1>Ledger</h1><p>Review transactions, manage entries and follow the flow of funds.</p></div>
-          <Link className={styles.headingLink} href="/admin/reports/accounts">Account statements <ArrowUpRight size={14} /></Link>
+          <Link className={shared.action} href="/admin/reports/accounts">Account statements <ArrowUpRight size={14} /></Link>
         </div>
-        <nav className={styles.tabs} aria-label="Ledger views">
-          <Link href={ledgerViewHref(params, "entries")} className={`${styles.tab} ${!insights ? styles.tabActive : ""}`} aria-current={!insights ? "page" : undefined}><ListFilter size={16} /> Entries</Link>
-          <Link href={ledgerViewHref(params, "insights")} className={`${styles.tab} ${insights ? styles.tabActive : ""}`} aria-current={insights ? "page" : undefined} prefetch={false}><ChartNoAxesCombined size={16} /> Insights</Link>
+        <nav className={shared.tabs} aria-label="Ledger views">
+          <Link href={ledgerViewHref(params, "entries")} aria-current={!insights ? "page" : undefined}><ListFilter size={16} /> Entries</Link>
+          <Link href={ledgerViewHref(params, "insights")} aria-current={insights ? "page" : undefined} prefetch={false}><ChartNoAxesCombined size={16} /> Insights</Link>
         </nav>
         <LedgerToolbar key={filterKey} currentParams={params} bankAccounts={bankAccounts} exportFilters={filters} />
         {insights ? <Suspense key={filterKey} fallback={<div className={styles.insightLoading} role="status">Loading ledger insights…</div>}><LedgerInsights filters={filters} /></Suspense> :
-          <section className={styles.tablePanel} aria-labelledby="ledger-records-title">
+          <section className={shared.panel} aria-labelledby="ledger-records-title">
             <div className={styles.paginationTop}>
               <AdminPagination label="Ledger pagination above entries" currentPage={currentPage} totalCount={total} pageSize={pageSize} />
             </div>
-            <LedgerDrillDown ledgerDataMap={rowDataMap}>
-              <EditableLedgerTable rows={rows} bankAccounts={bankAccounts} titleSlot={
-                <div className={styles.recordHeading}><h2 id="ledger-records-title">All entries</h2><span className={styles.recordCount}>{total.toLocaleString("en-AU")} {total === 1 ? "record" : "records"}</span></div>
+              <LedgerEntriesTable rows={rows} bankAccounts={bankAccounts} titleSlot={
+                <div className={shared.headerActions}><h2 id="ledger-records-title" className={shared.panelTitle}>All entries</h2><span className={shared.recordCount}>{total.toLocaleString("en-AU")} {total === 1 ? "record" : "records"}</span></div>
               } />
-            </LedgerDrillDown>
             <div className={styles.paginationBottom}>
               <AdminPagination label="Ledger pagination below entries" currentPage={currentPage} totalCount={total} pageSize={pageSize} />
             </div>

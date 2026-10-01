@@ -62,8 +62,8 @@ export function requestReceiptRows(receipt: RequestCompletionReceiptSnapshot): [
     ["Accepted exchange rate", `${Number(receipt.applied_rate).toLocaleString("en-AU")} Toman per AUD`],
     ["Service", receipt.service_tier === "priority" ? "Priority" : "Standard"],
     ["Base fee (AUD equivalent)", receiptAmount(receipt.base_fee_aud, "AUD")],
-    ["Additional priority fee", receiptAmount(receipt.priority_fee_amount, receipt.funding_currency)],
-    ...(receipt.service_tier === "priority" ? [["Priority fee status at completion", receipt.priority_fee_status.replace(/_/g, " ")] as [string, string]] : []),
+    ["Express processing fee", receiptAmount(receipt.priority_fee_amount, receipt.funding_currency)],
+    ...(receipt.service_tier === "priority" ? [["Express processing fee status at completion", receipt.priority_fee_status.replace(/_/g, " ")] as [string, string]] : []),
   ];
 }
 

@@ -82,19 +82,37 @@
 
 /* ── Header & Selectors ── */
 .header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  gap: 4px;
   align-items: center;
   margin-bottom: 1rem;
 }
 
 .selectors {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
   gap: 0.5rem;
   align-items: center;
-  justify-content: center;
-  flex: 1; /* گرفتن فضای وسط برای تقارن دکمه‌ها */
-  padding: 0 0.5rem;
+  min-width: 0;
+}
+
+.calendarSelect.calendarSelect {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  gap: 4px;
+  border: 1px solid var(--border-med, #ded8e9);
+  border-radius: 12px;
+  background: var(--bg-card, #fff);
+  --select-font-size: 0.875rem;
+}
+
+.calendarSelect > span {
+  flex: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 /* استایل حرفه‌ای برای Dropdown ماه و سال */

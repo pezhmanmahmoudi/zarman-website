@@ -1,4 +1,4 @@
-import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { Resend, type CreateEmailResponse } from "resend";
 import {
@@ -13,8 +13,9 @@ import { validatedNotificationSettings } from "./notification-config";
 const IDEMPOTENCY_SAFE_WINDOW_MS = 23 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 12;
 const DATABASE_ATTEMPT_TIMEOUT_MS = 8_000;
-// Leave time for the final claim, preparation, 12-second send and acknowledgement.
-const WORKER_CLAIM_WINDOW_MS = 20_000;
+// Keep the admin's click responsive: stop claiming further rounds after this.
+const SEND_CLAIM_WINDOW_MS = 20_000;
+const MAX_EMAILS_PER_ACTION = 25;
 
 export type NotificationDelivery = RequestEmailSnapshot & {
   attempts: number;
@@ -28,7 +29,7 @@ export type NotificationDatabase = { rpc(name: string, args?: Record<string, unk
 type FinishStatus = "pending" | "provider_accepted" | "failed" | "reconciliation_required";
 
 const NOTIFICATION_RPC_OPERATIONS = [
-  "sweep_exchange_request_deadlines", "claim_request_notifications", "prepare_request_notification",
+  "claim_request_notifications_for_request", "prepare_request_notification",
   "finish_request_notification", "record_request_email_event",
 ] as const;
 type NotificationRpcOperation = typeof NOTIFICATION_RPC_OPERATIONS[number];
@@ -89,13 +90,6 @@ export function notificationWorkerFailureDiagnostic(error: unknown) {
   return { ...base, stage: "unknown" };
 }
 
-export function authorizedNotificationCron(header: string | null, secret: string | undefined): boolean {
-  if (!secret || secret.length < 32 || !header) return false;
-  const expected = Buffer.from(`Bearer ${secret}`);
-  const received = Buffer.from(header);
-  return expected.length === received.length && timingSafeEqual(expected, received);
-}
-
 export function createNotificationDatabase(): NotificationDatabase {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -151,17 +145,6 @@ async function rpc<T>(db: NotificationDatabase, name: NotificationRpcOperation, 
   return result.data as T;
 }
 
-async function sweepRequestDeadlines(db: NotificationDatabase): Promise<void> {
-  try { await rpc(db, "sweep_exchange_request_deadlines"); }
-  catch (error) {
-    if (!(error instanceof NotificationRpcError)
-      || !(error.code === "transport_error" || error.status === 0 || [502, 503, 504].includes(error.status ?? -1))) throw error;
-    // _23 serializes sweeps and deduplicates their committed tasks/events. Only
-    // this operation may retry a lost response; never replay a lease or send.
-    await rpc(db, "sweep_exchange_request_deadlines");
-  }
-}
-
 export function notificationRetryAt(attempts: number, now: number, retryAfter?: string | null, jitter = Math.random()): string {
   const delay = Math.min(60 * 60 * 1000, 30_000 * 2 ** Math.min(Math.max(attempts - 1, 0), 7));
   const retrySeconds = retryAfter && /^\d+(\.\d+)?$/.test(retryAfter) ? Number(retryAfter) * 1000 : 0;
@@ -183,28 +166,25 @@ function outcomeForProviderError(response: CreateEmailResponse): { retry: boolea
   };
 }
 
-/** Claim one message at a time so later claims cannot expire while waiting on
- * slow provider calls. The database enforces audience-specific milestone order. */
-export async function runRequestNotificationWorker(options: {
+/** Send one request's admin-approved emails now, as part of the admin action.
+ * No scheduler is involved: a temporary failure stays pending and is retried
+ * (same payload and idempotency key) the next time an admin acts on the request.
+ * The database enforces audience-specific milestone order. */
+export async function sendRequestNotifications(options: {
   db: NotificationDatabase;
   send: (payload: RequestEmailPayload, key: string) => Promise<CreateEmailResponse>;
   from: string;
   siteUrl: string;
+  requestId: string;
   now?: () => number;
-  limit?: number;
   workerId?: string;
 }) {
   const now = options.now ?? Date.now;
   const started = now();
   const workerId = options.workerId ?? randomUUID();
   const counts = { claimed: 0, accepted: 0, retrying: 0, failed: 0, reconciliation: 0 };
-  await sweepRequestDeadlines(options.db);
-  for (let i = 0; i < Math.min(Math.max(options.limit ?? 10, 1), 25) && now() - started < WORKER_CLAIM_WINDOW_MS; i += 1) {
-    const rows = await rpc<NotificationDelivery[]>(options.db, "claim_request_notifications", {
-      p_worker_id: workerId, p_limit: 1, p_lease_seconds: 120,
-    });
-    const delivery = rows?.[0];
-    if (!delivery) break;
+
+  const deliver = async (delivery: NotificationDelivery) => {
     counts.claimed += 1;
     const finish = async (status: FinishStatus, errorCode: string | null, providerId: string | null = null, retryAt: string | null = null) => {
       await rpc(options.db, "finish_request_notification", {
@@ -215,7 +195,7 @@ export async function runRequestNotificationWorker(options: {
     if (requiresNotificationReconciliation(delivery.first_attempt_at, now())) {
       await finish("reconciliation_required", "idempotency_window_reconciliation_required");
       counts.reconciliation += 1;
-      continue;
+      return;
     }
     let payload: RequestEmailPayload;
     try {
@@ -232,7 +212,7 @@ export async function runRequestNotificationWorker(options: {
     } catch {
       await finish("failed", "recipient_or_snapshot_unavailable");
       counts.failed += 1;
-      continue;
+      return;
     }
     // Persist the EXACT recipient, sender, template, body and first possible
     // send time before network I/O. A crash must never reset the 24h window.
@@ -253,7 +233,7 @@ export async function runRequestNotificationWorker(options: {
       // On DB failure leave the lease intact: do not enqueue a different send.
       await finish("provider_accepted", null, response.data.id);
       counts.accepted += 1;
-      continue;
+      return;
     }
     const failure = outcomeForProviderError(response);
     if (failure.retry && prepared.attempts < MAX_ATTEMPTS) {
@@ -265,6 +245,17 @@ export async function runRequestNotificationWorker(options: {
       if (failure.retry) counts.reconciliation += 1;
       else counts.failed += 1;
     }
+  };
+
+  // A round may unblock the next milestone for the same recipient; stop once a
+  // send must wait, so a retried row is never claimed twice in one action.
+  while (counts.claimed < MAX_EMAILS_PER_ACTION && counts.retrying === 0 && now() - started < SEND_CLAIM_WINDOW_MS) {
+    const rows = await rpc<NotificationDelivery[]>(options.db, "claim_request_notifications_for_request", {
+      p_worker_id: workerId, p_request_id: options.requestId,
+      p_limit: MAX_EMAILS_PER_ACTION - counts.claimed, p_lease_seconds: 300,
+    });
+    if (!rows?.length) break;
+    for (const delivery of rows) await deliver(delivery);
   }
   return counts;
 }
@@ -273,7 +264,7 @@ export function createRequestEmailSender(apiKey: string) {
   const resend = new Resend(apiKey);
   return (payload: RequestEmailPayload, idempotencyKey: string) => {
     // The installed SDK forwards request options to fetch. Bound network I/O
-    // below both the lease duration and the route's execution budget.
+    // below the claim lease and the admin action's execution budget.
     const options = { idempotencyKey, signal: AbortSignal.timeout(12_000) };
     return resend.emails.send(payload, options);
   };

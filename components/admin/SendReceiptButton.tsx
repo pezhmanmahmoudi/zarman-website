@@ -36,7 +36,6 @@ export function SendReceiptButton({
   };
 
   const handleSend = async () => {
-    // Require a second click to confirm (acts as lightweight confirmation)
     if (!sent && !isSending) {
       setIsSending(true);
       try {
@@ -104,11 +103,11 @@ export function SendReceiptButton({
             }}
           />
         ) : sent ? (
-          <CheckCircle size={11} />
+          <CheckCircle size={14} aria-hidden="true" />
         ) : (
-          <Mail size={11} />
+          <Mail size={14} aria-hidden="true" />
         )}
-        {isSending ? "Sending…" : sent ? "Sent" : "Send Receipt"}
+        {isSending ? "Sending…" : sent ? "Email sent" : "Email receipt"}
       </button>
 
       {/* Keyframe for the spinner — injected once per mount */}

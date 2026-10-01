@@ -2,6 +2,7 @@ import React from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { getSystemSettings, getPromoCodes } from "@/app/actions/admin.actions";
 import { SystemSettingsForm } from "@/components/admin/SystemSettingsForm";
+import { SettingsWorkspace } from "@/components/admin/SettingsWorkspace";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 
@@ -16,7 +17,7 @@ export default async function SettingsPage() {
   return (
     <>
       <div className={shellStyles.topBar}>
-        <span className={shellStyles.pageTitle}>System Configuration</span>
+        <span className={shellStyles.pageTitle}>Settings</span>
       </div>
 
       <div className={`${shellStyles.pageContent} ${shellStyles.pageContentNarrow}`}>
@@ -27,17 +28,16 @@ export default async function SettingsPage() {
               <span className={cardStyles.sectionTitleIconAccent}>
                 <SlidersHorizontal size={26} strokeWidth={2.5} />
               </span>
-              Platform Settings
+              Settings
             </h1>
             <p className={cardStyles.sectionDesc}>
-              Configure daily exchange rates, market availability, and customer-facing pause messages. 
-              Changes made here are applied immediately across the platform.
+              Manage rates, rewards and the transfer service in one place. Save each section when ready.
             </p>
           </div>
         </div>
 
         {/* Form Component — includes Promo Code Management section */}
-        <SystemSettingsForm initialSettings={settings} initialCodes={promoCodes ?? []} />
+        <SettingsWorkspace platform={<SystemSettingsForm initialSettings={settings} initialCodes={promoCodes ?? []} />} />
       </div>
     </>
   );

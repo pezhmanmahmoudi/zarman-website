@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useMemo, useState, useTransition } from "react";
-import { ArrowLeftRight, Plus, Tag, Star, Pencil, Trash2, X } from "lucide-react";
+import { ArrowLeftRight, Plus, Pencil, Trash2, X } from "lucide-react";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
-import tableStyles from "@/styles/admin/AdminTable.module.css";
+import styles from "@/styles/admin/AdminWorkspace.module.css";
+import { AdminDataTable, AdminTableRow, AdminTableCell, AdminTableIdentity, AdminTableDate, AdminBadge } from "@/components/admin/ui/AdminDataTable";
+import { AdminRecordDrawer } from "@/components/admin/ui/AdminRecordDrawer";
 import formStyles from "@/styles/admin/AdminForms.module.css";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
 import { TransactionApproveButton } from "@/components/admin/TransactionApproveButton";
@@ -24,11 +26,13 @@ interface UserTransactionTimelineProps {
   userId?: string;
   transactions: Transactions;
   recipients: Recipients;
-  bankAccounts?: any[];
+  bankAccounts?: React.ComponentProps<typeof TransactionApproveButton>["bankAccounts"];
   onTransactionCreated?: () => void;
 }
 
 export function UserTransactionTimeline({ userId, transactions, recipients, bankAccounts = [], onTransactionCreated }: UserTransactionTimelineProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = transactions.find((tx: Transactions[number]) => tx.id === selectedId);
   const [openAdd, setOpenAdd] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -48,7 +52,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
   });
 
   const recipientOptions = useMemo<RecipientOption[]>(() => {
-    return (recipients ?? []).map((r: any) => {
+    return (recipients ?? []).map((r: Recipients[number]) => {
       const recipientLabel = typeof r.label === "string" ? r.label.trim() : "";
       if (recipientLabel) {
         return {
@@ -88,20 +92,20 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
   const setField = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
   const setEditField = (key: string, value: string) => setEditForm((prev) => ({ ...prev, [key]: value }));
 
-  const normalizeRecipient = (value: any) => {
+  const normalizeRecipient = (value: Recipients[number] | Recipients | undefined) => {
     if (Array.isArray(value)) return value.find(Boolean) ?? null;
     return value ?? null;
   };
 
   const resolveRecipientLabel = (tx: Transactions[number]) => {
-    const rec = normalizeRecipient((tx as any).recipients);
+    const rec = normalizeRecipient(tx.recipients);
     if (rec) return rec.label || rec.account_name || rec.full_name || "—";
-    if ((tx as any).payment_link) return "Payment Link";
+    if (tx.payment_link) return "Payment Link";
     return "—";
   };
 
   const startEditRow = (tx: Transactions[number]) => {
-    const rec = normalizeRecipient((tx as any).recipients);
+    const rec = normalizeRecipient(tx.recipients);
     setStatus(null);
     setOpenAdd(false);
     setEditingId(String(tx.id));
@@ -109,16 +113,16 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
     const createdAtDate = tx.created_at ? new Date(tx.created_at) : new Date();
     const dateOnly = createdAtDate.toISOString().slice(0, 10);
     setEditForm({
-      recipientId: (tx as any).payment_link
+      recipientId: tx.payment_link
         ? "__payment_link__"
-        : String((tx as any).recipient_id ?? rec?.id ?? ""),
+        : String(tx.recipient_id ?? rec?.id ?? ""),
       type: String(tx.type || "buy_aud"),
       amountAud: String(tx.amount_aud ?? ""),
       equivalentToman: String(tx.equivalent_toman ?? ""),
-      sourceOfFunds: String((tx as any).source_of_funds ?? ""),
-      reasonForTransfer: String((tx as any).reason_for_transfer ?? ""),
-      paymentLink: String((tx as any).payment_link ?? ""),
-      referenceCode: String((tx as any).reference_code ?? ""),
+      sourceOfFunds: String(tx.source_of_funds ?? ""),
+      reasonForTransfer: String(tx.reason_for_transfer ?? ""),
+      paymentLink: String(tx.payment_link ?? ""),
+      referenceCode: String(tx.reference_code ?? ""),
       status: String(tx.status || "pending"),
       createdAt: dateOnly,
     });
@@ -248,15 +252,15 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
   };
 
   return (
-    <div className={cardStyles.panel}>
-      <div className={cardStyles.panelHeader}>
-        <h2 className={cardStyles.panelTitle}>
+    <div className={styles.panel}>
+      <div className={styles.toolbar}>
+        <h2 className={styles.panelTitle}>
           <ArrowLeftRight size={18} color="var(--text-dim)" />
           Transactions Timeline
         </h2>
-        <div className={cardStyles.panelHeaderControls}>
+        <div className={styles.headerActions}>
           <span
-            className={`${tableStyles.badge} ${tableStyles.badgeArchived}`}
+            className={styles.recordCount}
           >
             {transactions.length} {transactions.length === 1 ? "record" : "records"}
           </span>
@@ -448,171 +452,35 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
         </div>
       )}
 
-      <div className={tableStyles.tableWrap}>
-        <table className={tableStyles.table}>
-          <thead>
-            <tr>
-              <th>Reference Code</th>
-              <th>Date</th>
-              <th>Type</th>
-              <th>AUD Amount</th>
-              <th>Toman Equiv.</th>
-              <th>Recipient</th>
-              <th>Discounts</th>
-              <th>Source of Funds</th>
-              <th>Reason for Transfer</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.length === 0 ? (
-              <tr>
-                <td colSpan={11}>
-                  <div className={`${cardStyles.emptyState} ${cardStyles.emptyStateCompact}`}>
-                    <div className={cardStyles.emptyStateText}>
-                      No transactions found for this user.
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              transactions.map((tx: Transactions[number]) => (
-                <tr
-                  key={tx.id}
-                  className={
-                    tx.status === "pending"
-                      ? tableStyles.rowTintWarning
-                      : tableStyles.rowTransparent
-                  }
-                >
-                  <>
-                  <td className={`${tableStyles.cellMono} ${tableStyles.cellSmall}`}>
-                    {(tx as any).reference_code || <span className={tableStyles.cellEmpty}>—</span>}
-                  </td>
-                  <td className={`${tableStyles.cellMono} ${tableStyles.cellSmall} ${tableStyles.cellDim}`}>
-                    {new Date(tx.created_at).toLocaleString("en-AU", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </td>
-                  <td>
-                    <span
-                      className={`${tableStyles.badge} ${
-                        tx.type === "buy_aud" ? tableStyles.txBuy : tableStyles.txSell
-                      }`}
-                    >
-                      {tx.type === "buy_aud" ? "Buy AUD" : "Sell AUD"}
-                    </span>
-                  </td>
-                  <td className={`${tableStyles.cellMono} ${tableStyles.cellStrong}`} dir="ltr">
-                    ${Number(tx.amount_aud).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className={`${tableStyles.cellMono} ${tableStyles.cellDim}`} dir="ltr">
-                    {Number(tx.equivalent_toman).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}T
-                  </td>
-                  {/* Recipient */}
-                  <td className={tableStyles.cellRecipient}>
-                    {resolveRecipientLabel(tx) === "—"
-                      ? <span className={tableStyles.cellEmpty}>—</span>
-                      : <span className={tableStyles.cellStrong}>{resolveRecipientLabel(tx)}</span>}
-                  </td>
-                  {/* Discounts */}
-                  <td>
-                    {!(tx as any).promo_code && !Number((tx as any).loyalty_discount ?? 0) ? (
-                      <span className={tableStyles.cellEmpty}>—</span>
-                    ) : (
-                      <div className={tableStyles.discountCell}>
-                        {(tx as any).promo_code && (
-                          <div className={tableStyles.discountPromo}>
-                            <Tag size={10} />
-                            <span className={tableStyles.discountPromoCode}>{(tx as any).promo_code}</span>
-                            {Number((tx as any).discount_amount ?? 0) > 0 && (
-                              <span className={tableStyles.discountAmount}>
-                                −{Number((tx as any).discount_amount).toLocaleString("en-AU")} T
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {Number((tx as any).loyalty_discount ?? 0) > 0 && (
-                          <div className={tableStyles.discountLoyalty}>
-                            <Star size={10} />
-                            <span className={tableStyles.discountLoyaltyLabel}>Loyalty</span>
-                            <span className={tableStyles.discountLoyaltyAmount}>
-                              −{Number((tx as any).loyalty_discount).toLocaleString("en-AU")} T
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                  <td className={`${tableStyles.cellSmall} ${tableStyles.cellWrap}`}>
-                    {(tx as Record<string, unknown>).source_of_funds as string || <span className={tableStyles.cellEmpty}>—</span>}
-                  </td>
-                  <td className={`${tableStyles.cellSmall} ${tableStyles.cellWrapNarrow}`}>
-                    {(tx as Record<string, unknown>).reason_for_transfer as string || <span className={tableStyles.cellEmpty}>—</span>}
-                  </td>
-                  <td>
-                    <StatusBadge status={tx.status} />
-                  </td>
-                  <td>
-                    <div className={tableStyles.cellActionGroup}>
-                      <button
-                        type="button"
-                        className={`${formStyles.btnSecondary} ${formStyles.btnIconOnly}`}
-                        title="Edit"
-                        aria-label="Edit"
-                        onClick={() => startEditRow(tx)}
-                        disabled={isPending}
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      {editingId === String(tx.id) && (
-                        <button
-                          type="button"
-                          className={`${formStyles.btnSecondary} ${formStyles.btnIconOnly}`}
-                          title="Cancel edit"
-                          aria-label="Cancel edit"
-                          onClick={cancelEditRow}
-                          disabled={isPending}
-                        >
-                          <X size={14} />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className={`${formStyles.btnDanger} ${formStyles.btnIconOnly}`}
-                        title="Delete"
-                        aria-label="Delete"
-                        onClick={() => deleteRow(String(tx.id))}
-                        disabled={isPending}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                      {tx.status === "pending" ? (
-                        <TransactionApproveButton
-                          transactionId={tx.id}
-                          transactionAmountToman={Number(tx.equivalent_toman)}
-                          transactionType={String(tx.type ?? "buy_aud")}
-                          bankAccounts={bankAccounts}
-                        />
-                      ) : (
-                        <span className={`${tableStyles.cellDim} ${tableStyles.cellProcessed}`}>
-                          Processed
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  </>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <AdminDataTable label="Customer transactions" columns={[
+        { key: "reference", label: "Transfer / recipient" }, { key: "type", label: "Type" },
+        { key: "aud", label: "AUD amount", align: "end" }, { key: "toman", label: "Toman amount", align: "end" },
+        { key: "status", label: "Status" }, { key: "date", label: "Created (Sydney)" }, { key: "actions", label: "Actions", actions: true },
+      ]} empty={!transactions.length && "No transactions found for this customer."}>
+        {transactions.map((tx: Transactions[number]) => <AdminTableRow key={tx.id}>
+          <AdminTableCell kind="primary"><AdminTableIdentity name={resolveRecipientLabel(tx)} detail={<bdi>{tx.reference_code || tx.id}</bdi>} /></AdminTableCell>
+          <AdminTableCell label="Type"><AdminBadge tone={tx.type === "buy_aud" ? "review" : "success"}>{tx.type === "buy_aud" ? "Buy AUD" : "Sell AUD"}</AdminBadge></AdminTableCell>
+          <AdminTableCell label="AUD amount" align="right"><strong dir="ltr">{Number(tx.amount_aud).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} AUD</strong></AdminTableCell>
+          <AdminTableCell label="Toman amount" align="right"><span dir="ltr">{Number(tx.equivalent_toman).toLocaleString("en-AU")} Toman</span></AdminTableCell>
+          <AdminTableCell label="Status"><StatusBadge status={tx.status} /></AdminTableCell>
+          <AdminTableCell label="Created (Sydney)"><AdminTableDate value={tx.created_at} time /></AdminTableCell>
+          <AdminTableCell kind="actions">
+            <button type="button" className={styles.action} onClick={() => startEditRow(tx)} disabled={isPending}><Pencil size={14} aria-hidden="true" />Edit</button>
+            {editingId === String(tx.id) && <button type="button" className={styles.action} onClick={cancelEditRow} disabled={isPending}>Cancel edit</button>}
+            <button type="button" className={styles.action} data-tone="danger" onClick={() => deleteRow(String(tx.id))} disabled={isPending}><Trash2 size={14} aria-hidden="true" />Delete</button>
+            {tx.status === "pending" && <TransactionApproveButton transactionId={tx.id} transactionAmountToman={Number(tx.equivalent_toman)} transactionType={String(tx.type ?? "buy_aud")} bankAccounts={bankAccounts} />}
+            <button type="button" className={styles.detailsToggle} aria-haspopup="dialog" onClick={() => setSelectedId(tx.id)} aria-label={"View transaction " + (tx.reference_code || tx.id)}>View</button>
+          </AdminTableCell>
+        </AdminTableRow>)}
+      </AdminDataTable>
+      {selected && <AdminRecordDrawer title={resolveRecipientLabel(selected)} subtitle={selected.reference_code || selected.id} eyebrow="Customer transaction" onClose={() => setSelectedId(null)}>
+        <section className={styles.detailSection}><h3>Transfer details</h3><dl className={styles.facts}>
+          {[["Source of funds", selected.source_of_funds], ["Reason for transfer", selected.reason_for_transfer], ["Promotion", selected.promo_code],
+            ["Promotion discount", Number(selected.discount_amount ?? 0).toLocaleString("en-AU") + " Toman"],
+            ["Loyalty discount", Number(selected.loyalty_discount ?? 0).toLocaleString("en-AU") + " Toman"],
+          ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd><bdi>{value || "—"}</bdi></dd></div>)}
+        </dl></section>
+      </AdminRecordDrawer>}
     </div>
   );
 }

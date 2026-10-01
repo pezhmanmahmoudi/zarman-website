@@ -54,10 +54,9 @@ async function renderPage(params = {}, records = { pageLedgerRows: [], total: 0 
     },
     "@/app/actions/treasury.actions": { getTreasuryFullData: async () => { calls.treasury++; throw new Error("Entries must not load treasury"); } },
     "@/components/admin/AdminPagination": { AdminPagination: props => { calls.pagination.push(props); return React.createElement("nav", { "aria-label": props.label }, `Page ${props.currentPage}`); } },
-    "@/components/admin/EditableLedgerTable": { EditableLedgerTable: props => { calls.table.push(props); return React.createElement("div", null, props.titleSlot, props.rows.map(row => React.createElement("span", { key: row.id }, row.sender))); } },
+    "@/components/admin/ledger/LedgerEntriesTable": { LedgerEntriesTable: props => { calls.table.push(props); return React.createElement("div", null, props.titleSlot, props.rows.map(row => React.createElement("span", { key: row.id }, row.sender))); } },
     "@/components/admin/ui/AdminRefreshButton": { AdminRefreshButton: () => React.createElement("button", { type: "button" }, "Refresh") },
     "@/components/admin/ledger/LedgerToolbar": { __esModule: true, default: props => { calls.toolbar.push(props); return React.createElement("section", { "aria-label": "Ledger filters and export" }); } },
-    "@/components/admin/ledger/LedgerDrillDown": { __esModule: true, default: props => { calls.details.push(props.ledgerDataMap); return props.children; } },
     "@/components/admin/ledger/LedgerInsights": { __esModule: true, default: props => { calls.insights.push(props); return React.createElement("section", { "aria-label": "Insights" }, "Period metrics"); } },
     "@/lib/admin-ledger-view": views,
     "@/lib/admin-pagination": pagination,
@@ -85,7 +84,6 @@ test("default ledger Entries render only the visible records without insights or
   assert.match(html, /href="\/admin\/ledger"[^>]+aria-current="page"/);
   assert.deepEqual(calls.table[0].rows, rows);
   assert.deepEqual(calls.table[0].bankAccounts, bankAccounts);
-  assert.deepEqual(calls.details[0], { "ledger-test": rows[0] });
   assert.equal(calls.pagination.length, 2);
   assert.notEqual(calls.pagination[0].label, calls.pagination[1].label);
 });

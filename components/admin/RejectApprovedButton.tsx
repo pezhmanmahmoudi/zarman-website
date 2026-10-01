@@ -40,7 +40,7 @@ export function RejectApprovedButton({
         className={`${tableStyles.btnAction} ${tableStyles.btnActionCompact} ${tableStyles.btnReject}`}
         title="Reject this transaction"
       >
-        <X size={11} />
+        <X size={14} aria-hidden="true" />
         Reject
       </button>
     </>

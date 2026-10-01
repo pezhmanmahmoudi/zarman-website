@@ -35,12 +35,12 @@ export function requestStageLabel(request: ExchangeRequest, locale: RequestLocal
   if (request.funding_status === "refunded") return ["Funds returned", "وجه بازپرداخت شد"][index];
   const journey = getRequestJourney(request);
   if (journey.customerActionRequired) return ["Reply needed", "نیاز به پاسخ شما"][index];
-  if (request.priority_fee_status === "refund_pending") return ["Priority fee refund in progress", "بازپرداخت هزینه سرویس اولویت‌دار در حال انجام"][index];
+  if (request.priority_fee_status === "refund_pending") return ["Express processing fee refund in progress", "بازپرداخت هزینه پردازش اکسپرس در حال انجام"][index];
   if (["under_review", "action_required"].includes(request.status) && journey.fundsReceived) return ["Funds received · under admin review", "وجه دریافت شد · در حال بررسی توسط مدیر"][index];
   if (request.status === "action_required" || (request.status === "under_review" && !request.evidence_submitted_at && !journey.fundsReceived)) return ["Admin review in progress", "در حال بررسی توسط مدیر"][index];
   const labels: Record<RequestJourneyStage, [string, string]> = {
-    approval: ["Awaiting approval", "در انتظار تأیید درخواست"],
-    payment: ["Ready for your payment", "آماده پرداخت شما"],
+    approval: ["Pending Approval", "در انتظار تأیید"],
+    payment: ["Action Required", "نیازمند اقدام شما"],
     receipt_review: ["Checking your payment", "در حال بررسی واریز شما"],
     funds_received: ["Funds received", "وجه شما دریافت شد"],
     completed: ["Transfer completed", "انتقال تکمیل شد"],
@@ -57,23 +57,12 @@ export function requestMilestones(request: ExchangeRequest, events: RequestEvent
   const earliest = (types: string[]) => events.filter(event => types.includes(event.event_type))
     .sort((a, b) => a.sequence - b.sequence)[0]?.created_at || null;
   const completedAt = earliest(["complete", "reconcile_complete"]);
-  const approvalLabel: [string, string] = journey.stage === 0
-    ? ["Awaiting Zarman approval", "در انتظار تأیید زرمان"]
-    : ["Request submitted", "درخواست ثبت شد"];
-  const receiptLabel: [string, string] = journey.stage === 2
-    ? ["Payment under review", "واریز در حال بررسی"]
-    : ["Receipt sent for review", "رسید برای بررسی ارسال شد"];
-  const settlementLabel: [string, string] = journey.stage === 3 && request.status === "processing"
-    ? ["Settlement in progress", "تسویه در حال انجام"]
-    : journey.stage === 3 && request.status === "reconciliation"
-      ? ["Confirming destination settlement", "در حال تأیید تسویه مقصد"]
-      : ["Funds received", "وجه دریافت شد"];
   const rows: Array<[string, [string, string], string | null, boolean]> = [
-    ["submitted", approvalLabel, request.created_at, true],
-    ["approved", ["Approved for payment", "اجازه پرداخت صادر شد"], request.payment_approved_at || null, journey.approved],
-    ["receipt", receiptLabel, earliest(["receipt_uploaded", "payment_evidence"]) || request.evidence_submitted_at, journey.receiptSubmitted],
-    ["received", settlementLabel, request.funds_confirmed_at || earliest(["ready", "resume_funded_request"]), journey.fundsReceived],
-    ["completed", ["Transfer completed", "انتقال تکمیل شد"], completedAt, request.status === "completed"],
+    ["submitted", ["Request Review", "بررسی درخواست"], request.created_at, true],
+    ["approved", ["Approved (Ready to Pay)", "تأیید درخواست (آماده واریز)"], request.payment_approved_at || null, journey.approved],
+    ["receipt", ["Receipt Review", "بررسی رسید بانکی"], earliest(["receipt_uploaded", "payment_evidence"]) || request.evidence_submitted_at, journey.receiptSubmitted],
+    ["received", ["Funds Confirmed", "تأیید دریافت وجه"], request.funds_confirmed_at || earliest(["ready", "resume_funded_request"]), journey.fundsReceived],
+    ["completed", ["Transfer Completed", "تکمیل تراکنش"], completedAt, request.status === "completed"],
   ];
   return rows.map(([key, label, at, done], index) => ({ key, label, at: at || null, done, current: !journey.closed && index === journey.stage }));
 }
@@ -110,11 +99,12 @@ export function requestActivityLabel(eventType: string, locale: RequestLocale): 
 
 export function requestEmailStatus(status: string, lastError?: string | null, locale: RequestLocale = "en"): string {
   const labels: Record<string, [string, string]> = {
-    pending: ["Queued", "در صف ارسال"], leased: ["Sending", "در حال ارسال"], provider_accepted: ["Sent", "ارسال شد"], delivered: ["Delivered", "تحویل شد"],
+    pending: ["Not sent yet · retried on next update", "هنوز ارسال نشده · در به‌روزرسانی بعدی دوباره ارسال می‌شود"], leased: ["Sending", "در حال ارسال"], provider_accepted: ["Sent", "ارسال شد"], delivered: ["Delivered", "تحویل شد"],
     skipped: ["Email not requested", "ارسال ایمیل انتخاب نشد"], failed: ["Delivery failed", "تحویل ناموفق"],
     suppressed: ["Recipient could not receive email", "گیرنده امکان دریافت ایمیل ندارد"],
     reconciliation_required: ["Delivery needs checking", "تحویل نیاز به بررسی دارد"],
+    queue_retired: ["Not sent (old queue retired)", "ارسال نشد (صف قدیمی حذف شد)"],
   };
-  const key = status === "skipped" && lastError === "admin_email_opt_out" ? "skipped" : status;
+  const key = status === "skipped" && lastError === "queue_retired" ? "queue_retired" : status;
   return (labels[key] || ["Delivery pending", "در انتظار تحویل"])[locale === "fa" ? 1 : 0];
 }

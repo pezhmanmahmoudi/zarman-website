@@ -13,5 +13,12 @@
 .hint,.feedback { color:#5f7180; font-size:13px; line-height:1.6; }
 .hint { margin:0 0 16px; }
 .feedback { padding:16px 20px; }
+.timingSection:not([hidden]) { display:grid; gap:22px; }
+.timingSection > .hint { margin:0; }
+.timingGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; align-items:end; }
+.timingGrid > label:last-child { grid-column:1 / -1; }
+.timingSection input[type="number"] { min-height:46px; border-radius:10px; font-variant-numeric:tabular-nums; }
+.timingSection input[type="number"]:focus { outline:none; border-color:#829acb; box-shadow:0 0 0 2px #365bd610; }
+@media(max-width:600px) { .timingGrid { grid-template-columns:1fr; gap:16px; } .timingSection:not([hidden]) { gap:20px; } }
 @media(max-width:900px) { .bankGrid { grid-template-columns:1fr; } }
 @media(max-width:600px) { .categories { padding:12px 14px 0; gap:6px; } .categories button { flex:1 1 auto; min-height:44px; } .section { padding:16px 14px; } .section input,.section textarea { font-size:16px; } .language button { min-height:44px; } }

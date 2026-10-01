@@ -1,3 +1,8 @@
+.dashboardSurface,.dashboardWrapper,.loadingPage {
+  background:radial-gradient(ellipse 65% 500px at 85% 0%,#ece5fa80,transparent),radial-gradient(ellipse 45% 600px at 0% 40%,#e0f4f380,transparent),#f7f7fb;
+  color-scheme:light;
+}
+.dashboardSurface {min-height:100dvh}
 .dashboardWrapper {
   --color-text-primary:#182027;--color-text-secondary:#626a76;--color-bg-base:#f7f8fa;
   --bg-app:#f7f8fa;--bg-sidebar:#fff;--bg-card:#fff;--bg-soft:#f1f3f6;--bg-input:#fff;--bg-hover:#eceef3;
@@ -9,7 +14,7 @@
   --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:20px;--radius-2xl:24px;--radius-pill:999px;
   --shadow-sm:0 2px 4px #18213304;--shadow-card:0 6px 24px #18213304;--shadow-md:0 12px 36px #18213309;
   --font-en-stack:var(--font-en,Inter),system-ui,sans-serif;--font-fa-stack:IRANSansX,Peyda,system-ui,sans-serif;
-  background:radial-gradient(ellipse 65% 500px at 85% 0%,#ece5fa80,transparent),radial-gradient(ellipse 45% 600px at 0% 40%,#e0f4f380,transparent),#f7f7fb;color:#182027;min-height:100dvh;font-family:var(--font-en-stack);font-size:14px;line-height:1.55;
+  color:#182027;min-height:100dvh;font-family:var(--font-en-stack);font-size:14px;line-height:1.55;
   -webkit-font-smoothing:antialiased;color-scheme:light;isolation:isolate;
 }
 .dashboardWrapper[dir="rtl"] {font-family:var(--font-fa-stack)}
@@ -21,7 +26,22 @@
 .dashboardWrapper [data-number-locale="fa"] {font-family:var(--font-fa-stack)!important;letter-spacing:0!important;font-variant-numeric:tabular-nums;line-height:1.6}
 .dashboardWrapper [data-number-locale="en"] {font-family:var(--font-en-stack)!important;font-variant-numeric:tabular-nums}
 .dashboardWrapper input[data-amount-input] {font-size:clamp(1.5rem,3vw,2rem)!important;font-weight:500;outline:none!important;box-shadow:none!important;line-height:1.5}
-.dashboardWrapper :where(a,button,input,textarea,select,summary):focus-visible {outline:3px solid #a49afb;outline-offset:4px}
+.dashboardWrapper :where(a,button,input,textarea,select,summary):focus-visible {outline:2px solid #8970b6;outline-offset:2px}
+/* A single border and soft halo for editable controls throughout the dashboard. */
+.dashboardWrapper :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([data-amount-input]),textarea,select):focus {
+  outline:none!important;
+  border-color:#8970b6!important;
+  box-shadow:0 0 0 2px rgb(118 103 189 / 8%)!important;
+}
+.dashboardWrapper :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([data-amount-input]),textarea,select)[aria-invalid="true"]:focus {
+  border-color:#be405d!important;
+  box-shadow:0 0 0 2px rgb(190 64 93 / 12%)!important;
+}
+.dashboardWrapper button[role="combobox"]:is(:focus-visible,[aria-expanded="true"]) {
+  outline:none!important;
+  border-color:#8970b6!important;
+  box-shadow:0 0 0 2px rgb(118 103 189 / 8%)!important;
+}
 .dashboardWrapper :where(button,a) {-webkit-tap-highlight-color:transparent}
 .mainArea {margin-inline-start:240px;min-width:0;min-height:100dvh;display:flex;flex-direction:column}
 .content {width:100%;max-width:1360px;margin-inline:auto;padding:36px clamp(24px,3.2vw,54px);flex:1;min-width:0;outline:none;scroll-margin-top:95px}
@@ -31,9 +51,11 @@
 .skipLink {position:fixed;inset-block-start:8px;inset-inline-start:260px;transform:translateY(-150%);z-index:100;background:#182133;color:white;padding:12px 20px;border-radius:10px}
 .skipLink:focus {transform:none}
 .srOnly {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.loadingState {padding:24px;width:100%;min-height:420px;color:var(--text-soft)}
-.skeletonHeading,.skeletonGrid > div,.skeletonList {background:linear-gradient(110deg,#e8ebf2,#f1f3f8);border-radius:24px}
+.loadingState {display:grid;place-items:center;align-content:center;padding:24px;width:100%;min-height:clamp(280px,50dvh,480px);color:#626a76;isolation:isolate}
+.loadingPage {min-height:100dvh;box-sizing:border-box}
+.skeletonHeading,.skeletonGrid > div,.skeletonList {background:linear-gradient(100deg,#e8ebf2 30%,#f6f7fb 50%,#e8ebf2 70%);background-size:220% 100%;border-radius:24px;animation:skeletonShimmer 1.6s ease-in-out infinite}
 .skeletonHeading {height:26px;width:38%;margin-bottom:38px}.skeletonGrid {display:grid;grid-template-columns:1.8fr 1fr;gap:24px}.skeletonGrid>div{height:240px}.skeletonList{height:200px;margin-top:24px}
+@keyframes skeletonShimmer {0%{background-position:120% 0}100%{background-position:-20% 0}}
 .errorState {padding:48px 24px;text-align:center;background:#fff;border:1px solid var(--border-soft);border-radius:24px}
 .errorState h1{font-size:20px}.errorState button{display:inline-flex;gap:8px;align-items:center;background:var(--accent);color:white;border:0;border-radius:12px;padding:12px 20px;margin-top:16px;cursor:pointer}
 .refreshNotice{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;margin-bottom:20px;border:1px solid #eadcc5;border-radius:12px;background:#fffaf0;color:#786033;font-size:12px}.refreshNotice button{border:0;background:transparent;color:inherit;font-weight:650;min-height:40px;padding:8px;cursor:pointer}

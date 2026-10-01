@@ -1,0 +1,80 @@
+.emptyCard {
+  container-type: inline-size;
+}
+
+.activeCard { container-type: inline-size; }
+.header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 24px 28px 0; }
+.hero { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 176px; align-items: center; gap: 32px; padding: 28px; }
+.actorRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-block-end: 12px; }
+.activeCard .heading { margin: 0 !important; max-width: 32ch; color: #25213e !important; font-size: clamp(23px, 3cqw, 30px) !important; font-weight: 650; line-height: 1.55 !important; letter-spacing: 0; text-wrap: balance; }
+.description { max-width: 64ch; margin: 12px 0 0; color: #605b73; font-size: 14px; line-height: 1.95; text-wrap: pretty; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block-start: 24px; }
+.actions > * { min-height: 44px; }
+.paymentDeadline { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; padding: 9px 12px; border: 1px solid #ead8b4; border-radius: 12px; background: #fff8eb; color: #78521b; font-size: 12px; line-height: 1.7; }
+.paymentDeadline svg { flex: none; }
+.paymentDeadline time { font-weight: 650; }
+.actionHint { margin: 12px 0 0; color: #6b657c; font-size: 12px; line-height: 1.8; }
+.heroArt { display: grid; place-items: center; min-width: 0; }
+.summary { padding: 24px 28px; border-block: 1px solid #e8e3f1; background: rgb(255 255 255 / 80%); }
+.amounts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; margin: 0; }
+.amounts > div + div { padding-inline-start: 28px; border-inline-start: 1px solid #e8e3f1; }
+.amountLabel { margin-block-end: 10px; color: #696278; font-size: 13px; font-weight: 500; }
+.amountValue { margin: 0; min-width: 0; color: #25213e; }
+.amountNumber { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 8px; max-width: 100%; font-size: clamp(24px, 3.2cqw, 32px); font-weight: 650; line-height: 1.5; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.amountNumber [data-number-locale="fa"] { font-family: var(--font-fa-stack) !important; letter-spacing: 0; }
+.amountUnit { font-size: 13px; font-weight: 500; color: #696278; white-space: nowrap; }
+.recipient { margin: 16px 0 0; color: #696278; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.progressHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 24px 28px 8px; }
+.activeCard .progressHeader h3 { margin: 0 !important; font-size: 14px !important; font-weight: 600; line-height: 1.6; color: #39324f !important; }
+.activeCard :global(.react-bits-stepper.request-journey-stepper.outer-container) { border-top: 0; }
+.activeCard :global(.request-journey-caption strong) { font-size: 13px; line-height: 1.75; }
+.activeCard :global(.request-journey-caption time), .activeCard :global(.request-journey-caption small) { font-size: 11px; line-height: 1.7; }
+.activeCard :global(.request-journey-focus-ring) { inset: -4px; }
+.refreshing { animation: refresh-turn 1s linear infinite; }
+@keyframes refresh-turn { to { transform: rotate(360deg); } }
+@container (max-width: 640px) {
+  .header { padding: 20px 20px 0; }
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 20px; }
+  .actorRow { min-height: 76px; padding-inline-end: 88px; margin-block-end: 16px; }
+  .heroArt { position: absolute; top: 14px; inset-inline-end: 16px; width: 80px; height: 80px; }
+  .heroArt > * { width: 80px !important; height: 80px !important; }
+  .activeCard .heading { font-size: 23px !important; max-width: none; }
+  .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-block-start: 20px; }
+  .actions > :only-child { grid-column: 1 / -1; }
+  .summary { padding: 20px; }
+  .amounts { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .amounts > div + div { padding-inline-start: 0; padding-block-start: 18px; border-inline-start: 0; border-block-start: 1px solid #eeeaf4; }
+  .amountNumber { font-size: 28px; }
+  .progressHeader { padding: 20px 20px 4px; }
+}
+@container (max-width: 360px) {
+  .actions { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .refreshing { animation: none; } }
+
+.emptyHero {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+  padding: clamp(1.25rem, 3cqw, 2rem);
+}
+
+.emptyArt {
+  width: 100%;
+  max-width: 13rem;
+  min-width: 0;
+  justify-self: center;
+}
+
+@container (min-width: 580px) {
+  .emptyHero {
+    min-height: 18rem;
+    grid-template-columns: minmax(0, 1.35fr) minmax(190px, 0.75fr);
+    gap: clamp(1rem, 3cqw, 2rem);
+  }
+
+  .emptyArt {
+    max-width: 17rem;
+  }
+}

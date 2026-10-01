@@ -60,19 +60,31 @@ test("real record props render once in both locales with status, reference, priv
     const h = dashboardHarness({ locale });
     const { RecentActivityList } = h.load("components/dashboard/recent-activity-list.tsx");
     const quoted = { ...fixture, updated_at: "2026-09-21T02:00:00Z", quote: { ...fixture.quote, recipient_snapshot: { full_name: "<script>recipient</script>" } } };
-    h.values[0] = now;
-    const html = markup(React.createElement(RecentActivityList, { requests: [quoted, quoted], locale, motionEnabled: false, onRefresh() {} }));
+    const html = markup(React.createElement(RecentActivityList, { requests: [quoted, quoted], locale, motionEnabled: false }));
+    assert.equal((html.match(/data-transaction-summary=/g) || []).length, 1);
     assert.equal((html.match(/ZE36827/g) || []).length, 1);
-    assert.equal((html.match(/role="listitem"/g) || []).length, 1);
     assert.match(html, new RegExp(`href="/${locale}/dashboard/requests/fixture-request"`));
-    assert.match(html, /dateTime="2026-09-21T02:00:00Z"/);
+    assert.match(html, new RegExp(`dateTime="${fixture.created_at}"`));
     assert.match(html, /data-private-value="true"/);
-    assert.match(html, locale === "en" ? /234,675,000 Toman/ : /۲۳۴٬۶۷۵٬۰۰۰ تومان/);
-    assert.match(html, locale === "en" ? /2 hours ago/ : /۲ ساعت پیش/);
+    assert.match(html, locale === "en" ? /Funds received/ : /وجه دریافت شد/);
     assert.match(html, /&lt;script&gt;recipient&lt;\/script&gt;/);
     assert.doesNotMatch(html, /<script>|Magic UI|Payment received·15m/);
     assert.match(html, locale === "en" ? /dir="ltr"/ : /dir="rtl"/);
   }
+});
+
+test("overview activity preview shows only the newest real record", () => {
+  const h = dashboardHarness();
+  const { RecentActivityList } = h.load("components/dashboard/recent-activity-list.tsx");
+  const rows = [
+    { ...fixture, id: "old", reference_code: "ZE-OLD", updated_at: "2026-09-19T00:00:00Z" },
+    { ...fixture, id: "middle", reference_code: "ZE-MIDDLE", updated_at: "2026-09-20T00:00:00Z" },
+    { ...fixture, id: "new", reference_code: "ZE-NEW", updated_at: "2026-09-21T00:00:00Z" },
+  ];
+  const html = markup(React.createElement(RecentActivityList, { requests: rows, locale: "en", motionEnabled: false }));
+  assert.match(html, /ZE-NEW/);
+  assert.doesNotMatch(html, /ZE-MIDDLE|ZE-OLD/);
+  assert.equal((html.match(/data-transaction-summary=/g) || []).length, 1);
 });
 
 test("live list displays every supplied item in its existing order, without a demo reveal timer", () => {
@@ -86,7 +98,7 @@ test("live list displays every supplied item in its existing order, without a de
   assert.doesNotMatch(html, /opacity:0|scale\(0\)/);
 });
 
-test("loading, empty and failed states stay distinct, and stale records remain available with retry", () => {
+test("loading and empty states have no fake rows, and activity has no refresh or new-transfer buttons", () => {
   const buttons = []; let refreshed = 0;
   const h = dashboardHarness({ mocks: { "@/components/ui/button": { Button: ({ asChild, children, ...props }) => {
     buttons.push(props); return asChild ? React.cloneElement(React.Children.only(children), props) : React.createElement("button", props, children);
@@ -95,12 +107,15 @@ test("loading, empty and failed states stay distinct, and stale records remain a
   const render = props => markup(React.createElement(RecentActivityList, { requests: [], locale: "en", onRefresh() { refreshed++; }, motionEnabled: false, ...props }));
   assert.match(render({ loading: true }), /role="status"/);
   assert.doesNotMatch(render({ loading: true }), /Your next connection starts here/);
-  assert.match(render({}), /href="\/en\/dashboard\?tab=transfer"/);
+  assert.match(render({}), /No transactions yet/);
+  assert.doesNotMatch(render({}), /href="\/en\/dashboard\?tab=transfer"|h-12 rounded-2xl|role="listitem"/);
   assert.doesNotMatch(render({ error: true }), /Your next connection starts here/);
   buttons.length = 0;
   const html = render({ error: true, requests: [fixture] });
   assert.match(html, /Showing the last loaded updates/); assert.match(html, /ZE36827/);
-  buttons.find(button => typeof button.onClick === "function").onClick(); assert.equal(refreshed, 1);
+  assert.equal(buttons.filter(button => typeof button.onClick === "function").length, 0);
+  assert.equal(refreshed, 0);
+  assert.match(html, /href="\/en\/dashboard\?tab=history"/);
 });
 
 test("overview passes the same live feed and motion preference to the new recent list", () => {
@@ -111,14 +126,16 @@ test("overview passes the same live feed and motion preference to the new recent
     "@/hooks/useDashboardRequests": { useDashboardRequests: () => feed },
     "@/context/FinanceConfigContext": { useFinanceConfig: () => ({}) },
     "./recent-activity-list": { RecentActivityList: Marker },
+    "./DashboardOverviewRecipients": { DashboardOverviewRecipients: () => null },
   } });
   const { DashboardOverview } = h.load("components/dashboard/DashboardOverview.tsx");
-  const row = elements(h.render(DashboardOverview, { volume: 0, completedCount: 0, tailoredRate: 105000 }), node => node.type === Marker)[0];
+  const row = elements(h.render(DashboardOverview, { volume: 0, completedCount: 0, baseBuyRate: 105000, baseSellRate: 106000 }), node => node.type === Marker)[0];
   assert.ok(row); assert.equal(row.props.requests, feed.requests); assert.equal(row.props.motionEnabled, false); assert.equal(row.props.locale, "en");
 });
 
-test("a Supabase realtime signal refreshes request data and the animated row follows the new status", async () => {
+test("a due Supabase realtime signal refreshes request data and the latest card follows the new status", async () => {
   const previous = { window: global.window, document: global.document };
+  const originalNow = Date.now; let clock = now; Date.now = () => clock;
   const listeners = new Map();
   global.window = { setInterval() { return 1; }, clearInterval() {}, addEventListener(event, fn) { listeners.set(event, fn); }, removeEventListener() {} };
   global.document = { visibilityState: "visible", addEventListener() {}, removeEventListener() {} };
@@ -133,9 +150,11 @@ test("a Supabase realtime signal refreshes request data and the animated row fol
   const show = () => markup(React.createElement(RecentActivityList, { ...hook.render(useDashboardRequests), locale: "en", onRefresh() {}, motionEnabled: false }));
   try {
     hook.render(useDashboardRequests); hook.effects(); await tick();
-    assert.match(show(), /data-tone="attention"/);
-    records = [{ ...fixture, updated_at: "2026-09-21T04:00:00Z" }]; signal(); await tick();
-    const html = show(); assert.match(html, /Funds received/); assert.match(html, /data-tone="neutral"/);
+    assert.match(show(), /data-transaction-summary="amber"/);
+    records = [{ ...fixture, updated_at: "2026-09-21T04:00:00Z" }];
+    signal(); await tick(); assert.equal(calls, 1, "signals inside the refresh window are throttled");
+    clock += 300000; signal(); await tick();
+    const html = show(); assert.match(html, /Funds received/); assert.doesNotMatch(html, /data-transaction-summary="amber"/);
     assert.equal((html.match(/ZE36827/g) || []).length, 1); assert.equal(calls, 2);
-  } finally { hook.cleanup(); global.window = previous.window; global.document = previous.document; }
+  } finally { hook.cleanup(); Date.now = originalNow; global.window = previous.window; global.document = previous.document; }
 });

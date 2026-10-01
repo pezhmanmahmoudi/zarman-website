@@ -141,6 +141,8 @@ test("activity and email summaries describe the action without leaking internal 
   assert.match(journey.requestActivityLabel("await_funds", "en"), /Payment approved/);
   assert.match(journey.requestActivityLabel("receipt_uploaded", "en"), /sent a payment receipt/);
   assert.equal(journey.requestEmailStatus("skipped", "admin_email_opt_out"), "Email not requested");
+  assert.equal(journey.requestEmailStatus("skipped", "queue_retired"), "Not sent (old queue retired)");
+  assert.match(journey.requestEmailStatus("pending", null), /retried on next update/);
   assert.equal(journey.requestEmailStatus("failed", "PRIVATE raw provider response"), "Delivery failed");
   assert.equal(journey.requestActivityLabel("internal_new_unknown_event", "en"), "Request updated");
 });

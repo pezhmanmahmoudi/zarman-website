@@ -11,7 +11,7 @@ const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 
-function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_000 } = {}) {
+function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_000, projectColumns = false } = {}) {
   const calls = [];
   let authChecks = 0;
   let serviceClients = 0;
@@ -23,8 +23,9 @@ function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_0
       this.orders = [];
       this.options = {};
     }
-    select(_columns, options = {}) { this.options = options; return this; }
+    select(columns, options = {}) { this.columns = columns; this.options = options; return this; }
     eq(field, value) { this.predicates.push((row) => row[field] === value); return this; }
+    neq(field, value) { this.predicates.push((row) => row[field] !== value); return this; }
     in(field, values) { this.predicates.push((row) => values.includes(row[field])); return this; }
     gte(field, value) { this.predicates.push((row) => row[field] >= value); return this; }
     lte(field, value) { this.predicates.push((row) => row[field] <= value); return this; }
@@ -53,8 +54,13 @@ function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_0
         return 0;
       });
       const [start, end] = this.window ?? [0, apiLimit - 1];
+      let page = filtered.slice(start, Math.min(end + 1, start + apiLimit));
+      if (projectColumns && this.columns !== "*") {
+        const fields = this.columns.split(",").map(field => field.trim());
+        page = page.map(row => Object.fromEntries(fields.map(field => [field, row[field]])));
+      }
       return Promise.resolve({
-        data: this.options.head ? null : filtered.slice(start, Math.min(end + 1, start + apiLimit)),
+        data: this.options.head ? null : page,
         count: this.options.count === "exact" ? filtered.length : null,
         error: null,
       }).then(resolve, reject);
@@ -75,7 +81,8 @@ function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_0
       if (name === "@/lib/supabase-server") return { createSupabaseServerActionClient: async () => db };
       // Direct action calls do not run in a React Server Component cache scope.
       if (name === "react") return { cache: (fn) => fn };
-      if (["next/cache", "@/lib/rates", "@/lib/pricing", "@/lib/iran-bank-transfer-fees"].includes(name)) return {};
+      if (name === "@/lib/requests/receipt-upload") return { REQUEST_RECEIPTS_BUCKET: "exchange-request-receipts" };
+      if (["next/cache", "@/lib/rates", "@/lib/pricing", "@/lib/iran-bank-transfer-fees", "@/lib/jalali"].includes(name)) return {};
       throw new Error(`Unexpected dependency: ${name}`);
     },
     compiledModule,
@@ -114,6 +121,79 @@ test("navigation reads only pending queues and verifies capability without count
 test("dashboard counters reject unavailable data instead of displaying false zeroes", async () => {
   const context = setup({ fail: (query) => query.table === "testimonials" });
   await assert.rejects(context.actions.getAdminStats(), /Synthetic read failure/);
+});
+
+test("verification queue and history return the saved contact, address and identity fields used by View", async () => {
+  const details = {
+    first_name: "Example", last_name: "Customer", email: "example@example.test", customer_code: "CZ00123",
+    created_at: "2026-09-27T00:00:00Z", mobile_number: "0400000000", dob: "1990-01-01",
+    address: "10 Example Street", city: "Sydney", state: "NSW", postcode: "2000", country: "Australia",
+    document_type: "driver_license", license_number: "001234", card_number: "00099", passport_number: null,
+    state_of_issue: "NSW", expiry_date: "2029-01-01",
+  };
+  const profiles = ["pending", "under_review", "approved", "rejected", "archived"].map(kyc_status => ({ ...details, id: kyc_status, kyc_status }));
+  const context = setup({ tables: { profiles }, projectColumns: true });
+  const queue = await context.actions.getKycQueue();
+  const history = await context.actions.getKycHistory(1, 20);
+  assert.deepEqual(queue.map(row => row.id).sort(), ["pending", "under_review"]);
+  assert.equal(history.total, 3);
+  assert.deepEqual(history.data.map(row => row.id).sort(), ["approved", "archived", "rejected"]);
+  for (const row of [...queue, ...history.data]) {
+    for (const [key, value] of Object.entries(details)) assert.equal(row[key], value, `${row.id}: missing ${key}`);
+  }
+  const read = context.calls.find(query => query.table === "profiles" && query.window);
+  assert.deepEqual(read.window, [0, 19]);
+  assert.equal(context.serviceClients, 0);
+});
+
+test("verification data remains admin-only and read failures are surfaced", async () => {
+  for (const role of [null, "customer"]) {
+    const context = setup({ role });
+    await assert.rejects(context.actions.getKycQueue());
+    await assert.rejects(context.actions.getKycHistory());
+    assert.equal(context.calls.some(query => query.table === "profiles"), false);
+  }
+  const failed = setup({ fail: query => query.table === "profiles" && !query.options.head });
+  await assert.rejects(failed.actions.getKycQueue(), /Synthetic read failure/);
+  await assert.rejects(failed.actions.getKycHistory(), /Synthetic read failure/);
+});
+
+test("merged queue includes every pending transfer beyond API limits and outstanding refunds without duplicates", async () => {
+  const pending = Array.from({ length: 205 }, (_, index) => ({ id: `tx-${index}`, status: "pending", created_at: "2026-09-15T01:00:00Z", request: index ? null : { id: "request-0" } }));
+  const refunds = Array.from({ length: 45 }, (_, index) => ({ id: `refund-${index}`, transaction_id: `closed-${index}`, funding_status: "refund_pending" }));
+  const context = setup({ apiLimit: 20, tables: {
+    transactions: [...pending, ...refunds.map(item => ({ id: item.transaction_id, status: "rejected" }))],
+    exchange_requests: [...refunds, { id: "pending-refund", transaction_id: "tx-0", priority_fee_status: "refund_pending" }],
+  } });
+  const rows = await context.actions.getPendingTransactionsWithDetails();
+  assert.equal(rows.length, 250);
+  assert.equal(new Set(rows.map(row => row.id)).size, 250);
+  assert.equal(rows.find(row => row.id === "tx-0").request.id, "request-0");
+  for (const query of context.calls.filter(query => query.table === "transactions")) assert.match(query.columns, /request:exchange_requests\(\*\)/);
+});
+
+test("request read errors fail the unified queue instead of treating linked transfers as manual", async () => {
+  const context = setup({ fail: query => query.table === "exchange_requests" });
+  await assert.rejects(context.actions.getPendingTransactionsWithDetails(), /Synthetic read failure/);
+});
+
+test("transaction history is paginated once, preserves linked request details and checks both counts and rows", async () => {
+  const transactions = Array.from({ length: 30 }, (_, index) => ({ id: String(index).padStart(3, "0"), status: "approved", created_at: "2026-09-15T01:00:00Z", request: { id: `req-${index}` } }));
+  const context = setup({ tables: { transactions } });
+  const result = await context.actions.getTransactionHistoryWithDetails(2, 10);
+  assert.equal(result.total, 30);
+  assert.equal(result.data.length, 10);
+  assert.equal(result.data[0].request.id, "req-19");
+  const failed = setup({ fail: query => query.table === "transactions" && query.options.head });
+  await assert.rejects(failed.actions.getTransactionHistoryWithDetails(), /Synthetic read failure/);
+  await assert.rejects(failed.actions.getTransactionHistoryStatusCounts(), /Synthetic read failure/);
+});
+
+test("unified transaction reads enforce admin authorization before using service credentials", async () => {
+  const context = setup({ role: null });
+  await assert.rejects(context.actions.getPendingTransactionsWithDetails());
+  await assert.rejects(context.actions.getTransactionHistoryWithDetails());
+  assert.equal(context.serviceClients, 0);
 });
 
 test("ledger pagination returns only the visible rows and a complete filtered count", async () => {
@@ -192,7 +272,7 @@ test("treasury rejects unauthorized direct server-action calls before creating a
       (name) => {
         if (name === "@/app/actions/admin.actions") return context.actions;
         if (name === "@supabase/supabase-js") return { createClient: () => { privilegedAccess = true; throw new Error("Privileged client should not be created"); } };
-        if (["next/cache", "@/lib/accounting-engine", "@/lib/treasury-engine", "@/lib/strategy-engine", "@/lib/bank-account-ordering"].includes(name)) return {};
+        if (["next/cache", "@/lib/accounting-engine", "@/lib/treasury-engine", "@/lib/strategy-engine", "@/lib/bank-account-ordering", "@/lib/reconciliation-engine", "@/lib/jalali"].includes(name)) return {};
         throw new Error(`Unexpected treasury dependency: ${name}`);
       },
       treasuryModule,

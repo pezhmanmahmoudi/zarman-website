@@ -207,6 +207,7 @@ export type IftiSourceRecord = {
     shaba_number?: string | null;
     irt_account_number?: string | null;
     bank_name?: string | null;
+    bank_city?: string | null;
   } | null;
 };
 
@@ -328,7 +329,8 @@ function createDataRow(record: IftiSourceRecord): Array<string | number> {
   row[50] = asString(recipient?.recipient_email);
   row[54] = asString(recipient?.account_number) || asString(recipient?.irt_account_number) || asString(recipient?.card_number) || asString(recipient?.shaba_number);
   row[55] = asString(recipient?.bank_name);
-  row[56] = beneficiaryCity;
+  // Institution city is the bank branch city; legacy recipients fall back to the residential city.
+  row[56] = asString(recipient?.bank_city) || beneficiaryCity;
   row[57] = beneficiaryCountryValue || beneficiaryCountry;
 
   // Person/organisation accepting the transfer instruction from the ordering customer — Zarman Exchange

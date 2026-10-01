@@ -3,6 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/app/actions/admin.actions";
+import { toJalaliStr } from "@/lib/jalali";
 import {
   calcAccountingSnapshot,
   type LedgerRowInput,
@@ -20,6 +21,7 @@ import {
   type StrategyOutput,
 } from "@/lib/strategy-engine";
 import { sortBankAccountsByPriority } from "@/lib/bank-account-ordering";
+import { calcAccountBalancesAsOf } from "@/lib/reconciliation-engine";
 
 // ── Private helpers ────────────────────────────────────────────────────────
 
@@ -89,6 +91,8 @@ export type TreasuryPageData = {
   expenses: any[];
   recurringExpenses: any[];
   bankAccounts: any[];
+  allBankAccounts: any[];
+  reconciliations: any[];
   settings: TreasurySettingsRow;
 };
 
@@ -102,7 +106,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
   const db = makeServiceRoleClient();
 
   // واکشی همزمان تمام داده‌های مالی زنده
-  const [ledgerRes, expenseRes, loanRes, settingsRes, rateRes, accountsRes, feePostingRes, serviceFeeRes] = await Promise.all([
+  const [ledgerRes, expenseRes, loanRes, settingsRes, rateRes, accountsRes, feePostingRes, serviceFeeRes, reconciliationRes] = await Promise.all([
     db
       .from("ledger")
       .select("*")
@@ -116,6 +120,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     db.from("bank_accounts").select("*"),
     db.from("bank_fee_monthly_postings").select("fee_month, expense_id"),
     db.rpc("get_exchange_request_fee_income"),
+    db.from("account_reconciliations").select("*").order("created_at", { ascending: false }).limit(300),
   ]);
 
   // Refuse to report incomplete profit if the deployed request-fee accounting
@@ -235,6 +240,15 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
 
   const strategy = generateStrategyOutput(treasury, accounting);
 
+  const accountById = new Map(allAccounts.map((a: any) => [String(a.id), a]));
+  const reconciliations = (reconciliationRes.data ?? []).map((r: any) => {
+    const account = accountById.get(String(r.account_id));
+    return {
+      ...r,
+      account_name: account?.account_name ?? "—",
+    };
+  });
+
   return {
     accounting,
     treasury,
@@ -246,6 +260,8 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     })),
     recurringExpenses: recurringRes.data ?? [],
     bankAccounts: allAccounts.filter((a: any) => a.is_active),
+    allBankAccounts: allAccounts,
+    reconciliations,
     settings,
   };
 }
@@ -832,6 +848,347 @@ export async function updateBankAccount(payload: {
     targetId: payload.id,
     oldValue: before,
     newValue: payload,
+  }).catch(() => {});
+
+  revalidatePath("/admin/treasury");
+  return { success: true };
+}
+
+/**
+ * بستن یک کشو/حساب بانکی: فقط وقتی موجودی دفتری آن صفر باشد قابل انجام است
+ * تا موجودی باقی‌مانده به‌طور پنهانی از دید و امکان تطبیق حذف نشود.
+ */
+export async function closeBankAccount(id: string): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+  if (!id) return { error: "شناسه الزامی است." };
+
+  const db = makeServiceRoleClient();
+  const { data: account, error: accountError } = await db
+    .from("bank_accounts")
+    .select("id, account_name, is_active")
+    .eq("id", id)
+    .maybeSingle();
+  if (accountError) return { error: accountError.message };
+  if (!account) return { error: "حساب یافت نشد." };
+  if (!account.is_active) return { error: "این حساب از قبل بسته شده است." };
+
+  const today = new Date().toISOString().slice(0, 10);
+  const [ledgerRes, expenseRes, loanRes, rateRes, accountsRes] = await Promise.all([
+    db.from("ledger").select("*"),
+    db.from("expenses").select("*"),
+    db.from("owner_loans").select("*"),
+    db.from("rates_history").select("buy_aud").order("date", { ascending: false }).limit(1).maybeSingle(),
+    db.from("bank_accounts").select("id, account_name, currency, account_type"),
+  ]);
+
+  const accountsMeta: AccountMeta[] = (accountsRes.data ?? []).map((a: any) => ({
+    id: String(a.id),
+    name: String(a.account_name),
+    currency: a.currency as "AUD" | "IRT",
+    type: a.account_type as "bank" | "virtual" | "transit",
+  }));
+
+  const ledgerRows: LedgerRowInput[] = (ledgerRes.data ?? []).map((r: any) => ({
+    id: String(r.id),
+    type: r.type as string,
+    entry_type: r.entry_type as string | null,
+    amount_aud: Number(r.amount_aud ?? 0),
+    amount_toman: Number(r.amount_toman ?? 0),
+    exchange_rate: Number(r.exchange_rate ?? 0),
+    fee_aud: Number(r.fee_aud ?? 0),
+    date_gregorian: r.date_gregorian as string,
+    payer_account_id: r.payer_account_id as string | null,
+    receiver_account_id: r.receiver_account_id as string | null,
+    created_at: r.created_at as string,
+  }));
+
+  const expenseInputs: ExpenseRowInput[] = (expenseRes.data ?? []).map((r: any) => ({
+    id: String(r.id),
+    currency: r.currency as "AUD" | "IRT",
+    amount: Number(r.amount),
+    exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
+    status: r.status as "paid" | "pending",
+    date: r.date as string,
+    category: r.category as string,
+    payer_account_id: r.payer_account_id as string | null,
+  }));
+
+  const loanInputs: OwnerLoanRowInput[] = (loanRes.data ?? []).map((r: any) => ({
+    id: String(r.id),
+    currency: r.currency as "AUD" | "IRT",
+    amount: Number(r.amount),
+    exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
+    loan_type: r.loan_type as "injection" | "repayment",
+    account_id: (r.account_id ?? r.account) as string | null,
+    date: r.date as string,
+  }));
+
+  const currentBuyRate = Number(rateRes.data?.buy_aud ?? 0);
+  const balances = calcAccountBalancesAsOf(ledgerRows, expenseInputs, loanInputs, accountsMeta, today, currentBuyRate);
+  const balance = balances[id] ?? 0;
+
+  if (Math.abs(balance) >= 0.01) {
+    return { error: `موجودی این حساب صفر نیست (${balance.toLocaleString("en-AU")}). ابتدا از بخش «تطبیق حساب‌ها» موجودی را صفر کنید.` };
+  }
+
+  const { error } = await db.from("bank_accounts").update({ is_active: false }).eq("id", id);
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "BANK_ACCOUNT_CLOSED",
+    targetType: "bank_accounts",
+    targetId: id,
+    oldValue: { is_active: true },
+    newValue: { is_active: false },
+  }).catch(() => {});
+
+  revalidatePath("/admin/treasury");
+  return { success: true };
+}
+
+/**
+ * بازگشایی یک کشو/حساب بانکی که قبلاً بسته شده بود
+ */
+export async function reopenBankAccount(id: string): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+  if (!id) return { error: "شناسه الزامی است." };
+
+  const db = makeServiceRoleClient();
+  const { error } = await db.from("bank_accounts").update({ is_active: true }).eq("id", id);
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "BANK_ACCOUNT_REOPENED",
+    targetType: "bank_accounts",
+    targetId: id,
+    oldValue: { is_active: false },
+    newValue: { is_active: true },
+  }).catch(() => {});
+
+  revalidatePath("/admin/treasury");
+  return { success: true };
+}
+
+// ── Reconciliation audit ────────────────────────────────────────────────
+
+/**
+ * محاسبه موجودی دفتری تمام کشوها در یک تاریخ مشخص (برای تطبیق پایان دوره)
+ */
+export async function getComputedBalancesAsOf(
+  asOfDate: string
+): Promise<{ balances: Record<string, number> } | { error: string }> {
+  await requireAdmin();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(asOfDate)) return { error: "تاریخ نامعتبر است." };
+
+  const db = makeServiceRoleClient();
+  const [ledgerRes, expenseRes, loanRes, rateRes, accountsRes] = await Promise.all([
+    db.from("ledger").select("*").lte("date_gregorian", asOfDate)
+      .order("date_gregorian", { ascending: true }).order("created_at", { ascending: true }),
+    db.from("expenses").select("*").lte("date", asOfDate),
+    db.from("owner_loans").select("*").lte("date", asOfDate),
+    db.from("rates_history").select("buy_aud").order("date", { ascending: false }).limit(1).maybeSingle(),
+    db.from("bank_accounts").select("id, account_name, currency, account_type"),
+  ]);
+
+  const accountsMeta: AccountMeta[] = (accountsRes.data ?? []).map((a: any) => ({
+    id: String(a.id),
+    name: String(a.account_name),
+    currency: a.currency as "AUD" | "IRT",
+    type: a.account_type as "bank" | "virtual" | "transit",
+  }));
+
+  const ledgerRows: LedgerRowInput[] = (ledgerRes.data ?? []).map((r: any) => ({
+    id: String(r.id),
+    type: r.type as string,
+    entry_type: r.entry_type as string | null,
+    amount_aud: Number(r.amount_aud ?? 0),
+    amount_toman: Number(r.amount_toman ?? 0),
+    exchange_rate: Number(r.exchange_rate ?? 0),
+    fee_aud: Number(r.fee_aud ?? 0),
+    date_gregorian: r.date_gregorian as string,
+    payer_account_id: r.payer_account_id as string | null,
+    receiver_account_id: r.receiver_account_id as string | null,
+    created_at: r.created_at as string,
+  }));
+
+  const expenseInputs: ExpenseRowInput[] = (expenseRes.data ?? []).map((r: any) => ({
+    id: String(r.id),
+    currency: r.currency as "AUD" | "IRT",
+    amount: Number(r.amount),
+    exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
+    status: r.status as "paid" | "pending",
+    date: r.date as string,
+    category: r.category as string,
+    payer_account_id: r.payer_account_id as string | null,
+  }));
+
+  const loanInputs: OwnerLoanRowInput[] = (loanRes.data ?? []).map((r: any) => ({
+    id: String(r.id),
+    currency: r.currency as "AUD" | "IRT",
+    amount: Number(r.amount),
+    exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
+    loan_type: r.loan_type as "injection" | "repayment",
+    account_id: (r.account_id ?? r.account) as string | null,
+    date: r.date as string,
+  }));
+
+  const currentBuyRate = Number(rateRes.data?.buy_aud ?? 0);
+  const balances = calcAccountBalancesAsOf(ledgerRows, expenseInputs, loanInputs, accountsMeta, asOfDate, currentBuyRate);
+  return { balances };
+}
+
+/**
+ * ثبت یک رکورد تطبیق برای یک حساب: مقایسه موجودی دفتری با موجودی واقعی بانک
+ */
+export async function saveAccountReconciliation(payload: {
+  account_id: string;
+  as_of_date: string;
+  computed_balance: number;
+  actual_balance: number;
+  notes?: string;
+}): Promise<{ success: true; status: string } | { error: string }> {
+  const admin = await requireAdmin();
+
+  if (!payload.account_id) return { error: "انتخاب حساب الزامی است." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.as_of_date)) return { error: "تاریخ تطبیق نامعتبر است." };
+  if (!Number.isFinite(payload.actual_balance)) return { error: "موجودی واقعی نامعتبر است." };
+  if (!Number.isFinite(payload.computed_balance)) return { error: "موجودی محاسبه‌شده نامعتبر است." };
+
+  const db = makeServiceRoleClient();
+  const { data: account, error: accountError } = await db
+    .from("bank_accounts")
+    .select("id, currency, account_type")
+    .eq("id", payload.account_id)
+    .maybeSingle();
+  if (accountError) return { error: accountError.message };
+  if (!account) return { error: "حساب یافت نشد." };
+
+  const discrepancy = Math.round((payload.actual_balance - payload.computed_balance) * 100) / 100;
+  const status = Math.abs(discrepancy) < 0.01 ? "matched" : "discrepancy";
+  const period = payload.as_of_date.slice(0, 7);
+
+  const { data: inserted, error } = await db.from("account_reconciliations").insert([{
+    account_id: payload.account_id,
+    period,
+    as_of_date: payload.as_of_date,
+    currency: account.currency,
+    computed_balance: payload.computed_balance,
+    actual_balance: payload.actual_balance,
+    status,
+    notes: payload.notes?.trim() || null,
+    reconciled_by: admin.id,
+    reconciled_by_email: admin.email ?? "",
+  }]).select("id").single();
+
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "ACCOUNT_RECONCILIATION_SAVED",
+    targetType: "account_reconciliations",
+    targetId: inserted?.id ? String(inserted.id) : null,
+    newValue: { ...payload, discrepancy, status },
+  }).catch(() => {});
+
+  revalidatePath("/admin/treasury");
+  return { success: true, status };
+}
+
+/**
+ * ثبت سند اصلاحی در دفتر کل تا موجودی دفتری برابر با موجودی واقعی بانک شود
+ */
+export async function postReconciliationAdjustment(
+  reconciliationId: string
+): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+  if (!reconciliationId) return { error: "شناسه الزامی است." };
+
+  const db = makeServiceRoleClient();
+  const { data: rec, error: recError } = await db
+    .from("account_reconciliations")
+    .select("*")
+    .eq("id", reconciliationId)
+    .maybeSingle();
+  if (recError) return { error: recError.message };
+  if (!rec) return { error: "رکورد تطبیق یافت نشد." };
+  if (rec.status !== "discrepancy") return { error: "فقط رکوردهای دارای مغایرت قابل اصلاح هستند." };
+
+  const gap = Number(rec.discrepancy ?? (rec.actual_balance - rec.computed_balance));
+  if (!Number.isFinite(gap) || gap === 0) return { error: "مغایرتی برای اصلاح وجود ندارد." };
+
+  const amount = Math.abs(Math.round(gap * 100) / 100);
+  const isCredit = gap > 0; // موجودی بانک بیشتر از دفتر است → باید به حساب اعتبار داده شود
+
+  const { data: rateRow } = await db
+    .from("rates_history")
+    .select("buy_aud")
+    .order("date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const exchangeRate = Number(rateRow?.buy_aud ?? 0);
+
+  const { data: ledgerRow, error: ledgerError } = await db.from("ledger").insert([{
+    transaction_id: null,
+    date_gregorian: rec.as_of_date,
+    date_jalali: toJalaliStr(new Date(`${rec.as_of_date}T00:00:00.000Z`)),
+    type: "buy_aud",
+    entry_type: "adjustment",
+    exchange_rate: exchangeRate,
+    amount_aud: rec.currency === "AUD" ? amount : 0,
+    amount_toman: rec.currency === "IRT" ? amount : 0,
+    sender: "",
+    recipient: "",
+    fee_aud: 0,
+    payer_account_id: isCredit ? null : rec.account_id,
+    receiver_account_id: isCredit ? rec.account_id : null,
+    notes: `تطبیق حساب ${rec.period} — ${rec.notes?.trim() || "اصلاح مغایرت با موجودی واقعی بانک"}`,
+    created_by: admin.id,
+  }]).select("id").single();
+
+  if (ledgerError) return { error: ledgerError.message };
+
+  const { error: updateError } = await db.from("account_reconciliations")
+    .update({ status: "adjusted", adjustment_ledger_id: ledgerRow.id })
+    .eq("id", reconciliationId);
+  if (updateError) return { error: updateError.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "ACCOUNT_RECONCILIATION_ADJUSTED",
+    targetType: "account_reconciliations",
+    targetId: reconciliationId,
+    newValue: { ledgerId: ledgerRow.id, amount, isCredit },
+  }).catch(() => {});
+
+  revalidatePath("/admin/treasury");
+  return { success: true };
+}
+
+/**
+ * حذف یک رکورد تطبیق (سند اصلاحی مرتبط، در صورت وجود، حذف نمی‌شود)
+ */
+export async function deleteAccountReconciliation(id: string): Promise<{ success: true } | { error: string }> {
+  const admin = await requireAdmin();
+  if (!id) return { error: "شناسه الزامی است." };
+
+  const db = makeServiceRoleClient();
+  const { data: before } = await db.from("account_reconciliations").select("*").eq("id", id).maybeSingle();
+  const { error } = await db.from("account_reconciliations").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "ACCOUNT_RECONCILIATION_DELETED",
+    targetType: "account_reconciliations",
+    targetId: id,
+    oldValue: before,
   }).catch(() => {});
 
   revalidatePath("/admin/treasury");

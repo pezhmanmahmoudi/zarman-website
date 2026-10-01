@@ -78,6 +78,8 @@ export function requestError(error: string, locale: RequestLocale): string {
     [/receipts can only|receipt.*awaiting review/i, "بارگذاری رسید در این مرحله امکان‌پذیر نیست."],
     [/2,?000|message.*long|message.*empty|enter the reason|write a message/i, "پیامی بین ۱ تا ۲۰۰۰ نویسه بنویسید."],
     [/wait a minute|too many|rate.?limit/i, "کمی صبر کنید و دوباره تلاش کنید."],
+    [/not (?:been )?configured/i, "این بخش هنوز روی سرور تنظیم نشده است. لطفاً با پشتیبانی تماس بگیرید."],
+    [/payment account details|username and password/i, "نام کاربری و رمز عبور حساب پرداخت را کامل و درست وارد کنید."],
     [/recipient|institution|invoice|payment link/i, "اطلاعات گیرنده و مقصد پرداخت را بررسی کنید."],
     [/promotion|promo code/i, "کد تخفیف معتبر نیست یا دیگر قابل استفاده نیست."],
     [/quote.*expir|quote.*valid|quote.*unavailable/i, "پیش‌فاکتور جدید بگیرید و مبلغ را تأیید کنید."],
@@ -98,6 +100,14 @@ export function requestDate(value: string | null | undefined, _locale?: RequestL
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("en-AU-u-ca-gregory-nu-latn", { dateStyle: "medium", timeStyle: "short", timeZone: "Australia/Sydney" }).format(date);
+}
+
+/** dd/mm/yy in Sydney time, for compact cards. */
+export function requestShortDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-AU-u-ca-gregory-nu-latn", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Australia/Sydney" }).format(date);
 }
 
 export const isRequestTerminal = (status: string) => ["completed", "cancelled", "rejected", "expired"].includes(status);

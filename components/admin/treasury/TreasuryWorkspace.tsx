@@ -11,6 +11,7 @@ import StrategyCenter from "@/components/admin/treasury/StrategyCenter";
 import MarketInventory from "@/components/admin/treasury/MarketInventory";
 import LiquidityAccounts from "@/components/admin/treasury/LiquidityAccounts";
 import ReconciliationGrid from "@/components/admin/treasury/ReconciliationGrid";
+import ReconciliationAudit from "@/components/admin/treasury/ReconciliationAudit";
 import ExposureSection from "@/components/admin/treasury/ExposureSection";
 import ProfitabilitySection from "@/components/admin/treasury/ProfitabilitySection";
 import BankAccountManager from "@/components/admin/treasury/BankAccountManager";
@@ -36,6 +37,7 @@ function TreasuryOverview({ data }: { data: TreasuryPageData }) {
   ];
   const actions: { title: string; description: string; view: TreasuryView; icon: typeof Wallet }[] = [
     { title: "Account balances", description: "Review bank, customer, and transit balances.", view: "reconciliation", icon: Landmark },
+    { title: "Reconcile accounts", description: "Match bank statements and resolve monthly discrepancies.", view: "audit", icon: CheckCircle2 },
     { title: "Manage expenses", description: "Add an expense or update an existing entry.", view: "expenses", icon: ReceiptText },
     { title: "Recurring payments", description: "Check due dates and post scheduled costs.", view: "recurring", icon: Repeat2 },
     { title: "Bank transfer fees", description: "Review and record monthly bank charges.", view: "bank-fees", icon: Wallet },
@@ -89,7 +91,7 @@ function TreasuryOverview({ data }: { data: TreasuryPageData }) {
 // Select on the server so inactive forms are neither mounted nor hydrated.
 // In particular, monthly bank-fee requests only run in the bank-fees workspace.
 function TreasuryContent({ view, data }: { view: TreasuryView; data: TreasuryPageData }) {
-  const { accounting, treasury, strategy, bankAccounts, expenses, recurringExpenses, ownerLoans, settings } = data;
+  const { accounting, treasury, strategy, bankAccounts, allBankAccounts, expenses, recurringExpenses, ownerLoans, settings, reconciliations } = data;
   switch (view) {
     case "overview": return <TreasuryOverview data={data} />;
     case "alerts": return (
@@ -99,7 +101,8 @@ function TreasuryContent({ view, data }: { view: TreasuryView; data: TreasuryPag
     );
     case "accounts": return <LiquidityAccounts treasury={treasury} strategy={strategy} accounting={accounting} />;
     case "reconciliation": return <ReconciliationGrid accounting={accounting} />;
-    case "bank-accounts": return <BankAccountManager bankAccounts={bankAccounts} defaultOpen />;
+    case "audit": return <ReconciliationAudit bankAccounts={bankAccounts} accounting={accounting} reconciliations={reconciliations ?? []} />;
+    case "bank-accounts": return <BankAccountManager bankAccounts={allBankAccounts ?? bankAccounts} defaultOpen />;
     case "expenses": return <ExpenseForm expenses={expenses} bankAccounts={bankAccounts} defaultOpen />;
     case "recurring": return <RecurringExpenseForm recurringExpenses={recurringExpenses} bankAccounts={bankAccounts} defaultOpen />;
     case "bank-fees": return <BankTransferFees />;

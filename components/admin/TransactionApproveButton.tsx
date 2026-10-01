@@ -277,17 +277,17 @@ export function TransactionApproveButton({
       <div className={tableStyles.btnGroup}>
         <button type="button" onClick={handleApproveClick}
           className={`${tableStyles.btnAction} ${tableStyles.btnActionCompact} ${tableStyles.btnApprove}`} title="Approve transaction">
-          <Check size={11} />
+          <Check size={14} aria-hidden="true" />
           Approve
         </button>
         <button type="button" onClick={handleReject}
           className={`${tableStyles.btnAction} ${tableStyles.btnActionCompact} ${tableStyles.btnReject}`} title="Reject transaction">
-          <X size={11} />
+          <X size={14} aria-hidden="true" />
           Reject
         </button>
         <button type="button" onClick={handleArchive}
           className={`${tableStyles.btnAction} ${tableStyles.btnActionCompact} ${tableStyles.btnArchive}`} title="Archive — customer did not complete">
-          <Archive size={11} />
+          <Archive size={14} aria-hidden="true" />
           Archive
         </button>
       </div>

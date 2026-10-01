@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ComponentType } from "react";
 import Image from "next/image";
 import { useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { dashboardMotionIcons, type DashboardMotionIconName } from "@/lib/dashboard/motion-icons";
+import { dashboardMotionIcons, type DashboardMotionAsset, type DashboardMotionIconName } from "@/lib/dashboard/motion-icons";
 import { useDashboardMotion } from "./DashboardMotion";
 import type { DashboardLottiePlayerProps } from "./DashboardLottiePlayer";
 
@@ -30,7 +30,7 @@ function MotionIcon({ name, size, className, animate }: Omit<Props, "motionEnabl
   const [ready, setReady] = useState(false);
   const [complete, setComplete] = useState(false);
   const [failed, setFailed] = useState(false);
-  const asset = dashboardMotionIcons[name];
+  const asset: DashboardMotionAsset = dashboardMotionIcons[name];
 
   useEffect(() => {
     const node = host.current;
@@ -62,14 +62,16 @@ function MotionIcon({ name, size, className, animate }: Omit<Props, "motionEnabl
 
   // A loaded player is retained while paused so resuming cannot briefly hide the
   // poster behind a new, unready SVG. It remains idle until motion is enabled.
-  const mounted = Player && !complete && !failed;
+  // Imported illustrations retain their final frame instead of snapping back
+  // to a different fallback drawing. They never restart on scroll or resume.
+  const mounted = Player && (!complete || asset.holdOnComplete) && !failed;
   return <span ref={host} aria-hidden="true" dir="ltr" data-motion-icon={name}
     className={cn("pointer-events-none relative inline-block shrink-0 select-none align-middle", className)}
     style={{ width: size, height: size }}>
     <Image src={asset.poster} alt="" width={size} height={size} unoptimized draggable={false}
       className={cn("absolute inset-0 z-10 size-full", mounted && animate && ready && "invisible")} />
     {mounted && <span className={animate ? undefined : "invisible"}>
-      <Player name={name} playing={animate && visible && foreground}
+      <Player name={name} playing={animate && visible && foreground && !complete}
         onReady={() => setReady(true)} onComplete={() => setComplete(true)} onError={() => setFailed(true)} />
     </span>}
   </span>;

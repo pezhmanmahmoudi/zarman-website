@@ -3,6 +3,7 @@ export const TREASURY_VIEWS = {
   alerts: { group: "overview", label: "Alerts", title: "Alerts & data quality", description: "Review treasury risks and accounting warnings before taking action." },
   accounts: { group: "accounts", label: "Liquidity", title: "Liquidity", description: "Monitor available cash, owner liabilities, and expense coverage." },
   reconciliation: { group: "accounts", label: "Balances", title: "Account balances", description: "Compare bank, customer, and transit balances with the central inventory." },
+  audit: { group: "accounts", label: "Reconcile", title: "Account reconciliation", description: "Match each bank account's statement balance against system records and resolve monthly discrepancies." },
   "bank-accounts": { group: "accounts", label: "Manage accounts", title: "Manage accounts", description: "Create and maintain the accounts used by treasury operations." },
   expenses: { group: "expenses", label: "All expenses", title: "Expenses", description: "Record operating costs and review existing expense entries." },
   recurring: { group: "expenses", label: "Recurring", title: "Recurring expenses", description: "Manage scheduled costs and post payments when they become due." },

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { PlusCircle, Building2, UserCircle, RefreshCw, Pencil, ChevronDown } from "lucide-react";
-import { addBankAccount, updateBankAccount } from "@/app/actions/treasury.actions";
+import { PlusCircle, Building2, UserCircle, RefreshCw, Pencil, ChevronDown, Lock, Unlock } from "lucide-react";
+import { addBankAccount, updateBankAccount, closeBankAccount, reopenBankAccount } from "@/app/actions/treasury.actions";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import s from "@/styles/admin/Treasury.module.css";
@@ -84,6 +84,21 @@ export default function BankAccountManager({ bankAccounts, defaultOpen = false }
     setEditingId(acc.id);
     setShowForm(true);
     setError(null);
+  }
+
+  function handleClose(acc: BankAccount) {
+    if (!confirm(`آیا از بستن حساب «${acc.account_name}» مطمئن هستید؟ این حساب دیگر در فرم‌ها نمایش داده نمی‌شود.`)) return;
+    startTransition(async () => {
+      const res = await closeBankAccount(acc.id);
+      if ("error" in res) alert(res.error);
+    });
+  }
+
+  function handleReopen(acc: BankAccount) {
+    startTransition(async () => {
+      const res = await reopenBankAccount(acc.id);
+      if ("error" in res) alert(res.error);
+    });
   }
 
   const isEditMode = Boolean(editingId);
@@ -191,7 +206,7 @@ export default function BankAccountManager({ bankAccounts, defaultOpen = false }
             </thead>
             <tbody>
               {bankAccounts.map(acc => (
-                <tr key={acc.id}>
+                <tr key={acc.id} style={acc.is_active ? undefined : { opacity: 0.55 }}>
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       {acc.account_type === "bank" ? <Building2 size={16} color="var(--accent)" /> : 
@@ -208,18 +223,43 @@ export default function BankAccountManager({ bankAccounts, defaultOpen = false }
                       {acc.currency}
                     </span>
                   </td>
-                  <td>{acc.is_active ? "فعال" : "غیرفعال"}</td>
+                  <td>{acc.is_active ? "فعال" : "بسته‌شده"}</td>
                   <td style={{ textAlign: "left" }}>
-                    <button
-                      className={s.btnIconEdit}
-                      onClick={() => startEdit(acc)}
-                      disabled={isPending}
-                      type="button"
-                      title="ویرایش"
-                      aria-label="ویرایش حساب"
-                    >
-                      <Pencil size={15} />
-                    </button>
+                    <div style={{ display: "flex", gap: "0.35rem", justifyContent: "flex-end" }}>
+                      <button
+                        className={s.btnIconEdit}
+                        onClick={() => startEdit(acc)}
+                        disabled={isPending}
+                        type="button"
+                        title="ویرایش"
+                        aria-label="ویرایش حساب"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      {acc.is_active ? (
+                        <button
+                          className={s.btnIconDanger}
+                          onClick={() => handleClose(acc)}
+                          disabled={isPending}
+                          type="button"
+                          title="بستن حساب (نیاز به موجودی صفر)"
+                          aria-label="بستن حساب"
+                        >
+                          <Lock size={15} />
+                        </button>
+                      ) : (
+                        <button
+                          className={s.btnToggle}
+                          onClick={() => handleReopen(acc)}
+                          disabled={isPending}
+                          type="button"
+                          title="بازگشایی حساب"
+                          aria-label="بازگشایی حساب"
+                        >
+                          <Unlock size={13} /> بازگشایی
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

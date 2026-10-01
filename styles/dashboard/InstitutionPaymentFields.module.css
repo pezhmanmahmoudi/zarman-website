@@ -1,0 +1,22 @@
+.form{min-width:0;margin:24px 0 0;padding:24px 0 0;border:0;border-top:1px solid #e4ddef;color:#302346}
+.heading{float:inline-start;width:100%;margin:0 0 20px;padding:0;font-size:14px;font-weight:600;line-height:1.8}
+.form>*:not(.heading){clear:both}
+.options{min-width:0;margin:0 0 22px;padding:0;border:0}
+.label{display:block;margin:0 0 8px;padding:0;font-size:13px;font-weight:500;line-height:1.8;color:#51445f}
+.optionGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.credentials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media(max-width:639px){.credentials{grid-template-columns:minmax(0,1fr);gap:0}}
+.option{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:12px;border:1px solid #d7cee7;border-radius:12px;background:#fff;color:#51445f;font-size:14px;font-weight:600;cursor:pointer}
+.option[data-checked="true"]{border-color:#8970b6;background:#f5f1fb;box-shadow:0 0 0 2px rgb(118 103 189 / 8%)}
+.form .option:has(input:focus-visible){outline:none;border-color:#8970b6;box-shadow:0 0 0 2px rgb(118 103 189 / 8%)}
+.option input{position:absolute;width:1px;height:1px;margin:-1px;clip-path:inset(50%);overflow:hidden}
+.form .option input:focus-visible{outline:none!important;box-shadow:none!important}
+.company{margin-bottom:22px;padding:16px;border:1px solid #e4ddef;border-radius:12px;background:#faf8fd}
+.company p{margin:0;font-size:14px;font-weight:500;line-height:1.8;overflow-wrap:anywhere;text-align:start}
+.field{min-width:0;margin-top:22px}
+.form .field input{box-sizing:border-box;width:100%;height:48px;min-width:0;padding:10px 14px;border:1px solid #d7cee7;border-radius:12px;background:#fff;color:#302346;font:inherit;font-size:16px;line-height:26px}
+.form .field input:focus,.form .field input:focus-visible{outline:none!important;border-color:#8970b6!important;box-shadow:0 0 0 2px rgb(118 103 189 / 8%)!important}
+.hint{display:flex;align-items:flex-start;gap:8px;margin:10px 0 0;font-size:12px;line-height:1.9;color:#756782}
+.hint svg{flex-shrink:0;margin-top:4px}
+.form:disabled{opacity:.6}
+@media(max-width:639px){.form{padding-top:20px}.company{padding:14px}.optionGrid{gap:10px}}

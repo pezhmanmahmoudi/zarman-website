@@ -1,0 +1,69 @@
+.form {
+  container-type:inline-size;
+  direction:ltr;
+  text-align:left;
+  font-family:var(--font-en-stack);
+}
+.form :where(input,button,select,textarea) {font-family:var(--font-en-stack)!important}
+.form input:not([type="checkbox"]):not([type="radio"]),
+.form button[role="combobox"]:not(:where([role="dialog"] *)),
+.form button[aria-haspopup="dialog"],
+.form .control:not(:has(button)),
+.form .control > button {
+  box-sizing:border-box;
+  width:100%;min-width:0;
+  height:48px!important;min-height:48px!important;
+  border:1px solid #ded8e9!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  padding-block:10px!important;
+  padding-inline:14px!important;
+  color:#302346!important;
+  font-size:16px!important;line-height:24px!important;
+  text-align:left;
+}
+.form input[role="combobox"] {padding-right:42px!important}
+.form input[aria-invalid="true"] {border-color:#be405d!important}
+.addressGrid {display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
+@container(min-width:540px){
+  .addressGrid {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .addressGrid > :first-child {grid-column:1 / -1}
+}
+@container(min-width:800px){
+  .addressGrid {grid-template-columns:repeat(3,minmax(0,1fr))}
+  .addressGrid > :first-child {grid-column:auto}
+}
+.profile input:not([type="checkbox"]):not([type="radio"]):focus,
+.profile textarea:focus,
+.profile select:focus {
+  border-color:#7667bd!important;
+  outline:none!important;
+  box-shadow:0 0 0 2px rgb(118 103 189 / 8%)!important;
+}
+.profile button[aria-haspopup]:focus-visible,
+.profile button[aria-expanded]:focus-visible {
+  outline:2px solid #7667bd!important;
+  outline-offset:1px!important;
+  box-shadow:none!important;
+}
+.profile input[aria-invalid="true"]:focus {
+  border-color:#be405d!important;
+  box-shadow:0 0 0 2px rgb(190 64 93 / 12%)!important;
+}
+.stepper {width:100%;min-width:0}
+.stepper :global(.step-circle-container) {border:0;background:transparent;box-shadow:none}
+.stepper :global(.step-indicator-row) {
+  display:grid;grid-template-columns:minmax(0,1fr) clamp(16px,4vw,56px) minmax(0,1fr) clamp(16px,4vw,56px) minmax(0,1fr);
+  align-items:start;gap:0;padding:0;margin:0;
+}
+.stepper :global(.step-connector) {width:100%;margin:18px 0 0;height:2px}
+.stepItem {min-width:0;list-style:none}
+.stepButton {
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  width:100%;min-height:76px;padding:0 2px;border:0;border-radius:12px;background:transparent;
+  color:#6a6279;font:inherit;font-size:12px;font-weight:600;line-height:1.6;text-align:center;
+  cursor:pointer;
+}
+.stepButton:disabled {cursor:default}
+.stepLabel {max-width:100%;overflow-wrap:anywhere;text-wrap:balance}
+@media(min-width:640px){.stepButton{font-size:13px}}

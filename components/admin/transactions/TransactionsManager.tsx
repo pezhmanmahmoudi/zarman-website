@@ -1,22 +1,19 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Archive, ArrowLeftRight, Clock, DollarSign, Download, LinkIcon, Trash2, X } from "lucide-react";
-import { bulkDeleteTransactions } from "@/app/actions/admin.actions";
-import { TransactionApproveButton } from "@/components/admin/TransactionApproveButton";
-import { SendReceiptButton } from "@/components/admin/SendReceiptButton";
-import { RejectApprovedButton } from "@/components/admin/RejectApprovedButton";
-import { EditableReferenceCode } from "@/components/admin/EditableReferenceCode";
-import { EditableAmount } from "@/components/admin/EditableAmount";
+import { Archive, CalendarDays, Download, RefreshCw, Search, Settings, Trash2, X } from "lucide-react";
+import { bulkDeleteTransactions, getPendingTransactionsWithDetails, getTransactionHistoryWithDetails, getTransactionHistoryStatusCounts, getActiveBankAccountsForAdmin } from "@/app/actions/admin.actions";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { reloadAdminPage } from "@/lib/admin-refresh";
+import type { ExchangeRequest } from "@/lib/requests/types";
+import { TransactionQueue } from "./TransactionQueue";
+import { TransactionTable } from "./TransactionTable";
+import workspace from "@/styles/admin/AdminWorkspace.module.css";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
-import cardStyles from "@/styles/admin/AdminCards.module.css";
-import tableStyles from "@/styles/admin/AdminTable.module.css";
 
 type HistoryStatusFilter = "all" | "approved" | "rejected" | "archived";
 type HistoryDirectionFilter = "all" | "incoming" | "outgoing";
@@ -35,6 +32,7 @@ export type TransactionRow = {
   payment_link?: string | null;
   reason_for_transfer?: string | null;
   receipt_sent?: boolean | null;
+  request?: ExchangeRequest | ExchangeRequest[] | null;
   profiles?: {
     first_name?: string | null;
     last_name?: string | null;
@@ -62,6 +60,8 @@ export type BankAccountOption = {
 };
 
 interface TransactionsManagerProps {
+  view: "active" | "history";
+  search: string;
   pending: TransactionRow[];
   history: TransactionRow[];
   total: number;
@@ -73,107 +73,6 @@ interface TransactionsManagerProps {
   endDate: string;
   statusTabs: Array<{ key: HistoryStatusFilter; label: string; count: number }>;
   bankAccounts: BankAccountOption[];
-}
-
-function StatusBadge({ status }: { status: string | null }) {
-  const s = (status ?? "").toLowerCase();
-  if (s === "approved") {
-    return (
-      <span className={`${tableStyles.badge} ${tableStyles.badgeApproved}`}>
-        <span className={tableStyles.badgeDot} />
-        Approved
-      </span>
-    );
-  }
-  if (s === "rejected") {
-    return (
-      <span className={`${tableStyles.badge} ${tableStyles.badgeRejected}`}>
-        <span className={tableStyles.badgeDot} />
-        Rejected
-      </span>
-    );
-  }
-  if (s === "archived") {
-    return (
-      <span className={`${tableStyles.badge} ${tableStyles.badgeArchived}`}>
-        <span className={tableStyles.badgeDot} />
-        Archived
-      </span>
-    );
-  }
-  return (
-    <span className={`${tableStyles.badge} ${tableStyles.badgePending}`}>
-      <span className={tableStyles.badgeDot} />
-      Pending
-    </span>
-  );
-}
-
-function getPaymentLink(paymentLink?: string | null, reason?: string | null): string | null {
-  if (paymentLink) return paymentLink;
-  if (!reason) return null;
-  const m = reason.match(/لینک پرداخت:\s*(\S+)/);
-  return m ? m[1] : null;
-}
-
-function RecipientCell({
-  recipient,
-  paymentLink,
-  reasonForTransfer,
-}: {
-  recipient: TransactionRow["recipients"];
-  paymentLink?: string | null;
-  reasonForTransfer?: string | null;
-}) {
-  const normalizedRecipient = Array.isArray(recipient)
-    ? (recipient.find(Boolean) ?? null)
-    : (recipient ?? null);
-
-  const link = getPaymentLink(paymentLink, reasonForTransfer);
-  if (!normalizedRecipient && link) {
-    return (
-      <div style={{ fontSize: "0.68rem", lineHeight: 1.7 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px", fontWeight: 700, color: "var(--accent, #2563eb)" }}>
-          <LinkIcon size={11} />
-          Payment Link
-        </div>
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: "var(--text-dim)", fontSize: "0.63rem", textDecoration: "underline", fontWeight: 600 }}
-        >
-          Open payment link
-        </a>
-      </div>
-    );
-  }
-
-  if (!normalizedRecipient) return <span style={{ color: "var(--text-dim)" }}>-</span>;
-
-  const r = normalizedRecipient as TransactionRow["recipients"];
-  const recipientTitle = r?.account_name ?? r?.full_name ?? r?.label ?? "-";
-  if (r?.direction === "aud") {
-    return (
-      <div style={{ fontSize: "0.68rem", lineHeight: 1.7 }}>
-        <div style={{ fontWeight: 700 }}>{recipientTitle}</div>
-        {r.bank_name && <div>{r.bank_name}</div>}
-        {r.bsb && <div style={{ color: "var(--text-dim)" }}>BSB {r.bsb}</div>}
-        {r.account_number && <div style={{ color: "var(--text-dim)" }}>Acc {r.account_number}</div>}
-      </div>
-    );
-  }
-
-  const isMelli = r?.bank_type === "bank_melli";
-  return (
-    <div style={{ fontSize: "0.68rem", lineHeight: 1.7 }}>
-      <div style={{ fontWeight: 700 }}>{recipientTitle}</div>
-      <div>{isMelli ? "Bank Melli" : (r?.bank_name ?? "Iranian Bank")}</div>
-      {isMelli
-        ? r?.card_number && <div style={{ color: "var(--text-dim)" }}>Card {r.card_number}</div>
-        : r?.shaba_number && <div style={{ color: "var(--text-dim)" }}>Shaba {r.shaba_number}</div>}
-    </div>
-  );
 }
 
 function parseFileName(contentDisposition: string | null): string {
@@ -192,209 +91,80 @@ function getIftiReportKind(type: string | null | undefined): "outgoing" | "incom
   return null;
 }
 
-function TxTable({
-  rows,
-  isPending,
-  bankAccounts,
-  selectedIds,
-  onToggleRow,
-  onToggleAll,
-  selectionAction,
-  defaultSelectionAction,
-  selectedExportType,
-}: {
-  rows: TransactionRow[];
-  isPending: boolean;
-  bankAccounts: BankAccountOption[];
-  selectedIds: Set<string>;
-  onToggleRow: (id: string, checked: boolean) => void;
-  onToggleAll: (ids: string[], checked: boolean) => void;
-  selectionAction: SelectionAction | null;
-  defaultSelectionAction: SelectionAction;
-  selectedExportType: string | null;
-}) {
-  const getRowAction = (row: TransactionRow): SelectionAction | null => {
-    const status = (row.status ?? "").toLowerCase();
-    if (status === "approved") return "export";
-    if (status === "rejected" || status === "archived") return "delete";
-    return null;
-  };
-  const activeAction = selectionAction ?? defaultSelectionAction;
-  const eligibleIds = useMemo(
-    () => rows
-      .filter((row) => {
-        if (isPending) return false;
-        if (getRowAction(row) !== activeAction) return false;
-        if (activeAction !== "export") return true;
-        return !selectedExportType || row.type === selectedExportType;
-      })
-      .map((row) => String(row.id)),
-    [activeAction, isPending, rows, selectedExportType],
-  );
-
-  const allChecked = eligibleIds.length > 0 && eligibleIds.every((id) => selectedIds.has(id));
-
-  return (
-    <div className={`${tableStyles.tableWrap} ${tableStyles.tableWrapTopBorder} ${tableStyles.tableWrapTopFlat}`}>
-      <table className={tableStyles.table}>
-        <thead className={isPending ? undefined : tableStyles.theadTransparent}>
-          <tr>
-            <th>
-              <input
-                type="checkbox"
-                aria-label={`Select all ${activeAction === "export" ? "approved" : "rejected or archived"} rows on this page`}
-                checked={allChecked}
-                disabled={eligibleIds.length === 0}
-                onChange={(e) => onToggleAll(eligibleIds, e.target.checked)}
-              />
-            </th>
-            <th>Reference</th>
-            <th>Customer</th>
-            <th>Date</th>
-            <th>Type</th>
-            <th>AUD ($)</th>
-            <th>Toman (IRT)</th>
-            <th>Recipient</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((tx) => {
-            const profile = tx.profiles;
-            const name = profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : "-";
-            const customerCode = profile?.customer_code;
-            const rowId = String(tx.id);
-            const rowAction = getRowAction(tx);
-            const isSelectable = !isPending
-              && rowAction !== null
-              && (!selectionAction || rowAction === selectionAction)
-              && (rowAction !== "export" || !selectedExportType || tx.type === selectedExportType);
-
-            return (
-              <tr key={rowId} className={isPending ? tableStyles.rowTintWarning : tableStyles.rowTransparent}>
-                <td>
-                  <input
-                    type="checkbox"
-                    aria-label={`Select transaction ${tx.reference_code ?? rowId}`}
-                    checked={selectedIds.has(rowId)}
-                    disabled={!isSelectable}
-                    onChange={(e) => onToggleRow(rowId, e.target.checked)}
-                  />
-                </td>
-                <td>
-                  <EditableReferenceCode transactionId={tx.id} currentCode={tx.reference_code ?? null} />
-                </td>
-                <td>
-                  <Link href={`/admin/users?userId=${tx.user_id}`} style={{ color: "inherit", textDecoration: "none" }}>
-                    <div className={tableStyles.cellStrong} style={{ color: "var(--accent, #2563eb)" }}>
-                      {name || "Unknown"}
-                    </div>
-                    <div className={`${tableStyles.cellSmall} ${tableStyles.cellDim} ${tableStyles.cellSubtleTop}`}>
-                      {profile?.email ?? "-"}
-                    </div>
-                    {customerCode && (
-                      <div style={{ fontSize: "0.65rem", color: "var(--text-dim)", fontFamily: "monospace", marginTop: "2px" }}>
-                        ({customerCode})
-                      </div>
-                    )}
-                  </Link>
-                </td>
-                <td className={`${tableStyles.cellMono} ${tableStyles.cellSmall} ${tableStyles.cellDim}`}>
-                  {new Date(tx.created_at).toLocaleString("en-AU", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </td>
-                <td>
-                  <span className={`${tableStyles.badge} ${tx.type === "buy_aud" ? tableStyles.txBuy : tableStyles.txSell}`}>
-                    {tx.type === "buy_aud" ? "Buy AUD" : "Sell AUD"}
-                  </span>
-                </td>
-                <td dir="ltr">
-                  <EditableAmount
-                    transactionId={tx.id}
-                    field="amount_aud"
-                    currentValue={Number(tx.amount_aud)}
-                    placeholder="e.g. 2254"
-                  />
-                </td>
-                <td dir="ltr">
-                  <EditableAmount
-                    transactionId={tx.id}
-                    field="equivalent_toman"
-                    currentValue={Number(tx.equivalent_toman)}
-                    placeholder="e.g. 279496000"
-                  />
-                </td>
-                <td style={{ minWidth: "150px" }}>
-                  <RecipientCell
-                    recipient={tx.recipients}
-                    paymentLink={tx.payment_link ?? null}
-                    reasonForTransfer={tx.reason_for_transfer ?? null}
-                  />
-                </td>
-                <td>
-                  <StatusBadge status={tx.status} />
-                </td>
-                <td>
-                  {isPending ? (
-                    <TransactionApproveButton
-                      transactionId={tx.id}
-                      transactionAmountToman={Number(tx.equivalent_toman)}
-                      transactionType={tx.type}
-                      bankAccounts={bankAccounts || []}
-                    />
-                  ) : (
-                    tx.status === "approved" && (
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                        <SendReceiptButton
-                          transactionId={tx.id}
-                          customerEmail={profile?.email ?? undefined}
-                          initiallySent={tx.receipt_sent === true}
-                        />
-                        <RejectApprovedButton transactionId={tx.id} />
-                      </div>
-                    )
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 export function TransactionsManager({
-  pending,
-  history,
-  total,
+  view,
+  search,
+  pending: initialPending,
+  history: initialHistory,
+  total: initialTotal,
   currentPage,
   pageSize,
   historyStatus,
   historyDirection,
   startDate,
   endDate,
-  statusTabs,
-  bankAccounts,
+  statusTabs: initialStatusTabs,
+  bankAccounts: initialBankAccounts,
 }: TransactionsManagerProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [data, setData] = useState({ pending: initialPending, history: initialHistory, total: initialTotal, statusTabs: initialStatusTabs, bankAccounts: initialBankAccounts });
+  const { pending, history, total, statusTabs, bankAccounts } = data;
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
+  const reading = useRef(false);
+  const mounted = useRef(true);
+  const refresh = useCallback(async () => {
+    if (reading.current) return;
+    reading.current = true;
+    setRefreshing(true);
+    try {
+      const [pendingRows, historyPage, counts, accounts] = await Promise.all([
+        getPendingTransactionsWithDetails(),
+        getTransactionHistoryWithDetails(currentPage, pageSize, { status: historyStatus, direction: historyDirection, startDate, endDate, search }),
+        getTransactionHistoryStatusCounts(), getActiveBankAccountsForAdmin(),
+      ]);
+      if (mounted.current) {
+        setData(previous => ({ pending: pendingRows as TransactionRow[], history: historyPage.data as TransactionRow[], total: historyPage.total,
+          statusTabs: previous.statusTabs.map(tab => ({ ...tab, count: counts[tab.key] })), bankAccounts: accounts }));
+        setRefreshError("");
+      }
+    } catch {
+      if (mounted.current) setRefreshError("Could not refresh transactions. Showing the last loaded records. Please try Refresh again.");
+    } finally {
+      reading.current = false;
+      if (mounted.current) setRefreshing(false);
+    }
+  }, [currentPage, pageSize, historyStatus, historyDirection, startDate, endDate, search]);
+  useEffect(() => {
+    mounted.current = true;
+    const onFocus = () => { if (document.visibilityState === "visible") void refresh(); };
+    const timer = window.setInterval(onFocus, 30000);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    // Preserve old bookmarks to service settings after the queue is redirected.
+    if (window.location.hash.startsWith("#request-")) router.replace(`/admin/settings${window.location.hash}`);
+    return () => { mounted.current = false; window.clearInterval(timer); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
+  }, [refresh, router]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // A background refresh must never turn an export selection into a deletion.
+  const selectedSnapshots = useRef(new Map<string, { status: string | null; type: string }>());
+  const [searchText, setSearchText] = useState(search);
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [filterStart, setFilterStart] = useState(startDate);
   const [filterEnd, setFilterEnd] = useState(endDate);
+  const [datesOpen, setDatesOpen] = useState(false);
+  const [dateError, setDateError] = useState("");
   const [exportMessage, setExportMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const selectedCount = selectedIds.size;
-  const selectedRows = history.filter((row) => selectedIds.has(String(row.id)));
+  const selectedRows = history.filter(row => {
+    const snapshot = selectedSnapshots.current.get(String(row.id));
+    return selectedIds.has(String(row.id)) && snapshot?.status === row.status && snapshot?.type === row.type;
+  });
+  const currentSelectedIds = new Set(selectedRows.map(row => String(row.id)));
+  const selectedCount = selectedRows.length;
   const selectionAction: SelectionAction | null = selectedRows.length === 0
     ? null
     : (selectedRows[0].status ?? "").toLowerCase() === "approved"
@@ -418,6 +188,7 @@ export function TransactionsManager({
       else params.delete(key);
     });
     params.set("page", "1");
+    params.set("view", "history");
     setSelectedIds(new Set());
     router.push(`${pathname}?${params.toString()}`);
   };
@@ -427,10 +198,20 @@ export function TransactionsManager({
     if (status === "all") params.delete("status");
     else params.set("status", status);
     params.set("page", "1");
+    params.set("view", "history");
+    return `${pathname}?${params.toString()}`;
+  };
+
+  const viewHref = (nextView: "active" | "history") => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", nextView);
     return `${pathname}?${params.toString()}`;
   };
 
   const toggleRow = (id: string, checked: boolean) => {
+    const row = history.find(item => String(item.id) === id);
+    if (checked && row) selectedSnapshots.current.set(id, { status: row.status, type: row.type });
+    else selectedSnapshots.current.delete(id);
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (checked) next.add(id);
@@ -440,6 +221,11 @@ export function TransactionsManager({
   };
 
   const toggleAll = (ids: string[], checked: boolean) => {
+    for (const id of ids) {
+      const row = history.find(item => String(item.id) === id);
+      if (checked && row) selectedSnapshots.current.set(id, { status: row.status, type: row.type });
+      else selectedSnapshots.current.delete(id);
+    }
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (checked) {
@@ -452,12 +238,13 @@ export function TransactionsManager({
   };
 
   const clearSelection = () => {
+    selectedSnapshots.current.clear();
     setSelectedIds(new Set());
     setExportMessage(null);
   };
 
   const downloadBulkReport = async () => {
-    if (selectedIds.size === 0 || selectionAction !== "export") {
+    if (selectedCount === 0 || selectionAction !== "export") {
       setExportMessage({ type: "error", text: "Select at least one approved transaction first." });
       return;
     }
@@ -478,7 +265,7 @@ export function TransactionsManager({
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transactionIds: Array.from(selectedIds) }),
+        body: JSON.stringify({ transactionIds: selectedRows.map(row => String(row.id)) }),
       });
 
       if (!response.ok) {
@@ -507,7 +294,7 @@ export function TransactionsManager({
       URL.revokeObjectURL(objectUrl);
 
       const label = reportKind === "incoming" ? "incoming" : "outgoing";
-      setExportMessage({ type: "success", text: `IFTI ${label} report generated for ${selectedIds.size} transaction(s).` });
+      setExportMessage({ type: "success", text: `IFTI ${label} report generated for ${selectedCount} transaction(s).` });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected export error.";
       setExportMessage({ type: "error", text: message });
@@ -517,18 +304,18 @@ export function TransactionsManager({
   };
 
   const deleteSelected = async () => {
-    if (selectedIds.size === 0 || selectionAction !== "delete") return;
-    if (!window.confirm(`Permanently delete ${selectedIds.size} selected transaction(s)? This cannot be undone.`)) return;
+    if (selectedCount === 0 || selectionAction !== "delete") return;
+    if (!window.confirm(`Permanently delete ${selectedCount} selected transaction(s)? This cannot be undone.`)) return;
 
     try {
       setIsDeleting(true);
       setExportMessage(null);
-      const result = await bulkDeleteTransactions(Array.from(selectedIds));
+      const result = await bulkDeleteTransactions(selectedRows.map(row => String(row.id)));
       if ("error" in result && result.error) {
         setExportMessage({ type: "error", text: result.error });
         return;
       }
-      const deletedCount = "deletedCount" in result ? result.deletedCount : selectedIds.size;
+      const deletedCount = "deletedCount" in result ? result.deletedCount : selectedCount;
       clearSelection();
       setExportMessage({ type: "success", text: `${deletedCount} transaction(s) deleted.` });
       reloadAdminPage(600);
@@ -543,127 +330,87 @@ export function TransactionsManager({
     <>
       <div className={shellStyles.topBar}>
         <span className={shellStyles.pageTitle}>Transactions</span>
-        {pending.length > 0 && (
-          <span className={`${tableStyles.badge} ${tableStyles.badgePending} ${tableStyles.badgeCompact}`}>
-            {pending.length} Pending
-          </span>
-        )}
       </div>
 
       <div className={shellStyles.pageContent}>
-        <div className={`${cardStyles.sectionHeader} ${cardStyles.sectionHeaderMd}`}>
+        <div className={workspace.header}>
           <div>
-            <h1 className={`${cardStyles.sectionTitle} ${cardStyles.sectionTitleWithIcon}`}>
-              <span className={cardStyles.sectionTitleIconAccent}>
-                <ArrowLeftRight size={24} strokeWidth={2.5} />
-              </span>
-              Transaction Processing
-            </h1>
-            <p className={cardStyles.sectionDesc}>Review pending transfers and send receipts to approved customers.</p>
+            <h1>Transactions</h1>
+            <p>Requests, payments and completed transfers in one workspace.</p>
+          </div>
+          <div className={workspace.headerActions}>
+            <Link className={workspace.action} href="/admin/settings#request-service"><Settings size={15} aria-hidden="true" />Transfer settings</Link>
+            <button type="button" className={workspace.action} onClick={refresh} disabled={refreshing}><RefreshCw size={15} aria-hidden="true" />{refreshing ? "Refreshing…" : "Refresh"}</button>
           </div>
         </div>
 
-        <div className={`${cardStyles.panel} ${pending.length > 0 ? cardStyles.panelWarning : ""}`}>
-          <div className={cardStyles.panelHeader}>
-            <h2 className={`${cardStyles.panelTitle} ${pending.length > 0 ? cardStyles.panelTitleWarning : ""}`}>
-              <Clock size={18} />
-              Awaiting Action ({pending.length})
-            </h2>
-          </div>
+        {refreshError && <p className={workspace.error} role="alert">{refreshError}</p>}
+        <nav className={workspace.tabs} aria-label="Transaction views">
+          <Link href={viewHref("active")} aria-current={view === "active" ? "page" : undefined}>Active<span>{pending.length}</span></Link>
+          <Link href={viewHref("history")} aria-current={view === "history" ? "page" : undefined}>History & reports<span>{statusTabs.find(tab => tab.key === "all")?.count ?? total}</span></Link>
+        </nav>
+        <div hidden={view !== "active"}><TransactionQueue rows={pending} bankAccounts={bankAccounts} /></div>
 
-          {pending.length === 0 ? (
-            <div className={`${cardStyles.emptyState} ${cardStyles.emptyStateLoose}`}>
-              <div className={cardStyles.emptyStateIcon}>
-                <DollarSign size={24} />
-              </div>
-              <div className={cardStyles.emptyStateText}>Queue is clear - no pending transactions.</div>
-            </div>
-          ) : (
-            <TxTable
-              rows={pending}
-              isPending={true}
-              bankAccounts={bankAccounts}
-              selectedIds={selectedIds}
-              onToggleRow={toggleRow}
-              onToggleAll={toggleAll}
-              selectionAction={selectionAction}
-              defaultSelectionAction={defaultSelectionAction}
-              selectedExportType={selectedExportType}
-            />
-          )}
-        </div>
-
-        <div className={`${cardStyles.panel} ${cardStyles.panelSoft} ${cardStyles.panelMt}`}>
+        <div hidden={view !== "history"} className={workspace.panel}>
           {/* Tab bar */}
-          <div className={tableStyles.historyTabBar}>
-            <div className={tableStyles.historyTabBarLeft}>
-              <Archive size={15} />
-              <span>Transaction History</span>
-              <span className={tableStyles.historyTotalCount}>{total.toLocaleString()} records</span>
-            </div>
-            <nav className={tableStyles.historyTabs} aria-label="Transaction status filter">
+          <div className={workspace.toolbar}>
+            <nav className={workspace.filters} aria-label="Transaction status filter">
               {statusTabs.map((tab) => {
                 const isActive = historyStatus === tab.key;
                 return (
                   <Link
                     key={tab.key}
                     href={statusHref(tab.key)}
-                    className={`${tableStyles.historyTab} ${isActive ? tableStyles.historyTabActive : ""}`}
                     aria-current={isActive ? "page" : undefined}
                   >
                     {tab.label}
-                    <span className={`${tableStyles.historyTabCount} ${isActive ? tableStyles.historyTabCountActive : ""}`}>
+                    <span>
                       {tab.count.toLocaleString()}
                     </span>
                   </Link>
                 );
               })}
             </nav>
+            <span className={workspace.recordCount}>{total.toLocaleString("en-AU")} records</span>
           </div>
 
           {/* Filter bar */}
-          <div className={tableStyles.historyFilters} aria-label="Transaction history filters">
-            <div className={tableStyles.historyFilterGroup}>
-              <span className={tableStyles.historyFilterLabel}>Direction</span>
+          <div className={workspace.historyControls} aria-label="Transaction history filters">
+            <form className={workspace.searchForm} role="search" onSubmit={event => { event.preventDefault(); updateFilters({ q: searchText.trim() || null }); }}>
+              <label className={workspace.search}><Search size={16} aria-hidden="true" /><span className={workspace.srOnly}>Search transaction history</span>
+                <input type="search" value={searchText} maxLength={64} placeholder="Search customer or reference" onChange={event => setSearchText(event.target.value)} />
+              </label>
+              <button type="submit" className={workspace.action}>Search</button>
+            </form>
+            <div className={workspace.select} role="group" aria-label="Transfer direction">
               <SelectBox
                 labeledOptions={[
-                  { label: "All types", value: "all" },
-                  { label: "Buy AUD", value: "outgoing" },
-                  { label: "Sell AUD", value: "incoming" },
+                  { label: "All directions", value: "all" },
+                  { label: "Australia to Iran", value: "outgoing" },
+                  { label: "Iran to Australia", value: "incoming" },
                 ]}
                 value={historyDirection}
+                placeholder="Transfer direction"
                 onChange={(value) => updateFilters({ direction: value === "all" ? null : value })}
                 dir="ltr"
-                className={tableStyles.historyFilterSelect}
               />
             </div>
 
-            <div className={tableStyles.historyFilterDivider} aria-hidden="true" />
+            <button type="button" className={workspace.action} aria-expanded={datesOpen} aria-controls="history-date-filters" onClick={() => setDatesOpen(value => !value)}>
+              <CalendarDays size={16} aria-hidden="true" />{startDate && endDate ? `${startDate} – ${endDate}` : startDate ? `From ${startDate}` : endDate ? `Until ${endDate}` : "Date range"}
+            </button>
 
-            <div className={tableStyles.historyFilterGroup}>
-              <span className={tableStyles.historyFilterLabel}>Date range</span>
-              <div className={tableStyles.historyDateRange}>
-                <CustomDatePicker value={filterStart} onChange={setFilterStart} placeholder="From" className={tableStyles.historyDatePicker} />
-                <span className={tableStyles.historyDateRangeSep} aria-hidden="true">→</span>
-                <CustomDatePicker value={filterEnd} onChange={setFilterEnd} placeholder="To" className={tableStyles.historyDatePicker} />
-                <button
-                  type="button"
-                  className={`${tableStyles.btnAction} ${tableStyles.historyApplyBtn}`}
-                  onClick={() => updateFilters({ start: filterStart || null, end: filterEnd || null })}
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
-
-            {(historyDirection !== "all" || startDate || endDate) && (
+            {(historyDirection !== "all" || startDate || endDate || search) && (
               <button
                 type="button"
-                className={tableStyles.historyResetBtn}
+                className={workspace.action}
                 onClick={() => {
                   setFilterStart("");
                   setFilterEnd("");
-                  updateFilters({ direction: null, start: null, end: null });
+                  setSearchText("");
+                  setDateError("");
+                  setDatesOpen(false);
+                  updateFilters({ direction: null, start: null, end: null, q: null });
                 }}
               >
                 <X size={13} />
@@ -672,38 +419,56 @@ export function TransactionsManager({
             )}
           </div>
 
+          <div id="history-date-filters" className={workspace.datePanel} hidden={!datesOpen} role="group" aria-label="Filter by date">
+            <div className={workspace.filterField}>
+              <span className={workspace.fieldLabel}>From</span>
+              <CustomDatePicker value={filterStart} onChange={value => { setFilterStart(value); setDateError(""); }} placeholder="Start date" className={workspace.datePicker} />
+            </div>
+            <div className={workspace.filterField}>
+              <span className={workspace.fieldLabel}>To</span>
+              <CustomDatePicker value={filterEnd} onChange={value => { setFilterEnd(value); setDateError(""); }} placeholder="End date" className={workspace.datePicker} />
+            </div>
+            <button type="button" className={workspace.action} onClick={() => {
+              if (filterStart && filterEnd && filterStart > filterEnd) { setDateError("The end date must be on or after the start date."); return; }
+              setDateError("");
+              setDatesOpen(false);
+              updateFilters({ start: filterStart || null, end: filterEnd || null });
+            }}>Apply dates</button>
+            {dateError && <p className={workspace.dateError} role="alert">{dateError}</p>}
+          </div>
+
           {(selectedCount > 0 || exportMessage) && (
-            <div className={tableStyles.bulkActionBar} role="status">
+            <div className={workspace.bulkBar}>
               <div>
                 <strong>{selectedCount} selected</strong>
                 <span>
                   {selectionAction === "delete"
-                    ? "Rejected/archived records"
+                    ? "Rejected / archived records"
                     : reportKind === "incoming"
-                      ? "Approved Sell AUD records for AUSTRAC IFTI-DRA IN"
-                      : "Approved Buy AUD records for AUSTRAC IFTI-DRA OUT"}
+                      ? "Incoming · IFTI-DRA"
+                      : "Outgoing · IFTI-DRA"}
                 </span>
               </div>
               {exportMessage && (
-                <span className={exportMessage.type === "error" ? tableStyles.bulkMessageError : tableStyles.bulkMessageSuccess}>
+                <span role={exportMessage.type === "error" ? "alert" : "status"} className={exportMessage.type === "error" ? workspace.error : workspace.status}>
                   {exportMessage.text}
                 </span>
               )}
-              <div className={tableStyles.bulkActions}>
+              <div className={workspace.headerActions}>
                 {selectionAction === "export" && selectedCount > 0 && (
-                  <button type="button" onClick={downloadBulkReport} disabled={isExporting} className={`${tableStyles.btnAction} ${tableStyles.btnApprove}`}>
+                  <button type="button" onClick={downloadBulkReport} disabled={isExporting} className={workspace.action}>
                     <Download size={14} />
                     {isExporting ? "Generating..." : "Export IFTI (.xlsx)"}
                   </button>
                 )}
                 {selectionAction === "delete" && selectedCount > 0 && (
-                  <button type="button" onClick={deleteSelected} disabled={isDeleting} className={`${tableStyles.btnAction} ${tableStyles.btnReject}`}>
+                  <button type="button" onClick={deleteSelected} disabled={isDeleting} className={workspace.action} data-tone="danger">
                     <Trash2 size={14} />
                     {isDeleting ? "Deleting..." : "Delete selected"}
                   </button>
                 )}
                 {selectedCount > 0 && (
-                  <button type="button" onClick={clearSelection} disabled={isExporting || isDeleting} className={`${tableStyles.btnAction} ${tableStyles.btnArchive}`}>
+                  <button type="button" onClick={clearSelection} disabled={isExporting || isDeleting} className={workspace.action}>
                     Clear
                   </button>
                 )}
@@ -712,25 +477,27 @@ export function TransactionsManager({
           )}
 
           {history.length === 0 ? (
-            <div className={`${cardStyles.emptyState} ${cardStyles.emptyStateCompact} ${cardStyles.emptyStateWithTopBorder}`}>
-              <div className={`${cardStyles.emptyStateText} ${cardStyles.emptyStateDim}`}>No history records found.</div>
+            <div className={workspace.empty} role="status">
+              <Archive size={26} aria-hidden="true" />
+              <strong>{statusTabs.find(tab => tab.key === "all")?.count ? "No matching transfers" : "No transfer history yet"}</strong>
+              <p>{statusTabs.find(tab => tab.key === "all")?.count ? "Try another status, customer or date range." : "Completed and closed transfers will appear here."}</p>
             </div>
           ) : (
             <>
-              <TxTable
+              <TransactionTable
                 rows={history}
                 isPending={false}
                 bankAccounts={bankAccounts}
-                selectedIds={selectedIds}
+                selectedIds={currentSelectedIds}
                 onToggleRow={toggleRow}
                 onToggleAll={toggleAll}
                 selectionAction={selectionAction}
                 defaultSelectionAction={defaultSelectionAction}
                 selectedExportType={selectedExportType}
               />
-              <AdminPagination currentPage={currentPage} totalCount={total} pageSize={pageSize} />
             </>
           )}
+          <AdminPagination currentPage={currentPage} totalCount={total} pageSize={pageSize} />
         </div>
       </div>
     </>

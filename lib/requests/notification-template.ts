@@ -105,7 +105,7 @@ export function renderRequestNotification(
     : eventLabels[snapshot.event_type ?? ""] ?? statuses[snapshot.workflow_status] ?? ["Request updated", "درخواست به‌روزرسانی شد"])[index];
   const isManagement = snapshot.audience === "management";
   const trackingUrl = isManagement
-    ? `${siteUrl}/admin/requests/${snapshot.request_id}`
+    ? `${siteUrl}/admin/transactions/requests/${snapshot.request_id}`
     : `${siteUrl}/${locale}/dashboard/requests/${snapshot.request_id}`;
   const isPriority = snapshot.requested_tier === "priority";
   const fee = Number(snapshot.priority_fee_aud);
@@ -150,7 +150,7 @@ export function renderRequestNotification(
       `${fa ? "مبلغ واریز" : "Amount to transfer"}: ${receiptAmount(details!.funding_total!, details!.funding_currency!)}`,
       ...bankLines,
       ...(note?.trim() ? [note] : []),
-      fa ? `کد پیگیری ${reference} را حتماً در توضیحات انتقال بانکی وارد کنید.` : `You must put your Reference Code ${reference} in your bank transfer description.`,
+      ...(details!.funding_currency === "AUD" ? [fa ? `کد پیگیری ${reference} را حتماً در توضیحات انتقال بانکی وارد کنید.` : `You must put your Reference Code ${reference} in your bank transfer description.`] : []),
       fa ? "رسید بانکی را در صفحه درخواست بارگذاری کنید؛ وصول وجه جداگانه تأیید می‌شود." : "Upload your bank receipt on the request page; funds are confirmed separately.",
     );
   }

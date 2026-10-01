@@ -38,7 +38,6 @@ export function AdminSidebar({ adminEmail, pendingKyc, pendingTx, pendingFeedbac
   const groups: { label: string; items: NavItem[] }[] = [
     { label: "Workspace", items: [
       { href: "/admin/dashboard", label: "Overview", icon: LayoutDashboard },
-      { href: "/admin/requests", label: "Request queue", icon: ClipboardList },
       { href: "/admin/transactions", label: "Transactions", icon: ArrowLeftRight, badge: pendingTx },
       { href: "/admin/kyc", label: "Identity verification", icon: ShieldCheck, badge: pendingKyc },
       { href: "/admin/users", label: "Customers", icon: Users },

@@ -27,8 +27,9 @@ export default function PanelRootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" dir="ltr" data-scroll-behavior="smooth">
-      <body className={`${inter.variable} ${themeStyles.theme} min-h-screen antialiased`}>
+    // suppressHydrationWarning: mobile Chrome injects its own __gchrome_* attributes before hydration.
+    <html lang="en" dir="ltr" data-scroll-behavior="smooth" suppressHydrationWarning>
+      <body className={`${inter.variable} ${themeStyles.theme} min-h-screen antialiased`} suppressHydrationWarning>
         {children}
       </body>
     </html>

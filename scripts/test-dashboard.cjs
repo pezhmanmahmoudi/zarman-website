@@ -38,7 +38,7 @@ test("English and Persian activity render real funding milestones, English dates
   for (const locale of ["en","fa"]) {
     const harness = dashboardHarness({locale}), { DashboardActivity } = harness.load("components/dashboard/DashboardActivity.tsx");
     const html = renderToStaticMarkup(React.createElement(DashboardActivity,{requests:[{...request,quote:{...request.quote,recipient_snapshot:{full_name:"<script>alert(1)</script>"}}}],loading:false,error:false,refreshing:false,onRefresh() {}}));
-    assert.match(html,/ZE36827/); assert.match(html,/15 Sept 2026/); assert.doesNotMatch(html.match(/<time[^>]*>(.*?)<\/time>/)[1],/[۰-۹]/);
+    assert.match(html,/ZE36827/); assert.match(html,/15\/09\/26/); assert.doesNotMatch(html.match(/<time[^>]*>(.*?)<\/time>/)[1],/[۰-۹]/);
     assert.match(html,locale === "en" ? /Funds received/ : /وجه دریافت شد/);
     assert.match(html,/&lt;script&gt;/); assert.doesNotMatch(html,/<script>/);
     assert.match(html,new RegExp(`/${locale}/dashboard/requests/fixture-request`));
@@ -59,7 +59,7 @@ test("navigation has current-page semantics and language switching keeps the req
 });
 test("a background refresh failure preserves the mounted transfer form; initial failures offer retry", () => {
   for (const sessionChecked of [false,true]) {
-    const harness = dashboardHarness({mocks:{"@/hooks/useDashboardData":{useDashboardData:()=>({profile:null,transactions:[],sessionChecked,error:true,loading:false,refresh(){}})}}});
+    const harness = dashboardHarness({mocks:{"./DashboardMessageChime":{DashboardMessageChime:()=>null},"@/hooks/useDashboardData":{useDashboardData:()=>({profile:null,approvedVolume:0,approvedCount:0,sessionChecked,error:true,loading:false,refresh(){}})}}});
     const {DashboardShell} = harness.load("components/dashboard/DashboardShell.tsx");
     const html = renderToStaticMarkup(React.createElement(DashboardShell,null,React.createElement("form",{"data-saved-draft":"present"})));
     assert.equal(html.includes('data-saved-draft="present"'),sessionChecked);
@@ -67,28 +67,42 @@ test("a background refresh failure preserves the mounted transfer form; initial 
     if (sessionChecked) assert.match(html,/Showing the last loaded details/);
   }
 });
-test("request feed refreshes on return, avoids overlapping reads, recovers from errors and ignores responses after cleanup", async () => {
+test("request feed waits five minutes for automatic refresh, allows manual refresh and ignores responses after cleanup", async () => {
   const previous = { window:global.window, document:global.document }; global.window = events(); global.document = events();
-  let resolve, calls = 0;
-  const harness = dashboardHarness({ mocks:{"@/app/actions/request.actions": {listMyRequests: () => {calls++; return new Promise(done => {resolve = done;});}}} });
+  const originalNow = Date.now; let now = 1000000; Date.now = () => now;
+  let resolve, calls = 0, signal, removed = false;
+  const interval = global.window.setInterval;
+  global.window.setInterval = (fn, delay) => { assert.equal(delay, 300000); return interval(fn); };
+  const channel = { on(_event, _filter, callback) { signal = callback; return this; }, subscribe() { return this; } };
+  const harness = dashboardHarness({ mocks:{
+    "@/app/actions/request.actions": {listMyRequests: () => {calls++; return new Promise(done => {resolve = done;});}},
+    "@/lib/supabase": {supabase: {channel: () => channel, removeChannel: () => {removed = true;}}},
+  } });
   const { useDashboardRequests } = harness.load("hooks/useDashboardRequests.ts");
   try {
     harness.render(useDashboardRequests); harness.effects();
     global.window.emit("focus"); assert.equal(calls,1);
     resolve({error:"offline"}); await tick(); assert.equal(harness.render(useDashboardRequests).error,true);
     global.document.visibilityState = "hidden"; global.window.emit("interval"); assert.equal(calls,1);
+    global.document.visibilityState = "visible"; global.document.emit("visibilitychange"); signal(); assert.equal(calls,1);
+    now += 299999; global.window.emit("interval"); assert.equal(calls,1);
+    now++; global.document.visibilityState = "hidden"; signal(); global.window.emit("interval"); assert.equal(calls,1);
     global.document.visibilityState = "visible"; global.document.emit("visibilitychange"); assert.equal(calls,2);
     resolve({data:[request]}); await tick(); assert.equal(harness.render(useDashboardRequests).requests.length,1); assert.equal(harness.render(useDashboardRequests).error,false);
-    global.window.emit("focus"); harness.cleanup(); resolve({data:[]}); await tick();
+    global.window.emit("focus"); signal(); assert.equal(calls,2);
+    void harness.render(useDashboardRequests).refresh(); assert.equal(calls,3);
+    void harness.render(useDashboardRequests).refresh(); assert.equal(calls,3);
+    harness.cleanup(); resolve({data:[]}); await tick();
     assert.equal(harness.render(useDashboardRequests).requests.length,1);
     assert.equal(global.window.listeners.size,0); assert.equal(global.document.listeners.size,0);
-  } finally { global.window = previous.window; global.document = previous.document; }
+    assert.equal(removed,true);
+  } finally { harness.cleanup(); Date.now = originalNow; global.window = previous.window; global.document = previous.document; }
 });
 test("dashboard account reads are user-scoped, fail visibly, and cannot restore private data after sign out", async () => {
   const previous = { window:global.window, document:global.document }; global.window = events(); global.document = events();
   let onAuth, resolveProfile, resolveTransactions; const scopes = [], redirects = [];
   const supabase = { auth:{ getUser:async () => ({data:{user:{id:"customer-id"}}}), onAuthStateChange:fn => {onAuth = fn; return {data:{subscription:{unsubscribe(){}}}};} }, from:table => {
-    const query = {select(){return this;},eq(column,value){scopes.push([table,column,value]);return this;},order(){return this;},abortSignal(){return this;},single(){return this;},then(fn) {return new Promise(resolve => {if(table === "profiles") resolveProfile = resolve; else resolveTransactions = resolve;}).then(fn);} };return query;
+    const query = {select(){return this;},eq(column,value){scopes.push([table,column,value]);return this;},order(){return this;},range(){return this;},abortSignal(){return this;},single(){return this;},then(fn) {return new Promise(resolve => {if(table === "profiles") resolveProfile = resolve; else resolveTransactions = resolve;}).then(fn);} };return query;
   } };
   const harness = dashboardHarness({mocks:{"@/lib/supabase":{supabase},"next/navigation":{useRouter:()=>({replace:path=>redirects.push(path)})}}});
   const { useDashboardData } = harness.load("hooks/useDashboardData.ts");
@@ -98,8 +112,8 @@ test("dashboard account reads are user-scoped, fail visibly, and cannot restore 
     assert.equal(harness.render(useDashboardData).error,true);
     const refresh = harness.render(useDashboardData).refresh(); await tick(); onAuth("SIGNED_OUT");
     resolveProfile({data:{id:"customer-id"},error:null}); resolveTransactions({data:[{amount_aud:500}],error:null}); await refresh;
-    const state = harness.render(useDashboardData); assert.equal(state.profile,null); assert.equal(state.transactions.length,0); assert.equal(state.sessionChecked,false);
-    assert.deepEqual(scopes.slice(0,2),[["profiles","id","customer-id"],["transactions","user_id","customer-id"]]);
+    const state = harness.render(useDashboardData); assert.equal(state.profile,null); assert.equal(state.approvedVolume,0); assert.equal(state.approvedCount,0); assert.equal(state.sessionChecked,false);
+    assert.deepEqual(scopes.slice(0,3),[["profiles","id","customer-id"],["transactions","user_id","customer-id"],["transactions","status","approved"]]);
     assert.deepEqual(redirects,["/en/login"]);
   } finally { harness.cleanup(); global.window = previous.window; global.document = previous.document; }
 });
@@ -113,10 +127,11 @@ test("transfer direction and rate changes invalidate recipients and pending prom
     "@/components/dashboard/RecipientModal":{RecipientModal:()=>null},
     "@/components/requests/OnlineRequestSubmit":{OnlineRequestSubmit},
     "@/context/FinanceConfigContext":{useFinanceConfig:()=>finance},
-    "@/app/actions/transaction.actions":{getRecipients:async()=>({data:[]}),validatePromoCode:()=>new Promise(resolve=>{resolvePromo=resolve;})},
+    "@/app/actions/transaction.actions":{getRecipients:async()=>({data:[{id:"recipient-aud",direction:"aud",label:"Alex"}]}),validatePromoCode:()=>new Promise(resolve=>{resolvePromo=resolve;})},
     "@/lib/supabase":{supabase:{from:()=>({select(){return this;},order(){return this;},limit(){return this;},single:async()=>({data:{market_active:true}})})}},
   }});
   const {DashboardRequestHub} = harness.load("components/dashboard/DashboardRequestHub.tsx");
+  const {TransferRecipientPicker} = harness.load("components/dashboard/TransferRecipientPicker.tsx");
   const props = {isApproved:true,txType:"buy_aud",setTxType(){},amountStr:"1,000",setAmountStr(value){props.amountStr=value;},loyaltyBonus:0,tailoredRate:100000,baseRate:100000,profile:{id:"fixture"}};
   const render = () => harness.render(DashboardRequestHub,props);
   const previousRAF = global.requestAnimationFrame; global.requestAnimationFrame = () => 1;
@@ -124,7 +139,7 @@ test("transfer direction and rate changes invalidate recipients and pending prom
     render(); harness.effects(); await tick();
     const next = () => elements(render(),node=>node.type==="button" && String(node.props.className).includes("wizardNext"))[0].props.onClick();
     next();
-    elements(render(),node=>node.type===SelectBox)[0].props.onChange("recipient-aud");
+    elements(render(),node=>node.type===TransferRecipientPicker)[0].props.onSelect("recipient-aud");
     next();
     elements(render(),node=>node.type===SelectBox)[0].props.onChange("Loan");
     elements(render(),node=>node.type===SelectBox)[1].props.onChange("Support Family");

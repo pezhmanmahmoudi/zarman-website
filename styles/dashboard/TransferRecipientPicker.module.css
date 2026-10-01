@@ -1,0 +1,56 @@
+.picker{min-width:0;margin:0;padding:0;border:0;color:#302346}
+.toolbar{display:flex;flex-direction:column;align-items:stretch;gap:16px;margin-bottom:24px}
+.addRecipient{align-self:center;min-width:176px;max-width:100%}
+.search{display:flex;align-items:center;position:relative;min-width:0;min-height:48px;padding-inline:14px;gap:10px;border:1px solid #d7cee7;border-radius:12px;background:#fff;color:#756782}
+.search:focus-within{border-color:#8970b6;box-shadow:0 0 0 2px rgb(118 103 189 / 8%)}
+.search>svg{flex-shrink:0}
+.search input{width:100%;min-width:0;height:46px;border:0;outline:none;background:transparent;font:inherit;font-size:14px;color:#302346}
+.picker .search input:focus,.picker .search input:focus-visible{border:0!important;outline:none!important;box-shadow:none!important}
+.search input::placeholder{color:#756782}
+.search input::-webkit-search-cancel-button{appearance:none}
+.clear{display:grid;place-items:center;flex-shrink:0;width:44px;height:44px;margin-inline-end:-12px;border:0;border-radius:10px;background:transparent;color:#625570;cursor:pointer}
+.action{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;max-width:100%;padding:10px 16px;border:1px solid #d7cee7;border-radius:12px;background:#fff;color:#483766;font:inherit;font-size:14px;font-weight:600;line-height:1.7;text-align:center;cursor:pointer}
+.action svg{flex-shrink:0}
+.action:focus-visible,.clear:focus-visible{outline:2px solid #7861b0;outline-offset:3px}
+.action:disabled,.clear:disabled{opacity:.55;cursor:default}
+.listHeading{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-bottom:12px;font-size:13px;font-weight:600;line-height:1.7}
+.listHeading>span:last-child{color:#756782;font-size:12px;font-weight:400}
+.list,.otherGrid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+/* Long lists scroll inside the step so the footer stays close. */
+.list[data-scrollable="true"]{max-height:min(620px,65vh);overflow-y:auto;overscroll-behavior:contain;padding:3px;margin:-3px}
+.list>.row{content-visibility:auto;contain-intrinsic-size:auto 190px}
+.row{--card-bg:#f7f3fc;--card-selected:#eee5f8;--card-border:#ded1ed;--card-accent:#8763ad;--card-ink:#674581;--avatar-bg:#eadff5;position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;min-width:0;margin:0;padding:20px;border:1px solid var(--card-border);border-radius:18px;background:var(--card-bg);color:#302346;font:inherit;text-align:center;cursor:pointer}
+.row[data-tone="sky"]{--card-bg:#f1f7fc;--card-selected:#e3f0fa;--card-border:#ccdfef;--card-accent:#4d8cb7;--card-ink:#285b80;--avatar-bg:#dcecf8}
+.row[data-tone="rose"]{--card-bg:#fff4f5;--card-selected:#fbe6eb;--card-border:#efd4dc;--card-accent:#ba708b;--card-ink:#87465e;--avatar-bg:#f8e0e8}
+/* Use the search field's single border and soft halo, never a second outline. */
+.picker .row{border-width:1px!important;outline:none!important;outline-offset:0!important;box-shadow:none}
+.picker .row[data-selected="true"]{border-color:#8970b6;background:var(--card-selected);box-shadow:0 0 0 2px rgb(118 103 189 / 8%)}
+.picker .row:focus-visible,.picker .row:has(input:focus-visible){outline:none!important;outline-offset:0!important;border-color:#8970b6;box-shadow:0 0 0 2px rgb(118 103 189 / 8%)}
+.row:has(input:disabled),.row:disabled{opacity:.55;cursor:default}
+/* Keep native single-selection and arrow-key navigation without a visible radio. */
+.picker .choiceInput{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+.picker .choiceInput:focus,.picker .choiceInput:focus-visible{outline:none!important;box-shadow:none!important}
+.cardTop{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:42px;padding-inline:28px;color:var(--card-ink)}
+.avatar,.specialIcon{display:grid;place-items:center;flex-shrink:0;width:42px;height:42px;border-radius:14px;background:var(--avatar-bg);color:var(--card-ink)}
+.selectionMark{position:absolute;top:14px;right:14px;display:grid;place-items:center;width:22px;height:22px;color:var(--card-ink);pointer-events:none}
+.selectionMark svg{flex-shrink:0}
+.details{display:flex;flex:1;flex-direction:column;align-items:center;gap:6px;width:100%;min-width:0;text-align:center;overflow-wrap:anywhere}
+.name{font-size:14px;font-weight:600;line-height:1.8}
+.alias{font-size:12px;line-height:1.8;color:#756782}
+.bank{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 12px;width:100%;padding-top:12px;border-top:1px solid var(--card-border);font-size:12px;line-height:1.8;color:#625570}
+.bank bdi[dir="ltr"]{font-family:var(--font-en-stack);font-variant-numeric:tabular-nums;white-space:nowrap}
+.message{margin:0;padding:16px 0;font-size:14px;line-height:1.9;color:#6a6279}
+.empty{padding:20px;border:1px dashed #d7cee7;border-radius:16px;background:#fff;text-align:center}
+.empty p{margin:0 0 16px;font-size:14px;line-height:1.9;color:#6a6279}
+.other{display:grid;gap:12px;margin-top:24px;padding-top:20px;border-top:1px solid #e4ddef}
+.otherTitle{margin:0;font-size:12px;font-weight:500;color:#756782}
+.self{--card-bg:#edf8f4;--card-selected:#e1f2eb;--card-border:#c3e2d7;--card-accent:#458774;--card-ink:#286854;--avatar-bg:#d7eee4}
+.education{--card-bg:#fff8eb;--card-selected:#fff0d4;--card-border:#ead6ad;--card-accent:#b38a36;--card-ink:#825d17;--avatar-bg:#f8e9c9}
+.row.compact{flex-direction:row;align-items:center;width:100%;min-height:72px;padding:12px 16px;border-radius:16px;text-align:start}
+.compact .details{align-items:flex-start;gap:2px;text-align:start}
+.compact .name,.compact .alias{line-height:1.7}
+.radio,.addMark{display:grid;place-items:center;flex-shrink:0;width:22px;height:22px;border:1.5px solid var(--card-border);border-radius:999px;background:#fff;color:#fff}
+.radio[data-selected="true"]{border-color:var(--card-accent);background:var(--card-accent)}
+.addMark{border-style:dashed;border-color:var(--card-accent);color:var(--card-ink)}
+@container(min-width:560px){.list,.otherGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@container(max-width:420px){.toolbar{flex-direction:column}.search{flex-basis:auto}.row{padding:16px}}

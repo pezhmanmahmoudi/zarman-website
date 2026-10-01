@@ -3,16 +3,36 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/context/LocaleContext";
 import { supabase } from "@/lib/supabase";
-import type { Profile, Transaction } from "@/app/[locale]/dashboard/dashboard.types";
+import { DASHBOARD_AUTO_REFRESH_MS, dashboardRefreshDue } from "@/lib/dashboard/refresh-policy";
+import type { Profile } from "@/app/[locale]/dashboard/dashboard.types";
+
+type ApprovedSummary = { volume: number; count: number };
+const noSummary: ApprovedSummary = { volume: 0, count: 0 };
+const SUMMARY_BATCH = 1000;
+
+/** Only the approved amounts are read; history pages load their own records on demand. */
+async function readApprovedSummary(userId: string, signal: AbortSignal): Promise<ApprovedSummary> {
+  let volume = 0, count = 0;
+  for (let from = 0; ; from += SUMMARY_BATCH) {
+    const { data, error } = await supabase.from("transactions").select("amount_aud").eq("user_id", userId).eq("status", "approved")
+      .order("id", { ascending: true }).range(from, from + SUMMARY_BATCH - 1).abortSignal(signal);
+    if (error) throw error;
+    for (const row of data ?? []) volume += Number(row.amount_aud) || 0;
+    count += data?.length ?? 0;
+    if ((data?.length ?? 0) < SUMMARY_BATCH) return { volume, count };
+  }
+}
 
 export function useDashboardData() {
   const router = useRouter(), locale = useLocale();
   const generation = useRef(0), abort = useRef<AbortController | null>(null);
+  const lastRefresh = useRef(0);
   const [loading, setLoading] = useState(true), [sessionChecked, setSessionChecked] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null), [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null), [approved, setApproved] = useState<ApprovedSummary>(noSummary);
   const [error, setError] = useState(false);
   const invalidate = useCallback(() => { ++generation.current; abort.current?.abort(); }, []);
   const refresh = useCallback(async () => {
+    lastRefresh.current = Date.now();
     const current = ++generation.current;
     abort.current?.abort();
     const controller = new AbortController(); abort.current = controller;
@@ -23,20 +43,18 @@ export function useDashboardData() {
       if (current !== generation.current) return;
       if (!user) {
         if (authError && authError.status !== 401 && authError.status !== 400 && authError.name !== "AuthSessionMissingError") throw authError;
-        setProfile(null); setTransactions([]); setSessionChecked(false);
+        setProfile(null); setApproved(noSummary); setSessionChecked(false);
         const next = window.location.pathname + window.location.search;
         router.replace(`/${locale}/login?next=${encodeURIComponent(next)}`); return;
       }
-      const [profileRes, txRes] = await Promise.all([
+      const [profileRes, summary] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).abortSignal(controller.signal).single(),
-        supabase.from("transactions")
-          .select("id,user_id,type,amount_aud,equivalent_toman,status,created_at,recipient_id,promo_code,discount_amount,loyalty_discount,final_amount,reference_code,recipients(id,label,full_name,account_name)")
-          .eq("user_id", user.id).order("created_at", { ascending: false }).abortSignal(controller.signal),
+        readApprovedSummary(user.id, controller.signal),
       ]);
       if (current !== generation.current) return;
-      if (profileRes.error || txRes.error) throw new Error("dashboard_read_failed");
+      if (profileRes.error) throw new Error("dashboard_read_failed");
       setProfile(profileRes.data as Profile);
-      setTransactions((txRes.data || []) as unknown as Transaction[]);
+      setApproved(summary);
       setSessionChecked(true);
     } catch {
       if (current === generation.current && !controller.signal.aborted) setError(true);
@@ -44,18 +62,18 @@ export function useDashboardData() {
   }, [locale, router]);
   useEffect(() => {
     void refresh();
-    const onVisible = () => { if (document.visibilityState === "visible") void refresh(); };
+    const onVisible = () => { if (document.visibilityState === "visible" && dashboardRefreshDue(lastRefresh.current)) void refresh(); };
     window.addEventListener("focus", onVisible);
     document.addEventListener("visibilitychange", onVisible);
-    const timer = window.setInterval(onVisible, 60000);
+    const timer = window.setInterval(onVisible, DASHBOARD_AUTO_REFRESH_MS);
     const { data: { subscription } } = supabase.auth.onAuthStateChange(event => {
       if (event === "SIGNED_OUT") {
         invalidate();
-        setProfile(null); setTransactions([]); setSessionChecked(false);
+        setProfile(null); setApproved(noSummary); setSessionChecked(false);
         router.replace(`/${locale}/login`);
       }
     });
     return () => { invalidate(); subscription.unsubscribe(); window.clearInterval(timer); window.removeEventListener("focus", onVisible); document.removeEventListener("visibilitychange", onVisible); };
   }, [refresh, locale, router, invalidate]);
-  return { profile, transactions, totalVolume: transactions.reduce((sum, tx) => sum + Number(tx.amount_aud || 0), 0), loading, sessionChecked, error, refresh };
+  return { profile, approvedVolume: approved.volume, approvedCount: approved.count, loading, sessionChecked, error, refresh };
 }

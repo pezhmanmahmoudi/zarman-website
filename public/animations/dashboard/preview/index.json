@@ -1,0 +1,155 @@
+{
+  "generatedAt": "2026-10-01T06:23:36.318Z",
+  "animations": [
+    {
+      "name": "3D mobile payment",
+      "source": "3D mobile payment.lottie",
+      "src": "/animations/dashboard/preview/3d-mobile-payment-c8ad66160dbc.json"
+    },
+    {
+      "name": "Add to favorites",
+      "source": "Add to favorites.lottie",
+      "src": "/animations/dashboard/preview/add-to-favorites-d5e84adaa551.json"
+    },
+    {
+      "name": "alert",
+      "source": "alert.lottie",
+      "src": "/animations/dashboard/preview/alert-8e8f11131c4a.json"
+    },
+    {
+      "name": "Animation - 1714895807937",
+      "source": "Animation - 1714895807937.lottie",
+      "src": "/animations/dashboard/preview/animation-1714895807937-39256464abf5.json"
+    },
+    {
+      "name": "Announcement",
+      "source": "Announcement.lottie",
+      "src": "/animations/dashboard/preview/announcement-c959aad54f31.json"
+    },
+    {
+      "name": "Bill Paid Successful",
+      "source": "Bill Paid Successful.lottie",
+      "src": "/animations/dashboard/preview/bill-paid-successful-172c2c142478.json"
+    },
+    {
+      "name": "Card Lottie Animation",
+      "source": "Card Lottie Animation.lottie",
+      "src": "/animations/dashboard/preview/card-lottie-animation-9f2d4343e31a.json"
+    },
+    {
+      "name": "Chat",
+      "source": "Chat.lottie",
+      "src": "/animations/dashboard/preview/chat-53dcf8299cbb.json"
+    },
+    {
+      "name": "compliance",
+      "source": "compliance.lottie",
+      "src": "/animations/dashboard/preview/compliance-560441a5c485.json"
+    },
+    {
+      "name": "fingerprint",
+      "source": "fingerprint.lottie",
+      "src": "/animations/dashboard/preview/fingerprint-01ac4fd147c2.json"
+    },
+    {
+      "name": "Gift Reward Animation",
+      "source": "Gift Reward Animation.lottie",
+      "src": "/animations/dashboard/preview/gift-reward-animation-ea087d954d71.json"
+    },
+    {
+      "name": "Hand Loding",
+      "source": "Hand Loding.lottie",
+      "src": "/animations/dashboard/preview/hand-loding-1b0090064d0c.json"
+    },
+    {
+      "name": "Isometric data analysis",
+      "source": "Isometric data analysis.lottie",
+      "src": "/animations/dashboard/preview/isometric-data-analysis-ec95196da0f2.json"
+    },
+    {
+      "name": "loading animation",
+      "source": "loading animation.lottie",
+      "src": "/animations/dashboard/preview/loading-animation-3bb470b5d8e7.json"
+    },
+    {
+      "name": "Mobile payment",
+      "source": "Mobile payment.lottie",
+      "src": "/animations/dashboard/preview/mobile-payment-2d2aae3198bc.json"
+    },
+    {
+      "name": "Payment Failed",
+      "source": "Payment Failed.lottie",
+      "src": "/animations/dashboard/preview/payment-failed-b9b2aae852a9.json"
+    },
+    {
+      "name": "Payment Success",
+      "source": "Payment Success.lottie",
+      "src": "/animations/dashboard/preview/payment-success-8575b8fd0859.json"
+    },
+    {
+      "name": "payment sucessful",
+      "source": "payment sucessful.lottie",
+      "src": "/animations/dashboard/preview/payment-sucessful-0963ddf8a121.json"
+    },
+    {
+      "name": "Profile Avatar for Child",
+      "source": "Profile Avatar for Child.lottie",
+      "src": "/animations/dashboard/preview/profile-avatar-for-child-bd507410b67b.json"
+    },
+    {
+      "name": "Recruitment",
+      "source": "Recruitment.lottie",
+      "src": "/animations/dashboard/preview/recruitment-d8f3ec5d7be5.json"
+    },
+    {
+      "name": "Review",
+      "source": "Review.lottie",
+      "src": "/animations/dashboard/preview/review-c420ba1ab3f7.json"
+    },
+    {
+      "name": "Send",
+      "source": "Send.lottie",
+      "src": "/animations/dashboard/preview/send-4a38d2aea6b2.json"
+    },
+    {
+      "name": "Submitted",
+      "source": "Submitted.lottie",
+      "src": "/animations/dashboard/preview/submitted-5c929bc9f3af.json"
+    },
+    {
+      "name": "success blue",
+      "source": "success blue.lottie",
+      "src": "/animations/dashboard/preview/success-blue-6b0b7dd2efdc.json"
+    },
+    {
+      "name": "Uploading to cloud",
+      "source": "Uploading to cloud.lottie",
+      "src": "/animations/dashboard/preview/uploading-to-cloud-bb09e4b9bba7.json"
+    },
+    {
+      "name": "Uploading",
+      "source": "Uploading.lottie",
+      "src": "/animations/dashboard/preview/uploading-2868b2da3e5e.json"
+    },
+    {
+      "name": "Waiting P",
+      "source": "Waiting P.lottie",
+      "src": "/animations/dashboard/preview/waiting-p-0c1ea7f43267.json"
+    },
+    {
+      "name": "Wallet _ Money Added",
+      "source": "Wallet _ Money Added.lottie",
+      "src": "/animations/dashboard/preview/wallet-money-added-118ff87c75fa.json"
+    },
+    {
+      "name": "warning",
+      "source": "warning.lottie",
+      "src": "/animations/dashboard/preview/warning-9bce6fbf7256.json"
+    },
+    {
+      "name": "Wrong fingerprint",
+      "source": "Wrong fingerprint.lottie",
+      "src": "/animations/dashboard/preview/wrong-fingerprint-17bce9a04f25.json"
+    }
+  ]
+}

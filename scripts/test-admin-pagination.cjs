@@ -220,6 +220,8 @@ for (const [route, actionName] of [["audit", "getAuditLogs"], ["feedback", "getF
       "@/components/admin/FeedbackModerateButtons": { FeedbackModerateButtons: () => null },
       "@/components/admin/KycActionButtons": { KycActionButtons: () => null },
       "@/components/admin/EditableCustomerCode": { EditableCustomerCode: () => null },
+      "@/components/admin/IdentityVerificationTable": { IdentityVerificationTable: ({ emptyMessage }) => React.createElement("div", null, emptyMessage) },
+      "@/components/admin/AuditLogTable": { AuditLogTable: () => React.createElement("div", null, "Choose another page below") },
     }).default;
     const output = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ page: "99", pageSize: "20" }) }));
     assert.deepEqual(calls, [[99, 20]]);

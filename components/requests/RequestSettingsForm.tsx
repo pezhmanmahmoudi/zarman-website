@@ -14,7 +14,7 @@ const sections = [
 type Section = typeof sections[number][0];
 type NumberKey = "priority_fee_aud" | "priority_capacity" | "standard_minutes" | "priority_minutes" | "quote_minutes" | "funding_minutes" | "australian_clearance_minutes" | "max_amount_aud" | "opening_hour" | "closing_hour";
 
-export function RequestSettingsForm() {
+export function RequestSettingsForm({ defaultExpanded = false }: { defaultExpanded?: boolean }) {
   const [record, setRecord] = useState<SettingsRecord | null>(null);
   const [emails, setEmails] = useState("");
   const [holidays, setHolidays] = useState("");
@@ -29,6 +29,7 @@ export function RequestSettingsForm() {
 
   useEffect(() => {
     let alive = true;
+    if (defaultExpanded && panel.current) panel.current.open = true;
     getRequestSettings().then(result => {
       if (!alive) return;
       if (result.error) setError(result.error);
@@ -47,7 +48,7 @@ export function RequestSettingsForm() {
     };
     followHash(); window.addEventListener("hashchange", followHash);
     return () => { alive = false; window.removeEventListener("hashchange", followHash); };
-  }, []);
+  }, [defaultExpanded]);
 
   function set<K extends keyof RequestSettings>(key: K, value: RequestSettings[K]) {
     setRecord(current => current ? { ...current, settings: { ...current.settings, [key]: value } } : null);
@@ -82,6 +83,11 @@ export function RequestSettingsForm() {
   function number(key: NumberKey, label: string, min: number, max: number, step = 1) {
     return <label className={styles.field}>{label}<input type="number" min={min} max={max} step={step}
       value={Number.isNaN(settings![key]) ? "" : settings![key]} onChange={event => set(key, event.target.valueAsNumber)} /></label>;
+  }
+  function hours(key: Extract<NumberKey, `${string}_minutes`>, label: string, minMinutes: number, maxMinutes: number) {
+    return <label className={styles.field}>{label}<input name={key} type="number" inputMode="decimal" min={minMinutes / 60} max={maxMinutes / 60} step="any"
+      value={Number.isNaN(settings![key]) ? "" : Number((settings![key] / 60).toFixed(2))}
+      onChange={event => set(key, Math.round(event.target.valueAsNumber * 60))} /></label>;
   }
   function bankField(currency: "aud" | "irt", key: keyof FundingBankDetails, label: string, placeholder = "", numeric = false) {
     const details = settings?.[currency === "aud" ? "payment_details_aud" : "payment_details_irt"] || {};
@@ -147,12 +153,14 @@ export function RequestSettingsForm() {
           <label className={styles.field}>Management emails<textarea rows={4} autoCapitalize="none" spellCheck={false} value={emails} onChange={event => { setEmails(event.target.value); setDirty(true); setMessage(""); }} placeholder="One email per line" /></label>
           <p className={ui.hint}>New requests and customer replies notify this list. Choose email delivery when approving or messaging.</p>
         </section>
-        <section id="request-timing" className={ui.section} hidden={active !== "timing"} aria-label="Hours and timing">
+        <section id="request-timing" className={`${ui.section} ${ui.timingSection}`} hidden={active !== "timing"} aria-label="Hours and timing">
           <p className={ui.hint}>Handling starts after cleared funds and checks. The bank allowance is a review deadline, not a required wait. Calendar: Sydney.</p>
+          <div className={ui.timingGrid}>
+            {hours("standard_minutes", "Standard · business hours", 1, 10080)}{hours("priority_minutes", "Priority · business hours", 1, 10080)}
+            {hours("quote_minutes", "Quote validity · hours", 1, 60)}{hours("funding_minutes", "Payment window · hours", 1, 10080)}
+            {hours("australian_clearance_minutes", "AU bank review allowance · hours", 1440, 10080)}
+          </div>
           <div className={styles.fields}>
-            {number("standard_minutes", "Standard · business minutes", 1, 10080)}{number("priority_minutes", "Priority · business minutes", 1, 10080)}
-            {number("quote_minutes", "Quote validity · minutes", 1, 60)}{number("funding_minutes", "Payment window · minutes", 1, 10080)}
-            {number("australian_clearance_minutes", "AU bank review allowance · minutes (1440 = 24h)", 1440, 10080)}
             {number("opening_hour", "Opening hour", 0, 23)}{number("closing_hour", "Closing hour", 1, 24)}
           </div>
           <div className={styles.settingsDays}>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => <label key={day}><input type="checkbox" checked={settings.business_days.includes(index)} onChange={event => set("business_days", event.target.checked ? [...settings.business_days, index].sort() : settings.business_days.filter(value => value !== index))} />{day}</label>)}</div>

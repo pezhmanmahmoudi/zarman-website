@@ -8,7 +8,7 @@ import { AdminToast } from "@/components/admin/ui/AdminToast";
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { SelectBox } from "../../ui/SelectBox/SelectBox";
-import styles from "@/styles/admin/LedgerToolbar.module.css";
+import styles from "@/styles/admin/AdminWorkspace.module.css";
 import { sortBankAccountsByPriority } from "@/lib/bank-account-ordering";
 
 interface LedgerToolbarProps {
@@ -168,39 +168,39 @@ export default function LedgerToolbar({ currentParams, bankAccounts, exportFilte
   };
 
 
-  return <section className={styles.toolbar} aria-label="Ledger filters and export" aria-busy={navigating}>
-    <div className={styles.primaryRow}>
+  return <section className={styles.panel} aria-label="Ledger filters and export" aria-busy={navigating}>
+    <div className={styles.historyControls}>
       <form className={styles.searchForm} role="search" aria-label="Search ledger entries" onSubmit={event => { event.preventDefault(); navigate({ search: searchText.trim() || null }); }}>
-        <div className={styles.searchField}>
+        <div className={styles.search}>
           <Search size={17} aria-hidden="true" />
           <input type="search" aria-label="Search sender or recipient" placeholder="Search sender or recipient…" value={searchText} onChange={event => setSearchText(event.target.value)} dir="auto" />
-          <button type="submit" disabled={navigating} className={styles.searchSubmit}>Search</button>
-        </div>
+          </div>
+        <button type="submit" disabled={navigating} className={styles.action}>Search</button>
       </form>
-      <div className={styles.primaryActions}>
-        <button type="button" className={`${styles.filterButton} ${filtersOpen ? styles.filterButtonActive : ""}`} aria-expanded={filtersOpen} onClick={() => setFiltersOpen(value => !value)}>
-          <SlidersHorizontal size={15} /> Filters {activeFilterCount > 0 && <span className={styles.filterCount}>{activeFilterCount}</span>}
+      <div className={styles.headerActions}>
+        <button type="button" className={`${styles.action} ${filtersOpen ? styles.activeControl : ""}`} aria-expanded={filtersOpen} onClick={() => setFiltersOpen(value => !value)}>
+          <SlidersHorizontal size={15} /> Filters {activeFilterCount > 0 && <span className={styles.recordCount}>{activeFilterCount}</span>}
         </button>
-        <button type="button" className={styles.exportButton} onClick={exportFilteredRows} disabled={isExporting || navigating} aria-busy={isExporting}>
+        <button type="button" className={styles.action} onClick={exportFilteredRows} disabled={isExporting || navigating} aria-busy={isExporting}>
           {isExporting ? <LoaderCircle size={15} className={styles.spinner} /> : <Download size={15} />}
           {isExporting ? "Exporting…" : "Export CSV"}
         </button>
       </div>
     </div>
-    {filtersOpen && <div className={styles.filterFields}>
-      <div className={styles.control}><span className={styles.controlLabel}>Entry type</span><SelectBox placeholder="Entry type" labeledOptions={transactionOptions} value={currentParams.type || "all"} onChange={value => navigate({ type: value === "all" ? null : value })} className={styles.selectTrigger} disabled={navigating} dir="ltr" /></div>
-      <div className={styles.control}><span className={styles.controlLabel}>Date range</span><SelectBox placeholder="Date range" labeledOptions={rangeOptions} value={currentParams.range || (currentParams.start || currentParams.end ? "custom" : "all")} onChange={value => navigate(value === "custom" ? { range: value } : { range: value, start: null, end: null })} className={styles.selectTrigger} disabled={navigating} dir="ltr" /></div>
-      <div className={styles.control}><span className={styles.controlLabel}>Bank account</span><SelectBox placeholder="Bank account" labeledOptions={accountOptions} value={currentParams.account || "all"} onChange={value => navigate({ account: value === "all" ? null : value })} className={styles.selectTrigger} disabled={navigating} dir="ltr" /></div>
-      {isCustom && <div className={styles.customRange}>
-        <div className={styles.dateControl}><span>From</span><CustomDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" disabled={navigating} /></div>
-        <div className={styles.dateControl}><span>To</span><CustomDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" disabled={navigating} /></div>
-        <button type="button" className={styles.applyButton} onClick={() => navigate({ start: customStart, end: customEnd, range: "custom" })} disabled={!customStart || !customEnd || invalidRange || navigating}><Check size={16} /> Apply dates</button>
-        {invalidRange && <p className={styles.rangeError} role="alert">End date must be on or after the start date.</p>}
+    {filtersOpen && <div className={styles.datePanel}>
+      <div className={styles.filterField}><span className={styles.fieldLabel}>Entry type</span><SelectBox placeholder="Entry type" labeledOptions={transactionOptions} value={currentParams.type || "all"} onChange={value => navigate({ type: value === "all" ? null : value })} className={styles.select} disabled={navigating} dir="ltr" /></div>
+      <div className={styles.filterField}><span className={styles.fieldLabel}>Date range</span><SelectBox placeholder="Date range" labeledOptions={rangeOptions} value={currentParams.range || (currentParams.start || currentParams.end ? "custom" : "all")} onChange={value => navigate(value === "custom" ? { range: value } : { range: value, start: null, end: null })} className={styles.select} disabled={navigating} dir="ltr" /></div>
+      <div className={styles.filterField}><span className={styles.fieldLabel}>Bank account</span><SelectBox placeholder="Bank account" labeledOptions={accountOptions} value={currentParams.account || "all"} onChange={value => navigate({ account: value === "all" ? null : value })} className={styles.select} disabled={navigating} dir="ltr" /></div>
+      {isCustom && <div className={styles.datePanel}>
+        <div className={styles.filterField}><span>From</span><CustomDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" disabled={navigating} /></div>
+        <div className={styles.filterField}><span>To</span><CustomDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" disabled={navigating} /></div>
+        <button type="button" className={styles.action} onClick={() => navigate({ start: customStart, end: customEnd, range: "custom" })} disabled={!customStart || !customEnd || invalidRange || navigating}><Check size={16} /> Apply dates</button>
+        {invalidRange && <p className={styles.dateError} role="alert">End date must be on or after the start date.</p>}
       </div>}
     </div>}
-    {(activeFilterCount > 0 || navigating) && <div className={styles.activeFilters}>
+    {(activeFilterCount > 0 || navigating) && <div className={styles.bulkBar}>
       {navigating ? <span role="status"><LoaderCircle size={13} className={styles.spinner} /> Updating entries…</span> : <span>{activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"}{currentParams.search ? ` · “${currentParams.search}”` : ""}</span>}
-      {activeFilterCount > 0 && <button type="button" onClick={clearFilters} disabled={navigating}><X size={13} /> Clear filters</button>}
+      {activeFilterCount > 0 && <button type="button" className={styles.detailsToggle} onClick={clearFilters} disabled={navigating}><X size={13} /> Clear filters</button>}
     </div>}
     <AdminToast {...toastProps} />
   </section>;

@@ -8,18 +8,43 @@ export function journeyPresentation(request: ExchangeRequest, locale: RequestLoc
   const priorityRefundPending = request.priority_fee_status === "refund_pending";
   const refundPending = principalRefundPending || priorityRefundPending;
   const text = (en: string, faText: string) => fa ? faText : en;
-  const labels = [
-    ["A great start.", "شروع یک انتقال مطمئن.", "Your request is with our team. Bank details appear after approval.", "درخواست شما در حال بررسی است. پس از تأیید، مشخصات بانکی نمایش داده می‌شود."],
-    ["You’re ready to pay.", "آماده واریز وجه هستید.", "Transfer the exact amount, then send your bank receipt.", "مبلغ مشخص‌شده را واریز کنید و سپس رسید بانکی را بفرستید."],
-    ["Your receipt is with us.", "رسید شما به دست ما رسید.", "We’re checking for cleared funds. No action needed.", "در حال بررسی وصول وجه هستیم. نیازی به اقدام شما نیست."],
-    ["Your funds are confirmed.", "دریافت وجه شما تأیید شد.", "Funds received. Under admin review for the remaining checks.", "وجه دریافت شد. بررسی‌های نهایی در حال انجام است."],
-    ["Delivered. All done.", "انتقال انجام شد.", "Destination settlement is confirmed. Your final receipt is ready.", "تسویه در مقصد تأیید شد. رسید نهایی شما آماده است."],
+  const labels: [string, string, string, string][] = [
+    [
+      "Request Submitted (Under Review)",
+      "درخواست شما ثبت شد (در حال بررسی)",
+      "Our team is reviewing your request. Once approved, the bank account details for your deposit will be displayed here.",
+      "کارشناسان ما در حال بررسی درخواست شما هستند. به محض تأیید، اطلاعات حساب بانکی جهت واریز وجه در همین صفحه نمایش داده خواهد شد.",
+    ],
+    [
+      "Request Approved; Please Transfer Funds",
+      "درخواست تأیید شد؛ لطفاً وجه را واریز کنید",
+      "Transfer the specified amount to the designated account and upload your bank receipt.",
+      "مبلغ تعیین‌شده را به حساب مشخص‌شده انتقال داده و رسید آن را بارگذاری کنید.",
+    ],
+    [
+      "Bank Receipt Received",
+      "رسید بانکی شما دریافت شد",
+      "Our team is reviewing your receipt and verifying the funds.",
+      "کارشناسان ما در حال بررسی رسید و تأیید وصول وجه هستند.",
+    ],
+    [
+      "Funds Verified",
+      "وصول وجه تأیید شد",
+      "Your payment has been successfully verified. We are now processing the final steps of your transfer.",
+      "دریافت وجه با موفقیت تأیید شد. کارشناسان ما در حال انجام مراحل نهایی انتقال هستند.",
+    ],
+    [
+      "Transfer Completed",
+      "تراکنش تکمیل شد",
+      "The transfer has been successfully completed. Your final summary and receipt are now available.",
+      "انتقال وجه با موفقیت به پایان رسید. خلاصه تراکنش و رسید نهایی شما آماده است.",
+    ],
   ];
   const row = labels[journey.stage];
   let heading = row[fa ? 1 : 0], description = row[fa ? 3 : 2];
   let mood: "active" | "attention" | "waiting" | "complete" | "failed" | "quiet" = request.status === "completed" ? "complete" : "waiting";
   let href: string | null = journey.canPay && !journey.receiptSubmitted ? "#request-payment-details" : null;
-  let action: string | null = href ? text("View payment details", "مشاهده مشخصات واریز") : null;
+  let action: string | null = href ? text("View account details", "مشاهده اطلاعات حساب") : null;
   let nextActor: "customer" | "zarman" | "complete" | "closed" = request.status === "completed" ? "complete" : "zarman";
   if (journey.canPay && !journey.receiptSubmitted) {
     nextActor = "customer";
@@ -40,12 +65,12 @@ export function journeyPresentation(request: ExchangeRequest, locale: RequestLoc
   if (journey.closed || ["refund_pending", "refunded"].includes(request.funding_status) || (priorityRefundPending && !journey.customerActionRequired)) {
     heading = requestStageLabel(request, locale); mood = ["rejected", "expired"].includes(request.status) ? "failed" : "quiet"; href = null; action = null;
     nextActor = refundPending ? "zarman" : "closed";
-    description = priorityRefundPending ? text("Our team is arranging your priority service fee refund.", "تیم زرمان در حال پیگیری بازپرداخت هزینه سرویس اولویت‌دار شماست.")
+    description = priorityRefundPending ? text("Our team is arranging your express processing fee refund.", "تیم زرمان در حال پیگیری بازپرداخت هزینه پردازش اکسپرس شماست.")
       : principalRefundPending ? text("Our team is arranging the return of your funds.", "تیم زرمان در حال پیگیری بازپرداخت وجه شماست.")
       : request.funding_status === "refunded" ? text("Your funds have been returned.", "وجه شما بازپرداخت شد.") : text("This request is closed. Please do not send a new payment.", "این درخواست بسته شده است. وجه جدید واریز نکنید.");
   }
-  const actorLabel = nextActor === "customer" ? text("Your turn", "نوبت شما")
-    : nextActor === "zarman" ? text("With Zarman", "نزد زرمان")
+  const actorLabel = nextActor === "customer" ? text("Action Required", "نیازمند اقدام شما")
+    : nextActor === "zarman" ? (journey.stage === 0 && !journey.closed && !refundPending ? text("Under Review by Zarman", "در حال بررسی توسط زرمان") : text("Under review by Zarman", "در حال بررسی توسط زرمان"))
       : nextActor === "complete" ? text("Complete", "تکمیل شده") : text("Closed", "بسته شده");
   const actorHint = nextActor === "customer" ? text("Action needed from you", "اقدام شما لازم است")
     : nextActor === "zarman" ? text("Our team is handling the next step", "مرحله بعد با تیم زرمان است")

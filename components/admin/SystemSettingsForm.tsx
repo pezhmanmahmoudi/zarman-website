@@ -104,7 +104,7 @@ export function SystemSettingsForm({
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", paddingTop: "0.5rem" }}>
       
       {/* ── 2-Column Grid Layout for Desktop ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "1.25rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 400px), 1fr))", gap: "1.25rem" }}>
         
         {/* === Left Column: Rates & Market Status === */}
         <div className={cardStyles.panel} style={{ display: "flex", flexDirection: "column" }}>

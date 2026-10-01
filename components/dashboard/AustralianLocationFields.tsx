@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import { normalizeAustralianState } from "@/lib/australian-driver-licence";
 import styles from "@/styles/dashboard/DashboardProfile.module.css";
+import { useAnchoredPopover } from "@/components/ui/useAnchoredPopover";
 
 type AuLocationEntry = {
   suburb: string;
@@ -27,6 +28,9 @@ type Props = {
     fieldGroupClassName?: string;
     labelClassName?: string;
     inputClassName?: string;
+    selectClassName?: string;
+    stateLabel?: string;
+    postcodeLabel?: string;
     errorTextClassName?: string;
     hintTextClassName?: string;
     requiredMarkClassName?: string;
@@ -62,7 +66,7 @@ function uniqueStrings(values: string[]) {
   return Array.from(new Set(values));
 }
 
-function filterSuggestions(values: string[], query: string) {
+export function filterSuggestions(values: string[], query: string) {
   const normalizedQuery = query.trim().toUpperCase();
   if (!normalizedQuery) return values.slice(0, 100);
 
@@ -96,7 +100,7 @@ type SuggestionFieldProps = {
   onSelect: (value: string) => void;
 };
 
-function SuggestionField({
+export function SuggestionField({
   label,
   value,
   placeholder,
@@ -115,34 +119,45 @@ function SuggestionField({
   onSelect,
 }: SuggestionFieldProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const listboxId = useId();
   const trimmedValue = value.trim();
   const hasSuggestions = suggestions.length > 0;
   const showDropdown = !disabled && isOpen && hasSuggestions;
 
+  useAnchoredPopover({
+    open: showDropdown, anchorRef: shellRef, popoverRef,
+    matchWidth: true, maxHeight: 260,
+    onClose: () => { setIsOpen(false); setActiveIndex(-1); },
+  });
+  const visibleSuggestions = suggestions.slice(0, 8);
   useEffect(() => {
-    if (!isOpen) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [isOpen]);
+    if (showDropdown && activeIndex >= 0) {
+      popoverRef.current?.querySelectorAll<HTMLElement>('[role="option"]')[activeIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [showDropdown, activeIndex]);
+  const choose = (suggestion: string) => {
+    onSelect(suggestion);
+    setIsOpen(false);
+    setActiveIndex(-1);
+  };
 
   return (
-    <div className={fieldGroupClassName} ref={wrapperRef}>
-      <label className={labelClassName}>{label} <span className={requiredMarkClassName}>*</span></label>
-      <div className={styles.auSuggestionShell}>
+    <div className={fieldGroupClassName}>
+      <label className={labelClassName} htmlFor={`${listboxId}-input`}>{label} <span className={requiredMarkClassName}>*</span></label>
+      <div className={styles.auSuggestionShell} ref={shellRef}>
         <input
+          ref={inputRef}
+          id={`${listboxId}-input`}
           type="text"
           value={value}
           onChange={(event) => {
             onChange(event.target.value);
             setIsOpen(true);
+            setActiveIndex(-1);
           }}
           onFocus={() => {
             if (hasSuggestions) setIsOpen(true);
@@ -152,8 +167,26 @@ function SuggestionField({
           disabled={disabled}
           inputMode={inputMode}
           autoComplete="off"
+          aria-invalid={Boolean(errorText)}
+          aria-describedby={`${listboxId}-hint${errorText ? ` ${listboxId}-error` : ""}`}
+          aria-activedescendant={showDropdown && activeIndex >= 0 && visibleSuggestions[activeIndex] ? `${listboxId}-option-${activeIndex}` : undefined}
+          onKeyDown={event => {
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              event.preventDefault();
+              setIsOpen(true);
+              setActiveIndex(index => Math.max(0, Math.min(visibleSuggestions.length - 1, index + (event.key === "ArrowDown" ? 1 : -1))));
+            } else if (event.key === "Enter" && showDropdown && visibleSuggestions[activeIndex]) {
+              event.preventDefault();
+              choose(visibleSuggestions[activeIndex]);
+            } else if (event.key === "Escape" || event.key === "Tab") {
+              setIsOpen(false);
+              setActiveIndex(-1);
+            }
+          }}
+          role="combobox"
           aria-autocomplete="list"
-          aria-haspopup="listbox"
+          aria-expanded={showDropdown}
+          aria-controls={listboxId}
         />
         <button
           type="button"
@@ -168,17 +201,18 @@ function SuggestionField({
           <ChevronDown size={16} className={showDropdown ? styles.auSuggestionChevronOpen : ""} />
         </button>
         {showDropdown && (
-          <div className={styles.auSuggestionDropdown} role="listbox">
-            {suggestions.slice(0, 8).map((suggestion) => (
+          <div ref={popoverRef} popover="manual" dir="ltr" className={styles.auSuggestionDropdown} role="listbox" aria-label={label} id={listboxId}>
+            {visibleSuggestions.map((suggestion, index) => (
               <button
                 key={suggestion}
                 type="button"
-                className={`${styles.auSuggestionOption} ${trimmedValue.toUpperCase() === suggestion.toUpperCase() ? styles.auSuggestionOptionActive : ""}`}
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  onSelect(suggestion);
-                  setIsOpen(false);
-                }}
+                id={`${listboxId}-option-${index}`}
+                role="option"
+                aria-selected={trimmedValue.toUpperCase() === suggestion.toUpperCase()}
+                tabIndex={-1}
+                className={`${styles.auSuggestionOption} ${index === activeIndex || trimmedValue.toUpperCase() === suggestion.toUpperCase() ? styles.auSuggestionOptionActive : ""}`}
+                onPointerDown={event => { if(event.pointerType === "mouse") event.preventDefault(); }}
+                onClick={() => choose(suggestion)}
               >
                 {suggestion}
               </button>
@@ -186,8 +220,8 @@ function SuggestionField({
           </div>
         )}
       </div>
-      <span className={hintTextClassName}>{helperText}</span>
-      {errorText && <span className={errorTextClassName}>{errorText}</span>}
+      <span id={`${listboxId}-hint`} className={hintTextClassName}>{helperText}</span>
+      {errorText && <span id={`${listboxId}-error`} className={errorTextClassName}>{errorText}</span>}
     </div>
   );
 }
@@ -274,7 +308,7 @@ export function AustralianLocationFields({
   return (
     <>
       <div className={fieldGroupClassName}>
-        <label className={labelClassName}>State/Province <span className={requiredMarkClassName}>*</span></label>
+        <label className={labelClassName}>{ui?.stateLabel ?? "State/Province"} <span className={requiredMarkClassName}>*</span></label>
         <SelectBox
           value={normalizedState}
           onChange={(value) => onStateChange(value)}
@@ -282,7 +316,7 @@ export function AustralianLocationFields({
           labeledOptions={AU_STATE_OPTIONS}
           disabled={disabled}
           dir="ltr"
-          className={inputClassName}
+          className={ui?.selectClassName ?? inputClassName}
         />
         {errors?.state && <span className={errorTextClassName}>{errors.state}</span>}
       </div>
@@ -306,7 +340,7 @@ export function AustralianLocationFields({
       />
 
       <SuggestionField
-        label="Postal Code"
+        label={ui?.postcodeLabel ?? "Postal Code"}
         value={postalCode}
         placeholder="Postcode"
         disabled={disabled || !normalizedState || isLoading}

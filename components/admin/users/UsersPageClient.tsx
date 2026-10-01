@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition, useEffect } from "react";
-import { Users } from "lucide-react";
+import styles from "@/styles/admin/AdminWorkspace.module.css";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import { searchUsers, getUserFinancialProfile, getActiveBankAccountsForAdmin } from "@/app/actions/admin.actions";
@@ -26,7 +26,7 @@ export function UsersPageClient({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserRow[]>([]);
   const [selectedUser, setSelectedUser] = useState<FinancialProfile | null>(null);
-  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<Awaited<ReturnType<typeof getActiveBankAccountsForAdmin>>>([]);
   const [searched, setSearched] = useState(false);
 
   const [isSearching, startSearch] = useTransition();
@@ -39,15 +39,13 @@ export function UsersPageClient({
       const profile = await getUserFinancialProfile(initialUserId);
       setSelectedUser(profile);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialUserId]);
 
   useEffect(() => {
     startLoad(async () => {
       const accounts = await getActiveBankAccountsForAdmin();
-      setBankAccounts(accounts as any[]);
+      setBankAccounts(accounts);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = () => {
@@ -107,23 +105,11 @@ export function UsersPageClient({
   return (
     <>
       <div className={shellStyles.topBar}>
-        <span className={shellStyles.pageTitle}>Customer 360 CRM</span>
+        <span className={shellStyles.pageTitle}>Customers</span>
       </div>
 
       <div className={shellStyles.pageContent}>
-        <div className={`${cardStyles.sectionHeader} ${cardStyles.sectionHeaderMd}`}>
-          <div>
-            <h1 className={`${cardStyles.sectionTitle} ${cardStyles.sectionTitleWithIcon}`}>
-              <span className={cardStyles.sectionTitleIconAccent}>
-                <Users size={24} strokeWidth={2.5} />
-              </span>
-              User Directory &amp; Search
-            </h1>
-            <p className={cardStyles.sectionDesc}>
-              Search by name, email, or phone to manage KYC, approve transactions, and moderate feedback from one place.
-            </p>
-          </div>
-        </div>
+        <div className={styles.header}><div><h1>Customers</h1><p>Find a customer and manage their profile, accounts and transfers.</p></div></div>
 
         <UserSearchPanel
           query={query}

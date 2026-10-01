@@ -1,0 +1,22 @@
+.control {
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+  min-height:44px;border:1px solid #d8d4e5;border-radius:14px;
+  background:#f7f6fb;color:#4d4167;box-shadow:none;
+  transition:background-color .15s,border-color .15s,color .15s;
+  text-decoration:none;line-height:1.4;
+}
+.control:hover {background:#eeeaf7;border-color:#b8a9d2;color:#382854}
+.control:active {background:#e6dff2}
+.control:focus-visible {outline:3px solid #a49afb;outline-offset:3px}
+.language {min-width:68px;padding:0 13px;font-size:13px;font-weight:600;letter-spacing:0}
+.language[lang="en"] {font-family:var(--font-en,Inter),Inter,system-ui,sans-serif!important}
+.language[lang="fa"] {font-family:IRANSansX,Peyda,system-ui,sans-serif!important}
+.settings {width:44px;padding:0;cursor:pointer}
+.avatar {width:44px;padding:0;border-radius:50%;border-color:#cfc3e6;background:#eee8f8}
+.profileLink{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0;border-radius:50%;color:#4d4167;text-decoration:none}
+.profileLink:focus-visible{outline:3px solid #a49afb;outline-offset:3px}
+.profileLink:hover .avatar,.profileLink[aria-current="page"] .avatar{background:#e6dff2;border-color:#a995cd}
+.mobileSignOut:disabled{opacity:.5;cursor:wait}
+@media(min-width:900px){.mobileSignOut{display:none}}
+.initials {font-family:var(--font-en,Inter),Inter,IRANSansX,Peyda,system-ui,sans-serif!important;font-size:14px;font-weight:600;line-height:1;letter-spacing:0;unicode-bidi:isolate}
+@media(prefers-reduced-motion:reduce){.control{transition:none}}

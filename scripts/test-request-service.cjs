@@ -13,7 +13,7 @@ function compile(path, imports = {}, env = {}, globals = {}) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText;
   const compiledModule = { exports: {} };
-  const context = vm.createContext({ module: compiledModule, exports: compiledModule.exports, Buffer, URL, FormData, File, Uint8Array, Intl, Date, console, ...globals,
+  const context = vm.createContext({ module: compiledModule, exports: compiledModule.exports, Buffer, URL, URLSearchParams, FormData, File, Uint8Array, Intl, Date, console, ...globals,
     process: { env: { NEXT_PUBLIC_SUPABASE_URL: "https://fixture.invalid", SUPABASE_SERVICE_ROLE_KEY: "test-only", ...env } },
     require: id => Object.hasOwn(imports, id) ? imports[id] : require(id),
   });
@@ -24,6 +24,67 @@ const validation = compile("lib/requests/validation.ts");
 const upload = compile("lib/requests/receipt-upload.ts");
 const navigation = compile("lib/requests/navigation.ts");
 const notificationConfig = compile("lib/requests/notification-config.ts");
+const institutions = compile("lib/payments/institutions.ts");
+const accountAccess = compile("lib/payments/account-access.ts", { "server-only": {} }, { PAYMENT_ACCESS_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64") });
+const journey = compile("lib/requests/journey.ts");
+const activity = compile("lib/dashboard/activity.ts", { "@/lib/requests/journey": journey });
+const paging = compile("lib/dashboard/paging.ts");
+test("payment account encryption authenticates owner and quote, preserves password, and fails closed", () => {
+  const credentials = { username: "synthetic@example.invalid", password: "  synthetic-secret!  " };
+  const encrypted = accountAccess.encryptPaymentAccountAccess(credentials, "owner", "quote");
+  assert.equal(encrypted.includes(credentials.password), false);
+  assert.equal(encrypted.includes(credentials.username), false);
+  assert.notEqual(encrypted, accountAccess.encryptPaymentAccountAccess(credentials, "owner", "quote"));
+  assert.equal(accountAccess.decryptPaymentAccountAccess(encrypted, "owner", "quote").password, credentials.password);
+  assert.throws(() => accountAccess.decryptPaymentAccountAccess(encrypted, "other", "quote"));
+  assert.throws(() => accountAccess.decryptPaymentAccountAccess(encrypted, "owner", "other-quote"));
+  assert.throws(() => accountAccess.decryptPaymentAccountAccess(encrypted.slice(0, -8) + "AAAAAAAA", "owner", "quote"));
+  assert.throws(() => accountAccess.validatePaymentAccountAccess({ username: "one", password: "" }));
+  assert.throws(() => accountAccess.validatePaymentAccountAccess({ username: "", password: "one" }));
+  assert.throws(() => accountAccess.validatePaymentAccountAccess({ username: "one", password: "x".repeat(1025) }));
+  assert.equal(accountAccess.validatePaymentAccountAccess({ username: "", password: "" }), undefined);
+  const unconfigured = compile("lib/payments/account-access.ts", { "server-only": {} });
+  assert.throws(() => unconfigured.encryptPaymentAccountAccess(credentials, "owner", "quote"), /not configured/);
+});
+test("Other company quotes validate custom names without adding a reporting beneficiary", async () => {
+  const h = harness();
+  const args = { ...input, recipientId: "__edu_exam__", institutionId: "other", institutionName: "  Example Exam Ltd  ", paymentLink: "https://example.invalid/pay" };
+  const result = await h.actions.createRequestQuote(args);
+  assert.equal(result.error, undefined);
+  assert.equal(result.data.snapshot.institution_name, "Example Exam Ltd");
+  assert.equal(result.data.snapshot.recipient_snapshot.institution_id, "other");
+  assert.equal(result.data.snapshot.invoice_reference, null);
+  assert.equal(result.data.snapshot.recipient_snapshot.invoice_reference, null);
+  assert.ok((await h.actions.createRequestQuote({ ...args, institutionName: " " })).error);
+  assert.ok((await h.actions.createRequestQuote({ ...args, institutionId: "unrecognised" })).error);
+});
+test("account submission sends only encrypted data to the atomic RPC", async () => {
+  const h = harness();
+  const account = { username: "synthetic-user", password: "synthetic-secret" };
+  assert.equal((await h.actions.submitExchangeRequest({ quoteId: COMMAND, commandKey: REQUEST, paymentAccount: account })).error, undefined);
+  const call = h.state.calls.find(item => item.rpc);
+  assert.equal(call.rpc, "submit_exchange_request_with_payment_access");
+  assert.equal(JSON.stringify(call).includes(account.password), false);
+  assert.equal(JSON.stringify(call).includes(account.username), false);
+  assert.equal(accountAccess.decryptPaymentAccountAccess(call.args.p_encrypted_account, CUSTOMER, COMMAND).username, account.username);
+  const bad = harness();
+  assert.ok((await bad.actions.submitExchangeRequest({ quoteId: COMMAND, commandKey: REQUEST, paymentAccount: { username: "only", password: "" } })).error);
+  assert.equal(bad.state.calls.length, 0);
+});
+test("payment account reveal requires admin and confirmed customer funding", async () => {
+  const customer = harness();
+  assert.ok((await customer.actions.getAdminPaymentAccount(REQUEST)).error);
+  assert.equal(customer.state.calls.length, 0);
+  for (const funding_status of ["unpaid", "partial", "refund_pending", "refunded"]) {
+    const h = harness({ admin: true, request: { funding_status } });
+    assert.ok((await h.actions.getAdminPaymentAccount(REQUEST)).error);
+    assert.equal(h.state.calls.some(call => call.rpc), false);
+  }
+  const account = { username: "synthetic-user", password: "synthetic-secret" };
+  const h = harness({ admin: true, request: { funding_status: "confirmed" }, rpc: name => ({ data: name === "read_funded_request_payment_access" ? [{ user_id: CUSTOMER, quote_id: COMMAND, encrypted_account: accountAccess.encryptPaymentAccountAccess(account, CUSTOMER, COMMAND) }] : null, error: null }) });
+  const result = await h.actions.getAdminPaymentAccount(REQUEST);
+  assert.equal(result.data.password, account.password);
+});
 const pricing = compile("lib/pricing.ts");
 const CUSTOMER = "10000000-0000-4000-8000-000000000001";
 const OTHER = "10000000-0000-4000-8000-000000000002";
@@ -51,8 +112,10 @@ function harness(overrides = {}) {
       builder.order = (column, options) => { query.order = { column, ...options }; return builder; };
       builder.eq = (field, value) => { query.filters[field] = value; return builder; };
       builder.insert = value => { query.operation = "insert"; query.value = value; return builder; };
+      builder.update = value => { query.operation = "update"; query.value = value; return builder; };
       const finish = () => {
         state.calls.push({ ...query });
+        if (query.operation === "update") return { data: null, error: null };
         if (query.operation === "insert") {
           state.inserts.push(query);
           return { data: { id: COMMAND, ...query.value, created_at: new Date().toISOString() }, error: null };
@@ -101,12 +164,41 @@ function harness(overrides = {}) {
     "@/app/actions/admin.actions": { requireAdmin: async () => { if (!state.admin) throw new Error("Administrator required"); return state.user; } },
     "@/lib/requests/validation": validation, "@/lib/requests/receipt-upload": upload, "@/lib/pricing": pricing,
     "@/lib/requests/notification-config": notificationConfig,
+    "@/lib/requests/notifications": {
+      notificationRuntimeSettings: () => ({ apiKey: "test-key", from: "Zarman <sender@example.invalid>", siteUrl: "https://example.invalid" }),
+      createNotificationDatabase: () => ({ notification: true }),
+      createRequestEmailSender: apiKey => ({ apiKey }),
+      notificationWorkerFailureDiagnostic: () => ({ event: "request_notification_worker_unavailable", stage: "unknown" }),
+      sendRequestNotifications: async options => {
+        state.emailSends = (state.emailSends || []).concat([options]);
+        if (state.mailError) throw state.mailError;
+        return { claimed: 2, accepted: 2, retrying: 0, failed: 0, reconciliation: 0 };
+      },
+    },
+    "@/lib/payments/institutions": institutions,
+    "@/lib/payments/account-access": accountAccess,
+    "@/lib/dashboard/activity": activity,
+    "@/lib/dashboard/paging": paging,
+    "next/server": { after: callback => { state.after = (state.after || []).concat(callback); } },
+    "@/lib/notifications/telegram": { newRequestTelegramMessage: request => `New request ${request.reference_code || ""}`, sendTelegramAdminMessage: async (...args) => { state.telegram = (state.telegram || []).concat([args]); } },
   }, state.env, state.now ? { Date: class extends Date {
     constructor(...args) { super(...(args.length ? args : [state.now])); }
     static now() { return new Date(state.now).getTime(); }
   } } : {});
   return { actions, state };
 }
+
+test("quotes default to one hour and continue to respect administrator validity settings", async () => {
+  assert.equal(validation.DEFAULT_REQUEST_SETTINGS.quote_minutes, 60);
+  const now = "2026-09-30T02:00:00.000Z";
+  for (const minutes of [60, 30]) {
+    const h = harness({ now, settings: { ...settings, quote_minutes: minutes } });
+    const result = await h.actions.createRequestQuote(input);
+    assert.equal(result.error, undefined);
+    assert.equal(Date.parse(result.data.expires_at) - Date.parse(now), minutes * 60_000);
+    assert.equal(result.data.snapshot.policy_snapshot.quote_minutes, minutes);
+  }
+});
 
 test("priority is an additional collection line in both directions; recipient principal stays unchanged", async () => {
   const selling = harness();
@@ -123,6 +215,23 @@ test("priority is an additional collection line in both directions; recipient pr
   assert.equal(purchase.data.snapshot.recipient_amount, 1000);
   assert.equal(purchase.data.snapshot.funding_total, 53300000);
   assert.equal(purchase.data.snapshot.priority_fee_amount, 1300000);
+});
+
+test("exam quotes resolve the reporting company on the server and never persist account passwords", async () => {
+  for (const institution of institutions.paymentInstitutions) {
+    const { actions, state } = harness({ direction: "aud" });
+    const response = await actions.createRequestQuote({ ...input, txType: "buy_aud", recipientId: "__edu_exam__", institutionId: institution.id,
+      institutionName: "Untrusted browser company", invoiceReference: "CANDIDATE-TEST", paymentLink: "https://example.com/pay?token=temporary", password: "must-not-be-stored", username: "must-not-be-stored" });
+    assert.equal(response.error, undefined);
+    assert.equal(response.data.snapshot.institution_name, institution.companyName);
+    assert.equal(response.data.snapshot.recipient_snapshot.institution_id, institution.id);
+    assert.doesNotMatch(JSON.stringify(state.inserts), /must-not-be-stored|Untrusted browser company/);
+  }
+  for (const changed of [{ institutionId: "unknown" }, { paymentLink: "https://example.com/?password=secret" }, { paymentLink: "https://user:secret@example.com/pay" }]) {
+    const { actions, state } = harness();
+    const response = await actions.createRequestQuote({ ...input, txType: "buy_aud", recipientId: "__edu_exam__", institutionId: "amc", institutionName: "AMC", invoiceReference: "TEST", paymentLink: "https://example.com/pay", ...changed });
+    assert.ok(response.error); assert.equal(state.inserts.length, 0);
+  }
 });
 
 test("auth, KYC, market, recipient ownership/direction and finite amounts are enforced before quote insertion", async () => {
@@ -241,14 +350,17 @@ test("service enablement requires bank instructions and notification recipients;
   assert.ok(validation.settingsInputError({ ...settings, australian_clearance_minutes: 60 }));
   assert.ok(validation.settingsInputError({ ...settings, priority_fee_aud: NaN }));
   assert.ok(validation.settingsInputError({ ...settings, priority_minutes: settings.standard_minutes }));
-  assert.ok(validation.settingsInputError({ ...settings, iran_banking_notice_fa: "" }));
+  assert.equal(validation.settingsInputError({ ...settings, iran_banking_notice: "", iran_banking_notice_fa: "" }), null);
+  assert.equal(validation.settingsInputError({ ...settings, iran_banking_notice_fa: "" }), null);
+  assert.equal(validation.settingsInputError({ ...settings, iran_banking_notice: "" }), null);
+  assert.ok(validation.settingsInputError({ ...settings, iran_banking_notice: "x".repeat(2001) }));
   assert.ok(validation.bankDetailsError({ account_name: "TEST\nONLY" }, "aud"));
   assert.ok(validation.bankDetailsError({ account_name: " ".repeat(201) }, "aud"));
 });
 
 test("activation rejects unusable mail configuration before writing settings", async () => {
-  const env = { RESEND_API_KEY: "test-key", REQUEST_NOTIFICATIONS_FROM: "Zarman <sender@example.invalid>", REQUEST_SITE_URL: "https://example.invalid", REQUEST_NOTIFICATIONS_CRON_SECRET: "x".repeat(32), RESEND_WEBHOOK_SECRET: "whsec_test" };
-  for (const change of [{ REQUEST_NOTIFICATIONS_FROM: undefined }, { REQUEST_NOTIFICATIONS_CRON_SECRET: "short" }, { REQUEST_SITE_URL: "https://example.invalid/path" }, { RESEND_WEBHOOK_SECRET: "" }]) {
+  const env = { RESEND_API_KEY: "test-key", REQUEST_NOTIFICATIONS_FROM: "Zarman <sender@example.invalid>", REQUEST_SITE_URL: "https://example.invalid", RESEND_WEBHOOK_SECRET: "whsec_test" };
+  for (const change of [{ REQUEST_NOTIFICATIONS_FROM: undefined }, { REQUEST_SITE_URL: "https://example.invalid/path" }, { RESEND_WEBHOOK_SECRET: "" }]) {
     const { actions, state } = harness({ admin: true, env: { ...env, ...change } });
     assert.ok((await actions.saveRequestSettings({ expectedVersion: 1, settings })).error);
     assert.equal(state.calls.some(call => call.rpc === "save_exchange_request_settings"), false);
@@ -290,6 +402,48 @@ test("each admin approval requires an email decision, and customer payloads cann
   assert.ok((await actions.mutateMyRequest({ ...base, action: "cancel", sendEmail: false })).error);
   assert.equal((await actions.mutateMyRequest({ ...base, action: "cancel", payload: { send_email: false } })).error, undefined);
   assert.equal(Object.hasOwn(state.calls.filter(call => call.rpc).at(-1).args.p_payload, "send_email"), false);
+});
+
+test("emails are sent immediately only when an admin ticks send email; mail problems never undo the action", async () => {
+  const { actions, state } = harness({ admin: true });
+  const base = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, action: "await_funds" };
+  assert.equal((await actions.mutateAdminRequest({ ...base, sendEmail: false })).error, undefined);
+  assert.equal(state.emailSends, undefined);
+  assert.equal((await actions.mutateAdminRequest({ ...base, sendEmail: true })).error, undefined);
+  assert.equal(state.emailSends.length, 1);
+  assert.equal(state.emailSends[0].requestId, REQUEST);
+  assert.deepEqual(state.emailSends[0].send, { apiKey: "test-key" });
+  const message = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, message: "Your transfer is complete." };
+  assert.equal((await actions.sendAdminRequestMessage({ ...message, sendEmail: false })).error, undefined);
+  assert.equal(state.emailSends.length, 1);
+  assert.equal((await actions.sendAdminRequestMessage({ ...message, sendEmail: true })).error, undefined);
+  assert.equal(state.emailSends.length, 2);
+  state.mailError = new Error("PRIVATE provider detail");
+  const logged = [], original = console.error;
+  console.error = (...args) => logged.push(args);
+  try { assert.equal((await actions.mutateAdminRequest({ ...base, sendEmail: true })).error, undefined); }
+  finally { console.error = original; }
+  assert.doesNotMatch(JSON.stringify(logged), /PRIVATE/);
+  state.mailError = undefined;
+  state.admin = false;
+  assert.equal((await actions.mutateMyRequest({ ...base, action: "cancel" })).error, undefined);
+  assert.equal((await actions.sendMyRequestMessage(message)).error, undefined);
+  assert.equal(state.emailSends.length, 3);
+  state.rpc = () => ({ data: null, error: { code: "P0001", message: "Rejected" } });
+  state.admin = true;
+  assert.ok((await actions.mutateAdminRequest({ ...base, sendEmail: true })).error);
+  assert.equal(state.emailSends.length, 3);
+});
+
+test("opening the admin queue runs the deadline sweep without a scheduler, and a sweep failure never hides the list", async () => {
+  const { actions, state } = harness({ admin: true });
+  assert.equal((await actions.listAdminRequests()).error, undefined);
+  assert.ok(state.calls.some(call => call.rpc === "sweep_exchange_request_deadlines"));
+  state.rpc = () => ({ data: null, error: { code: "PGRST202" } });
+  const original = console.error;
+  console.error = () => {};
+  try { assert.equal((await actions.listAdminRequests()).error, undefined); }
+  finally { console.error = original; }
 });
 
 test("messages bind the actor and retry key, trim content, and restrict email decisions to admins", async () => {
@@ -355,8 +509,27 @@ test("final reconciliation is admin-only and sends one validated command with a 
   assert.equal(calls[0].args.p_action, "reconcile_complete");
   assert.equal(calls[0].args.p_payload.send_email, false);
   assert.match(calls[0].args.p_payload.date_jalali, /^14\d{2}\/\d{2}\/\d{2}$/);
-  assert.ok((await actions.mutateAdminRequest({ ...input, payload: { ...input.payload, settlement_reference: "" } })).error);
+  assert.equal((await actions.mutateAdminRequest({ ...input, payload: { ...input.payload, settlement_reference: "" } })).error, undefined);
+  assert.equal(state.calls.filter(call => call.rpc).at(-1).args.p_payload.settlement_reference, `AUTO-${COMMAND.slice(0, 13).toUpperCase()}`);
   assert.ok((await actions.mutateMyRequest({ ...input, sendEmail: undefined })).error);
+});
+
+test("admin confirm_funds generates a deterministic reference and only stores changed accounting terms", async () => {
+  const quote = { applied_rate: 50000, base_fee_aud: 10 };
+  const { actions, state } = harness({ admin: true, rpcRequest: { transaction_id: ACCOUNT, quote } });
+  const base = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 2, action: "confirm_funds", sendEmail: false,
+    payload: { received_amount: 1000, received_currency: "AUD", receiver_account_id: ACCOUNT, accounting_rate: 50000, accounting_fee_aud: 10 } };
+  assert.equal((await actions.mutateAdminRequest(base)).error, undefined);
+  const payload = state.calls.filter(call => call.rpc).at(-1).args.p_payload;
+  assert.equal(payload.payment_reference, `AUTO-${COMMAND.slice(0, 13).toUpperCase()}`);
+  assert.equal(Object.hasOwn(payload, "accounting_rate"), false);
+  assert.equal(state.calls.some(call => call.operation === "update"), false);
+  assert.equal((await actions.mutateAdminRequest({ ...base, payload: { ...base.payload, accounting_rate: 51000, accounting_fee_aud: 0 } })).error, undefined);
+  const updates = state.calls.filter(call => call.operation === "update");
+  assert.deepEqual(updates.map(call => call.table), ["exchange_requests", "transactions"]);
+  assert.deepEqual(JSON.parse(JSON.stringify(updates[0].value)), { accounting_overrides: { applied_rate: 51000, base_fee_aud: 0 } });
+  assert.deepEqual(JSON.parse(JSON.stringify(updates[1].value)), { applied_rate: 51000, ledger_fee_aud: 0 });
+  assert.ok((await actions.mutateAdminRequest({ ...base, payload: { ...base.payload, accounting_rate: -1 } })).error);
 });
 
 const financialActions = {

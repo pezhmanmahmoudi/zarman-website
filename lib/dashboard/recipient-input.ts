@@ -8,7 +8,7 @@ export type RecipientInputResult =
   | { error: string; fieldErrors: RecipientFieldErrors; data?: never };
 
 const relationships: readonly RecipientRelationship[] = ["self", "family", "friend", "business", "other"];
-const commonFields = ["direction", "label", "bank_name", "relationship"] as const;
+const commonFields = ["direction", "label", "bank_name", "bank_city", "relationship"] as const;
 const audFields = [
   ...commonFields,
   "bsb",
@@ -24,7 +24,6 @@ const audFields = [
 ] as const;
 const irtFields = [
   ...commonFields,
-  "bank_city",
   "bank_type",
   "card_number",
   "shaba_number",
@@ -37,9 +36,11 @@ const irtFields = [
   "irt_phone",
 ] as const;
 
+// AUSTRAC IFTI reports require the city of the institution holding the beneficiary account.
 const audRequired = [
   "label",
   "bank_name",
+  "bank_city",
   "account_name",
   "bsb",
   "account_number",
@@ -54,6 +55,7 @@ const audRequired = [
 const irtRequired = [
   "label",
   "bank_name",
+  "bank_city",
   "full_name",
   "shaba_number",
   "irt_address",
@@ -153,7 +155,6 @@ export function normalizeRecipientInput(input: unknown): RecipientInputResult {
     if (isPresent(data.shaba_number) && !isValidIranianShaba(data.shaba_number)) fail("shaba_number", "Enter a valid Iranian Shaba number.");
     validate("card_number", /^\d{16}$/, "Card number must contain exactly 16 digits.");
     if ("card_number" in data && !isPresent(data.card_number)) data.card_number = null;
-    if ("bank_city" in data && !isPresent(data.bank_city)) data.bank_city = null;
     if (isPresent(data.bank_type) && data.bank_type !== "bank_melli" && data.bank_type !== "other") fail("bank_type", "Invalid bank type.");
     validate("irt_phone", /^\+?[0-9 ()-]{7,25}$/, "Enter a valid recipient phone number.");
   }

@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
         residential_city, residential_state, residential_postcode, residential_country,
         irt_city, irt_state, irt_postcode, irt_country,
         recipient_phone, recipient_email, irt_phone, account_number, card_number,
-        shaba_number, irt_account_number, bank_name
+        shaba_number, irt_account_number, bank_name, bank_city
       )
     `)
     .in("id", parsed.ids);

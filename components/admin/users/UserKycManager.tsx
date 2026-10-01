@@ -12,6 +12,7 @@ import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { ComplianceCheckButtons } from "@/components/admin/ComplianceCheckButtons";
 import { AustralianLocationFields } from "@/components/dashboard/AustralianLocationFields";
+import { CustomerKycEvidence } from "@/components/admin/CustomerKycEvidence";
 import { AU_DRIVER_LICENCE_ISSUER_OPTIONS, formatAustralianDriverLicenceIssuer, normalizeAustralianState } from "@/lib/australian-driver-licence";
 import type { getUserFinancialProfile } from "@/app/actions/admin.actions";
 
@@ -335,6 +336,7 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
         </dl>
         )}
 
+        {profile && <CustomerKycEvidence key={profile.id} userId={profile.id}/>}
         <div className={cardStyles.kycStatusFooter}>
           <div className={cardStyles.kycStatusLeft}>
             Current Status

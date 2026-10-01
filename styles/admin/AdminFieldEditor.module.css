@@ -1,8 +1,8 @@
-.valueGroup { display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; min-width: 0; }
+.valueGroup { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.65rem; min-width: 0; }
 .value { color: var(--text-main, #172033); font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .valueGroup[data-variant="reference"] .value { color: var(--accent, #4f46e5); font-family: var(--font-mono, monospace); font-size: 0.78rem; letter-spacing: 0.02em; }
 .valueGroup[data-variant="customer"] .value { color: var(--text-soft, #64748b); font-family: var(--font-mono, monospace); font-size: 0.75rem; }
-.editButton { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; min-height: 32px; padding: 0.3rem 0.55rem; margin-left: -0.55rem; border: 0; border-radius: 0.4rem; background: transparent; color: var(--text-soft, #53627a); font: inherit; font-size: 0.73rem; font-weight: 600; cursor: pointer; }
+.editButton { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; min-height: 44px; padding: 0.4rem 0.6rem; border: 1px solid var(--border-soft, #e3e8ef); border-radius: 0.5rem; background: white; color: var(--text-soft, #53627a); font: inherit; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
 .editButton:hover { color: var(--accent, #4f46e5); background: var(--bg-soft, #f4f6fb); }
 .editButton:focus-visible { outline: 3px solid var(--accent, #4f46e5); outline-offset: 2px; }
 .dialog { width: min(100%, 480px); }

@@ -37,7 +37,7 @@ const funding = (r, overrides = {}) => ({ received_amount: Number(r.quote.fundin
   payment_reference: `bank-${randomUUID()}`, receiver_account_id: AUD, ...overrides });
 const settlement = () => ({ settlement_reference: `settled-${randomUUID()}`, payer_account_id: IRT,
   receiver_account_id: AUD, transfer_method: 'satna', date_jalali: '1405/06/22' });
-async function quote(tier = 'standard', customer = CUSTOMER, txType = 'sell_aud') {
+async function quote(tier = 'standard', customer = CUSTOMER, txType = 'sell_aud', overrides = {}) {
   const policy = (await one('SELECT version,settings FROM exchange_request_settings WHERE id'));
   const recipient = await one('SELECT * FROM recipients WHERE id=$1', [RECIPIENT]);
   const q = { raw_amount_aud: 1000, equivalent_toman: 970000, applied_rate: 1000, base_fee_aud: 30,
@@ -50,7 +50,7 @@ async function quote(tier = 'standard', customer = CUSTOMER, txType = 'sell_aud'
   if (txType === 'buy_aud') Object.assign(q, { equivalent_toman: 1030000, customer_request_type: 'buy_aud', company_trade_type: 'sell_aud',
     funding_currency: 'IRT', recipient_currency: 'AUD', recipient_amount: 1000,
     priority_fee_amount: tier === 'priority' ? 20000 : 0, funding_total: tier === 'priority' ? 1050000 : 1030000 });
-  return (await one("INSERT INTO exchange_request_quotes(user_id,snapshot,expires_at) VALUES($1,$2,now()+interval '10 minutes') RETURNING id", [customer, q])).id;
+  return (await one("INSERT INTO exchange_request_quotes(user_id,snapshot,expires_at) VALUES($1,$2,now()+interval '10 minutes') RETURNING id", [customer, { ...q, ...overrides }])).id;
 }
 const submit = (quoteId, customer = CUSTOMER, key = randomUUID()) => rpc(
   'SELECT submit_exchange_request($1,$2,$3) AS result', [customer, quoteId, key]);
@@ -94,7 +94,9 @@ describe('customer request PostgreSQL workflow', { concurrency: false }, () => {
       'supabase/migrations/20260913_23_request_funding_and_receipts.sql',
       'supabase/migrations/20260913_24_request_receipt_notifications.sql',
       'supabase/migrations/20260913_25_request_fee_accounting.sql',
-      'supabase/migrations/20260913_26_request_fee_ledger_type.sql']) await db.exec(read(file));
+      'supabase/migrations/20260913_26_request_fee_ledger_type.sql',
+      'supabase/migrations/20260930_39_optional_institution_reference.APPLY_MANUALLY.sql',
+      'supabase/migrations/20260930_39_optional_institution_reference.APPLY_MANUALLY.sql']) await db.exec(read(file));
   });
   after(async () => { await db?.close(); });
   beforeEach(async () => {
@@ -114,6 +116,22 @@ describe('customer request PostgreSQL workflow', { concurrency: false }, () => {
       business_days: [0, 1, 2, 3, 4, 5, 6], opening_hour: 0, closing_hour: 24 }]);
   });
   afterEach(async () => { await db.exec('ROLLBACK'); });
+
+  test('institution submission no longer requires an invoice or candidate reference', async () => {
+    const q = await quote('standard', CUSTOMER, 'sell_aud', {
+      recipient_id: null, recipient_snapshot: { label: 'Custom company' },
+      institution_name: 'Custom company', payment_link: 'https://example.invalid/payment'
+    });
+    const r = await submit(q);
+    assert.equal(r.quote.institution_name, 'Custom company');
+    assert.equal(r.quote.invoice_reference, undefined);
+    for (const missing of ['institution_name', 'payment_link']) {
+      const invalid = await quote('standard', CUSTOMER, 'sell_aud', {
+        recipient_id: null, institution_name: 'Custom company', payment_link: 'https://example.invalid/payment', [missing]: null
+      });
+      await rejects(() => submit(invalid), /Recipient or education payment details required/);
+    }
+  });
 
   test('submission provides immutable instructions and two ordered milestone snapshots exactly once', async () => {
     const q = await quote(); const key = randomUUID(); const r = await submit(q, CUSTOMER, key);

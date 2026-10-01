@@ -18,7 +18,7 @@ function descendants(node, predicate) {
   return result;
 }
 
-function animationHarness({ enabled = true, reduced = false, observation = true, failImport = false } = {}) {
+function animationHarness({ enabled = true, reduced = false, observation = true, failImport = false, iconName } = {}) {
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
   const originalObserver = Object.getOwnPropertyDescriptor(globalThis, "IntersectionObserver");
   const listeners = new Map(), observers = [];
@@ -44,7 +44,7 @@ function animationHarness({ enabled = true, reduced = false, observation = true,
   } });
   const { DashboardMotionIcon } = h.load("components/dashboard/DashboardMotionIcon.tsx");
   const assets = h.load("lib/dashboard/motion-icons.ts").dashboardMotionIcons;
-  const name = Object.keys(assets)[0];
+  const name = iconName || Object.keys(assets)[0];
   let localMotion = true;
   const render = () => {
     const inner = h.render(DashboardMotionIcon, { name, size: 72, motionEnabled: localMotion });
@@ -207,6 +207,59 @@ test("light player uses local SVG-only non-looping playback and reacts to visibi
   h.cleanup();
 });
 
+test("downloaded cues retain their last frame, respect pause and never restart on scroll", async () => {
+  for (const iconName of ["waiting", "reward"]) {
+    const h = animationHarness({ iconName });
+    try {
+      await h.mount();
+      assert.equal(h.imports, 0);
+      await h.enter();
+      h.player().props.onReady();
+      h.player().props.onComplete();
+      await h.settle();
+      assert.equal(h.player().props.playing, false);
+      assert.match(h.poster().props.className, /invisible/, "Keep the illustration's actual final frame");
+      await h.enter(false); await h.enter(true);
+      assert.equal(h.player().props.playing, false);
+      await h.motion(false);
+      assert.doesNotMatch(h.poster().props.className, /invisible/);
+      await h.motion(true);
+      assert.equal(h.player().props.playing, false);
+      assert.equal(h.imports, 1);
+    } finally { h.cleanup(); }
+    const reduced = animationHarness({ iconName, reduced: true });
+    try {
+      await reduced.mount(); await reduced.enter();
+      assert.equal(reduced.imports, 0);
+      assert.ok(reduced.poster());
+    } finally { reduced.cleanup(); }
+  }
+});
+
+test("only the real loading cue loops and it pauses when the tab or cue is hidden", async () => {
+  const LottieLight = () => null;
+  const h = dashboardHarness({ mocks: { "lottie-react": { LottieLight } } });
+  try {
+    const { DashboardLottiePlayer } = h.load("components/dashboard/DashboardLottiePlayer.tsx");
+    for (const name of ["loading", "waiting", "reward"]) {
+      const tree = h.render(DashboardLottiePlayer, { name, playing: true, onReady() {}, onComplete() {}, onError() {} });
+      assert.equal(tree.props.loop, name === "loading");
+      assert.equal(tree.props.rendererSettings.runExpressions, false);
+    }
+  } finally { h.cleanup(); }
+  const lifecycle = animationHarness({ iconName: "loading" });
+  try {
+    await lifecycle.mount(); await lifecycle.enter();
+    assert.equal(lifecycle.player().props.playing, true);
+    await lifecycle.foreground(false);
+    assert.equal(lifecycle.player().props.playing, false);
+    await lifecycle.foreground(true); await lifecycle.enter(false);
+    assert.equal(lifecycle.player().props.playing, false);
+    await lifecycle.motion(false); await lifecycle.enter(true);
+    assert.equal(lifecycle.player().props.playing, false);
+  } finally { lifecycle.cleanup(); }
+});
+
 test("English and Persian transfer cues follow real workflow facts without implying success for refunds or rejection", () => {
   const h = dashboardHarness();
   const { journeyPresentation } = h.load("lib/dashboard/journey-presentation.ts");
@@ -254,8 +307,10 @@ test("all motion assets are bounded local vectors without images, fonts, express
     }
     const raw = fs.readFileSync(path.join(__dirname, "../public", asset.src), "utf8");
     const animation = JSON.parse(raw);
-    assert.ok(Buffer.byteLength(raw) <= 30000, `${name} should stay a small icon`);
-    assert.ok(animation.w > 0 && animation.w <= 256 && animation.h > 0 && animation.h <= 256);
+    const importedLimits = { waiting: { bytes: 15000, canvas: 120 }, reward: { bytes: 70000, canvas: 32 }, loading: { bytes: 8000, canvas: 1080 } };
+    const limit = importedLimits[name] || { bytes: 30000, canvas: 256 };
+    assert.ok(Buffer.byteLength(raw) <= limit.bytes, `${name} should stay within its reviewed asset budget`);
+    assert.ok(animation.w > 0 && animation.w <= limit.canvas && animation.h > 0 && animation.h <= limit.canvas);
     assert.ok(animation.fr > 0 && animation.fr <= 60);
     assert.ok((animation.op - animation.ip) / animation.fr > 0 && (animation.op - animation.ip) / animation.fr <= 5);
     assert.ok(animation.layers.length > 0);

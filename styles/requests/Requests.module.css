@@ -5,12 +5,13 @@
 .eyebrow { font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .1em; color: #687181; }
 .muted { color: var(--request-muted, #5f7180); font-size: 14px; line-height: 1.7; margin: 6px 0; }
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-.button, .secondary, .danger { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 17px; min-height: 44px; font: inherit; font-size: 14px; font-weight: 650; border-radius: 10px; text-decoration: none; cursor: pointer; border: 1px solid transparent; }
-.button { color: white; background: #365bd6; }
-.button:hover { background: #294bc1; }
-.secondary { color: #424b5b; background: white; border-color: #e0e4eb; }
-.secondary:hover { background: #f8f9fb; border-color: #c9d0dd; }
+.button, .secondary, .danger { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 17px; min-height: 44px; font: inherit; font-size: 14px; font-weight: 650; border-radius: 10px; text-decoration: none; cursor: pointer; border: 1px solid transparent; transition: box-shadow .18s ease, background .18s ease, border-color .18s ease; }
+.button { color: white; background: #365bd6; box-shadow: 0 6px 16px -4px #365bd666; }
+.button:hover { background: #294bc1; box-shadow: 0 10px 24px -4px #294bc180; }
+.secondary { color: #424b5b; background: white; border-color: #e0e4eb; box-shadow: 0 2px 8px -2px #20242c1a; }
+.secondary:hover { background: #f8f9fb; border-color: #c9d0dd; box-shadow: 0 8px 18px -4px #20242c26; }
 .danger { color: #a43239; background: #fff5f5; border-color: #eeced1; }
+.danger:hover { background: #ffecec; box-shadow: 0 8px 18px -4px #a4323926; }
 .button:disabled, .secondary:disabled, .danger:disabled { cursor: wait; opacity: .55; }
 .button:focus-visible, .secondary:focus-visible, .danger:focus-visible, .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible, .service:focus-within { outline: 3px solid #a7b8ef; outline-offset: 3px; }
 .grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr); gap: 24px; align-items: start; }
@@ -137,4 +138,4 @@
 @media (max-width: 720px) { .grid { grid-template-columns: minmax(0, 1fr); } .fields, .services { grid-template-columns: minmax(0, 1fr); } .workspace { padding: 20px 14px; } .card { padding: 18px; } .fact { gap: 12px; } .header { margin-block-end: 20px; } }
 
 /* Shared customer palette; management actions retain their operational styling. */
-:global([data-dashboard-shell]) .button{background:#7748c8;border-color:#7748c8;border-radius:13px;transition:transform .2s,box-shadow .2s,background .2s}:global([data-dashboard-shell]) .button:hover:not(:disabled){background:#673ab8;transform:translateY(-2px);box-shadow:0 6px 18px #7445c92b}:global([data-dashboard-shell]) .service{border-radius:17px;transition:background .25s,border-color .25s,box-shadow .25s}:global([data-dashboard-shell]) .service[data-selected="true"]{background:#f7f0ff;border-color:#ba97e2;box-shadow:0 0 0 3px #f6f0fc}:global([data-dashboard-shell]) .card h2,:global([data-dashboard-shell]) .card h3{color:#3d2c4d}:global([data-dashboard-shell]) .field textarea{border-radius:14px;border-color:#e2d6ed;background:#fefcff}:global([data-dashboard-shell]) .secondary{border-radius:12px;border-color:#e5d9ef;color:#77548f}
+:global([data-dashboard-shell]) .button{background:#7748c8;border-color:#7748c8;border-radius:13px;transition:box-shadow .2s,background .2s,transform .2s}:global([data-dashboard-shell]) .button:hover:not(:disabled){background:#673ab8;box-shadow:0 14px 30px #7445c95c;transform:scale(1.03)}:global([data-dashboard-shell]) .button:active:not(:disabled){transform:scale(0.97)}:global([data-dashboard-shell]) .service{border-radius:17px;transition:background .25s,border-color .25s,box-shadow .25s}:global([data-dashboard-shell]) .service[data-selected="true"]{background:#f7f0ff;border-color:#ba97e2;box-shadow:0 0 0 3px #f6f0fc}:global([data-dashboard-shell]) .card h2,:global([data-dashboard-shell]) .card h3{color:#3d2c4d}:global([data-dashboard-shell]) .field textarea{border-radius:14px;border-color:#e2d6ed;background:#fefcff}:global([data-dashboard-shell]) .secondary{border-radius:12px;border-color:#e5d9ef;color:#77548f}

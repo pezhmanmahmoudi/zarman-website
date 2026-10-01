@@ -49,8 +49,9 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const { locale } = await params;
   if (locale !== "en" && locale !== "fa") notFound();
   return (
-    <html lang={locale} dir={locale === "fa" ? "rtl" : "ltr"} data-scroll-behavior="smooth">
-      <body className={`${inter.variable} min-h-screen antialiased bg-[#080B12] text-white`}>
+    // suppressHydrationWarning: mobile Chrome injects its own __gchrome_* attributes before hydration.
+    <html lang={locale} dir={locale === "fa" ? "rtl" : "ltr"} data-scroll-behavior="smooth" suppressHydrationWarning>
+      <body className={`${inter.variable} min-h-screen antialiased bg-[#080B12] text-white`} suppressHydrationWarning>
         <LocaleProvider locale={locale}>
           <JsonLdSchema locale={locale} />
           <main id="main-content">{children}</main>

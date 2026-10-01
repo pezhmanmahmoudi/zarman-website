@@ -19,6 +19,8 @@ export type SelectBoxProps = {
   className?: string;
   dir?: "ltr" | "rtl";
   variant?: "default" | "ghost";
+  id?: string;
+  ariaLabel?: string;
 };
 
 const DROPDOWN_MAX_HEIGHT = 260;
@@ -38,6 +40,8 @@ export function SelectBox({
   className,
   dir = "rtl",
   variant = "default",
+  id: controlId,
+  ariaLabel,
 }: SelectBoxProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -195,7 +199,8 @@ export function SelectBox({
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           className={styles.nativeOverlay}
-          aria-label={placeholder}
+          id={controlId}
+          aria-label={ariaLabel ?? placeholder}
         >
           <option value="" disabled hidden>{placeholder}</option>
           {groups
@@ -221,12 +226,13 @@ export function SelectBox({
     <div ref={wrapperRef} className={wrapperClasses} data-dir={dir}>
       <button
         ref={triggerRef}
+        id={controlId}
         type="button"
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
-        aria-label={placeholder}
+        aria-label={ariaLabel ?? placeholder}
         aria-activedescendant={open && activeIndex >= 0 ? `${id}-option-${activeIndex}` : undefined}
         disabled={disabled}
         tabIndex={disabled ? -1 : 0}

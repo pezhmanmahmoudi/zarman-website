@@ -81,6 +81,8 @@ The transfer form and quote summary use the same Magic Card surfaces as the over
 
 Validation: 98 dashboard tests, 44 request-interface tests, scoped ESLint and the isolated preview build passed. New coverage verifies localised amount round trips and the exact numeric value passed to the existing submission component. Visual checks remain skipped as requested.
 
+Published preview commit `dced9b489ad54e5f6c41abac2ede45233b7e7953`; Vercel deployment `dpl_6XraUe31J9LPgii8UZMTWWXJTghh` is READY. All 17 authenticated page checks and ownership checks passed against the isolated test project. Production remains unchanged.
+
 ## Earlier workflow validation
 
 - `npm run test:dashboard` — 20/20 passed.

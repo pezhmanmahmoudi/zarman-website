@@ -68,7 +68,7 @@ test("funding emails include snapshotted instructions, reference, clearance and 
 test("receipt and status templates escape content and do not confuse upload evidence with cleared funds", () => {
   const receipt = templates.renderRequestNotification(delivery({ event_type: "complete", workflow_status: "completed", payload_snapshot: { receipt: { ...completion, sender_name: "<script>bad()</script>" } } }), settings);
   assert.match(receipt.text, /final PDF receipt is attached/);
-  assert.match(receipt.text, /Additional priority fee: AUD 25.00/);
+  assert.match(receipt.text, /Express processing fee: AUD 25.00/);
   assert.doesNotMatch(receipt.html, /<script>/);
   assert.match(receipt.html, /&lt;script&gt;/);
   assert.throws(() => templates.renderRequestNotification(delivery({ event_type: "complete", workflow_status: "completed" }), settings), /completion_receipt_unavailable/);
@@ -138,7 +138,7 @@ test("conversation emails have concise localized subjects, escaped messages and 
     assert.doesNotMatch(result.html, /<b>Test reply/);
     assert.match(result.text, /Test reply/);
     assert.doesNotMatch(result.text, /24 hours|additional fee|Bank clearance/);
-    assert.match(result.html, new RegExp(audience === "management" ? `/admin/requests/${requestId}` : `/${locale}/dashboard/requests/${requestId}`));
+    assert.match(result.html, new RegExp(audience === "management" ? `/admin/transactions/requests/${requestId}` : `/${locale}/dashboard/requests/${requestId}`));
   }
 });
 
@@ -187,8 +187,10 @@ function workerDb(row, options = {}) {
   const calls = [];
   return { calls, row, async rpc(name, args) {
     calls.push({ name, args });
-    if (name === "sweep_exchange_request_deadlines") return { data: 0, error: null };
-    if (name === "claim_request_notifications") { if (claimed) return { data: [], error: null }; claimed = true; return { data: [row], error: null }; }
+    if (name === "claim_request_notifications_for_request") {
+      assert.equal(args.p_request_id, requestId);
+      if (claimed) return { data: [], error: null }; claimed = true; return { data: [row], error: null };
+    }
     if (name === "prepare_request_notification") {
       row.rendered_payload ??= structuredClone(args.p_payload); row.template_version ??= args.p_template_version;
       row.first_attempt_at ??= "2026-09-13T01:00:00Z";
@@ -199,41 +201,24 @@ function workerDb(row, options = {}) {
   } };
 }
 const now = () => Date.parse("2026-09-13T01:00:00Z");
+const sendNow = (options) => notifications.sendRequestNotifications({ ...settings, requestId, now, ...options });
 
-test("only a transient deadline sweep retries once; lease and send mutations remain single-attempt", async () => {
-  for (const status of [0, 502, 503, 504, "rejected"]) {
-    let sweeps = 0, claims = 0;
-    const db = { async rpc(name) {
-      if (name === "sweep_exchange_request_deadlines") {
-        if (++sweeps === 1) {
-          if (status === "rejected") throw new Error("Synthetic transport loss");
-          return { data: null, error: { code: "", message: "Synthetic gateway failure" }, status };
-        }
-        return { data: { updated: 0 }, error: null, status: 200 };
-      }
-      assert.equal(name, "claim_request_notifications"); claims++;
-      return { data: [], error: null, status: 200 };
-    } };
-    const result = await notifications.runRequestNotificationWorker({ ...settings, db, now, send: async () => assert.fail("Queue is empty") });
-    assert.equal(sweeps, 2); assert.equal(claims, 1); assert.equal(result.claimed, 0);
-  }
-  for (const [operation, status, code, expectedCalls] of [
-    ["sweep_exchange_request_deadlines", 504, "", 2],
-    ["sweep_exchange_request_deadlines", 403, "42501", 1],
-    ["sweep_exchange_request_deadlines", 400, "PGRST202", 1],
-    ["claim_request_notifications", 504, "", 1],
-    ["prepare_request_notification", 503, "", 1],
-    ["finish_request_notification", 502, "", 1],
-  ]) {
+test("an admin-triggered send claims only that request, never sweeps, and never retries a failed lease, prepare or acknowledgement", async () => {
+  const empty = { calls: [], async rpc(name, args) { this.calls.push({ name, args }); return { data: [], error: null, status: 200 }; } };
+  const result = await sendNow({ db: empty, send: async () => assert.fail("Nothing to send") });
+  assert.deepEqual(empty.calls.map(call => call.name), ["claim_request_notifications_for_request"]);
+  assert.equal(empty.calls[0].args.p_request_id, requestId);
+  assert.equal(result.claimed, 0);
+  for (const operation of ["claim_request_notifications_for_request", "prepare_request_notification", "finish_request_notification"]) {
     const base = workerDb(delivery()); let failures = 0, sends = 0;
     const db = { async rpc(name, args) {
-      if (name === operation) { failures++; return { data: null, error: { code }, status }; }
+      if (name === operation) { failures++; return { data: null, error: { code: "" }, status: 503 }; }
       return base.rpc(name, args);
     } };
-    await assert.rejects(notifications.runRequestNotificationWorker({ ...settings, db, now, send: async () => {
+    await assert.rejects(sendNow({ db, send: async () => {
       sends++; return { data: { id: "synthetic-provider-id" }, error: null, headers: null };
     } }), /notification_rpc_failed/);
-    assert.equal(failures, expectedCalls, operation);
+    assert.equal(failures, 1, operation);
     assert.equal(sends, operation === "finish_request_notification" ? 1 : 0);
   }
 });
@@ -279,19 +264,20 @@ test("database transport preserves cancellation and limits each HTTP attempt wit
   }
 });
 
-test("worker freezes PDF before send and retries ambiguous acceptance with identical payload/key", async () => {
+test("sender freezes PDF before send and retries ambiguous acceptance with identical payload/key on the next admin action", async () => {
   const row = delivery({ event_type: "complete", workflow_status: "completed", payload_snapshot: { receipt: completion } });
   const db = workerDb(row);
   const sent = [];
-  const result = await notifications.runRequestNotificationWorker({ ...settings, db, now, send: async (payload, key) => {
+  const result = await sendNow({ db, send: async (payload, key) => {
     assert.ok(row.rendered_payload, "persist before network I/O");
     sent.push({ payload: structuredClone(payload), key }); throw new Error("network reset after acceptance");
   } });
   assert.equal(result.retrying, 1);
+  assert.equal(db.calls.filter(call => call.name === "claim_request_notifications_for_request").length, 1, "a retried row is not reclaimed in the same click");
   assert.equal(sent[0].key, `request-notification/${deliveryId}`);
   assert.match(Buffer.from(sent[0].payload.attachments[0].content, "base64").toString("ascii", 0, 8), /%PDF/);
   const retryDb = workerDb({ ...row, attempts: 2 });
-  await notifications.runRequestNotificationWorker({ ...settings, from: "Changed <changed@example.test>", db: retryDb, now,
+  await sendNow({ from: "Changed <changed@example.test>", db: retryDb,
     send: async (payload, key) => { assert.deepEqual({ payload, key }, sent[0]); return { data: { id: "provider-id" }, error: null, headers: null }; } });
   assert.equal(retryDb.calls.find(call => call.name === "finish_request_notification").args.p_status, "provider_accepted");
 });
@@ -299,69 +285,44 @@ test("worker freezes PDF before send and retries ambiguous acceptance with ident
 test("stale ambiguity requires reconciliation; permanent errors fail; DB acknowledgement failure never sends twice", async () => {
   const db = workerDb(delivery({ first_attempt_at: "2026-09-12T00:00:00Z" }));
   let sends = 0;
-  const stale = await notifications.runRequestNotificationWorker({ ...settings, db, now, send: async () => { sends++; throw new Error(); } });
+  const stale = await sendNow({ db, send: async () => { sends++; throw new Error(); } });
   assert.equal(stale.reconciliation, 1); assert.equal(sends, 0);
-  const permanent = await notifications.runRequestNotificationWorker({ ...settings, db: workerDb(delivery()), now, send: async () => ({ data: null, error: { name: "validation_error", statusCode: 422 }, headers: null }) });
+  const permanent = await sendNow({ db: workerDb(delivery()), send: async () => ({ data: null, error: { name: "validation_error", statusCode: 422 }, headers: null }) });
   assert.equal(permanent.failed, 1);
-  await assert.rejects(notifications.runRequestNotificationWorker({ ...settings, db: workerDb(delivery(), { failFinish: true }), now, send: async () => { sends++; return { data: { id: "accepted" }, error: null, headers: null }; } }), /notification_rpc_failed/);
+  await assert.rejects(sendNow({ db: workerDb(delivery(), { failFinish: true }), send: async () => { sends++; return { data: { id: "accepted" }, error: null, headers: null }; } }), /notification_rpc_failed/);
   assert.equal(sends, 1);
   assert.equal(notifications.notificationRetryAt(1, now(), "120", 0), "2026-09-13T01:02:00.000Z");
-  assert.equal(notifications.authorizedNotificationCron("Bearer short", "short"), false);
-  assert.equal(notifications.authorizedNotificationCron(`Bearer ${"a".repeat(32)}`, "a".repeat(32)), true);
-  assert.equal(notifications.authorizedNotificationCron(`Bearer ${"b".repeat(32)}`, "a".repeat(32)), false);
+  assert.equal(notifications.authorizedNotificationCron, undefined);
+  assert.equal(notifications.runRequestNotificationWorker, undefined);
 });
 
-test("worker route logs only allowlisted diagnostics and never exposes RPC secrets", async (t) => {
+test("send failures produce only allowlisted diagnostics and never expose RPC secrets", async () => {
   const secret = "whsec_TEST_ONLY_NEVER_LOG_recipient@example.test";
-  const records = [];
-  t.mock.method(console, "error", (...args) => records.push(args));
-  let scenario;
-  const route = compile("app/api/cron/request-notifications/route.ts", {
-    "@/lib/requests/notifications": {
-      ...notifications,
-      authorizedNotificationCron: () => true,
-      notificationRuntimeSettings: () => {
-        if (scenario.configurationError) throw scenario.configurationError;
-        return settings;
-      },
-      createNotificationDatabase: () => ({ async rpc(name) {
-        if (name === scenario.operation) {
-          if (scenario.thrown) throw scenario.thrown;
-          return { data: null, error: scenario.error, status: scenario.status };
-        }
-        return { data: [], error: null, status: 200 };
-      } }),
-      createRequestEmailSender: () => async () => { assert.fail("Failed RPC must not send email"); },
-    },
-  });
   const cases = [
-    { operation: "sweep_exchange_request_deadlines", error: { code: "PGRST202", message: secret, details: secret, hint: secret }, status: 404,
-      expected: { stage: "database_rpc", operation: "sweep_exchange_request_deadlines", code: "PGRST202", status: 404 } },
-    { operation: "claim_request_notifications", error: { code: secret, message: secret }, status: 700,
-      expected: { stage: "database_rpc", operation: "claim_request_notifications", code: "unclassified", status: null } },
-    { operation: "sweep_exchange_request_deadlines", error: { code: "", message: secret }, status: 504,
-      expected: { stage: "database_rpc", operation: "sweep_exchange_request_deadlines", code: "unclassified", status: 504 } },
-    { operation: "sweep_exchange_request_deadlines", thrown: new Error(secret, { cause: { secret } }),
-      expected: { stage: "database_rpc", operation: "sweep_exchange_request_deadlines", code: "transport_error", status: null, category: "unclassified" } },
-    { operation: "claim_request_notifications", thrown: new Error(secret, { cause: { code: "ENOTFOUND", message: secret } }),
-      expected: { stage: "database_rpc", operation: "claim_request_notifications", code: "transport_error", status: null, category: "dns_error" } },
-    { configurationError: new Error(`invalid_site_url:${secret}`), expected: { stage: "unknown" } },
-    { configurationError: new Error("missing_site_url"), expected: { stage: "configuration", code: "missing_site_url" } },
+    { error: { code: secret, message: secret }, status: 700,
+      expected: { stage: "database_rpc", operation: "claim_request_notifications_for_request", code: "unclassified", status: null } },
+    { error: { code: "PGRST202", message: secret, details: secret, hint: secret }, status: 404,
+      expected: { stage: "database_rpc", operation: "claim_request_notifications_for_request", code: "PGRST202", status: 404 } },
+    { thrown: new Error(secret, { cause: { code: "ENOTFOUND", message: secret } }),
+      expected: { stage: "database_rpc", operation: "claim_request_notifications_for_request", code: "transport_error", status: null, category: "dns_error" } },
   ];
   for (const [category, marker] of [
     ["timeout", "TimeoutError"], ["aborted", "AbortError"], ["socket_error", "UND_ERR_SOCKET"],
     ["dns_error", "EAI_AGAIN"], ["invalid_response", "SyntaxError"], ["unclassified", "unknown error"],
-  ]) cases.push({ operation: "claim_request_notifications", error: { code: "", message: secret, details: `${marker}: ${secret}` }, status: 0,
-    expected: { stage: "database_rpc", operation: "claim_request_notifications", code: "unclassified", status: 0, category } });
-  for (scenario of cases) {
-    records.length = 0;
-    const response = await route.GET(new Request("https://example.test/api/cron/request-notifications"));
-    const body = await response.text();
-    assert.equal(response.status, 503);
-    assert.deepEqual(JSON.parse(body), { error: "Notification worker unavailable; inspect the queue and configuration." });
-    assert.deepEqual(records, [[{ event: "request_notification_worker_unavailable", ...scenario.expected }]]);
-    assert.ok(!`${JSON.stringify(records)}${body}`.includes(secret));
+  ]) cases.push({ error: { code: "", message: secret, details: `${marker}: ${secret}` }, status: 0,
+    expected: { stage: "database_rpc", operation: "claim_request_notifications_for_request", code: "unclassified", status: 0, category } });
+  for (const scenario of cases) {
+    const db = { async rpc() {
+      if (scenario.thrown) throw scenario.thrown;
+      return { data: null, error: scenario.error, status: scenario.status };
+    } };
+    const error = await sendNow({ db, send: async () => assert.fail("Failed RPC must not send email") }).then(() => assert.fail("Expected failure"), failure => failure);
+    const diagnostic = notifications.notificationWorkerFailureDiagnostic(error);
+    assert.deepEqual(diagnostic, { event: "request_notification_worker_unavailable", ...scenario.expected });
+    assert.ok(!JSON.stringify(diagnostic).includes(secret));
   }
+  assert.deepEqual(notifications.notificationWorkerFailureDiagnostic(new Error(`invalid_site_url:${secret}`)), { event: "request_notification_worker_unavailable", stage: "unknown" });
+  assert.deepEqual(notifications.notificationWorkerFailureDiagnostic(new Error("missing_site_url")), { event: "request_notification_worker_unavailable", stage: "configuration", code: "missing_site_url" });
 });
 
 test("webhook verifies raw signed body and rejects replayed signatures over altered content", () => {
@@ -396,65 +357,67 @@ async function loadNotificationDatabase(db) {
   ]) await db.exec(read(`supabase/migrations/${migration}`));
 }
 
-test("a committed sweep with a lost response retries without duplicate tasks, refunds or notification events", async () => {
+test("after _44 only admin-approved events are sendable, stale queue rows retire, and one admin action sends its emails at once", async () => {
   const db = new PGlite();
   try {
     await loadNotificationDatabase(db);
-    const user = randomUUID();
+    const user = randomUUID(), admin = randomUUID(), otherRequest = randomUUID();
+    const snapshot = { ...completion, locale: "en", policy_snapshot: {} };
     await db.query("insert into auth.users(id,email) values($1,'customer@example.test')", [user]);
+    await db.query(`insert into auth.users(id,email,raw_app_meta_data) values($1,'admin@example.test','{"role":"admin"}')`, [admin]);
     await db.query("insert into profiles(id) values($1)", [user]);
-    await db.exec("update exchange_request_settings set settings=jsonb_set(settings,'{management_emails}','[\"manager@example.test\"]')");
-    for (const [status, tier, feeStatus, evidence] of [
-      ["ready", "priority", "paid", false],
-      ["awaiting_funds", "standard", "not_applicable", true],
-      ["awaiting_funds", "standard", "not_applicable", false],
-    ]) {
-      const id = randomUUID(), transaction = randomUUID(), quote = randomUUID();
-      const snapshot = { ...completion, locale: "en", policy_snapshot: {}, service_tier: tier,
-        priority_fee_aud: tier === "priority" ? 25 : 0, priority_fee_amount: tier === "priority" ? 25 : 0 };
+    for (const [id, transaction, reference] of [[requestId, transactionId, "ZE123456"], [otherRequest, randomUUID(), "ZE654321"]]) {
+      const quote = randomUUID();
       await db.query("insert into transactions(id,user_id,type,amount_aud,equivalent_toman) values($1,$2,'buy_aud',1000,100000000)", [transaction, user]);
       await db.query("insert into exchange_request_quotes(id,user_id,snapshot,expires_at) values($1,$2,$3,now()+interval '1 hour')", [quote, user, snapshot]);
-      await db.query(`insert into exchange_requests(id,transaction_id,user_id,quote_id,idempotency_key,reference_code,quote,
-        status,service_tier,priority_fee_status,funding_due_at,clearance_due_at,handling_due_at,evidence_submitted_at,payment_instructions)
-        values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now()-interval '2 days',now()-interval '1 day',now()-interval '1 hour',
-        case when $11::boolean then now()-interval '1 day' end,'Synthetic bank details')`,
-      [id, transaction, user, quote, randomUUID(), `ZE${id}`, snapshot, status, tier, feeStatus, evidence]);
+      await db.query("insert into exchange_requests(id,transaction_id,user_id,quote_id,idempotency_key,reference_code,quote,service_tier,priority_fee_status,funding_due_at,clearance_due_at,payment_instructions) values($1,$2,$3,$4,$5,$6,$7,'priority','unpaid',now()+interval '1 day',now()+interval '2 days','Bank details')", [id, transaction, user, quote, randomUUID(), reference, snapshot]);
     }
-    let sweeps = 0, committed;
-    const facts = async () => ({
-      tasks: (await db.query("select request_id,kind,dedupe_key from exchange_request_tasks order by request_id,kind")).rows,
-      refunds: (await db.query("select request_id,kind,amount,status from exchange_request_refunds order by request_id,kind")).rows,
-      events: (await db.query("select id,request_id,sequence,event_type from exchange_request_events order by id")).rows,
-      requests: (await db.query("select id,status,version,priority_fee_status from exchange_requests order by id")).rows,
-    });
+    await db.exec("update exchange_request_settings set settings=jsonb_set(settings,'{management_emails}','[\"manager@example.test\"]')");
+    // A job left by the old scheduled worker must not be sent later.
+    await db.query("select emit_exchange_request_event($1,'submitted',$2,null)", [requestId, user]);
+    await db.exec(read("supabase/migrations/20260913_27_request_messages_and_notifications.sql"));
+    await db.exec(read("supabase/migrations/20261003_44_request_immediate_admin_email.APPLY_MANUALLY.sql"));
+    const rows = async (id = requestId) => (await db.query("select id,event_type,audience,status,last_error from exchange_request_notification_deliveries where request_id=$1 order by event_sequence,audience", [id])).rows;
+    assert.ok((await rows()).every(d => d.status === "skipped" && d.last_error === "queue_retired"));
+
+    await db.query("select emit_exchange_request_event($1,'receipt_uploaded',$2,'PRIVATE BANK REFERENCE')", [requestId, user]);
+    await db.query("select emit_exchange_request_event($1,'handling_overdue',null,null)", [requestId]);
+    await db.query("select set_config('app.exchange_request_send_email','false',false)");
+    await db.query("select emit_exchange_request_event($1,'review',$2,null)", [requestId, admin]);
+    const optedOut = (await rows()).filter(d => d.last_error !== "queue_retired");
+    assert.equal(optedOut.length, 5);
+    assert.ok(optedOut.every(d => d.status === "skipped" && d.last_error === "admin_email_opt_out"), "customer, system and opted-out events never queue mail");
+
+    await db.query("select set_config('app.exchange_request_send_email','true',false)");
+    await db.query("select emit_exchange_request_event($1,'review',$2,null)", [requestId, admin]);
+    await db.query("select emit_exchange_request_event($1,'reject',$2,null)", [requestId, admin]);
+    await db.query("select emit_exchange_request_event($1,'review',$2,null)", [otherRequest, admin]);
+    assert.equal((await rows()).filter(d => d.status === "pending").length, 4);
+
     const adapter = { async rpc(name, args) {
-      if (name === "sweep_exchange_request_deadlines") {
-        const result = (await db.query("select sweep_exchange_request_deadlines() as result")).rows[0].result;
-        if (++sweeps === 1) {
-          committed = await facts();
-          return { data: null, error: { code: "", message: "Synthetic response lost after commit" }, status: 504 };
-        }
-        assert.deepEqual(await facts(), committed); assert.equal(result.updated, 0);
-        return { data: result, error: null, status: 200 };
-      }
       const statements = {
-        claim_request_notifications: ["select * from claim_request_notifications($1,$2,$3)", [args.p_worker_id, args.p_limit, args.p_lease_seconds]],
+        claim_request_notifications_for_request: ["select * from claim_request_notifications_for_request($1,$2,$3,$4)", [args.p_worker_id, args.p_request_id, args.p_limit, args.p_lease_seconds]],
         prepare_request_notification: ["select prepare_request_notification($1,$2,$3,$4) as result", [args.p_id, args.p_worker_id, args.p_payload, args.p_template_version]],
         finish_request_notification: ["select finish_request_notification($1,$2,$3,$4,$5,$6) as result", [args.p_id, args.p_worker_id, args.p_status, args.p_provider_id, args.p_error_code, args.p_next_attempt_at]],
       };
       assert.ok(statements[name], `Unexpected RPC ${name}`);
       const [sql, params] = statements[name], result = await db.query(sql, params);
-      return { data: name === "claim_request_notifications" ? result.rows : result.rows[0].result, error: null, status: 200 };
+      return { data: name === "claim_request_notifications_for_request" ? result.rows : result.rows[0].result, error: null, status: 200 };
     } };
     const sent = [];
-    const result = await notifications.runRequestNotificationWorker({ ...settings, db: adapter, send: async (_payload, key) => {
-      sent.push(key); return { data: { id: randomUUID() }, error: null, headers: null };
+    const result = await notifications.sendRequestNotifications({ ...settings, db: adapter, requestId, send: async (payload, key) => {
+      sent.push({ key, to: payload.to[0] }); return { data: { id: randomUUID() }, error: null, headers: null };
     } });
-    assert.equal(sweeps, 2); assert.equal(committed.tasks.length, 2); assert.equal(committed.refunds.length, 1);
-    assert.equal(committed.events.length, 3); assert.deepEqual(await facts(), committed);
-    assert.equal(result.accepted, 5); assert.equal(sent.length, 5); assert.equal(new Set(sent).size, 5);
-    assert.equal((await db.query("select count(*)::int n from exchange_request_notification_deliveries")).rows[0].n, 5);
-    assert.equal((await db.query("select max(attempts)::int n from exchange_request_notification_deliveries")).rows[0].n, 1);
+    assert.equal(result.accepted, 4); assert.equal(sent.length, 4); assert.equal(new Set(sent.map(s => s.key)).size, 4);
+    const byId = new Map((await rows()).map(d => [d.id, d]));
+    assert.deepEqual(sent.map(s => byId.get(s.key.replace("request-notification/", "")).event_type), ["review", "review", "reject", "reject"]);
+    assert.ok((await rows()).every(d => d.status !== "pending" && d.status !== "leased"));
+    assert.equal((await rows(otherRequest)).filter(d => d.status === "pending").length, 2, "other requests are untouched");
+    assert.deepEqual(new Set(sent.map(s => s.to)), new Set(["customer@example.test", "manager@example.test"]));
+
+    await db.exec("set role authenticated");
+    await assert.rejects(db.query("select * from claim_request_notifications_for_request($1,$2,1,60)", [randomUUID(), otherRequest]), /permission denied/);
+    await db.exec("reset role");
   } finally { await db.close(); }
 });
 

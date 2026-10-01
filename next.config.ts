@@ -4,6 +4,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Let Next.js detect stale browser tabs after a deployment and force a full navigation.
   deploymentId: process.env.VERCEL_DEPLOYMENT_ID ?? process.env.VERCEL_GIT_COMMIT_SHA,
+  // Allow LAN access in dev (mobile testing) to dev-only resources like the webpack HMR socket.
+  allowedDevOrigins: ["192.168.18.6"],
   // Empty turbopack config silences the "webpack config but no turbopack config" warning
   // so `next dev` (Turbopack) works alongside the webpack() config used by `next build`.
   turbopack: {},
@@ -28,6 +30,8 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     const noindexHeaders = [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }];
+    // HSTS only makes sense once the app is actually served over real HTTPS (Vercel); never send it for local dev/start.
+    const enableHsts = Boolean(process.env.VERCEL_ENV);
     return [
       ...(process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production'
         ? [{ source: '/:path*', headers: noindexHeaders }]
@@ -50,13 +54,14 @@ const nextConfig: NextConfig = {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
           },
-          {
+          ...(enableHsts ? [{
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains; preload',
-          },
+          }] : []),
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co; connect-src 'self' https://*.supabase.co; img-src 'self' data: https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;",
+            // connect-src needs the wss:// scheme explicitly; https:// does not cover WebSocket (Supabase Realtime) connections.
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;",
           },
         ],
       },
