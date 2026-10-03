@@ -1,3 +1,6 @@
+.routeFrame { display: flex; flex: 1 1 0; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.criticalAlertBadge { display: inline-flex; align-items: center; gap: .375rem; min-height: 44px; padding: .375rem .875rem; border-radius: 100px; background: #fef2f2; color: #b91c1c; font-size: .8rem; font-weight: 650; text-decoration: none; }
+.criticalAlertBadge:hover { background: #fee2e2; }
 .workspace { display: flex; flex-direction: column; gap: 1.5rem; min-width: 0; width: 100%; }
 .navigation { display: flex; flex-wrap: wrap; gap: .25rem; padding: .3rem; border: 1px solid var(--border-soft, #e2e8f0); border-radius: .75rem; background: #fff; }
 .navLink { display: flex; align-items: center; justify-content: center; gap: .5rem; min-height: 44px; flex: 1 1 auto; padding: .6rem .875rem; border-radius: .5rem; font-size: .8125rem; font-weight: 600; text-decoration: none; color: var(--text-soft, #475569); }
@@ -50,7 +53,7 @@
 .capitalCard span { font-size: .8125rem; color: var(--text-soft, #475569); }
 .capitalCard strong { font-size: 1.375rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .capitalCard small { color: var(--text-dim, #64748b); line-height: 1.6; }
-.navLink:focus-visible, .sublink:focus-visible, .actionLink:focus-visible, .quickLink:focus-visible, .metric:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 3px; }
+.criticalAlertBadge:focus-visible, .navLink:focus-visible, .sublink:focus-visible, .actionLink:focus-visible, .quickLink:focus-visible, .metric:focus-visible { outline: 3px solid #6366f1; outline-offset: 3px; }
 @media (max-width: 1100px) {
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metric:nth-child(2) { border-inline-end: 0; }

@@ -1,0 +1,22 @@
+Transaction ZE123456: Your transfer was successful | Zarman
+
+Zarman Exchange
+
+Your transfer was successful
+
+Hi Sam Example,
+
+You sent AUD 1,150.00 to Alex Example. You can find the details below:
+
+To: Alex Example
+Sent: AUD 1,150.00
+On (Sydney time): 2 Oct 2026, 3:12 pm
+Transaction code: ZE123456
+
+Your final PDF receipt is attached and is also available from the request page.
+
+View request: https://example.test/en/dashboard/requests/10000000-0000-4000-8000-000000000001
+
+If you don't recognise this transfer or have a question, contact the Zarman team through the messages on your request page. Include your transaction code so we can identify your transfer.
+
+— Team Zarman

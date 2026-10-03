@@ -4,11 +4,11 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Archive, CalendarDays, Download, RefreshCw, Search, Settings, Trash2, X } from "lucide-react";
-import { bulkDeleteTransactions, getPendingTransactionsWithDetails, getTransactionHistoryWithDetails, getTransactionHistoryStatusCounts, getActiveBankAccountsForAdmin } from "@/app/actions/admin.actions";
+import { bulkDeleteTransactions, getAdminTransactionWorkspace } from "@/app/actions/admin.actions";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import { useAdminRefresh } from "@/components/admin/ui/useAdminRefresh";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
-import { reloadAdminPage } from "@/lib/admin-refresh";
 import type { ExchangeRequest } from "@/lib/requests/types";
 import { TransactionQueue } from "./TransactionQueue";
 import { TransactionTable } from "./TransactionTable";
@@ -107,9 +107,21 @@ export function TransactionsManager({
   bankAccounts: initialBankAccounts,
 }: TransactionsManagerProps) {
   const router = useRouter();
+  const refreshAdmin = useAdminRefresh();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [data, setData] = useState({ pending: initialPending, history: initialHistory, total: initialTotal, statusTabs: initialStatusTabs, bankAccounts: initialBankAccounts });
+  const initialData = { pending: initialPending, history: initialHistory, total: initialTotal, statusTabs: initialStatusTabs, bankAccounts: initialBankAccounts };
+  const [refreshedData, setRefreshedData] = useState<{ source: typeof initialData; value: typeof initialData } | null>(null);
+  // A router refresh supplies new server props without remounting this component.
+  // Only use refreshed data while it belongs to that same server snapshot. This also
+  // prevents an older in-flight read from overwriting a newly committed mutation.
+  const data = refreshedData
+    && refreshedData.source.pending === initialPending
+    && refreshedData.source.history === initialHistory
+    && refreshedData.source.total === initialTotal
+    && refreshedData.source.statusTabs === initialStatusTabs
+    && refreshedData.source.bankAccounts === initialBankAccounts
+    ? refreshedData.value : initialData;
   const { pending, history, total, statusTabs, bankAccounts } = data;
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState("");
@@ -120,14 +132,15 @@ export function TransactionsManager({
     reading.current = true;
     setRefreshing(true);
     try {
-      const [pendingRows, historyPage, counts, accounts] = await Promise.all([
-        getPendingTransactionsWithDetails(),
-        getTransactionHistoryWithDetails(currentPage, pageSize, { status: historyStatus, direction: historyDirection, startDate, endDate, search }),
-        getTransactionHistoryStatusCounts(), getActiveBankAccountsForAdmin(),
-      ]);
+      const snapshot = await getAdminTransactionWorkspace(view, currentPage, pageSize, {
+        status: historyStatus, direction: historyDirection, startDate, endDate, search,
+      });
       if (mounted.current) {
-        setData(previous => ({ pending: pendingRows as TransactionRow[], history: historyPage.data as TransactionRow[], total: historyPage.total,
-          statusTabs: previous.statusTabs.map(tab => ({ ...tab, count: counts[tab.key] })), bankAccounts: accounts }));
+        setRefreshedData({
+          source: { pending: initialPending, history: initialHistory, total: initialTotal, statusTabs: initialStatusTabs, bankAccounts: initialBankAccounts },
+          value: { pending: snapshot.pending as TransactionRow[], history: snapshot.history as TransactionRow[], total: snapshot.total,
+            statusTabs: initialStatusTabs.map(tab => ({ ...tab, count: snapshot.statusCounts[tab.key] })), bankAccounts: snapshot.bankAccounts },
+        });
         setRefreshError("");
       }
     } catch {
@@ -136,19 +149,15 @@ export function TransactionsManager({
       reading.current = false;
       if (mounted.current) setRefreshing(false);
     }
-  }, [currentPage, pageSize, historyStatus, historyDirection, startDate, endDate, search]);
+  }, [view, currentPage, pageSize, historyStatus, historyDirection, startDate, endDate, search, initialPending, initialHistory, initialTotal, initialStatusTabs, initialBankAccounts]);
   useEffect(() => {
     mounted.current = true;
-    const onFocus = () => { if (document.visibilityState === "visible") void refresh(); };
-    const timer = window.setInterval(onFocus, 30000);
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
     // Preserve old bookmarks to service settings after the queue is redirected.
     if (window.location.hash.startsWith("#request-")) router.replace(`/admin/settings${window.location.hash}`);
-    return () => { mounted.current = false; window.clearInterval(timer); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
-  }, [refresh, router]);
+    return () => { mounted.current = false; };
+  }, [router]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  // A background refresh must never turn an export selection into a deletion.
+  // A refresh must never turn an export selection into a deletion.
   const selectedSnapshots = useRef(new Map<string, { status: string | null; type: string }>());
   const [searchText, setSearchText] = useState(search);
   const [isExporting, setIsExporting] = useState(false);
@@ -318,7 +327,7 @@ export function TransactionsManager({
       const deletedCount = "deletedCount" in result ? result.deletedCount : selectedCount;
       clearSelection();
       setExportMessage({ type: "success", text: `${deletedCount} transaction(s) deleted.` });
-      reloadAdminPage(600);
+      refreshAdmin();
     } catch (error) {
       setExportMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to delete transactions." });
     } finally {
@@ -349,9 +358,9 @@ export function TransactionsManager({
           <Link href={viewHref("active")} aria-current={view === "active" ? "page" : undefined}>Active<span>{pending.length}</span></Link>
           <Link href={viewHref("history")} aria-current={view === "history" ? "page" : undefined}>History & reports<span>{statusTabs.find(tab => tab.key === "all")?.count ?? total}</span></Link>
         </nav>
-        <div hidden={view !== "active"}><TransactionQueue rows={pending} bankAccounts={bankAccounts} /></div>
+        {view === "active" && <TransactionQueue rows={pending} bankAccounts={bankAccounts} />}
 
-        <div hidden={view !== "history"} className={workspace.panel}>
+        {view === "history" && <div className={workspace.panel}>
           {/* Tab bar */}
           <div className={workspace.toolbar}>
             <nav className={workspace.filters} aria-label="Transaction status filter">
@@ -498,7 +507,7 @@ export function TransactionsManager({
             </>
           )}
           <AdminPagination currentPage={currentPage} totalCount={total} pageSize={pageSize} />
-        </div>
+        </div>}
       </div>
     </>
   );

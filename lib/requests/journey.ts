@@ -1,4 +1,4 @@
-import type { ExchangeRequest, RequestEvent, RequestLocale } from "./types";
+import type { ExchangeRequest, RequestDelivery, RequestEvent, RequestLocale } from "./types";
 
 export type RequestJourneyStage = "approval" | "payment" | "receipt_review" | "funds_received" | "completed";
 
@@ -97,14 +97,24 @@ export function requestActivityLabel(eventType: string, locale: RequestLocale): 
   return (labels[eventType] || ["Request updated", "درخواست به‌روزرسانی شد"])[locale === "fa" ? 1 : 0];
 }
 
-export function requestEmailStatus(status: string, lastError?: string | null, locale: RequestLocale = "en"): string {
+export function requestEmailStatus(status: string, lastError?: string | null, locale: RequestLocale = "en", leaseExpiresAt?: string | null): string {
   const labels: Record<string, [string, string]> = {
-    pending: ["Not sent yet · retried on next update", "هنوز ارسال نشده · در به‌روزرسانی بعدی دوباره ارسال می‌شود"], leased: ["Sending", "در حال ارسال"], provider_accepted: ["Sent", "ارسال شد"], delivered: ["Delivered", "تحویل شد"],
+    pending: ["Queued for sending", "در صف ارسال"], leased: ["Sending", "در حال ارسال"], provider_accepted: ["Accepted by email service", "سرویس ایمیل پذیرفت"], delivered: ["Delivered", "تحویل شد"],
     skipped: ["Email not requested", "ارسال ایمیل انتخاب نشد"], failed: ["Delivery failed", "تحویل ناموفق"],
     suppressed: ["Recipient could not receive email", "گیرنده امکان دریافت ایمیل ندارد"],
     reconciliation_required: ["Delivery needs checking", "تحویل نیاز به بررسی دارد"],
     queue_retired: ["Not sent (old queue retired)", "ارسال نشد (صف قدیمی حذف شد)"],
+    interrupted: ["Sending interrupted · check delivery", "ارسال متوقف شده · نتیجه را بررسی کنید"],
   };
-  const key = status === "skipped" && lastError === "queue_retired" ? "queue_retired" : status;
+  const key = status === "leased" && leaseExpiresAt && Date.parse(leaseExpiresAt) <= Date.now() ? "interrupted"
+    : status === "skipped" && lastError === "queue_retired" ? "queue_retired" : status;
   return (labels[key] || ["Delivery pending", "در انتظار تحویل"])[locale === "fa" ? 1 : 0];
+}
+
+/** The database repeats these checks under a row lock. This only controls UI. */
+export function canRetryRequestEmail(delivery: RequestDelivery, now = Date.now()): boolean {
+  if (delivery.audience !== "customer" || delivery.provider_id) return false;
+  if (delivery.first_attempt_at && (!Number.isFinite(Date.parse(delivery.first_attempt_at)) || now - Date.parse(delivery.first_attempt_at) >= 23 * 60 * 60 * 1000)) return false;
+  return ["pending", "failed"].includes(delivery.status)
+    || (delivery.status === "leased" && !!delivery.lease_expires_at && Date.parse(delivery.lease_expires_at) <= now);
 }

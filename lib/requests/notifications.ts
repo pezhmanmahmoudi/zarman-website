@@ -8,14 +8,14 @@ import {
   type RequestEmailSnapshot,
 } from "./notification-template";
 import { renderRequestReceiptPdf } from "./receipt";
-import { validatedNotificationSettings } from "./notification-config";
+import { validNotificationEmail, validatedNotificationSettings } from "./notification-config";
 
 const IDEMPOTENCY_SAFE_WINDOW_MS = 23 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 12;
 const DATABASE_ATTEMPT_TIMEOUT_MS = 8_000;
-// Keep the admin's click responsive: stop claiming further rounds after this.
+// Bound post-response work: stop claiming further rounds after this.
 const SEND_CLAIM_WINDOW_MS = 20_000;
-const MAX_EMAILS_PER_ACTION = 25;
+const MAX_EMAILS_PER_RUN = 25;
 
 export type NotificationDelivery = RequestEmailSnapshot & {
   attempts: number;
@@ -28,11 +28,8 @@ type RpcResult = { data: unknown; error: unknown; status?: number };
 export type NotificationDatabase = { rpc(name: string, args?: Record<string, unknown>): PromiseLike<RpcResult> };
 type FinishStatus = "pending" | "provider_accepted" | "failed" | "reconciliation_required";
 
-const NOTIFICATION_RPC_OPERATIONS = [
-  "claim_request_notifications_for_request", "prepare_request_notification",
-  "finish_request_notification", "record_request_email_event",
-] as const;
-type NotificationRpcOperation = typeof NOTIFICATION_RPC_OPERATIONS[number];
+type NotificationRpcOperation = "claim_request_notifications_for_request"
+  | "prepare_request_notification" | "finish_request_notification" | "record_request_email_event";
 const SAFE_RPC_ERROR_CODES = new Set([
   "PGRST000", "PGRST001", "PGRST002", "PGRST003", "PGRST100", "PGRST102", "PGRST106",
   "PGRST202", "PGRST301", "PGRST302", "PGRST303", "42501", "42883", "57014", "55P03",
@@ -166,25 +163,38 @@ function outcomeForProviderError(response: CreateEmailResponse): { retry: boolea
   };
 }
 
-/** Send one request's admin-approved emails now, as part of the admin action.
- * No scheduler is involved: a temporary failure stays pending and is retried
- * (same payload and idempotency key) the next time an admin acts on the request.
- * The database enforces audience-specific milestone order. */
-export async function sendRequestNotifications(options: {
+type NotificationWorkerOptions = {
   db: NotificationDatabase;
   send: (payload: RequestEmailPayload, key: string) => Promise<CreateEmailResponse>;
   from: string;
   siteUrl: string;
-  requestId: string;
   now?: () => number;
   workerId?: string;
-}) {
+};
+
+/** Fail closed for legacy stored payloads as well as newly rendered messages.
+ * Never permit an extra recipient or a provider option such as cc/bcc. */
+function isCustomerPayload(delivery: NotificationDelivery, payload: RequestEmailPayload): boolean {
+  const allowed = new Set(["from", "to", "subject", "html", "text", "tags", "attachments"]);
+  return delivery.audience === "customer" && validNotificationEmail(delivery.recipient_email)
+    && payload !== null && typeof payload === "object"
+    && Object.keys(payload).every(key => allowed.has(key))
+    && Array.isArray(payload.to) && payload.to.length === 1 && payload.to[0] === delivery.recipient_email;
+}
+
+/** Invoked only by an explicit admin action after its durable commit. There is
+ * no scheduler: a temporary failure waits for the next manual send/retry. An
+ * explicit delivery selection never sends another email from the request. */
+export async function sendRequestNotifications(options: NotificationWorkerOptions & { requestId: string; deliveryId?: string }) {
   const now = options.now ?? Date.now;
   const started = now();
   const workerId = options.workerId ?? randomUUID();
   const counts = { claimed: 0, accepted: 0, retrying: 0, failed: 0, reconciliation: 0 };
 
   const deliver = async (delivery: NotificationDelivery) => {
+    if (delivery.request_id !== options.requestId || (options.deliveryId && delivery.id !== options.deliveryId)) {
+      throw new Error("notification_claim_scope_mismatch");
+    }
     counts.claimed += 1;
     const finish = async (status: FinishStatus, errorCode: string | null, providerId: string | null = null, retryAt: string | null = null) => {
       await rpc(options.db, "finish_request_notification", {
@@ -192,6 +202,13 @@ export async function sendRequestNotifications(options: {
         p_provider_id: providerId, p_error_code: errorCode, p_next_attempt_at: retryAt,
       });
     };
+    // The database also excludes legacy management rows. Keep this boundary so
+    // a delayed migration can never cause the application to send them.
+    if (delivery.audience !== "customer") {
+      await finish("failed", "management_email_disabled");
+      counts.failed += 1;
+      return;
+    }
     if (requiresNotificationReconciliation(delivery.first_attempt_at, now())) {
       await finish("reconciliation_required", "idempotency_window_reconciliation_required");
       counts.reconciliation += 1;
@@ -209,6 +226,7 @@ export async function sendRequestNotifications(options: {
           contentType: "application/pdf",
         }];
       }
+      if (!isCustomerPayload(delivery, payload)) throw new Error("invalid_customer_payload");
     } catch {
       await finish("failed", "recipient_or_snapshot_unavailable");
       counts.failed += 1;
@@ -221,6 +239,16 @@ export async function sendRequestNotifications(options: {
       p_template_version: delivery.template_version ?? REQUEST_EMAIL_TEMPLATE_VERSION,
     });
     if (!prepared?.rendered_payload) throw new Error("notification_payload_not_persisted");
+    if (!isCustomerPayload(prepared, prepared.rendered_payload)) {
+      await finish("failed", "invalid_customer_payload");
+      counts.failed += 1;
+      return;
+    }
+    if (requiresNotificationReconciliation(prepared.first_attempt_at, now())) {
+      await finish("reconciliation_required", "idempotency_window_reconciliation_required");
+      counts.reconciliation += 1;
+      return;
+    }
     let response: CreateEmailResponse;
     try {
       response = await options.send(prepared.rendered_payload, `request-notification/${delivery.id}`);
@@ -247,12 +275,15 @@ export async function sendRequestNotifications(options: {
     }
   };
 
-  // A round may unblock the next milestone for the same recipient; stop once a
-  // send must wait, so a retried row is never claimed twice in one action.
-  while (counts.claimed < MAX_EMAILS_PER_ACTION && counts.retrying === 0 && now() - started < SEND_CLAIM_WINDOW_MS) {
+  // Claim only what can be processed now. Leasing a whole batch and sending
+  // sequentially strands the untouched rows if the invocation is interrupted.
+  // A retryable failure stops the current action. A selected delivery is the
+  // sole permitted recipient of a manual retry, even if more rows are pending.
+  while (counts.claimed < (options.deliveryId ? 1 : MAX_EMAILS_PER_RUN) && counts.retrying === 0 && now() - started < SEND_CLAIM_WINDOW_MS) {
     const rows = await rpc<NotificationDelivery[]>(options.db, "claim_request_notifications_for_request", {
       p_worker_id: workerId, p_request_id: options.requestId,
-      p_limit: MAX_EMAILS_PER_ACTION - counts.claimed, p_lease_seconds: 300,
+      ...(options.deliveryId ? { p_delivery_id: options.deliveryId } : {}),
+      p_limit: 1, p_lease_seconds: 120,
     });
     if (!rows?.length) break;
     for (const delivery of rows) await deliver(delivery);

@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import Image from "next/image";
 import { SlidersHorizontal, X, ShieldCheck, LogOut } from "lucide-react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";

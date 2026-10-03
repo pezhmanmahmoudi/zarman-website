@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import { useReducedMotion } from "framer-motion";
 import { Archive, ChevronDown, Plus } from "lucide-react";
 import { useLocale } from "@/context/LocaleContext";

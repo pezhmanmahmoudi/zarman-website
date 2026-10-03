@@ -8,7 +8,7 @@ import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import { applyPromoCode, calcAppliedFee, calcEquivalentTomanForRequestType, calcLoyaltyDiscount, FINANCE_CONFIG_DEFAULTS, toCompanyTradeType, type PromoCodeData } from "@/lib/pricing";
 import { DEFAULT_REQUEST_SETTINGS, isUuid, messageInputError, mutationInputError, publicRequestSettings, quoteInputError, settingsInputError } from "@/lib/requests/validation";
-import type { ActionResult, ExchangeRequest, PublicRequestSettings, QuoteInput, QuoteSnapshot, RequestDetail, RequestMessageInput, RequestMessageResult, RequestMutationInput, RequestQuote, RequestReceipt, RequestSettings, SettingsRecord } from "@/lib/requests/types";
+import type { ActionResult, ExchangeRequest, PublicRequestSettings, QuoteInput, QuoteSnapshot, RequestDelivery, RequestDetail, RequestMessageInput, RequestMessageResult, RequestMutationInput, RequestQuote, RequestReceipt, RequestSettings, SettingsRecord } from "@/lib/requests/types";
 import { inspectReceiptUpload, MAX_REQUEST_RECEIPT_BYTES, REQUEST_RECEIPTS_BUCKET } from "@/lib/requests/receipt-upload";
 import { validatedNotificationSettings } from "@/lib/requests/notification-config";
 import { createNotificationDatabase, createRequestEmailSender, notificationRuntimeSettings, notificationWorkerFailureDiagnostic, sendRequestNotifications } from "@/lib/requests/notifications";
@@ -16,6 +16,8 @@ import { isInstitutionPaymentLink, paymentInstitution } from "@/lib/payments/ins
 import { decryptPaymentAccountAccess, encryptPaymentAccountAccess, validatePaymentAccountAccess, type PaymentAccountAccess } from "@/lib/payments/account-access";
 import { requestMatchesSearch, requestNeedsAttention, type ActivityFilter, type RequestPage } from "@/lib/dashboard/activity";
 import { cleanSearchTerm, DASHBOARD_PAGE_SIZE, ilikeAny, requestedPage } from "@/lib/dashboard/paging";
+
+const REQUEST_DELIVERY_COLUMNS = "id,event_id,request_id,audience,recipient_email,locale,status,attempts,last_error,created_at,first_attempt_at,lease_expires_at,provider_id";
 
 function database() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -43,13 +45,13 @@ async function result<T>(operation: () => Promise<T>): Promise<ActionResult<T>> 
   try { return { data: await operation() }; }
   catch (error) { return { error: failure(error) }; }
 }
-/** Admin-approved emails go out within the same click; nothing waits for a scheduler.
- * The request change is already committed, so a mail problem never fails the action;
- * the admin sees each email's outcome in the request's delivery list. */
-async function sendApprovedEmails(requestId: string) {
+/** Runs through Next's after() once the committed change has been returned.
+ * The click still triggers delivery immediately, without waiting for a scheduler;
+ * mail failures leave the durable outbox available for an idempotent retry. */
+async function sendApprovedEmails(requestId: string, deliveryId?: string) {
   try {
     const settings = notificationRuntimeSettings();
-    await sendRequestNotifications({ db: createNotificationDatabase(), send: createRequestEmailSender(settings.apiKey), ...settings, requestId });
+    await sendRequestNotifications({ db: createNotificationDatabase(), send: createRequestEmailSender(settings.apiKey), ...settings, requestId, ...(deliveryId ? { deliveryId } : {}) });
   } catch (error) {
     // Log only explicit operation/code/status fields, never the error or cause.
     console.error(notificationWorkerFailureDiagnostic(error));
@@ -60,6 +62,8 @@ async function settingsRecord(validate = true): Promise<SettingsRecord> {
   if (error) throw error;
   if (!data) throw new Error("Request settings are unavailable.");
   const settings = { ...DEFAULT_REQUEST_SETTINGS, ...data.settings } as RequestSettings;
+  // Discard retired recipient settings even before the data migration is applied.
+  Reflect.deleteProperty(settings, "management_emails");
   const validation = settingsInputError(settings);
   if (validate && validation) throw new Error("Request service settings need administrator review.");
   return { version: data.version, settings };
@@ -287,20 +291,20 @@ async function readDetail(id: string, userId?: string): Promise<RequestDetail> {
       .eq("request_id", id).eq("customer_visible", true).order("sequence", { ascending: true })
     : db.from("exchange_request_events").select("id,request_id,sequence,event_type,status,public_message,actor_id,created_at,internal_message,send_email")
       .eq("request_id", id).order("sequence", { ascending: true });
-  const [events, receipts, messages] = await Promise.all([
+  // These reads depend on the authorized request lookup above, not on one another.
+  // Keep admin-only data out of customer queries while avoiding a second read wave.
+  const [events, receipts, messages, deliveries, payments] = await Promise.all([
     eventQuery,
     db.from("exchange_request_receipts").select("id,request_id,original_name,content_type,size_bytes,sha256,uploaded_by,created_at").eq("request_id", id).order("created_at", { ascending: false }),
     db.from("exchange_request_messages").select("id,request_id,event_id,event_sequence,sender_id,sender_role,body,send_email,created_at").eq("request_id", id).order("event_sequence", { ascending: true }),
+    userId ? null : db.from("exchange_request_notification_deliveries").select(REQUEST_DELIVERY_COLUMNS).eq("request_id", id).order("created_at", { ascending: false }).limit(100),
+    userId ? null : db.from("exchange_request_payments").select("id,request_id,payment_reference,amount,currency,account_id,created_at").eq("request_id", id).order("created_at", { ascending: false }),
   ]);
   if (events.error) throw events.error;
   if (receipts.error) throw receipts.error;
   if (messages.error) throw messages.error;
   const detail: RequestDetail = { request: userId ? customerRequest(request.data as ExchangeRequest) : request.data as ExchangeRequest, events: events.data || [], receipts: receipts.data as RequestReceipt[], messages: messages.data || [] };
-  if (!userId) {
-    const [deliveries, payments] = await Promise.all([
-      db.from("exchange_request_notification_deliveries").select("id,event_id,request_id,audience,recipient_email,locale,status,attempts,last_error,created_at").eq("request_id", id).order("created_at", { ascending: false }).limit(100),
-      db.from("exchange_request_payments").select("id,request_id,payment_reference,amount,currency,account_id,created_at").eq("request_id", id).order("created_at", { ascending: false }),
-    ]);
+  if (deliveries && payments) {
     if (deliveries.error) throw deliveries.error;
     if (payments.error) throw payments.error;
     detail.deliveries = deliveries.data as RequestDetail["deliveries"];
@@ -356,7 +360,7 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
   });
   if (error) throw error;
   if (admin && input.action === "confirm_funds") await saveAccountingTerms(db, data as ExchangeRequest, supplied);
-  if (admin && input.sendEmail === true) await sendApprovedEmails(input.requestId);
+  if (admin && input.sendEmail === true) after(() => sendApprovedEmails(input.requestId));
   return admin ? data as ExchangeRequest : customerRequest(data as ExchangeRequest);
 }
 // Admin-adjusted rate/fee only change the accounting record (ledger + linked
@@ -394,6 +398,32 @@ export async function listAdminRequests(): Promise<ActionResult<ExchangeRequest[
 }
 export async function getAdminRequest(id: string): Promise<ActionResult<RequestDetail>> {
   return result(async () => { await requireAdmin(); return readDetail(id); });
+}
+/** Refresh delivery progress without reloading the request's full event history. */
+export async function getAdminRequestDeliveries(id: string): Promise<ActionResult<RequestDelivery[]>> {
+  return result(async () => {
+    await requireAdmin();
+    if (!isUuid(id)) throw new Error("Request not found.");
+    const { data, error } = await database().from("exchange_request_notification_deliveries")
+      .select(REQUEST_DELIVERY_COLUMNS).eq("request_id", id).order("created_at", { ascending: false }).limit(100);
+    if (error) throw error;
+    return (data || []) as RequestDelivery[];
+  });
+}
+/** Retry the existing email identity; never replay a financial transition. */
+export async function retryAdminRequestEmail(input: { requestId: string; deliveryId: string }): Promise<ActionResult<Pick<RequestDelivery, "id" | "status" | "last_error" | "first_attempt_at" | "lease_expires_at">>> {
+  return result(async () => {
+    const actor = await requireAdmin();
+    if (!input || !isUuid(input.requestId) || !isUuid(input.deliveryId)) throw new Error("Email delivery not found.");
+    const { data, error } = await database().rpc("retry_request_notification", {
+      p_actor_id: actor.id, p_request_id: input.requestId, p_delivery_id: input.deliveryId,
+    });
+    if (error) throw error;
+    if (!data || data.id !== input.deliveryId || !["pending", "reconciliation_required"].includes(data.status)) throw new Error("Email retry was not confirmed. Refresh the delivery history.");
+    if (data.status === "pending") after(() => sendApprovedEmails(input.requestId, input.deliveryId));
+    return { id: data.id, status: data.status, last_error: data.last_error,
+      first_attempt_at: data.first_attempt_at, lease_expires_at: data.lease_expires_at };
+  });
 }
 export async function deleteAdminRequest(id: string): Promise<ActionResult<{ transactionId: string; warning?: string }>> {
   return result(async () => {
@@ -437,7 +467,7 @@ async function sendMessage(input: RequestMessageInput, admin: boolean): Promise<
     p_command_key: input.commandKey, p_message: input.message.trim(), p_send_email: admin ? input.sendEmail : false,
   });
   if (error) throw error;
-  if (admin && input.sendEmail === true) await sendApprovedEmails(input.requestId);
+  if (admin && input.sendEmail === true) after(() => sendApprovedEmails(input.requestId));
   return data as RequestMessageResult;
 }
 export async function sendMyRequestMessage(input: RequestMessageInput): Promise<ActionResult<RequestMessageResult>> {
@@ -466,7 +496,7 @@ export async function saveRequestSettings(input: { expectedVersion: number; sett
     }
     const { data, error } = await database().rpc("save_exchange_request_settings", {
       p_actor_id: actor.id, p_expected_version: input.expectedVersion,
-      p_settings: { ...input.settings, management_emails: [...new Set(input.settings.management_emails.map(email => email.trim().toLowerCase()))] },
+      p_settings: Object.fromEntries(Object.entries(input.settings).filter(([key]) => key !== "management_emails")),
     });
     if (error) throw error;
     return data as SettingsRecord;

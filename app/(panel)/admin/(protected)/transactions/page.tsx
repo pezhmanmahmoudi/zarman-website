@@ -1,11 +1,6 @@
 import React from "react";
 import { parseAdminPage, parseAdminPageSize } from "@/lib/admin-pagination";
-import {
-  getPendingTransactionsWithDetails,
-  getTransactionHistoryWithDetails,
-  getTransactionHistoryStatusCounts,
-  getActiveBankAccountsForAdmin,
-} from "@/app/actions/admin.actions";
+import { getAdminTransactionWorkspace } from "@/app/actions/admin.actions";
 import {
   TransactionsManager,
   type BankAccountOption,
@@ -49,18 +44,15 @@ export default async function TransactionsPage({
   const startDate = params.start && datePattern.test(params.start) ? params.start : "";
   const endDate = params.end && datePattern.test(params.end) ? params.end : "";
 
-  const [pending, { data: history, total }, statusCounts, bankAccounts] = await Promise.all([
-    getPendingTransactionsWithDetails(),
-    getTransactionHistoryWithDetails(currentPage, pageSize, {
+  const { pending, history, total, statusCounts, bankAccounts } = await getAdminTransactionWorkspace(
+    view, currentPage, pageSize, {
       status: historyStatus,
       direction: historyDirection,
       startDate,
       endDate,
       search,
-    }),
-    getTransactionHistoryStatusCounts(),
-    getActiveBankAccountsForAdmin(),
-  ]);
+    },
+  );
 
   const statusTabs: Array<{ key: HistoryStatusFilter; label: string; count: number }> = [
     { key: "all", label: "All", count: statusCounts.all },

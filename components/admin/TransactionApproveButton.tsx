@@ -16,7 +16,7 @@ import {
   type IranBankTransferMethod,
 } from "@/lib/iran-bank-transfer-fees";
 import { sortBankAccountsByPriority, type BankAccountLike } from "@/lib/bank-account-ordering";
-import { reloadAdminPage } from "@/lib/admin-refresh";
+import { useAdminRefresh } from "@/components/admin/ui/useAdminRefresh";
 
 export function TransactionApproveButton({
   transactionId,
@@ -30,6 +30,7 @@ export function TransactionApproveButton({
   bankAccounts?: { id: string; account_name?: string | null; currency?: string | null }[];
 }) {
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
+  const refreshAdmin = useAdminRefresh();
 
   // State برای مدیریت پنجره‌ی انتخاب کشوها
   const [showApproveModal, setShowApproveModal] = useState(false);
@@ -107,7 +108,7 @@ export function TransactionApproveButton({
         showToast({ type: "success", message: "تراکنش با موفقیت تایید و در دفتر کل ثبت شد." });
         setShowApproveModal(false);
         setTransferMethod("free");
-        reloadAdminPage(600);
+        refreshAdmin();
       }
     } catch {
       showToast({ type: "error", message: "The approval could not be completed. Please try again." });
@@ -125,7 +126,7 @@ export function TransactionApproveButton({
       onConfirm: async () => {
         const result = await rejectTransaction(transactionId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "Transaction rejected." }); reloadAdminPage(600); }
+        else { showToast({ type: "success", message: "Transaction rejected." }); refreshAdmin(); }
       },
     });
   };
@@ -139,7 +140,7 @@ export function TransactionApproveButton({
       onConfirm: async () => {
         const result = await archiveTransaction(transactionId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "Transaction archived." }); reloadAdminPage(600); }
+        else { showToast({ type: "success", message: "Transaction archived." }); refreshAdmin(); }
       },
     });
   };

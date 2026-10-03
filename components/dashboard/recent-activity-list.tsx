@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import { DashboardButton, DashboardMagicCard } from "@/components/dashboard/dashboard-ui";
 import { dashboardCopy, dashboardHref } from "@/lib/dashboard/navigation";
 import { recentActivityRequests } from "@/lib/dashboard/recent-activity";

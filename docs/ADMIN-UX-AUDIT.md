@@ -65,3 +65,19 @@ The existing treasury/ledger accounting rollups still read unpaginated history a
 - `lib/admin-pagination.ts`: page validation, row sizes and filter-preserving navigation.
 
 New admin modals should use `AdminDialog`, and floating controls should use the shared anchored-popover hook instead of increasing `z-index` inside a clipped card.
+
+## Performance follow-up — 3 October 2026
+
+The reported production delay was most noticeable when approving requests or changing their status. Code inspection found several avoidable waits:
+
+- Approved status emails and completion PDFs ran before the mutation response returned. The committed request now returns first, with delivery triggered through Next.js `after()` and the existing transactional outbox. Email opt-in, leases, retries and fresh authorization remain enforced. The admin UI reads delivery progress through manual Refresh.
+- Request forms waited for a second full detail read after receiving the committed request. They now show the returned version and next action immediately; supplementary records refresh separately. Older reads cannot replace a newer committed version, and overlapping refreshes coalesce into a follow-up read.
+- Manual transaction and KYC decisions added a 600 ms timer and reloaded the entire document. They now refresh server data while keeping the admin shell mounted. Deployment-error recovery uses a full reload only when Try again is clicked.
+- Transaction refreshes invoked four browser Server Actions. One authenticated workspace action now performs independent database reads in parallel. Active-view requests omit history rows, and inactive table/form trees no longer mount. Server-render reads share authorization only within that request; direct action calls verify authorization again.
+- Customer dashboard tabs use URL parameters as client state. Same-path tab links now use the supported native History API without refetching the server route. Full destination parameters, browser history and normal navigation to different routes are preserved.
+
+These changes follow the documented [post-response work](https://nextjs.org/docs/app/api-reference/functions/after), [sequential client dispatch of Server Actions](https://nextjs.org/docs/app/guides/server-actions#sequential-dispatch-on-the-client), and [native History API](https://nextjs.org/docs/app/getting-started/linking-and-navigating#native-history-api) behavior. Existing authentication/bootstrap work and dashboard animations were preserved.
+
+Validation: production build and TypeScript passed; dashboard suite 141/141, request interface 54/54, request service 39/39 and notification suite 18/18 passed. The full admin suite passed 105/106 tests. Its independent OET incoming-report assertion expects a longer beneficiary name than the unchanged reporting/catalogue code produces; the same failure reproduces when run alone. Targeted lint checks passed.
+
+No authenticated browser was available, so these checks establish behavior and removal of known work, not a measured production speedup. After deployment, compare median and 95th-percentile approval-to-next-step latency with email enabled and disabled, confirm delivery completion, and profile treasury navigation separately before changing its accounting reads. Treasury still retrieves its shared snapshot on navigation, and some specialized editors/settings retain full reloads.

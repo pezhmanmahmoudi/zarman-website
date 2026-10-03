@@ -120,6 +120,36 @@ test("the dashboard light boundary renders before asynchronous rate/configuratio
   assert.equal(viewport.colorScheme, "light");
 });
 
+test("the dashboard bootstrap reads the signed-in account on the server and degrades to a client read", async () => {
+  const Shell = () => null;
+  let claims = { sub: "customer-id" }, profileError = null;
+  const scopes = [];
+  const supabase = {
+    auth: { getClaims: async () => ({ data: claims ? { claims } : null, error: null }) },
+    from: table => ({ select() { return this; }, eq(column, value) { scopes.push([table, column, value]); return this; }, single: async () => ({ data: profileError ? null : { id: "customer-id", first_name: "Alex" }, error: profileError }) }),
+    rpc: name => ({ single: async () => ({ data: name === "my_approved_transaction_summary" ? { volume: "1250.50", approved_count: 4 } : null, error: null }) }),
+  };
+  const h = dashboardHarness({ mocks: {
+    "@/lib/rates": { getRatesSnapshot: async () => ({}) },
+    "@/lib/finance-config": { getFinanceConfig: async () => ({}) },
+    "@/lib/supabase-server": { createSupabaseServerComponentClient: async () => supabase },
+    "@/components/providers/MarketProviders": { __esModule: true, default: () => null },
+    "@/components/dashboard/DashboardShell": { DashboardShell: Shell },
+  } });
+  const { default: Layout } = h.load("app/[locale]/dashboard/layout.tsx");
+  const bootstrap = Layout({ children: "account" }).props.children.props.children;
+  const initialAccount = async () => {
+    const tree = await bootstrap.type(bootstrap.props);
+    return elements(tree, node => node.type === Shell)[0].props.initialAccount;
+  };
+  assert.deepEqual(await initialAccount(), { profile: { id: "customer-id", first_name: "Alex" }, approved: { volume: 1250.5, count: 4 } });
+  assert.deepEqual(scopes, [["profiles", "id", "customer-id"]]);
+  profileError = { message: "read failed" };
+  assert.equal(await initialAccount(), null);
+  claims = null;
+  assert.equal(await initialAccount(), null);
+});
+
 test("shared reveal inherits the dashboard motion preference and respects reduced motion", () => {
   for (const { enabled, local, reduced, expected } of [
     { enabled: false, reduced: false, expected: false },

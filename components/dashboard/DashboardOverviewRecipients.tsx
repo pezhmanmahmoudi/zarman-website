@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getRecentRecipients } from "@/app/actions/transaction.actions";
 import type { Recipient } from "@/app/[locale]/dashboard/dashboard.types";

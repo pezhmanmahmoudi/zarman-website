@@ -26,7 +26,6 @@ export type RequestSettings = {
   opening_hour: number;
   closing_hour: number;
   holidays: string[];
-  management_emails: string[];
   payment_instructions_aud: string;
   payment_instructions_irt: string;
   payment_instructions_aud_fa: string;
@@ -37,7 +36,7 @@ export type RequestSettings = {
   priority_terms_fa: string;
 };
 export type SettingsRecord = { version: number; settings: RequestSettings };
-export type PublicRequestSettings = Omit<RequestSettings, "management_emails" | "payment_instructions_aud" | "payment_instructions_irt" | "payment_instructions_aud_fa" | "payment_instructions_irt_fa" | "payment_details_aud" | "payment_details_irt">;
+export type PublicRequestSettings = Omit<RequestSettings, "payment_instructions_aud" | "payment_instructions_irt" | "payment_instructions_aud_fa" | "payment_instructions_irt_fa" | "payment_details_aud" | "payment_details_irt">;
 
 export type QuoteInput = {
   rawAmount: number;
@@ -121,7 +120,13 @@ export type RequestMessage = {
 };
 export type RequestMessageInput = { requestId: string; expectedVersion: number; commandKey: string; message: string; sendEmail?: boolean };
 export type RequestMessageResult = { message: RequestMessage; request_version: number };
-export type RequestDelivery = { id: string; event_id: string; request_id: string; audience: "customer" | "management"; recipient_email: string; locale: RequestLocale; status: string; attempts: number; last_error: string | null; created_at: string };
+export type RequestDelivery = {
+  id: string; event_id: string; request_id: string;
+  // Legacy management rows remain in the immutable audit history only.
+  audience: "customer" | "management"; recipient_email: string; locale: RequestLocale;
+  status: string; attempts: number; last_error: string | null; created_at: string;
+  first_attempt_at?: string | null; lease_expires_at?: string | null; provider_id?: string | null;
+};
 export type RequestReceipt = {
   id: string; request_id: string; original_name: string; content_type: string;
   size_bytes: number; sha256: string; uploaded_by: string; created_at: string; request_version?: number;

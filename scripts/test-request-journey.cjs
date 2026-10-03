@@ -142,7 +142,21 @@ test("activity and email summaries describe the action without leaking internal 
   assert.match(journey.requestActivityLabel("receipt_uploaded", "en"), /sent a payment receipt/);
   assert.equal(journey.requestEmailStatus("skipped", "admin_email_opt_out"), "Email not requested");
   assert.equal(journey.requestEmailStatus("skipped", "queue_retired"), "Not sent (old queue retired)");
-  assert.match(journey.requestEmailStatus("pending", null), /retried on next update/);
+  assert.match(journey.requestEmailStatus("pending", null), /Queued for sending/);
   assert.equal(journey.requestEmailStatus("failed", "PRIVATE raw provider response"), "Delivery failed");
   assert.equal(journey.requestActivityLabel("internal_new_unknown_event", "en"), "Request updated");
+});
+
+test("expired email leases are never labelled Sending and unsafe retries stay unavailable", () => {
+  const now = Date.now();
+  const base = { audience: "customer", status: "leased", provider_id: null, first_attempt_at: null, lease_expires_at: new Date(now - 1000).toISOString() };
+  assert.match(journey.requestEmailStatus(base.status, null, "en", base.lease_expires_at), /Sending interrupted/);
+  assert.equal(journey.canRetryRequestEmail(base, now), true);
+  assert.equal(journey.canRetryRequestEmail({ ...base, lease_expires_at: new Date(now + 1000).toISOString() }, now), false);
+  assert.equal(journey.canRetryRequestEmail({ ...base, first_attempt_at: new Date(now - 24 * 3600000).toISOString() }, now), false);
+  assert.equal(journey.canRetryRequestEmail({ ...base, provider_id: "accepted-id" }, now), false);
+  assert.equal(journey.canRetryRequestEmail({ ...base, audience: "management" }, now), false);
+  for (const status of ["skipped", "delivered", "provider_accepted", "suppressed", "reconciliation_required"]) assert.equal(journey.canRetryRequestEmail({ ...base, status }, now), false);
+  assert.equal(journey.requestEmailStatus("provider_accepted"), "Accepted by email service");
+  assert.equal(journey.requestEmailStatus("delivered"), "Delivered");
 });

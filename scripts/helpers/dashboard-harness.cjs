@@ -21,7 +21,11 @@ function dashboardHarness({ locale = "en", pathname = `/${locale}/dashboard`, qu
       if (id in mocks) return mocks[id];
       if (id === "react") return hookReact;
       if (id === "next/navigation") return navigation;
-      if (id === "next/link") return { __esModule: true, default: ({ children, ...props }) => React.createElement("a",props,children) };
+      if (id === "next/link") return { __esModule: true, default: ({ children, ...props }) => {
+        const attributes = { ...props };
+        for (const key of ["prefetch", "replace", "scroll", "onNavigate"]) delete attributes[key];
+        return React.createElement("a",attributes,children);
+      } };
       if (id === "next/image") return { __esModule: true, default: props => { const attributes = { ...props }; delete attributes.unoptimized; return React.createElement("img",attributes); } };
       if (id === "@/context/LocaleContext") return { useLocale: () => locale };
       if (id === "@/lib/supabase") return { supabase: { auth: { signOut() { throw Error("Unexpected auth mutation"); } } } };

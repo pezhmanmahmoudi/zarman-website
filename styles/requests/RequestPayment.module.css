@@ -6,6 +6,40 @@
 .amount dt { color: #687181; font-size: 13px; }
 .amount dd { margin: 0; font-weight: 650; color: #20242c; font-size: 28px; letter-spacing: -.04em; }
 .amountList { margin: 0; }
+.paymentNotice {
+  --notice-background: #fff8f1;
+  --notice-border: #f0d8be;
+  --notice-accent: #a85014;
+  --notice-heading: #713609;
+  --notice-text: #745037;
+  --notice-icon-background: #fff0e3;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--notice-border);
+  border-inline-start: 3px solid var(--notice-accent);
+  border-radius: 16px;
+  background: var(--notice-background);
+  color: var(--notice-text);
+  text-align: start;
+}
+.bankWarning {
+  margin-block-end: 16px;
+}
+.referenceNotice {
+  margin-block-start: 14px;
+}
+.paymentNoticeIcon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--notice-icon-background); color: var(--notice-accent); }
+.paymentNoticeIcon :global([data-lottie-scene] > span:first-child) { color: var(--notice-accent); }
+.paymentNoticeCopy { min-width: 0; overflow-wrap: anywhere; font-family: inherit; letter-spacing: normal; }
+.paymentNoticeCopy > .paymentNoticeLabel { display: block; margin: 0 0 4px; color: var(--notice-accent); font-family: inherit; font-size: 12px; font-weight: 500; line-height: 1.6; }
+.paymentNoticeCopy > .paymentNoticeTitle { display: block; margin: 0 0 10px; color: var(--notice-heading); font-family: inherit; font-size: 16px; font-weight: 700; line-height: 1.7; letter-spacing: normal; }
+.paymentNoticeCopy > .paymentNoticeText { margin: 0; color: var(--notice-text); font-family: inherit; font-size: 14px; font-weight: 400; line-height: 1.85; letter-spacing: normal; }
+.paymentNoticeCopy > .paymentNoticeAction { margin-block-start: 8px; color: var(--notice-heading); }
+.paymentNoticeText bdi { color: inherit; font-size: inherit; font-weight: inherit; line-height: inherit; }
+.paymentNoticeText .paymentNoticeField { display: inline-block; padding: 1px 7px; border: 1px solid var(--notice-border); border-radius: 6px; background: #fff; color: var(--notice-heading); font-size: 12px; line-height: 1.7; white-space: nowrap; vertical-align: baseline; }
 .bankGrid { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .bankField { min-width: 0; background: #fafbfc; border: 1px solid #eceef2; border-radius: 10px; padding: 11px 13px; }
 .bankField dt { font-size: 12px; color: #687181; margin-block-end: 4px; }
@@ -186,3 +220,15 @@
 .bankField dd .bankNumber{display:block;width:100%;white-space:nowrap;overflow-wrap:normal;font-family:Arial,"Helvetica Neue",sans-serif!important;font-size:clamp(12px,2.4vw,15px);font-variant-numeric:tabular-nums;letter-spacing:-.025em;direction:ltr;unicode-bidi:isolate}
 .bankField dd .copy{position:absolute;top:11px;left:11px;min-height:31px!important;min-width:0!important;padding:5px 7px!important;font-size:11px!important;line-height:1.2!important}
 .bankField dd .copy svg{width:13px;height:13px}
+@media (max-width: 480px) {
+  .bankGrid.australianBankGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .australianBankGrid .bankField { padding: 12px; }
+  .australianBankGrid .bankField dt { min-height: 0; padding-left: 0; }
+  .australianBankGrid .bankField dd { margin-block-start: 10px; }
+  .australianBankGrid .bankField dd .copy { position: static; display: flex; width: fit-content; margin-block-start: 10px; margin-inline-start: auto; }
+  .australianBankGrid .bankField dd .bankNumber { font-size: 14px; }
+  .paymentNotice { grid-template-columns: 40px minmax(0, 1fr); gap: 10px; padding: 16px 14px; }
+  .paymentNoticeIcon { width: 40px; height: 40px; border-radius: 12px; }
+  .paymentNoticeIcon > :global([data-lottie-scene]) { width: 40px !important; height: 40px !important; }
+  .paymentNoticeCopy > .paymentNoticeTitle { font-size: 15px; }
+}

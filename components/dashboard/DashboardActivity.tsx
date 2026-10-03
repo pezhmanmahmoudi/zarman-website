@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import { CircleAlert, CircleCheck, Hourglass, ReceiptText, RefreshCw, SearchX, Send } from "lucide-react";
 import { useLocale } from "@/context/LocaleContext";
 import { dashboardCopy, dashboardHref } from "@/lib/dashboard/navigation";

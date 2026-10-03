@@ -1,0 +1,22 @@
+Transaction ZE123456: Message from Zarman | Zarman
+
+Zarman Exchange
+
+Message from Zarman
+
+Hi Sam Example,
+
+You have a new message from the Zarman team about your request.
+
+Updated (Sydney time): 2 Oct 2026, 3:13 pm
+Transaction code: ZE123456
+
+Your transfer is being processed. We will update you on this request page once settlement is confirmed.
+
+You can reply on the request page if needed.
+
+View request: https://example.test/en/dashboard/requests/10000000-0000-4000-8000-000000000001
+
+If you don't recognise this transfer or have a question, contact the Zarman team through the messages on your request page. Include your transaction code so we can identify your transfer.
+
+— Team Zarman

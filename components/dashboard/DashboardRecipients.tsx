@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import { ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Pencil, Plus, RefreshCw, SearchX, Trash2, UserPlus, Users } from "lucide-react";
 import { useLocale } from "@/context/LocaleContext";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";

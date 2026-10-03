@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Download, ExternalLink, Mail, RefreshCw, Trash2 } from "lucide-react";
-import { deleteAdminRequest, getAdminRequest, getMyRequest, getRequestBankAccounts, mutateAdminRequest, mutateMyRequest } from "@/app/actions/request.actions";
+import { deleteAdminRequest, getAdminRequest, getMyRequest, getRequestBankAccounts, mutateAdminRequest, mutateMyRequest, retryAdminRequestEmail } from "@/app/actions/request.actions";
 import type { ExchangeRequest, RequestCommand, RequestDetail, RequestMutationInput } from "@/lib/requests/types";
 import { requestDate, requestLabel, requestMoney, requestError, isRequestTerminal, type RequestLocale } from "./request-labels";
-import { getRequestJourney, requestActivityLabel, requestEmailStatus, requestMilestones, requestStageLabel } from "@/lib/requests/journey";
+import { canRetryRequestEmail, getRequestJourney, requestActivityLabel, requestEmailStatus, requestMilestones, requestStageLabel } from "@/lib/requests/journey";
 import { isMoney } from "@/lib/requests/validation";
 import { RequestTransactionSummary } from "./RequestTransactionSummary";
 import { RequestPaymentAccount } from "./RequestPaymentAccount";
@@ -91,10 +91,13 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
   const [differentCurrency, setDifferentCurrency] = useState(false);
   const [separateDeposit, setSeparateDeposit] = useState(false);
   const [savedDeposit, setSavedDeposit] = useState<{ requestId: string; amount: number; currency: "AUD" | "IRT"; version: number } | null>(null);
+  const [retryingEmail, setRetryingEmail] = useState<string | null>(null);
+  const emailRetryPending = useRef(false);
   const pending = useRef(false);
   const attempt = useRef<{ signature: string; key: string; expectedVersion: number } | null>(null);
   const intentFocused = useRef(false);
   const lastRefresh = useRef(0), refreshPending = useRef(false);
+  const refreshQueued = useRef(false);
 
   // A row shortcut only opens the existing form. Allowed commands, confirmation,
   // version checks and the user's explicit submit still govern every mutation.
@@ -107,8 +110,8 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
     target.querySelector<HTMLElement>("textarea")?.focus({ preventScroll: true });
   }, [admin, loading, detail?.request.id, initialIntent]);
 
-  const refresh = useCallback(async () => {
-    if (refreshPending.current) return;
+  const refresh: () => Promise<void> = useCallback(async () => {
+    if (refreshPending.current) { refreshQueued.current = true; return; }
     refreshPending.current = true; lastRefresh.current = Date.now();
     setRefreshing(true);
     try {
@@ -121,7 +124,10 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
         setError("");
       }
     } catch { setError(fa ? "دریافت وضعیت ممکن نشد. دوباره تلاش کنید." : "Could not load the latest status. Please try again."); }
-    finally { refreshPending.current = false; setLoading(false); setRefreshing(false); }
+    finally {
+      refreshPending.current = false; setLoading(false); setRefreshing(false);
+      if (refreshQueued.current) { refreshQueued.current = false; void refresh(); }
+    }
   }, [id, admin, fa]);
 
   const autoRefresh = useCallback(() => {
@@ -130,15 +136,16 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
 
   useEffect(() => {
     void refresh();
+    if (admin) return;
     const timer = window.setInterval(autoRefresh, DASHBOARD_AUTO_REFRESH_MS);
     const onFocusOrVisible = autoRefresh;
     window.addEventListener("focus", onFocusOrVisible);
     document.addEventListener("visibilitychange", onFocusOrVisible);
     return () => { window.clearInterval(timer); window.removeEventListener("focus", onFocusOrVisible); document.removeEventListener("visibilitychange", onFocusOrVisible); };
-  }, [refresh, autoRefresh]);
+  }, [admin, refresh, autoRefresh]);
 
   useEffect(() => {
-    if (typeof supabase.channel !== "function") return;
+    if (admin || typeof supabase.channel !== "function") return;
     const channel = supabase
       .channel(`request-status:${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "exchange_request_realtime_signals", filter: `request_id=eq.${id}` }, () => {
@@ -146,7 +153,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
       })
       .subscribe();
     return () => { if (typeof supabase.removeChannel === "function") void supabase.removeChannel(channel); };
-  }, [id, autoRefresh]);
+  }, [admin, id, autoRefresh]);
 
   useEffect(() => {
     if (!admin) return;
@@ -158,6 +165,23 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
 
   useEffect(() => { setConfirmed(false); }, [detail?.request.version]);
   useEffect(() => { if (validation?.field === "submission") document.getElementById("request-form-feedback")?.focus(); }, [validation]);
+
+  async function retryEmail(deliveryId: string) {
+    if (!admin || emailRetryPending.current) return;
+    emailRetryPending.current = true; setRetryingEmail(deliveryId); setError("");
+    try {
+      const result = await retryAdminRequestEmail({ requestId: id, deliveryId });
+      if (result.error) setError(result.error);
+      else if (result.data) {
+        const update = result.data;
+        setDetail(current => current && current.request.id === id ? { ...current, deliveries: current.deliveries?.map(delivery => delivery.id === update.id ? { ...delivery, ...update } : delivery) } : current);
+        setNotice(update.status === "pending"
+          ? (fa ? "تلاش مجدد برای ارسال ایمیل مشتری ثبت شد. برای دیدن نتیجه روی «به‌روزرسانی» بزنید." : "Customer email retry queued. Click Refresh to check delivery.")
+          : (fa ? "نتیجه ارسال قبلی باید در سرویس ایمیل بررسی شود." : "Check the previous attempt in the email service before sending again."));
+      }
+    } catch { setError(fa ? "تلاش مجدد ثبت نشد. وضعیت را به‌روزرسانی کنید." : "Retry was not confirmed. Refresh the delivery history."); }
+    finally { emailRetryPending.current = false; setRetryingEmail(null); }
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -224,7 +248,10 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
             : updated.funding_status === "partial" ? `Partial payment recorded. ${requestMoney(outstanding, updated.quote.funding_currency, locale)} still to collect.`
             : "Deposit recorded. The request remains on hold for review.");
         } else setNotice(fa ? "تغییرات ثبت شد." : "Update saved.");
-        await refresh();
+        if (admin && sendEmail) setNotice(saved => `${saved} ${fa ? "ارسال ایمیل در پس‌زمینه ادامه دارد؛ برای دیدن آخرین وضعیت در سابقه ایمیل، روی «به‌روزرسانی» بزنید." : "Email delivery continues in the background. Click Refresh to update its status in Activity & email history."}`);
+        // The committed response already supplies the new version and next step.
+        // Refresh supplementary records without holding the action form open.
+        void refresh();
       } else {
         const unconfirmed = fa ? "ثبت تأیید نشد. دوباره تلاش کنید." : "The update was not confirmed. Please retry.";
         setError(unconfirmed); setValidation({ field: "submission", message: unconfirmed });
@@ -336,7 +363,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
           {accountSelect("refund-account", "Account debited", refundAccount, setRefundAccount, request.quote.funding_currency)}
         </>}
         {messageRequired && <label className={styles.field}>{currentAction === "record_uncertain_payout" ? "Internal reconciliation note" : admin ? "Message to customer" : (fa ? "دلیل" : "Reason")} *<textarea id="request-action-message" value={message} onChange={event => setMessage(event.target.value)} required minLength={3} maxLength={2000} rows={2} dir="auto" {...fieldValidation("action-message")} /></label>}
-        {admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} /><Mail size={16} aria-hidden="true" /><span>Send email to customer and management</span></label>}
+        {admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} /><Mail size={16} aria-hidden="true" /><span>{fa ? "ارسال ایمیل به مشتری" : "Send email to customer"}</span></label>}
         <label className={`${styles.checkbox} ${workspace.confirmChoice}`}><input id="request-confirmation" type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required {...fieldValidation("confirmation")} /><span>{currentAction === "cancel" ? (fa ? "لغو را تأیید می‌کنم؛ بازپرداخت جداگانه پیگیری می‌شود." : "Confirm cancellation; any refund is tracked separately.") : currentAction === "confirm_funds" ? `I verified cleared funds in the bank account: the entered amount and ${currencyLabel(fundingCurrency)} currency.` : ["complete", "reconcile_complete"].includes(currentAction) ? "I verified the destination account, amount and successful settlement." : currentAction === "confirm_refund" ? "I verified the returned funds in the original currency." : (fa ? "اطلاعات را بررسی و تأیید می‌کنم." : "I checked and approve the request details.")} *</span></label>
         {validation && <p id="request-form-feedback" className={workspace.formFeedback} role="alert" tabIndex={-1}>{validation.message}</p>}
         <div className={styles.actions}><button className={["cancel", "reject"].includes(currentAction) ? styles.danger : styles.button} type="submit" disabled={busy}>{busy ? (fa ? "در حال ثبت…" : "Saving…") : referenceRequired && fundingCurrency !== expectedCurrency ? "Record deposit for review" : actionLabel(currentAction)}</button>{(currentAction !== recommended || separateDeposit) && <button type="button" className={workspace.textButton} onClick={() => { setAction(""); setSeparateDeposit(false); setConfirmed(false); setValidation(null); }}>{fa ? "انصراف" : "Back"}</button>}</div>
@@ -436,9 +463,9 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
             <ol className={workspace.activityList}>{[...detail.events].reverse().map(event => {
               const eventMessages = messages.filter(item => item.event_id === event.id);
               const actor = eventMessages[0]?.sender_role === "customer" || event.actor_id === request.user_id ? "Customer" : event.actor_id ? "Zarman team" : "System";
-              const deliveries = detail.deliveries?.filter(delivery => delivery.event_id === event.id) || [];
+              const deliveries = detail.deliveries?.filter(delivery => delivery.event_id === event.id && delivery.audience === "customer") || [];
               const privateNote = event.internal_message && event.internal_message !== event.public_message && !/^[\s]*[\[{]/.test(event.internal_message) ? event.internal_message : null;
-              return <li key={event.id}><div className={workspace.activityHeading}><strong>{requestActivityLabel(event.event_type, locale)}</strong><time dir="ltr" dateTime={event.created_at}>{requestDate(event.created_at, locale)}</time></div><span className={workspace.activityActor}>{actor}</span>{privateNote && <details className={workspace.activityNotes}><summary>Internal note</summary><p dir="auto">{privateNote}</p></details>}{deliveries.length > 0 && <ul className={workspace.emailActivity}>{deliveries.map(delivery => <li key={delivery.id}><span><Mail size={13} />{delivery.audience === "customer" ? "Customer email" : "Management email"}</span><span>{requestEmailStatus(delivery.status, delivery.last_error, locale)}</span></li>)}</ul>}</li>;
+              return <li key={event.id}><div className={workspace.activityHeading}><strong>{requestActivityLabel(event.event_type, locale)}</strong><time dir="ltr" dateTime={event.created_at}>{requestDate(event.created_at, locale)}</time></div><span className={workspace.activityActor}>{actor}</span>{privateNote && <details className={workspace.activityNotes}><summary>Internal note</summary><p dir="auto">{privateNote}</p></details>}{deliveries.length > 0 && <ul className={workspace.emailActivity}>{deliveries.map(delivery => <li key={delivery.id}><span><Mail size={13} />{fa ? "ایمیل مشتری" : "Customer email"}</span><span>{requestEmailStatus(delivery.status, delivery.last_error, locale, delivery.lease_expires_at)}</span>{canRetryRequestEmail(delivery) && <button type="button" className={workspace.emailRetry} disabled={retryingEmail !== null} onClick={() => void retryEmail(delivery.id)}>{retryingEmail === delivery.id ? (fa ? "در حال ثبت…" : "Queuing…") : (fa ? "تلاش مجدد ارسال ایمیل" : "Retry customer email")}</button>}</li>)}</ul>}</li>;
             })}</ol>
           </div></details>
         </div>

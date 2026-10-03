@@ -25,12 +25,12 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const supabaseServer = await createSupabaseServerComponentClient();
-  const {
-    data: { user },
-  } = await supabaseServer.auth.getUser();
+  // Local JWT signature check; data reads below still pass requireAdmin.
+  const { data: claimsData } = await supabaseServer.auth.getClaims();
+  const claims = claimsData?.claims;
 
   // Double-check: if middleware was bypassed somehow, redirect here too.
-  if (!user || user.app_metadata?.role !== "admin") {
+  if (!claims || claims.app_metadata?.role !== "admin") {
     redirect("/admin/login");
   }
 
@@ -51,7 +51,7 @@ export default async function AdminLayout({
     <div className={shellStyles.adminShell}>
       <a href="#admin-main" className={shellStyles.skipLink}>Skip to page content</a>
       <AdminSidebar
-        adminEmail={user.email ?? ""}
+        adminEmail={claims.email ?? ""}
         pendingKyc={pendingKyc}
         pendingTx={pendingTx}
         pendingFeedback={pendingFeedback}

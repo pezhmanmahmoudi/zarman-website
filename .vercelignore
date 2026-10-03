@@ -1,0 +1,26 @@
+# Local dependencies, build products, credentials, and tool state.
+.git/
+.github/
+.agents/
+.codex/
+.aws/
+.vercel/
+node_modules/
+.next/
+.env*
+*.pem
+*.tsbuildinfo
+next-env.d.ts
+coverage/
+tmp/
+out/
+build/
+
+# Local reports, exports, samples, and investigation files are not app assets.
+artifacts/
+output/
+.tmp*
+ledger_import.csv
+*.tgz
+*-debug.log*
+*-error.log*

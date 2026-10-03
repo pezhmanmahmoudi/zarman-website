@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import { Clock3, RefreshCw } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";

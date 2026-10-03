@@ -252,8 +252,6 @@ export async function sendTransactionReceipt(
         content: Buffer.from(pdfBytes),
       },
     ],
-    // Optional: BCC to admin mailbox for record-keeping
-    // bcc: ["admin@zarmanex.com"],
   });
 
   if (sendError) {

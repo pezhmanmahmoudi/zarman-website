@@ -26,8 +26,7 @@ export type SelectBoxProps = {
 const DROPDOWN_MAX_HEIGHT = 260;
 const subscribePlatform = () => () => {};
 const isIOSPlatform = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
-  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  || typeof HTMLElement.prototype.showPopover !== "function";
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 export function SelectBox({
   options = [],
@@ -238,7 +237,6 @@ export function SelectBox({
         tabIndex={disabled ? -1 : 0}
         className={triggerClasses}
         onClick={() => open ? setOpen(false) : openList()}
-        onBlur={event => { if (event.relatedTarget && !wrapperRef.current?.contains(event.relatedTarget as Node)) setOpen(false); }}
         onKeyDown={handleKeyDown}
       >
         {!disabled && <ChevronDown size={16} strokeWidth={2.5} className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`} />}

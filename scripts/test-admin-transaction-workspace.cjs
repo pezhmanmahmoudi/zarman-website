@@ -29,6 +29,8 @@ function nodes(tree, match) {
   return [...(match(tree) ? [tree] : []), ...React.Children.toArray(tree.props?.children).flatMap(child => nodes(child, match))];
 }
 const text = tree => typeof tree === "string" || typeof tree === "number" ? String(tree) : React.Children.toArray(tree?.props?.children).map(text).join("");
+const workspaceSnapshot = (overrides = {}) => ({ pending: [], history: [], total: 0,
+  statusCounts: { all: 0, approved: 0, rejected: 0, archived: 0 }, bankAccounts: [], ...overrides });
 
 test("one queue preserves manual approval and routes linked transfers through their workflow", () => {
   const h = queueHarness();
@@ -183,10 +185,7 @@ test("old request URLs redirect into Transactions and keep the exact request ide
 test("refresh updates workflow data atomically and retains the last good records on a failed read", async () => {
   let fail = false;
   const actions = {
-    getPendingTransactionsWithDetails: async () => { if (fail) throw Error("Unavailable"); return [row("online", { status: "ready" })]; },
-    getTransactionHistoryWithDetails: async () => ({ data: [], total: 0 }),
-    getTransactionHistoryStatusCounts: async () => ({ all: 0, approved: 0, rejected: 0, archived: 0 }),
-    getActiveBankAccountsForAdmin: async () => [],
+    getAdminTransactionWorkspace: async () => { if (fail) throw Error("Unavailable"); return workspaceSnapshot({ pending: [row("online", { status: "ready" })] }); },
   };
   const h = dashboardHarness({ mocks: { ...tableMocks, "@/app/actions/admin.actions": actions,
     "@/components/admin/AdminPagination": { AdminPagination: () => null },
@@ -208,13 +207,131 @@ test("refresh updates workflow data atomically and retains the last good records
   assert.match(text(nodes(tree, node => node.props.role === "alert")[0]), /last loaded records/);
 });
 
-test("a report selection cannot become a delete selection after a background status change", async () => {
+test("transaction pages request one authorized snapshot with the selected view and history filters", async () => {
+  for (const view of ["active", "history"]) {
+    const reads = [];
+    const h = dashboardHarness({ mocks: {
+      "@/app/actions/admin.actions": {
+        getAdminTransactionWorkspace: async (...args) => {
+          reads.push(args);
+          return workspaceSnapshot({ pending: [row("pending")], history: view === "history" ? [row("closed", null, { status: "approved" })] : [],
+            total: view === "history" ? 1 : 0, statusCounts: { all: 1, approved: 1, rejected: 0, archived: 0 } });
+        },
+      },
+      "@/components/admin/transactions/TransactionsManager": { TransactionsManager: () => null },
+    } });
+    const Page = h.load("app/(panel)/admin/(protected)/transactions/page.tsx").default;
+    const tree = await Page({ searchParams: Promise.resolve({ view, status: "approved", page: "2", pageSize: "25", q: "Alex" }) });
+    assert.equal(reads.length, 1);
+    assert.equal(tree.props.history.length, view === "history" ? 1 : 0);
+    assert.equal(tree.props.statusTabs[0].count, 1, "both view badges retain accurate totals");
+    assert.equal(reads[0][0], view);
+    assert.equal(reads[0][1], 2);
+    assert.equal(reads[0][3].status, "approved");
+    assert.equal(reads[0][3].search, "Alex");
+  }
+});
+
+test("active transactions mount only the queue and refresh with a single active snapshot request", async () => {
+  const reads = [];
+  const h = dashboardHarness({ mocks: { ...tableMocks,
+    "@/app/actions/admin.actions": {
+      getAdminTransactionWorkspace: async (...args) => { reads.push(args); return workspaceSnapshot({ pending: [row("online", { status: "ready" })] }); },
+    },
+  } });
+  const { TransactionsManager } = h.load("components/admin/transactions/TransactionsManager.tsx");
+  const props = { view: "active", search: "", pending: [row("online", {})], history: [], total: 0,
+    currentPage: 1, pageSize: 10, historyStatus: "all", historyDirection: "all", startDate: "", endDate: "",
+    statusTabs: [{ key: "all", label: "All", count: 0 }], bankAccounts: [] };
+  const tree = h.render(TransactionsManager, props);
+  assert.equal(nodes(tree, node => node.type?.name === "TransactionQueue").length, 1);
+  assert.equal(nodes(tree, node => node.props["aria-label"] === "Transaction history filters").length, 0);
+  await nodes(tree, node => node.type === "button" && text(node) === "Refresh")[0].props.onClick();
+  assert.equal(reads.length, 1);
+  assert.equal(reads[0][0], "active");
+});
+
+test("new server snapshots replace previously refreshed data and an in-flight read cannot undo a committed update", async () => {
+  let resolvePending;
+  const h = dashboardHarness({ mocks: { ...tableMocks,
+    "@/app/actions/admin.actions": {
+      getAdminTransactionWorkspace: () => new Promise(resolve => { resolvePending = resolve; }),
+    },
+  } });
+  const { TransactionsManager } = h.load("components/admin/transactions/TransactionsManager.tsx");
+  const props = { view: "active", search: "", pending: [row("online", {})], history: [], total: 0,
+    currentPage: 1, pageSize: 10, historyStatus: "all", historyDirection: "all", startDate: "", endDate: "",
+    statusTabs: [{ key: "all", label: "All", count: 0 }], bankAccounts: [] };
+  let tree = h.render(TransactionsManager, props);
+  const inFlight = nodes(tree, node => node.type === "button" && text(node) === "Refresh")[0].props.onClick();
+  const committedProps = { ...props, pending: [] };
+  tree = h.render(TransactionsManager, committedProps);
+  assert.equal(nodes(tree, node => node.type?.name === "TransactionQueue")[0].props.rows.length, 0);
+  resolvePending(workspaceSnapshot({ pending: [row("online", {})] }));
+  await inFlight;
+  tree = h.render(TransactionsManager, committedProps);
+  assert.equal(nodes(tree, node => node.type?.name === "TransactionQueue")[0].props.rows.length, 0);
+});
+
+test("manual approval refreshes only after a successful commit and keeps failed approvals open", async () => {
+  for (const failure of [false, true]) {
+    const calls = [];
+    const h = dashboardHarness({ mocks: {
+      "@/app/actions/admin.actions": { approveTransaction: async (...args) => { calls.push(args); return failure ? { error: "Approval failed" } : { success: true }; } },
+      "next/navigation": { useRouter: () => ({ refresh: () => calls.push("refresh") }) },
+      "@/components/admin/ui/useAdminFeedback": { useAdminFeedback: () => ({ confirm() {}, showToast: toast => calls.push(toast.type), dialogProps: {}, toastProps: {} }) },
+      "./ui/AdminDialog": { AdminDialog: () => null },
+      "@/components/admin/ui/AdminConfirmDialog": { AdminConfirmDialog: () => null },
+      "@/components/admin/ui/AdminToast": { AdminToast: () => null },
+    } });
+    const { TransactionApproveButton } = h.load("components/admin/TransactionApproveButton.tsx");
+    const props = { transactionId: "manual", transactionAmountToman: 100000, transactionType: "sell_aud", bankAccounts: [] };
+    let tree = h.render(TransactionApproveButton, props);
+    nodes(tree, node => node.props.title === "Approve transaction")[0].props.onClick();
+    tree = h.render(TransactionApproveButton, props);
+    const accounts = nodes(tree, node => node.type === "select");
+    accounts[0].props.onChange({ target: { value: "receiver" } });
+    accounts[1].props.onChange({ target: { value: "payer" } });
+    tree = h.render(TransactionApproveButton, props);
+    await nodes(tree, node => node.type === "button" && text(node) === "تایید قطعی و ثبت")[0].props.onClick();
+    assert.deepEqual(calls[0], ["manual", "payer", "receiver", "free"]);
+    assert.deepEqual(calls.slice(1), failure ? ["error"] : ["success", "refresh"]);
+    tree = h.render(TransactionApproveButton, props);
+    assert.equal(nodes(tree, node => typeof node.props.open === "boolean")[0].props.open, failure);
+  }
+});
+
+test("KYC and approved-transaction decisions refresh committed data and leave failed decisions unchanged", async () => {
+  for (const failure of [false, true]) {
+    for (const [file, component, props, title] of [
+      ["components/admin/KycActionButtons.tsx", "KycActionButtons", { userId: "customer", currentStatus: "pending" }, "Approve KYC"],
+      ["components/admin/KycActionButtons.tsx", "KycActionButtons", { userId: "customer", currentStatus: "pending" }, "Reject KYC"],
+      ["components/admin/KycActionButtons.tsx", "KycActionButtons", { userId: "customer", currentStatus: "pending" }, "Archive — incomplete/abandoned"],
+      ["components/admin/RejectApprovedButton.tsx", "RejectApprovedButton", { transactionId: "manual" }, "Reject this transaction"],
+    ]) {
+      const calls = [];
+      let confirmation;
+      const decide = async () => { calls.push("commit"); return failure ? { error: "Decision failed" } : { success: true }; };
+      const h = dashboardHarness({ mocks: {
+        "@/app/actions/admin.actions": { approveKyc: decide, rejectKyc: decide, archiveKyc: decide, rejectTransaction: decide },
+        "next/navigation": { useRouter: () => ({ refresh: () => calls.push("refresh") }) },
+        "@/components/admin/ui/useAdminFeedback": { useAdminFeedback: () => ({ confirm: value => { confirmation = value; }, showToast: toast => calls.push(toast.type), dialogProps: {}, toastProps: {} }) },
+        "@/components/admin/ui/AdminConfirmDialog": { AdminConfirmDialog: () => null },
+        "@/components/admin/ui/AdminToast": { AdminToast: () => null },
+      } });
+      const tree = h.render(h.load(file)[component], props);
+      nodes(tree, node => node.props.title === title)[0].props.onClick();
+      await confirmation.onConfirm();
+      assert.deepEqual(calls, failure ? ["commit", "error"] : ["commit", "success", "refresh"], title);
+    }
+  }
+});
+
+test("a report selection cannot become a delete selection after a refreshed status change", async () => {
   const approved = row("selected", null, { status: "approved" });
   const h = dashboardHarness({ mocks: { ...tableMocks, "@/app/actions/admin.actions": {
-    getPendingTransactionsWithDetails: async () => [],
-    getTransactionHistoryWithDetails: async () => ({ data: [{ ...approved, status: "rejected" }], total: 1 }),
-    getTransactionHistoryStatusCounts: async () => ({ all: 1, approved: 0, rejected: 1, archived: 0 }),
-    getActiveBankAccountsForAdmin: async () => [],
+    getAdminTransactionWorkspace: async () => workspaceSnapshot({ history: [{ ...approved, status: "rejected" }], total: 1,
+      statusCounts: { all: 1, approved: 0, rejected: 1, archived: 0 } }),
   },
   "@/components/admin/AdminPagination": { AdminPagination: () => null },
   "@/components/ui/SelectBox/SelectBox": { SelectBox: () => null },

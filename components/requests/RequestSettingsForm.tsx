@@ -16,7 +16,6 @@ type NumberKey = "priority_fee_aud" | "priority_capacity" | "standard_minutes" |
 
 export function RequestSettingsForm({ defaultExpanded = false }: { defaultExpanded?: boolean }) {
   const [record, setRecord] = useState<SettingsRecord | null>(null);
-  const [emails, setEmails] = useState("");
   const [holidays, setHolidays] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,7 +33,7 @@ export function RequestSettingsForm({ defaultExpanded = false }: { defaultExpand
       if (!alive) return;
       if (result.error) setError(result.error);
       else if (result.data) {
-        setRecord(result.data); setEmails(result.data.settings.management_emails.join("\n"));
+        setRecord(result.data);
         setHolidays(result.data.settings.holidays.join("\n"));
       }
     }).catch(() => { if (alive) setError("Could not load settings."); })
@@ -65,15 +64,13 @@ export function RequestSettingsForm({ defaultExpanded = false }: { defaultExpand
     try {
       const result = await saveRequestSettings({ expectedVersion: record.version, settings: {
         ...record.settings,
-        management_emails: emails.split(/[\n,;]+/).map(value => value.trim()).filter(Boolean),
         holidays: holidays.split(/[\n,;]+/).map(value => value.trim()).filter(Boolean),
       } });
       if (result.error) {
         setError(result.error);
         if (/BSB|account|IBAN|bank|Toman/i.test(result.error)) setActive("bank-details");
-        else if (/management email/i.test(result.error)) setActive("notifications");
       } else if (result.data) {
-        setRecord(result.data); setEmails(result.data.settings.management_emails.join("\n"));
+        setRecord(result.data);
         setHolidays(result.data.settings.holidays.join("\n")); setDirty(false); setMessage("Settings saved.");
       }
     } catch { setError("Could not save. Please retry."); }
@@ -149,9 +146,8 @@ export function RequestSettingsForm({ defaultExpanded = false }: { defaultExpand
               value={settings[fa ? "payment_instructions_irt_fa" : "payment_instructions_irt"] || ""} onChange={event => set(fa ? "payment_instructions_irt_fa" : "payment_instructions_irt", event.target.value)} /></label>
           </div>
         </section>
-        <section id="request-notifications" className={ui.section} hidden={active !== "notifications"} aria-label="Management notifications">
-          <label className={styles.field}>Management emails<textarea rows={4} autoCapitalize="none" spellCheck={false} value={emails} onChange={event => { setEmails(event.target.value); setDirty(true); setMessage(""); }} placeholder="One email per line" /></label>
-          <p className={ui.hint}>New requests and customer replies notify this list. Choose email delivery when approving or messaging.</p>
+        <section id="request-notifications" className={ui.section} hidden={active !== "notifications"} aria-label="Customer email notifications">
+          <p className={ui.hint}>Select “Send email to customer” when approving a request or sending a customer message. Check delivery progress in Activity &amp; email history.</p>
         </section>
         <section id="request-timing" className={`${ui.section} ${ui.timingSection}`} hidden={active !== "timing"} aria-label="Hours and timing">
           <p className={ui.hint}>Handling starts after cleared funds and checks. The bank allowance is a review deadline, not a required wait. Calendar: Sydney.</p>

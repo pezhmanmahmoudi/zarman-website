@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import { ArrowLeft, ArrowRight, Ban, Check, ChevronLeft, ChevronRight, Clock3, Download, PenLine, ReceiptText, Star, Undo2, X, type LucideIcon } from "lucide-react";
 import { DashboardButton, DashboardMagicCard, StatusBadge, dashboardCardLink } from "@/components/dashboard/dashboard-ui";
 import { dashboardHref } from "@/lib/dashboard/navigation";

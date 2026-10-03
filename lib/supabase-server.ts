@@ -49,7 +49,7 @@ export async function createSupabaseServerActionClient() {
 }
 
 export function createSupabaseProxyClient(request: NextRequest) {
-  const response = NextResponse.next({
+  let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -65,6 +65,15 @@ export function createSupabaseProxyClient(request: NextRequest) {
       cookiesToSet.forEach(({ name, value, options }) => {
         pendingCookies.set(name, { name, value, options });
         request.cookies.set(name, value);
+      });
+      // NextResponse.next() snapshots request headers when it is created, so rebuild it
+      // to forward refreshed tokens to Server Components instead of refreshing twice.
+      response = NextResponse.next({
+        request: {
+          headers: request.headers,
+        },
+      });
+      pendingCookies.forEach(({ name, value, options }) => {
         response.cookies.set(name, value, options);
       });
     },

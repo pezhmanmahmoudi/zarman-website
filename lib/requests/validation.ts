@@ -7,7 +7,7 @@ export const DEFAULT_REQUEST_SETTINGS: RequestSettings = {
   iran_banking_notice: "Iranian payouts follow SATNA/PAYA banking cycles, bank operating hours and holidays. Processing is not confirmation of settlement.",
   iran_banking_notice_fa: "واریز تومان تابع چرخه‌های ساتنا و پایا، ساعات کاری و تعطیلات بانک است.",
   max_amount_aud: 50_000, timezone: "Australia/Sydney", business_days: [1, 2, 3, 4, 5],
-  opening_hour: 9, closing_hour: 17, holidays: [], management_emails: [],
+  opening_hour: 9, closing_hour: 17, holidays: [],
   payment_instructions_aud: "", payment_instructions_irt: "", priority_terms: "", priority_terms_fa: "",
   payment_instructions_aud_fa: "", payment_instructions_irt_fa: "", payment_details_aud: {}, payment_details_irt: {},
 };
@@ -76,8 +76,6 @@ export function settingsInputError(input: RequestSettings): string | null {
     const date = new Date(day + "T00:00:00Z");
     return !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== day;
   })) return "Enter valid holiday dates in YYYY-MM-DD format.";
-  if (!Array.isArray(input.management_emails) || input.management_emails.length > 10
-      || input.management_emails.some(email => typeof email !== "string" || email.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email))) return "Enter up to ten valid management email addresses.";
   for (const key of ["payment_instructions_aud", "payment_instructions_irt", "priority_terms", "priority_terms_fa"] as const) {
     if (!boundedText(input[key], 4000, false)) return "Instructions and terms must be plain text, up to 4,000 characters.";
   }
@@ -88,7 +86,6 @@ export function settingsInputError(input: RequestSettings): string | null {
     const invalid = bankDetailsError(input[`payment_details_${currency}`] ?? {}, currency);
     if (invalid) return invalid;
   }
-  if (input.enabled && !input.management_emails.length) return "Add a management email before enabling requests.";
   if (input.enabled && (!input.payment_details_aud?.account_name?.trim() || !input.payment_details_aud?.bsb || !input.payment_details_aud?.account_number)) return "Add the AUD account name, BSB and account number before enabling requests.";
   if (input.enabled && (!input.payment_details_irt?.account_name?.trim() || !(input.payment_details_irt?.account_number || input.payment_details_irt?.iban || input.payment_details_irt?.card_number))) return "Add the Toman account name and account, IBAN or card number before enabling requests.";
   if (input.priority_enabled && (!input.enabled || input.priority_fee_aud <= 0 || input.priority_capacity < 1

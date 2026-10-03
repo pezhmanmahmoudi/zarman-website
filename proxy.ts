@@ -51,17 +51,18 @@ export async function proxy(request: NextRequest) {
   // ------------------------------------------------------------------
   const { supabase, getResponse, applyPendingCookies } = createSupabaseProxyClient(request)
 
-  // getUser() validates the JWT server-side — safer than getSession().
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // getClaims() refreshes an expired session and verifies the JWT signature
+  // locally against the cached JWKS (ES256), avoiding an Auth round trip per request.
+  // Server actions that mutate data still re-validate with getUser().
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const claims = claimsData?.claims ?? null
 
   // ------------------------------------------------------------------
   // Admin routes (/admin/*)
   // ------------------------------------------------------------------
   if (isAdminPath) {
     const isAdminLoginPage = pathname === '/admin/login'
-    const isAdmin = !!user && user.app_metadata?.role === 'admin'
+    const isAdmin = !!claims && claims.app_metadata?.role === 'admin'
 
     if (isAdminLoginPage) {
       // Redirect already-authenticated admins away from the login page.
@@ -88,7 +89,7 @@ export async function proxy(request: NextRequest) {
   // ------------------------------------------------------------------
   const locale = pathname.startsWith('/en') ? 'en' : 'fa'
 
-  if (!user) {
+  if (!claims) {
     const loginUrl = new URL(`/${locale}/login`, request.url)
     loginUrl.searchParams.set('next', pathname + request.nextUrl.search)
     return applyPendingCookies(

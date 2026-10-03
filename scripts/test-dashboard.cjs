@@ -100,22 +100,72 @@ test("request feed waits five minutes for automatic refresh, allows manual refre
 });
 test("dashboard account reads are user-scoped, fail visibly, and cannot restore private data after sign out", async () => {
   const previous = { window:global.window, document:global.document }; global.window = events(); global.document = events();
-  let onAuth, resolveProfile, resolveTransactions; const scopes = [], redirects = [];
-  const supabase = { auth:{ getUser:async () => ({data:{user:{id:"customer-id"}}}), onAuthStateChange:fn => {onAuth = fn; return {data:{subscription:{unsubscribe(){}}}};} }, from:table => {
-    const query = {select(){return this;},eq(column,value){scopes.push([table,column,value]);return this;},order(){return this;},range(){return this;},abortSignal(){return this;},single(){return this;},then(fn) {return new Promise(resolve => {if(table === "profiles") resolveProfile = resolve; else resolveTransactions = resolve;}).then(fn);} };return query;
-  } };
+  let onAuth, resolveProfile, resolveTransactions; const scopes = [], redirects = [], rpcs = [];
+  const query = table => ({select(){return this;},eq(column,value){scopes.push([table,column,value]);return this;},order(){return this;},range(){return this;},abortSignal(){return this;},single(){return this;},then(fn,reject) {return new Promise(resolve => {if(table === "profiles") resolveProfile = resolve; else resolveTransactions = resolve;}).then(fn,reject);} });
+  const supabase = { auth:{ getUser:async () => ({data:{user:{id:"customer-id"}}}), onAuthStateChange:fn => {onAuth = fn; return {data:{subscription:{unsubscribe(){}}}};} }, from:query, rpc:name => {rpcs.push(name); return query("rpc");} };
   const harness = dashboardHarness({mocks:{"@/lib/supabase":{supabase},"next/navigation":{useRouter:()=>({replace:path=>redirects.push(path)})}}});
   const { useDashboardData } = harness.load("hooks/useDashboardData.ts");
   try {
     harness.render(useDashboardData); harness.effects(); await tick();
-    resolveProfile({data:null,error:{message:"read failed"}}); resolveTransactions({data:[],error:null}); await tick();
+    resolveProfile({data:null,error:{message:"read failed"}}); resolveTransactions({data:{volume:0,approved_count:0},error:null}); await tick();
     assert.equal(harness.render(useDashboardData).error,true);
     const refresh = harness.render(useDashboardData).refresh(); await tick(); onAuth("SIGNED_OUT");
-    resolveProfile({data:{id:"customer-id"},error:null}); resolveTransactions({data:[{amount_aud:500}],error:null}); await refresh;
+    resolveProfile({data:{id:"customer-id"},error:null}); resolveTransactions({data:{volume:"500.00",approved_count:1},error:null}); await refresh;
     const state = harness.render(useDashboardData); assert.equal(state.profile,null); assert.equal(state.approvedVolume,0); assert.equal(state.approvedCount,0); assert.equal(state.sessionChecked,false);
-    assert.deepEqual(scopes.slice(0,3),[["profiles","id","customer-id"],["transactions","user_id","customer-id"],["transactions","status","approved"]]);
+    assert.deepEqual(scopes,[["profiles","id","customer-id"],["profiles","id","customer-id"]]);
+    assert.deepEqual(rpcs,["my_approved_transaction_summary","my_approved_transaction_summary"]);
     assert.deepEqual(redirects,["/en/login"]);
   } finally { harness.cleanup(); global.window = previous.window; global.document = previous.document; }
+});
+test("server-rendered account data is shown immediately without a duplicate client read", async () => {
+  const previous = { window:global.window, document:global.document }; global.window = events(); global.document = events();
+  const originalNow = Date.now; let now = 5000000; Date.now = () => now;
+  let reads = 0;
+  const supabase = { auth:{ getUser:async () => {reads++; return {data:{user:{id:"customer-id"}}};}, onAuthStateChange:() => ({data:{subscription:{unsubscribe(){}}}}) },
+    from:() => {reads++; return {select(){return this;},eq(){return this;},abortSignal(){return this;},single:async()=>({data:{id:"customer-id",first_name:"Fresh"},error:null})};},
+    rpc:() => {reads++; return {abortSignal(){return this;},single:async()=>({data:{volume:"750.50",approved_count:"3"},error:null})};} };
+  const harness = dashboardHarness({mocks:{"@/lib/supabase":{supabase},"next/navigation":{useRouter:()=>({replace(){}})}}});
+  const { useDashboardData } = harness.load("hooks/useDashboardData.ts");
+  const initial = { profile:{id:"customer-id",first_name:"Server"}, approved:{volume:500,count:2} };
+  try {
+    let state = harness.render(useDashboardData,initial);
+    assert.equal(state.sessionChecked,true); assert.equal(state.loading,false); assert.equal(state.profile.first_name,"Server");
+    assert.equal(state.approvedVolume,500); assert.equal(state.approvedCount,2);
+    harness.effects(); await tick(); global.window.emit("focus"); await tick();
+    assert.equal(reads,0);
+    now += 300000; global.window.emit("focus"); await tick(); await tick();
+    assert.equal(reads,3);
+    state = harness.render(useDashboardData,initial);
+    assert.equal(state.profile.first_name,"Fresh"); assert.equal(state.approvedVolume,750.5); assert.equal(state.approvedCount,3);
+  } finally { harness.cleanup(); Date.now = originalNow; global.window = previous.window; global.document = previous.document; }
+});
+test("approved summary falls back to paged rows until the database function is applied", async () => {
+  const { readApprovedSummary } = dashboardHarness().load("lib/dashboard/approved-summary.ts");
+  const ranges = [];
+  const client = {
+    rpc:() => ({single:async()=>({data:null,error:{code:"PGRST202",message:"Could not find the function"}})}),
+    from:() => { let range; const q = {select(){return q;},eq(){return q;},order(){return q;},range(from,to){range=[from,to];ranges.push(range);return q;},then(fn,reject){
+      const rows = range[0] === 0 ? Array.from({length:1000},()=>({amount_aud:"1.50"})) : [{amount_aud:2}];
+      return Promise.resolve({data:rows,error:null}).then(fn,reject);
+    }}; return q; },
+  };
+  assert.deepEqual(await readApprovedSummary(client,"customer-id"),{volume:1502,count:1001});
+  assert.deepEqual(ranges,[[0,999],[1000,1999]]);
+  const direct = { rpc:() => ({single:async()=>({data:{volume:"12.34",approved_count:2},error:null})}), from(){ throw Error("Unexpected paging"); } };
+  assert.deepEqual(await readApprovedSummary(direct,"customer-id"),{volume:12.34,count:2});
+});
+test("a session refreshed in the proxy is forwarded to Server Components and returned to the browser", () => {
+  let handlers;
+  const { NextRequest } = require("next/server");
+  const harness = dashboardHarness({mocks:{"@supabase/ssr":{createServerClient:(_url,_key,options) => {handlers = options.cookies; return {};}}}});
+  const { createSupabaseProxyClient } = harness.load("lib/supabase-server.ts");
+  const request = new NextRequest("https://example.test/en/dashboard",{headers:{cookie:"sb-auth=expired"}});
+  const { getResponse } = createSupabaseProxyClient(request);
+  assert.equal(getResponse().headers.get("x-middleware-request-cookie"),"sb-auth=expired");
+  handlers.setAll([{name:"sb-auth",value:"fresh",options:{path:"/"}}]);
+  const response = getResponse();
+  assert.equal(response.headers.get("x-middleware-request-cookie"),"sb-auth=fresh");
+  assert.equal(response.cookies.get("sb-auth").value,"fresh");
 });
 
 test("transfer direction and rate changes invalidate recipients and pending promo responses", async () => {

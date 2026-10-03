@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import Image from "next/image";
 import { House, Send, History, UserRound, UsersRound, MessageCircle, LogOut } from "lucide-react";
 import { useId, useState } from "react";

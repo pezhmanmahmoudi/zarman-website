@@ -1,0 +1,40 @@
+Transaction ZE123456: Payment approved | Zarman
+
+Zarman Exchange
+
+Payment approved
+
+Hi Sam Example,
+
+Your Zarman request has been updated. You can find the details below:
+
+To: Alex Example
+Recipient amount: Toman (IRT) 115,000,000
+Amount to transfer: AUD 1,150.00
+Service: Standard
+Updated (Sydney time): 2 Oct 2026, 3:13 pm
+Transaction code: ZE123456
+
+Do not transfer money to our account from Commonwealth Bank (CommBank). Transfers from this bank to our account are currently restricted. Please pay from a bank account in your own name at another bank.
+
+Account name: ZARMAN — PREVIEW ONLY
+
+BSB: 000-000
+
+Account number: 00000000
+
+You must put your transaction code ZE123456 in your bank transfer description.
+
+Upload your bank receipt on the request page; funds are confirmed separately.
+
+Australian payments may arrive quickly. Some first-time transfers or bank checks take up to 24 hours, or longer; we do not impose a 24-hour wait.
+
+Iranian payouts follow Satna/Paya cycles and bank holidays.
+
+After making the transfer, send your receipt on the request page.
+
+View request: https://example.test/en/dashboard/requests/10000000-0000-4000-8000-000000000001
+
+If you don't recognise this transfer or have a question, contact the Zarman team through the messages on your request page. Include your transaction code so we can identify your transfer.
+
+— Team Zarman

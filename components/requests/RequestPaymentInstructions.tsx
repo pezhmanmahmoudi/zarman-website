@@ -22,8 +22,8 @@ export function RequestPaymentInstructions({ request, locale }: { request: Excha
   const fields = [
     { key: "account_name", label: fa ? "نام صاحب حساب" : "Account name", value: bank?.account_name },
     { key: "bank_name", label: fa ? "بانک" : "Bank", value: bank?.bank_name },
-    { key: "bsb", label: fa ? "کد شعبه (BSB)" : "BSB", value: bank?.bsb },
-    { key: "account_number", label: fa ? "شماره حساب" : "Account number", value: bank?.account_number },
+    { key: "bsb", label: isAustralianFunding ? "BSB" : fa ? "کد شعبه (BSB)" : "BSB", value: bank?.bsb },
+    { key: "account_number", label: isAustralianFunding ? "Acount Number" : fa ? "شماره حساب" : "Account number", value: bank?.account_number },
     { key: "iban", label: fa ? "شماره شبا" : "SHABA/IBAN", value: bank?.iban },
     { key: "card_number", label: fa ? "شماره کارت" : "Card number", value: bank?.card_number },
   ].filter((field): field is { key: string; label: string; value: string } => Boolean(field.value?.trim()));
@@ -58,16 +58,41 @@ export function RequestPaymentInstructions({ request, locale }: { request: Excha
     {journey.closed && <div className="mb-4 flex items-center gap-3"><DashboardLottieScene name="warning" size={42}/><p className={`${styles.warning} m-0! flex-1`}>{fa ? "درخواست بسته شده؛ وجه جدید واریز نکنید." : "Request closed. Do not send further payment."}</p></div>}
     <div className="flex items-center justify-between gap-3"><dl className={`${compact.amountList} min-w-0 flex-1`}><div className={compact.amount}><dt>{fa ? "مبلغی که باید واریز کنید" : "Amount you need to transfer"}</dt><dd>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</dd></div></dl>{journey.canPay && !journey.receiptSubmitted && <DashboardLottieScene name="mobile-payment" size={78}/>}</div>
     {!fields.length && !instructions && <div className="mb-4 flex items-center gap-3"><DashboardLottieScene name="warning" size={42}/><p className={`${styles.warning} m-0! flex-1`}>{fa ? "تا نمایش مشخصات حساب در این صفحه، واریز نکنید." : "Wait for bank details here before sending payment."}</p></div>}
-    <dl className={compact.bankGrid}>
-      {fields.map(field => <div className={`${compact.bankField} ${["account_number", "iban", "card_number"].includes(field.key) ? compact.full : ""}`} key={field.key}>
-        <dt>{field.label}</dt><dd><bdi className={["bsb", "account_number", "iban", "card_number"].includes(field.key) ? compact.bankNumber : undefined} dir={["account_name", "bank_name"].includes(field.key) ? "auto" : "ltr"}>{field.value}</bdi>{(isAustralianFunding ? ["account_name", "bsb", "account_number"].includes(field.key) : !["account_name", "bank_name"].includes(field.key)) && copyButton(field.key, field.label, field.value)}</dd>
+    {journey.canPay && isAustralianFunding && <div className={`${compact.paymentNotice} ${compact.bankWarning}`} role="alert">
+      <span className={compact.paymentNoticeIcon} aria-hidden="true"><DashboardLottieScene name="warning" size={52} /></span>
+      <div className={compact.paymentNoticeCopy}>
+        <span className={compact.paymentNoticeLabel}>{fa ? "هشدار مهم" : "Important warning"}</span>
+        <h3 className={compact.paymentNoticeTitle}>{fa ? "از کامان‌ولث واریز نکنید" : "Do not pay from CommBank"}</h3>
+        <p className={compact.paymentNoticeText}>{fa
+          ? <>واریز از حساب کامان‌ولث (<bdi dir="ltr">CommBank</bdi>) به حساب ما با محدودیت بانکی روبه‌روست.</>
+          : <>Transfers from Commonwealth Bank (CommBank) to our account are currently restricted.</>}</p>
+        <p className={`${compact.paymentNoticeText} ${compact.paymentNoticeAction}`}>{fa
+          ? "برای پرداخت، از حساب خودتان در یک بانک دیگر استفاده کنید."
+          : "Use a bank account in your own name at another bank to make your payment."}</p>
+      </div>
+    </div>}
+    <dl className={`${compact.bankGrid} ${isAustralianFunding ? compact.australianBankGrid : ""}`}>
+      {fields.map(field => <div className={`${compact.bankField} ${["iban", "card_number"].includes(field.key) || (field.key === "account_number" && !isAustralianFunding) ? compact.full : ""}`} key={field.key}>
+        <dt>{isAustralianFunding && ["bsb", "account_number"].includes(field.key) ? <bdi dir="ltr">{field.label}</bdi> : field.label}</dt><dd><bdi className={["bsb", "account_number", "iban", "card_number"].includes(field.key) ? compact.bankNumber : undefined} dir={["account_name", "bank_name"].includes(field.key) ? "auto" : "ltr"}>{field.value}</bdi>{(isAustralianFunding ? ["account_name", "bsb", "account_number"].includes(field.key) : !["account_name", "bank_name"].includes(field.key)) && copyButton(field.key, field.label, field.value)}</dd>
       </div>)}
       <div className={`${compact.bankField} ${compact.reference} ${compact.full}`}>
         <dt>{isAustralianFunding ? (fa ? "کد تراکنش / شرح واریز" : "Transaction code / transfer reference") : (fa ? "کد تراکنش" : "Transaction code")}</dt>
         <dd><bdi className={compact.bankNumber} dir="ltr">{request.reference_code}</bdi>{isAustralianFunding && copyButton("reference", fa ? "کد تراکنش" : "transaction code", request.reference_code)}</dd>
       </div>
     </dl>
-    {journey.canPay && isAustralianFunding && <div className={`${compact.hint} flex items-center gap-3`}><DashboardLottieScene name="alert" size={40}/><p className="m-0 flex-1">{fa ? <>توجه: حتماً کد تراکنش را در هر دو بخش <bdi dir="ltr">Description</bdi> و <bdi dir="ltr">Reference</bdi> انتقال بانکی وارد کنید. ثبت این کد در توضیحات فیش برای شناسایی و پردازش واریز شما ضروری است.</> : <>Important: You must enter the transaction code in both the <strong>Description</strong> and <strong>Reference</strong> fields of your bank transfer. This code is required to identify and process your deposit.</>}</p></div>}
+    {journey.canPay && isAustralianFunding && <div className={`${compact.paymentNotice} ${compact.referenceNotice}`} role="note">
+      <span className={compact.paymentNoticeIcon} aria-hidden="true"><DashboardLottieScene name="alert" size={52} /></span>
+      <div className={compact.paymentNoticeCopy}>
+        <span className={compact.paymentNoticeLabel}>{fa ? "توجه مهم" : "Important payment step"}</span>
+        <h3 className={compact.paymentNoticeTitle}>{fa ? "ثبت کد تراکنش الزامی است" : "Your transaction code is required"}</h3>
+        <p className={compact.paymentNoticeText}>{fa
+          ? <>کد تراکنش بالا را در هر دو بخش <bdi className={compact.paymentNoticeField} dir="ltr">Description</bdi> و <bdi className={compact.paymentNoticeField} dir="ltr">Reference</bdi> انتقال بانکی وارد کنید.</>
+          : <>Enter the transaction code shown above in both the <bdi className={compact.paymentNoticeField} dir="ltr">Description</bdi> and <bdi className={compact.paymentNoticeField} dir="ltr">Reference</bdi> fields of your bank transfer.</>}</p>
+        <p className={`${compact.paymentNoticeText} ${compact.paymentNoticeAction}`}>{fa
+          ? "این کد برای شناسایی و پردازش واریز شما ضروری است."
+          : "We need this code to identify and process your deposit."}</p>
+      </div>
+    </div>}
     {journey.canPay && !journey.receiptSubmitted && <p className={compact.receiptPrompt}>{fa ? "پس از واریز، لطفاً رسید بانکی را در بخش زیر ارسال بفرمایید." : "After transferring the funds, please upload your bank receipt below."}</p>}
     <div className={compact.reviewFlow}>
       {instructions && <details className={compact.reviewDisclosure}>

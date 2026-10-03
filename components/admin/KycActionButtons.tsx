@@ -7,10 +7,11 @@ import { approveKyc, rejectKyc, archiveKyc } from "@/app/actions/admin.actions";
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminToast } from "@/components/admin/ui/AdminToast";
-import { reloadAdminPage } from "@/lib/admin-refresh";
+import { useAdminRefresh } from "@/components/admin/ui/useAdminRefresh";
 
 export function KycActionButtons({ userId, currentStatus }: { userId: string; currentStatus?: string }) {
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
+  const refreshAdmin = useAdminRefresh();
 
   const handleApprove = () => {
     confirm({
@@ -21,7 +22,7 @@ export function KycActionButtons({ userId, currentStatus }: { userId: string; cu
       onConfirm: async () => {
         const result = await approveKyc(userId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "KYC approved." }); reloadAdminPage(600); }
+        else { showToast({ type: "success", message: "KYC approved." }); refreshAdmin(); }
       },
     });
   };
@@ -35,7 +36,7 @@ export function KycActionButtons({ userId, currentStatus }: { userId: string; cu
       onConfirm: async () => {
         const result = await rejectKyc(userId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "KYC rejected." }); reloadAdminPage(600); }
+        else { showToast({ type: "success", message: "KYC rejected." }); refreshAdmin(); }
       },
     });
   };
@@ -49,7 +50,7 @@ export function KycActionButtons({ userId, currentStatus }: { userId: string; cu
       onConfirm: async () => {
         const result = await archiveKyc(userId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "KYC archived." }); reloadAdminPage(600); }
+        else { showToast({ type: "success", message: "KYC archived." }); refreshAdmin(); }
       },
     });
   };

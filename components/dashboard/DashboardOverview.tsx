@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import { ArrowDownLeft, ArrowUpRight, BarChart3, CheckCircle2, type LucideIcon } from "lucide-react";
 import { useLocale } from "@/context/LocaleContext";
 import { dashboardCopy, dashboardHref } from "@/lib/dashboard/navigation";
@@ -62,7 +62,7 @@ export function DashboardOverview({ volume, completedCount, baseBuyRate, baseSel
   const customerName = profile?.first_name?.trim();
   return <div className="min-w-0 space-y-6 sm:space-y-7">
     <LoyaltyMilestoneCelebration userId={profile?.id} volume={volume} motionEnabled={motionEnabled} />
-    <DashboardPageHeader title={<AuroraText className="max-w-full break-words [overflow-wrap:anywhere]" motionEnabled={motionEnabled} colors={["#6841b8", "#ac3978", "#30699d", "#287a70"]}>{fa ? customerName ? "سلام، " : "به زرمان خوش آمدید" : customerName ? "Welcome back, " : "Welcome to Zarman"}{customerName && <bdi dir="auto">{customerName}</bdi>}</AuroraText>} description={fa ? "به پنل مدیریت تراکنش خوش آمدید." : "Welcome to your transaction panel."} action={focus ? <DashboardButton asChild><Link href={dashboardHref(locale, "transfer")}>{copy.newTransfer}</Link></DashboardButton> : undefined} />
+    <DashboardPageHeader title={<AuroraText className="max-w-full break-words [overflow-wrap:anywhere]" motionEnabled={motionEnabled} colors={["#6841b8", "#ac3978", "#30699d", "#287a70"]}>{fa ? customerName ? "سلام، " : "به زرمان خوش آمدید" : customerName ? "Welcome back, " : "Welcome to Zarman"}{customerName && <bdi dir="auto">{customerName}</bdi>}</AuroraText>} description={fa ? "به پنل جدید مدیریت تراکنش خوش آمدید." : "Welcome to your newtransaction panel."} action={focus ? <DashboardButton asChild><Link href={dashboardHref(locale, "transfer")}>{copy.newTransfer}</Link></DashboardButton> : undefined} />
     <DashboardIdentityCard profile={profile} motionEnabled={motionEnabled} />
     <TransferOverviewCard request={focus} locale={locale} loading={feed.loading} error={feed.error} refreshing={feed.refreshing} onRetry={() => void feed.refresh()} motionEnabled={motionEnabled} />
     <DashboardReveal motionEnabled={motionEnabled}>

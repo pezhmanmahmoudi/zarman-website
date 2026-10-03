@@ -5,7 +5,7 @@ import { resolveTreasuryView, treasuryViewHref } from "@/lib/treasury-navigation
 import TreasuryWorkspace from "@/components/admin/treasury/TreasuryWorkspace";
 import { AdminRefreshButton } from "@/components/admin/ui/AdminRefreshButton";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
-import s from "@/styles/admin/Treasury.module.css";
+import s from "@/styles/admin/TreasuryWorkspace.module.css";
 
 export const metadata = { title: "Treasury | Zarman Admin" };
 export const revalidate = 60;

@@ -4,31 +4,18 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "@/context/LocaleContext";
 import { supabase } from "@/lib/supabase";
 import { DASHBOARD_AUTO_REFRESH_MS, dashboardRefreshDue } from "@/lib/dashboard/refresh-policy";
+import { readApprovedSummary, type ApprovedSummary, type DashboardInitialAccount } from "@/lib/dashboard/approved-summary";
 import type { Profile } from "@/app/[locale]/dashboard/dashboard.types";
 
-type ApprovedSummary = { volume: number; count: number };
 const noSummary: ApprovedSummary = { volume: 0, count: 0 };
-const SUMMARY_BATCH = 1000;
 
-/** Only the approved amounts are read; history pages load their own records on demand. */
-async function readApprovedSummary(userId: string, signal: AbortSignal): Promise<ApprovedSummary> {
-  let volume = 0, count = 0;
-  for (let from = 0; ; from += SUMMARY_BATCH) {
-    const { data, error } = await supabase.from("transactions").select("amount_aud").eq("user_id", userId).eq("status", "approved")
-      .order("id", { ascending: true }).range(from, from + SUMMARY_BATCH - 1).abortSignal(signal);
-    if (error) throw error;
-    for (const row of data ?? []) volume += Number(row.amount_aud) || 0;
-    count += data?.length ?? 0;
-    if ((data?.length ?? 0) < SUMMARY_BATCH) return { volume, count };
-  }
-}
-
-export function useDashboardData() {
+/** `initial` is the account read during server rendering; when present the first client fetch is skipped. */
+export function useDashboardData(initial?: DashboardInitialAccount | null) {
   const router = useRouter(), locale = useLocale();
   const generation = useRef(0), abort = useRef<AbortController | null>(null);
-  const lastRefresh = useRef(0);
-  const [loading, setLoading] = useState(true), [sessionChecked, setSessionChecked] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null), [approved, setApproved] = useState<ApprovedSummary>(noSummary);
+  const lastRefresh = useRef(0), skipInitialRefresh = useRef(Boolean(initial));
+  const [loading, setLoading] = useState(!initial), [sessionChecked, setSessionChecked] = useState(Boolean(initial));
+  const [profile, setProfile] = useState<Profile | null>(initial?.profile ?? null), [approved, setApproved] = useState<ApprovedSummary>(initial?.approved ?? noSummary);
   const [error, setError] = useState(false);
   const invalidate = useCallback(() => { ++generation.current; abort.current?.abort(); }, []);
   const refresh = useCallback(async () => {
@@ -49,7 +36,7 @@ export function useDashboardData() {
       }
       const [profileRes, summary] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).abortSignal(controller.signal).single(),
-        readApprovedSummary(user.id, controller.signal),
+        readApprovedSummary(supabase, user.id, controller.signal),
       ]);
       if (current !== generation.current) return;
       if (profileRes.error) throw new Error("dashboard_read_failed");
@@ -61,7 +48,10 @@ export function useDashboardData() {
     } finally { if (current === generation.current) setLoading(false); }
   }, [locale, router]);
   useEffect(() => {
-    void refresh();
+    if (skipInitialRefresh.current) {
+      skipInitialRefresh.current = false;
+      lastRefresh.current = Date.now();
+    } else void refresh();
     const onVisible = () => { if (document.visibilityState === "visible" && dashboardRefreshDue(lastRefresh.current)) void refresh(); };
     window.addEventListener("focus", onVisible);
     document.addEventListener("visibilitychange", onVisible);

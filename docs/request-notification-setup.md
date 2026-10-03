@@ -1,56 +1,59 @@
-# Request status emails and final receipts
+﻿# Manual customer emails and final receipts
 
-Request emails are sent only when an admin approves a stage (or posts a message) with **Send email to customer and management** ticked. The request action writes the email rows in the same PostgreSQL transaction as the milestone, then the same server action immediately claims and sends that request's emails before returning. There is no scheduler or background queue.
+Request emails send only after an administrator selects **Send email to customer** and saves a stage or customer message, or explicitly clicks **Retry customer email** on a previously requested email. There is no cron endpoint, scheduled sender or automatic retry. Opening or refreshing a request does not send mail. Telegram alerts for new requests are unchanged.
 
-After `_44`, events created by customers (submission, receipt upload, replies) and by the system deadline sweep (`actor_id` NULL) are recorded as `skipped` with `admin_email_opt_out`; they are visible in the delivery list but never sent. Telegram still alerts admins about new submissions. Funding evidence never marks funds received.
+The workflow transaction records the email decision and customer delivery snapshot alongside the request event. A Next.js `after()` callback starts the approved send immediately after the committed response. The browser can advance to the next step without waiting for Resend or PDF generation. A successful request update confirms the workflow change; it does not assert email delivery.
 
-Completion creates `exchange_request_completion_receipts` from the accepted quote and verified settlement. The customer and management receive a final PDF with the original names, payout, accepted rate, base fee and separate priority fee. It includes the priority fee status at completion; later refund updates are separate events. The authenticated dashboard download renders the same stored snapshot. No current profile, recipient, bank-account or price lookups are used to rebuild receipts. Bank settlement references and uploaded evidence remain private.
+Management recipients, settings and template branches have been removed. The worker and database also reject legacy management jobs and payloads containing extra recipients, CC or BCC. Historical audit records remain in the database; customer delivery history is shown in the admin interface. Unchecked email choices and customer/system events never become sendable emails.
 
-## Deployment configuration
+## Deployment
 
-Apply migrations in repository order, including `_18`, `_19`, `_23`, `_24`, `_25`, `_26` and `_44`. `_44` restricts sendable rows to admin-approved events, retires never-attempted pending rows from the old scheduled queue (`skipped` / `queue_retired`) and adds the service-role-only `claim_request_notifications_for_request` RPC. `_24` corrects the earlier notification prepare/acknowledgement RPCs and adds immutable completion receipts; `_25` posts priority cash and earned income to accounting. `_26` permits those managed priority-fee adjustments under the legacy ledger type check and is required before paid-priority funding can succeed. Neither migration application nor application startup sends messages. Keep request and priority settings disabled until the following deployment configuration is in place.
+Apply migrations in repository order, including `_24` (immutable receipts), `_28` (structured bank details), `_44` (admin opt-in) and **`20261003_46_customer_only_email_recovery.APPLY_MANUALLY.sql`**. Deploy this application version with `_46`.
 
-Set these server environment variables in the actual deployment, never with a `NEXT_PUBLIC_` prefix:
+The new migration removes management enqueue/settings, retires unsent management jobs, removes global claiming, and adds the selected-delivery retry RPC. It normalizes abandoned customer leases: a never-prepared email becomes pending; an old ambiguous prepared attempt requires reconciliation. Applying it does not send an email or change a financial stage. It neither deletes nor regenerates completion receipts.
+
+The existing request-only worker remains compatible with the old four-argument claim RPC until `_46` is installed. The new Retry button requires `_46`; without it, retries fail closed. Keep the application and database deployment close together so administrators can use the new settings and retry control.
+
+These environment variables are server-only:
 
 | Variable | Purpose |
 | --- | --- |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-only database access for sending and the verified webhook. |
-| `RESEND_API_KEY` | Existing Resend API key authorized for the verified sending domain. |
-| `REQUEST_NOTIFICATIONS_FROM` | Approved sender, for example `Zarman Exchange <transfers@your-verified-domain>`. |
-| `REQUEST_SITE_URL` | Canonical HTTPS site origin only, with no path, query, credentials or fragment. |
-| `RESEND_WEBHOOK_SECRET` | Signing secret for the dedicated Resend webhook endpoint, including its `whsec_` prefix. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Database access for sending and verified delivery callbacks. |
+| `RESEND_API_KEY` | Key authorized for the verified sending domain. |
+| `REQUEST_NOTIFICATIONS_FROM` | Approved sender, e.g. `Zarman Exchange <transfers@your-verified-domain>`. |
+| `REQUEST_SITE_URL` | Canonical HTTPS origin, without a path, query, credentials or fragment. |
+| `RESEND_WEBHOOK_SECRET` | Signing secret for `/api/webhooks/request-email`, including `whsec_`. |
 
-Sending also uses the existing `NEXT_PUBLIC_SUPABASE_URL`. Missing or invalid sender, site URL or database credentials fail closed before claiming or sending mail. `REQUEST_NOTIFICATIONS_CRON_SECRET` is no longer used. The webhook endpoint and request activation checks separately require `RESEND_WEBHOOK_SECRET`. Enabling requests must also pass the application configuration checks and have valid management email recipients and company funding instructions in request settings. Confirm both bank instruction fields with finance, including account name, BSB/account or Iranian banking information, before enabling either transfer direction.
+Sending also uses `NEXT_PUBLIC_SUPABASE_URL`. No cron secret or Vercel plan change is required. Activation validates the sender, site URL, webhook secret and company bank details; there is no management email requirement.
 
-## Immediate sending
+## Sending and recovery
 
-After a successful admin action with the email box ticked, the server claims only that request's pending rows (up to 25, 300-second leases) and sends them in event order. Later events wait for earlier unsettled events for the same audience and recipient, so one action can take two claim rounds. Sending stops after 20 seconds of claims. Mail problems never undo the admin action: they are logged with only the operation, allowlisted error code and status (no bodies, recipients or credentials), and the delivery list on the request shows the result.
+Each callback claims one customer email at a time with a 120-second lease. It stops starting new claims after 20 seconds or 25 messages. Ordinary approved actions process due emails for their request in event order; explicit Retry is restricted to the selected delivery. Existing unresolved earlier emails for the same recipient retain ordering. Database HTTP requests time out after eight seconds and provider requests after twelve seconds.
 
-The deadline sweep (expiry, overdue tasks) runs best-effort whenever an admin opens the request list, because there is no scheduler. Database HTTP attempts are capped at eight seconds; claim, prepare and acknowledgement calls are never retried within one action.
-Database HTTP calls request connection closure after each response to avoid retaining idle serverless sockets; transport failures include only a fixed diagnostic category such as timeout, socket error or invalid response.
+Before contacting Resend, the worker stores the exact recipient, sender, HTML, plain text, PDF bytes, template version and first-attempt timestamp. Retries reuse those bytes and the same `request-notification/<delivery-id>` idempotency key. Neither retrying an email nor recovering its lease repeats a financial transition.
 
-## Resend webhook
+If a process stops, only its one in-progress email remains leased; unstarted emails are not marked Sending. An expired lease displays **Sending interrupted - check delivery**. Click **Refresh** to obtain current delivery state, then **Retry customer email** for an eligible failed, pending or interrupted email. Retry queues an immediate selected send; if a prior email blocks it, resolve that earlier delivery first. Errors are logged as sanitized operation/code/status metadata, never customer addresses or email bodies.
 
-In the Resend dashboard, create a webhook for `https://<canonical-host>/api/webhooks/request-email` and copy its signing secret into `RESEND_WEBHOOK_SECRET`. Subscribe to `email.sent`, `email.delivered`, `email.bounced`, `email.failed`, `email.complained` and `email.suppressed` where available for the account. The endpoint verifies the signature against the unmodified request body before database access. HTTP 2xx means the verified event was durably recorded; non-2xx requests provider redelivery.
+Resend retains idempotency keys for 24 hours. This implementation uses a conservative 23-hour window. An ambiguous older attempt or exhausted retry budget becomes `reconciliation_required`; inspect the original send in Resend before further action. Never clear `first_attempt_at`, alter a persisted payload, delete a delivery or change its key to bypass this protection. An accepted, delivered, suppressed, opted-out or actively leased email cannot be manually retried. A never-prepared expired lease can be retried safely even if created yesterday.
 
-Provider callbacks can arrive before acknowledgement, out of order, or repeatedly. The database deduplicates event IDs and aggregates outcomes rather than trusting arrival order. A bounce or suppression creates an operations task to verify the customer's contact details. `provider_accepted` means Resend accepted the email; `delivered` is recorded only after delivery confirmation. A complaint/suppression takes precedence over a late delivered callback.
+The October 3 read-only production investigation found the reported completion email's management job leased with a first attempt recorded, and its customer job leased with **no first attempt**. Both leases had expired the previous day. This is consistent with the old batch being interrupted before reaching the customer. `_46` makes that customer delivery eligible for an explicit retry and retires the management job. No production recovery or send was performed during development.
 
-## Retries and operations
+## Delivery confirmation
 
-Before contacting Resend, the worker persists the exact recipient, sender, localized HTML/text, PDF bytes, template version and first-attempt timestamp. Retries reuse that payload and the same `request-notification/<delivery-id>` idempotency key. Network exceptions and temporary provider failures stay `pending` and are retried on the next admin action for that request with the email box ticked; there is no automatic retry.
+Configure a Resend webhook for `https://<canonical-host>/api/webhooks/request-email`, subscribed to `email.sent`, `email.delivered`, `email.bounced`, `email.failed`, `email.complained` and `email.suppressed` where available. The endpoint verifies the signature against the original body before database access. It updates delivery records only; it does not trigger sending.
 
-Ambiguous messages older than 23 hours, or after 12 unsuccessful attempts, become `reconciliation_required`; automatic delivery stops for that message and holds later messages for that recipient. Investigate provider acceptance before doing anything that could cause a second send. Never clear `first_attempt_at`, change a persisted payload, delete a job or assign a new key just to retry an uncertain delivery. Terminal validation failures become `failed`; missing contacts must be corrected through a reviewed operations process, not by changing an immutable recipient snapshot. Monitor the management request detail delivery list and the `exchange_request_notification_deliveries` table for `failed`, `suppressed` and `reconciliation_required` states.
+Callbacks can arrive before acknowledgement, out of order or repeatedly. The database deduplicates them and gives suppression/complaints precedence over late delivery callbacks. **Accepted by email service** means Resend accepted the message; **Delivered** requires a delivery callback. Bounce/suppression creates an operations task to check contact details.
 
-Jobs created before `_24` have no historical funding/receipt snapshot. A previously rendered payload remains unchanged; an unrendered legacy funding or completion job fails closed if the required snapshot is absent. Investigate these separately during rollout rather than reconstructing historical instructions or receipts from mutable records. The initial feature defaults to disabled, so a fresh installation has no such jobs.
+## Email design and PDF
 
-## Timing and receipts
+There is one English customer email template, irrespective of the account's interface language. The simple white Zarman layout contains a factual heading, greeting and a gray card with recipient, amount and date, followed by a prominent **Transaction code**. This code is the existing request `reference_code`, also shown in the subject and receipt; a UUID or bank settlement reference is never substituted. Names and administrator-written messages retain their original text. Successful-transfer wording is limited to the verified completion receipt. There is no Expected arrival field or estimated-arrival promise. Funding emails show the approved bank details and, for AUD funding, the Commonwealth restriction.
 
-Australian clearance allowances and the Iranian Satna/Paya notice come from the accepted policy snapshot. Configure current bank guidance operationally; no hardcoded Iranian settlement-cycle schedule promises delivery at a particular time. Priority measures handling after staff confirms cleared funds and required checks, using the accepted Sydney business calendar. Customer proof of payment does not start that clock.
+Completion emails attach the existing PDF generated from `exchange_request_completion_receipts`. The receipt design and authenticated dashboard download are unchanged. Accepted names, amounts, rates and fees come from the immutable completion snapshot. Later profile, bank, price or refund changes do not rewrite the receipt. PDFs use the existing local IRANSansX font assets; no runtime font download is required.
 
-The PDF embeds the site's IRANSansX fonts to preserve Persian names. The `.ttf` files beside the existing web fonts were losslessly decompressed from their corresponding `.woff2` files with `fontTools.ttLib.TTFont` (`font.flavor = None`); no external font or runtime font download is used. Include these font assets in deployment file tracing. PDF metadata is pinned to settlement and mail retries use the persisted attachment bytes.
+Run `node scripts/preview-request-emails.mjs` to generate synthetic English HTML and plain-text examples in `artifacts/request-email-previews`. `node scripts/preview-request-email-sample.mjs` also generates a clearly labelled English design sample and its PDF receipt at `output/pdf/zarman-sample-receipt-en.pdf`. These scripts do not send mail. Already-prepared historical emails keep their exact original bytes for safe idempotent retries; newly prepared emails use the English template.
 
-## Offline validation
+## Verification
 
-Run `node --test scripts/test-request-notifications.mjs` and the customer request database suite before release. The notification tests use synthetic fixtures, ephemeral PGlite and a fake mail sender, with no real credentials, database or messages. They cover public funding instructions, reference requirements, Persian/English templates, signed webhook verification, immutable PDF receipts, retry identity, expired ambiguity, lease ordering, completion validation, audience privacy, early/out-of-order callbacks and database permissions.
+`npm run test:requests` covers customer-only enqueue, explicit opt-in, permissions, selected retry, abandoned leases, immutable payloads/PDFs, deduplication, webhook ordering, templates and admin UI behavior with synthetic data and fake senders. Production delivery requires deployment plus an authorized manual send; offline tests do not establish delivery to a real inbox.
 
-Before enabling production requests, separately exercise the staging deployment with authorized test recipients, an admin action with email ticked and provider delivery/bounce fixtures. Confirm PDF availability, dashboard ownership checks and current bank instructions there. Deployment configuration and those externally observable delivery checks are operational steps, not something the offline suite can verify.
+References: [Next.js after](https://nextjs.org/docs/app/api-reference/functions/after), [Resend idempotency](https://resend.com/docs/dashboard/emails/idempotency-keys), [Resend send API](https://resend.com/docs/api-reference/emails/send-email), [Gmail email CSS support](https://developers.google.com/workspace/gmail/design/css).

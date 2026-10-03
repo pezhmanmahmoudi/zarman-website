@@ -11,7 +11,7 @@ const { renderToStaticMarkup } = require("react-dom/server");
 const projectRoot = path.resolve(__dirname, "..");
 
 // Render actual UI with controlled state; no account, database, provider or network access.
-function load(file, { states = {}, actions = {}, captureEffects = false } = {}) {
+function load(file, { states = {}, actions = {}, captureEffects = false, supabase } = {}) {
   let stateIndex = 0;
   let refIndex = 0;
   const values = { ...states };
@@ -38,7 +38,7 @@ function load(file, { states = {}, actions = {}, captureEffects = false } = {}) 
     const localRequire = id => {
       if (id === "react") return hookReact;
       if (id === "@/app/actions/request.actions") return new Proxy(actions, { get: (target, key) => target[key] || (() => { throw Error(`Unexpected server action: ${String(key)}`); }) });
-      if (id === "@/lib/supabase") return { supabase: {
+      if (id === "@/lib/supabase") return { supabase: supabase || {
         channel() { return { on() { return this; }, subscribe() { return this; } }; },
         removeChannel: async () => undefined,
       } };
@@ -87,7 +87,7 @@ const policy = {
   iran_banking_notice: "Settlement follows the receiving bank operating calendar.",
   iran_banking_notice_fa: "تسویه طبق تقویم کاری بانک گیرنده است.",
   business_days: [1, 2, 3, 4, 5], opening_hour: 9, closing_hour: 17, holidays: [],
-  management_emails: ["ops@example.test"], payment_instructions_aud: "Zarman Test\nBSB 123-456\nAccount 12345678",
+  payment_instructions_aud: "Zarman Test\nBSB 123-456\nAccount 12345678",
   payment_instructions_irt: "Test IRT account", priority_terms: "Handling after cleared funds.", priority_terms_fa: "رسیدگی پس از تأیید وجه",
   payment_instructions_aud_fa: "واریز فقط از حساب شخصی خودتان.", payment_instructions_irt_fa: "واریز به حساب ریالی آزمایشی.",
   payment_details_aud: { account_name: "Zarman Test", bank_name: "Test Bank", bsb: "012-345", account_number: "0012345678" },
@@ -121,6 +121,290 @@ function elements(element, predicate) {
   visit(element); return found;
 }
 const textOf = element => markup(element).replace(/<[^>]*>/g, "");
+
+function emailHistoryDetail(deliveries) {
+  return { request, receipts: [], messages: [], events: [{ id: "email-review-event", event_type: "review", created_at: request.created_at }],
+    deliveries: deliveries.map(delivery => ({ id: "email-customer", request_id: request.id, event_id: "email-review-event", audience: "customer",
+      recipient_email: "customer@example.test", locale: "en", status: "pending", first_attempt_at: null, lease_expires_at: null,
+      provider_id: null, last_error: null, ...delivery })),
+  };
+}
+
+test("request activity and both email opt-in controls are customer-only in each locale", () => {
+  const detail = emailHistoryDetail([{ id: "customer-history" }, { id: "manager-history", audience: "management", recipient_email: "manager@example.test", status: "leased" }]);
+  detail.request = { ...request, status: "submitted", payment_approved_at: null };
+  for (const locale of ["en", "fa"]) {
+    const h = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false } });
+    const tree = h.rerender("RequestDetailView", { id: request.id, admin: true, locale });
+    const label = locale === "fa" ? "ارسال ایمیل به مشتری" : "Send email to customer";
+    const choice = elements(tree, node => node.type === "label" && textOf(node) === label)[0];
+    assert.ok(choice, `The ${locale} approval option names the customer alone: ${elements(tree, node => node.type === "label").map(textOf).join(" | ")}`);
+    assert.equal(elements(choice, node => node.type === "input")[0].props.checked, false);
+    const activity = elements(tree, node => node.props.className === "emailActivity")[0];
+    assert.equal(elements(activity, node => node.type === "li").length, 1, "Legacy management records do not appear in customer delivery history");
+    assert.match(textOf(activity), locale === "fa" ? /ایمیل مشتری/ : /Customer email/);
+    assert.doesNotMatch(markup(tree), /Management email|manager@example.test|customer and management|ایمیل مدیریت/);
+    const conversation = load("components/requests/RequestConversation.tsx").rerender("RequestConversation", {
+      requestId: request.id, version: request.version, messages: [], locale, admin: true, onUpdated: async () => {},
+    });
+    const messageChoice = elements(conversation, node => node.type === "label" && textOf(node) === label)[0];
+    assert.ok(messageChoice, "Message opt-in is localized and only names the customer");
+    assert.equal(elements(messageChoice, node => node.type === "input")[0].props.checked, false);
+    assert.doesNotMatch(markup(conversation), /customer and management|ایمیل مدیریت|\?{3,}/);
+    const customerHtml = render("RequestDetailView", { id: request.id, locale }, { states: { 0: detail, 1: false } });
+    assert.doesNotMatch(customerHtml, /Retry customer email|تلاش مجدد ارسال ایمیل|Activity &amp; email history/);
+  }
+  const settings = render("RequestSettingsForm", {}, { states: { 0: { version: 1, settings: { ...policy, management_emails: ["manager@example.test"] } }, 2: false, 7: "notifications" } });
+  assert.match(settings, /Send email to customer/);
+  assert.doesNotMatch(settings, /manager@example.test|Management recipients|Management emails/);
+});
+
+test("email history distinguishes active sending, expired attempts and confirmed delivery without unsafe retries", () => {
+  const now = Date.now();
+  const ago = minutes => new Date(now - minutes * 60000).toISOString();
+  const cases = [
+    { id: "pending", status: "pending", retry: true, label: /Queued for sending/ },
+    { id: "failed", status: "failed", retry: true, label: /Delivery failed/ },
+    { id: "active", status: "leased", first_attempt_at: ago(5), lease_expires_at: ago(-5), retry: false, label: /^Customer emailSending$/ },
+    { id: "interrupted", status: "leased", first_attempt_at: ago(60), lease_expires_at: ago(1), retry: true, label: /Sending interrupted/ },
+    { id: "old-interrupted", status: "leased", first_attempt_at: ago(24 * 60), lease_expires_at: ago(23 * 60), retry: false, label: /Sending interrupted|Delivery needs checking/ },
+    { id: "old-pending", status: "pending", first_attempt_at: ago(24 * 60), retry: false, label: /Queued for sending|Delivery needs checking/ },
+    { id: "unknown-attempt", status: "failed", first_attempt_at: "invalid-date", retry: false, label: /Delivery failed|Delivery needs checking/ },
+    { id: "accepted", status: "provider_accepted", provider_id: "provider-id", retry: false, label: /Accepted by email service/ },
+    { id: "delivered", status: "delivered", provider_id: "provider-id", retry: false, label: /Delivered/ },
+    { id: "suppressed", status: "suppressed", retry: false, label: /Recipient could not receive email/ },
+    { id: "ambiguous", status: "reconciliation_required", retry: false, label: /Delivery needs checking/ },
+    { id: "not-requested", status: "skipped", last_error: "admin_email_opt_out", retry: false, label: /Email not requested/ },
+    { id: "failed-with-provider", status: "failed", provider_id: "already-accepted", retry: false, label: /Delivery failed/ },
+  ];
+  const detail = emailHistoryDetail(cases.map(item => Object.fromEntries(Object.entries(item).filter(([key]) => !["retry", "label"].includes(key)))));
+  const h = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false } });
+  const tree = h.rerender("RequestDetailView", { id: request.id, admin: true, locale: "en" });
+  for (const item of cases) {
+    const row = elements(tree, node => node.type === "li" && node.key === item.id)[0];
+    assert.ok(row, item.id);
+    assert.match(textOf(row), item.label, item.id);
+    assert.equal(elements(row, node => node.type === "button").length, Number(item.retry), item.id);
+  }
+});
+
+test("manual email retry targets one delivery, blocks duplicate clicks, and never repeats a financial action", async () => {
+  const now = Date.now();
+  const detail = emailHistoryDetail([{ id: "interrupted", status: "leased", first_attempt_at: new Date(now - 60000).toISOString(), lease_expires_at: new Date(now - 1000).toISOString() }, { id: "other", status: "failed" }]);
+  const originalRequest = JSON.stringify(detail.request);
+  const calls = []; let resolveRetry; let mutations = 0; let refreshReads = 0;
+  const h = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false }, actions: {
+    retryAdminRequestEmail: input => { calls.push(input); return new Promise(resolve => { resolveRetry = resolve; }); },
+    mutateAdminRequest: async () => { mutations++; throw Error("Financial mutation must not run"); },
+    getAdminRequest: async () => { refreshReads++; return { data: detail }; },
+  } });
+  const props = { id: request.id, admin: true, locale: "en" };
+  let tree = h.rerender("RequestDetailView", props);
+  const retry = elements(elements(tree, node => node.type === "li" && node.key === "interrupted")[0], node => node.type === "button")[0];
+  assert.equal(calls.length, 0, "Rendering never sends an email");
+  retry.props.onClick(); retry.props.onClick();
+  assert.deepEqual(calls, [{ requestId: request.id, deliveryId: "interrupted" }]);
+  tree = h.rerender("RequestDetailView", props);
+  const buttons = elements(tree, node => node.type === "button" && /Retry customer email|Queuing/.test(textOf(node)));
+  assert.equal(buttons.length, 2);
+  assert.ok(buttons.every(button => button.props.disabled));
+  buttons[1].props.onClick();
+  assert.equal(calls.length, 1, "The in-flight guard also protects another delivery and stale event handlers");
+  resolveRetry({ data: { id: "interrupted", status: "pending", last_error: null, first_attempt_at: detail.deliveries[0].first_attempt_at, lease_expires_at: null } });
+  await new Promise(resolve => setImmediate(resolve));
+  tree = h.rerender("RequestDetailView", props);
+  assert.match(markup(tree), /Customer email retry queued\. Click Refresh to check delivery/);
+  assert.match(textOf(elements(tree, node => node.type === "li" && node.key === "interrupted")[0]), /Queued for sending/);
+  assert.match(textOf(elements(tree, node => node.type === "li" && node.key === "other")[0]), /Delivery failed/);
+  assert.equal(elements(tree, node => node.type?.name === "RequestConversation")[0].props.version, request.version);
+  assert.equal(JSON.stringify(detail.request), originalRequest);
+  assert.equal(mutations, 0);
+  assert.equal(refreshReads, 0, "The email action leaves subsequent delivery checks to manual Refresh");
+  assert.ok(elements(tree, node => node.type === "button" && /Retry customer email/.test(textOf(node))).every(button => !button.props.disabled));
+});
+
+test("an ambiguous retry result asks for provider review and removes the retry control", async () => {
+  const detail = emailHistoryDetail([{ id: "ambiguous-attempt", status: "failed" }]);
+  let calls = 0;
+  const h = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false }, actions: {
+    retryAdminRequestEmail: async () => { calls++; return { data: { id: "ambiguous-attempt", status: "reconciliation_required", last_error: "idempotency_window_reconciliation_required" } }; },
+  } });
+  const props = { id: request.id, admin: true, locale: "en" };
+  let tree = h.rerender("RequestDetailView", props);
+  elements(tree, node => node.type === "button" && textOf(node) === "Retry customer email")[0].props.onClick();
+  await new Promise(resolve => setImmediate(resolve));
+  tree = h.rerender("RequestDetailView", props);
+  assert.equal(calls, 1);
+  assert.match(markup(tree), /Check the previous attempt in the email service before sending again/);
+  assert.match(markup(tree), /Delivery needs checking/);
+  assert.equal(elements(tree, node => node.type === "button" && /Retry customer email/.test(textOf(node))).length, 0);
+});
+
+test("a failed email retry keeps the original delivery visible and releases the click guard", async () => {
+  for (const response of ["throw", "error"]) {
+    const detail = emailHistoryDetail([{ id: "failed-attempt", status: "failed" }]);
+    let calls = 0;
+    const h = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false }, actions: {
+      retryAdminRequestEmail: async () => { calls++; if (response === "throw") throw Error("Offline"); return { error: "Notification cannot be retried" }; },
+    } });
+    const props = { id: request.id, admin: true, locale: "en" };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const tree = h.rerender("RequestDetailView", props);
+      const button = elements(tree, node => node.type === "button" && textOf(node) === "Retry customer email")[0];
+      assert.ok(button); assert.notEqual(button.props.disabled, true);
+      button.props.onClick();
+      await new Promise(resolve => setImmediate(resolve));
+    }
+    const html = markup(h.rerender("RequestDetailView", props));
+    assert.equal(calls, 2);
+    assert.match(html, /Delivery failed/);
+    assert.match(html, /role="alert"/);
+    assert.doesNotMatch(html, /Customer email retry queued/);
+  }
+});
+
+test("checking customer email alone does not send until the administrator submits the action or message", async () => {
+  const detail = { request: { ...request, status: "submitted", payment_approved_at: null }, events: [], receipts: [], messages: [] };
+  const approvals = [];
+  const h = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false, 21: true }, actions: {
+    mutateAdminRequest: async input => { approvals.push(input); return { data: detail.request }; },
+    getAdminRequest: async () => ({ data: detail }),
+  } });
+  const props = { id: request.id, admin: true, locale: "en" };
+  let tree = h.rerender("RequestDetailView", props);
+  const label = elements(tree, node => node.type === "label" && textOf(node) === "Send email to customer")[0];
+  elements(label, node => node.type === "input")[0].props.onChange({ target: { checked: true } });
+  assert.equal(approvals.length, 0);
+  tree = h.rerender("RequestDetailView", props);
+  await elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });
+  assert.equal(approvals.length, 1); assert.equal(approvals[0].sendEmail, true);
+  assert.equal(approvals[0].action, "await_funds");
+  const messagesSent = [];
+  const conversation = load("components/requests/RequestConversation.tsx", { states: { 0: "Status update for the customer." }, actions: {
+    sendAdminRequestMessage: async input => { messagesSent.push(input); return { data: { id: "sent-message" } }; },
+  } });
+  const messageProps = { requestId: request.id, version: request.version, messages: [], admin: true, locale: "en", onUpdated: async () => {} };
+  tree = conversation.rerender("RequestConversation", messageProps);
+  const messageLabel = elements(tree, node => node.type === "label" && textOf(node) === "Send email to customer")[0];
+  elements(messageLabel, node => node.type === "input")[0].props.onChange({ target: { checked: true } });
+  assert.equal(messagesSent.length, 0);
+  tree = conversation.rerender("RequestConversation", messageProps);
+  await elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });
+  assert.equal(messagesSent.length, 1); assert.equal(messagesSent[0].sendEmail, true);
+});
+
+/** Observe background refresh registrations without real browser timers. */
+function requestRefreshFixture({ admin = true, status = "pending", component = "RequestDetailView" } = {}) {
+  const descriptors = { window: Object.getOwnPropertyDescriptor(globalThis, "window"), document: Object.getOwnPropertyDescriptor(globalThis, "document") };
+  const timeouts = new Map(), intervals = new Map(), windowEvents = new Map(), documentEvents = new Map(), subscriptions = new Map();
+  let timerId = 0, deliveryReads = 0, detailReads = 0;
+  const visibility = { visibilityState: "visible", addEventListener: (name, callback) => documentEvents.set(name, callback), removeEventListener: name => documentEvents.delete(name) };
+  let latest = { request, receipts: [], messages: [],
+    events: [{ id: "mail-event", event_type: "await_funds", created_at: request.created_at }],
+    deliveries: [{ id: "mail-delivery", event_id: "mail-event", request_id: request.id, audience: "customer", status, last_error: null }],
+  };
+  const read = async () => { detailReads++; return { data: component === "RequestList" ? [latest.request] : latest }; };
+  const harness = load(`components/requests/${component}.tsx`, { captureEffects: true, states: { 0: component === "RequestList" ? [request] : latest, 1: false }, actions: {
+    getAdminRequest: read, getMyRequest: read, listAdminRequests: read, listMyRequests: read, getRequestBankAccounts: async () => ({ data: [] }),
+    getAdminRequestDeliveries: async () => { deliveryReads++; return { data: latest.deliveries }; },
+  }, supabase: {
+    channel(name) {
+      const channel = { on(_event, _filter, callback) { subscriptions.set(name, callback); return this; }, subscribe() { return this; }, name };
+      return channel;
+    },
+    removeChannel: async channel => { subscriptions.delete(channel.name); },
+  } });
+  const props = { id: request.id, admin, locale: "en" };
+  // Import browser-aware libraries before installing timer-only globals, so
+  // these effect tests do not change the later server-render tests' environment.
+  Object.defineProperty(globalThis, "document", { configurable: true, value: visibility });
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {
+    setTimeout: (callback, delay) => { const id = ++timerId; timeouts.set(id, { callback, delay }); return id; },
+    clearTimeout: id => timeouts.delete(id),
+    setInterval: (callback, delay) => { const id = ++timerId; intervals.set(id, { callback, delay }); return id; },
+    clearInterval: id => intervals.delete(id), addEventListener: (name, callback) => windowEvents.set(name, callback), removeEventListener: name => windowEvents.delete(name),
+  } });
+  harness.rerender(component, props);
+  let cleanups = harness.runEffects();
+  const cleanup = () => { cleanups.forEach(fn => fn()); cleanups = []; };
+  return {
+    visibility, timeouts, intervals, windowEvents, documentEvents, subscriptions, cleanup,
+    get deliveryReads() { return deliveryReads; }, get detailReads() { return detailReads; },
+    get latest() { return latest; }, set latest(value) { latest = value; },
+    tree: () => harness.rerender(component, props),
+    restore() {
+      cleanup();
+      for (const name of ["window", "document"]) {
+        if (descriptors[name]) Object.defineProperty(globalThis, name, descriptors[name]);
+        else delete globalThis[name];
+      }
+    },
+  };
+}
+
+test("admin requests load once without polling, focus refresh, realtime or email delivery checks", async () => {
+  for (const component of ["RequestDetailView", "RequestList"]) {
+    for (const status of ["pending", "leased", "provider_accepted", "delivered", "failed", "skipped"]) {
+      const fixture = requestRefreshFixture({ component, status });
+      try {
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(fixture.detailReads, 1, "Initial load remains available");
+        assert.equal(fixture.deliveryReads, 0);
+        assert.equal(fixture.timeouts.size, 0);
+        assert.equal(fixture.intervals.size, 0);
+        assert.equal(fixture.windowEvents.has("focus"), false);
+        assert.equal(fixture.documentEvents.has("visibilitychange"), false);
+        assert.equal(fixture.subscriptions.size, 0);
+      } finally { fixture.restore(); }
+    }
+  }
+});
+
+test("manual admin Refresh retrieves request and email delivery status together", async () => {
+  for (const component of ["RequestDetailView", "RequestList"]) {
+    const fixture = requestRefreshFixture({ component });
+    try {
+      await new Promise(resolve => setImmediate(resolve));
+      fixture.latest = { ...fixture.latest, request: { ...request, version: request.version + 1, reference_code: "ZE09999" },
+        deliveries: fixture.latest.deliveries.map(delivery => ({ ...delivery, status: "delivered" })),
+      };
+      assert.doesNotMatch(markup(fixture.tree()), /ZE09999/);
+      await elements(fixture.tree(), node => node.type === "button" && textOf(node) === "Refresh")[0].props.onClick();
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(fixture.detailReads, 2);
+      assert.equal(fixture.deliveryReads, 0);
+      const tree = fixture.tree();
+      assert.match(markup(tree), /ZE09999/);
+      if (component === "RequestDetailView") {
+        assert.match(textOf(elements(tree, node => node.props.className === "emailActivity")[0]), /Delivered/);
+        assert.equal(elements(tree, node => node.type?.name === "RequestConversation")[0].props.version, request.version + 1);
+      }
+      assert.equal(fixture.timeouts.size, 0);
+      assert.equal(fixture.intervals.size, 0);
+    } finally { fixture.restore(); }
+  }
+});
+
+test("customer requests retain five-minute polling, focus refresh and request realtime", async () => {
+  for (const component of ["RequestDetailView", "RequestList"]) {
+    const fixture = requestRefreshFixture({ component, admin: false });
+    try {
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(fixture.detailReads, 1);
+      assert.equal(fixture.timeouts.size, 0);
+      assert.equal(fixture.intervals.size, 1);
+      assert.equal([...fixture.intervals.values()][0].delay, 300000);
+      assert.equal(fixture.windowEvents.has("focus"), true);
+      assert.equal(fixture.documentEvents.has("visibilitychange"), true);
+      assert.equal(fixture.subscriptions.size, component === "RequestDetailView" ? 1 : 0);
+      fixture.cleanup();
+      assert.equal(fixture.intervals.size, 0);
+      assert.equal(fixture.windowEvents.size, 0);
+      assert.equal(fixture.documentEvents.size, 0);
+      assert.equal(fixture.subscriptions.size, 0);
+    } finally { fixture.restore(); }
+  }
+});
 
 test("customer realtime uses an owner-scoped signal instead of sensitive request tables", () => {
   const dashboardHook = fs.readFileSync(path.join(projectRoot, "hooks/useDashboardRequests.ts"), "utf8");
@@ -184,13 +468,13 @@ test("payment instructions expose real account details, reference description re
   assert.match(html, /012-345/); assert.match(html, /0012345678/);
   assert.match(html, /aria-label="Copy Account name"/);
   assert.match(html, /aria-label="Copy BSB"/);
-  assert.match(html, /aria-label="Copy Account number"/);
+  assert.match(html, /aria-label="Copy Acount Number"/);
   assert.doesNotMatch(html, /aria-label="Copy Bank"/);
   assert.doesNotMatch(html, /I’ve paid|upload receipt<\/a>|data-lottie-scene="bank-card"|lucide-landmark/);
   assert.match(html, /data-lottie-scene="mobile-payment"/);
   assert.match(html, /After transferring the funds, please upload your bank receipt below/);
   assert.match(html, /1,025 AUD/); assert.match(html, /Amount you need to transfer/);
-  assert.match(html, /<strong>Description<\/strong> and <strong>Reference<\/strong>/);
+  assert.match(html, /<bdi class="paymentNoticeField" dir="ltr">Description<\/bdi> and <bdi class="paymentNoticeField" dir="ltr">Reference<\/bdi>/);
   assert.match(html, /aria-label="Copy transaction code"/); assert.doesNotMatch(html, /Pay by/);
   assert.match(html, /may take 24 hours or more/);
   assert.match(html, /Paya and Satna clearing cycles/);
@@ -204,7 +488,7 @@ test("payment instructions expose real account details, reference description re
   const fa = render("RequestPaymentInstructions", { request, locale: "fa" });
   assert.match(fa, /کد تراکنش/); assert.match(fa, /پایا/); assert.doesNotMatch(fa, /\?{3}/);
   assert.match(fa, /مبلغی که باید واریز کنید/);
-  assert.match(fa, /Description<\/bdi> و <bdi dir="ltr">Reference/);
+  assert.match(fa, /Description<\/bdi> و <bdi class="paymentNoticeField" dir="ltr">Reference/);
   assert.match(fa, /dir="rtl"/); assert.match(fa, /واریز فقط از حساب شخصی خودتان/);
   assert.match(fa, /تسویه طبق تقویم کاری بانک گیرنده/);
   assert.doesNotMatch(fa, /Settlement follows|Bank timing|Payment instructions|Copy transaction code/);
@@ -241,8 +525,8 @@ test("structured bank copy controls preserve exact values and show localized suc
       const props = { request, locale };
       let tree = harness.rerender("RequestPaymentInstructions", props);
       const controls = locale === "en"
-        ? [["Copy BSB", "012-345"], ["Copy Account number", "0012345678"], ["Copy transaction code", "ZE01234"]]
-        : [["کپی کد شعبه (BSB)", "012-345"], ["کپی شماره حساب", "0012345678"], ["کپی کد تراکنش", "ZE01234"]];
+        ? [["Copy BSB", "012-345"], ["Copy Acount Number", "0012345678"], ["Copy transaction code", "ZE01234"]]
+        : [["کپی BSB", "012-345"], ["کپی Acount Number", "0012345678"], ["کپی کد تراکنش", "ZE01234"]];
       for (const [label, value] of controls) {
         const button = elements(tree, node => node.type === "button" && node.props["aria-label"] === label)[0];
         assert.ok(button, `Missing ${label}`); button.props.onClick();
@@ -502,7 +786,7 @@ test("main dashboard composes self-service submission and discoverable request h
 });
 
 test("management settings keep payment initiation and Australian bank clearance as separate windows", () => {
-  const html = render("RequestSettingsForm", {}, { states: { 0: { version: 1, settings: policy }, 3: false } });
+  const html = render("RequestSettingsForm", {}, { states: { 0: { version: 1, settings: policy }, 2: false } });
   assert.match(html, /Payment window · hours/);
   assert.match(html, /AU bank review allowance · hours/);
   assert.match(html, /review deadline, not a required wait/);
@@ -516,7 +800,7 @@ test("management settings keep payment initiation and Australian bank clearance 
 
 test("hour edits save the correct minute values and fractional hours render in both customer languages", async () => {
   let saved;
-  const h = load("components/requests/RequestSettingsForm.tsx", { states: { 0: { version: 1, settings: policy }, 1: policy.management_emails.join("\n"), 3: false }, actions: {
+  const h = load("components/requests/RequestSettingsForm.tsx", { states: { 0: { version: 1, settings: policy }, 2: false }, actions: {
     saveRequestSettings: async input => { saved = input; return { data: { version: 2, settings: input.settings } }; },
   } });
   let tree = h.rerender("RequestSettingsForm", {});
@@ -537,7 +821,7 @@ test("hour edits save the correct minute values and fractional hours render in b
 test("settings sections retain structured bank fields and separate English and Persian notes during editing", async () => {
   let saved;
   const harness = load("components/requests/RequestSettingsForm.tsx", { states: {
-    0: { version: 1, settings: policy }, 1: policy.management_emails.join("\n"), 2: "", 3: false,
+    0: { version: 1, settings: policy }, 1: "", 2: false,
   }, actions: { saveRequestSettings: async input => { saved = input; return { data: { version: 2, settings: input.settings } }; } } });
   let tree = harness.rerender("RequestSettingsForm", {});
   let sections = elements(tree, node => node.type === "section");
@@ -567,7 +851,7 @@ test("settings sections retain structured bank fields and separate English and P
   assert.equal(saved.settings.payment_details_aud.account_number, "0012345678");
   assert.equal(saved.settings.payment_instructions_aud, policy.payment_instructions_aud);
   assert.equal(saved.settings.payment_instructions_aud_fa, "شرح تراکنش را وارد کنید.");
-  assert.deepEqual(saved.settings.management_emails, policy.management_emails);
+  assert.equal(saved.settings.management_emails, undefined);
 });
 
 test("existing settings hash links open the corresponding section", async () => {
@@ -577,7 +861,7 @@ test("existing settings hash links open the corresponding section", async () => 
   const cleanups = [];
   try {
     Object.defineProperty(globalThis, "window", { configurable: true, value: fakeWindow });
-    const harness = load("components/requests/RequestSettingsForm.tsx", { captureEffects: true, states: { 0: { version: 1, settings: policy }, 3: false },
+    const harness = load("components/requests/RequestSettingsForm.tsx", { captureEffects: true, states: { 0: { version: 1, settings: policy }, 2: false },
       actions: { getRequestSettings: async () => ({ data: { version: 1, settings: policy } }) } });
     let tree = harness.rerender("RequestSettingsForm", {});
     const panel = { open: false }; tree.props.ref.current = panel;
@@ -841,7 +1125,7 @@ test("admin approval steps remain actionable and validate the explicit approval 
     let tree = harness.rerender("RequestDetailView", props);
     const html = markup(tree);
     assert.match(html, /class="actionForm"/);
-    assert.match(html, /Send email to customer and management/);
+    assert.match(html, /Send email to customer/);
     assert.match(html, /type="checkbox" required=""/);
     const form = elements(tree, node => node.type === "form")[0];
     const submit = elements(form, node => node.type === "button" && node.props.type === "submit")[0];
@@ -871,7 +1155,7 @@ test("admin approval submits the chosen email policy and customer actions do not
   const approve = elements(tree, node => node.type === "button" && textOf(node) === "Approve request")[0];
   assert.ok(approve); assert.equal(approve.props.type, "submit");
   const labels = elements(tree, node => node.type === "label");
-  const email = labels.find(node => textOf(node).includes("Send email to customer and management"));
+  const email = labels.find(node => textOf(node).includes("Send email to customer"));
   const confirm = labels.find(node => textOf(node).includes("I checked and approve the request details."));
   assert.ok(email); assert.ok(confirm);
   elements(email, node => node.type === "input")[0].props.onChange({ target: { checked: false } });
@@ -1006,6 +1290,82 @@ test("successful cleared funds immediately show destination reconciliation when 
     assert.equal(elements(tree, node => node.props.id === "request-payment-reference").length, 0);
     assert.equal(elements(tree, node => node.props.id === "request-settlement-reference").length, 0);
     assert.doesNotMatch(markup(tree), /The update was not confirmed/);
+  }
+});
+
+test("a committed funds approval unlocks the next step before a slow supplementary refresh and rejects its older version", async () => {
+  const detail = incomingDetail();
+  const updated = { ...detail.request, version: request.version + 1, status: "ready", funding_status: "confirmed", funding_received: request.quote.funding_total,
+    funds_confirmed_at: "2026-09-16T02:00:00Z", ready_at: "2026-09-16T02:00:00Z" };
+  let resolveRefresh, refreshReads = 0, submitted = false;
+  const harness = load("components/requests/RequestDetailView.tsx", { states: {
+    0: detail, 1: false, 9: "1025", 15: "aud-account", 21: true, 22: fundingAccounts,
+  }, actions: {
+    mutateAdminRequest: async () => ({ data: updated }),
+    getAdminRequest: () => { refreshReads++; return new Promise(resolve => { resolveRefresh = resolve; }); },
+  } });
+  const props = { id: request.id, admin: true, locale: "en" };
+  let tree = harness.rerender("RequestDetailView", props);
+  const submission = elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} }).then(() => { submitted = true; });
+  try {
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(refreshReads, 1);
+    assert.equal(submitted, true, "The committed mutation must finish without waiting for supplementary reads");
+    tree = harness.rerender("RequestDetailView", props);
+    assert.match(markup(tree), /Reconcile destination payment/);
+    assert.doesNotMatch(markup(tree), /Saving…/);
+    assert.ok(elements(tree, node => node.type === "fieldset").every(node => !node.props.disabled));
+    const conversation = elements(tree, node => node.type?.name === "RequestConversation")[0];
+    assert.equal(conversation.props.disabled, false);
+    assert.equal(conversation.props.version, updated.version);
+    assert.equal(requiredField(tree, "request-confirmation").props.checked, false);
+    resolveRefresh({ data: detail });
+    await new Promise(resolve => setImmediate(resolve));
+    tree = harness.rerender("RequestDetailView", props);
+    assert.match(markup(tree), /Reconcile destination payment/);
+    assert.equal(elements(tree, node => node.type?.name === "RequestConversation")[0].props.version, updated.version);
+  } finally {
+    resolveRefresh?.({ data: detail });
+    await submission;
+  }
+});
+
+test("a mutation during an existing read queues one fresh snapshot without blocking the committed next step", async () => {
+  const detail = incomingDetail();
+  const updated = { ...detail.request, version: request.version + 1, status: "ready", funding_status: "confirmed", funding_received: request.quote.funding_total,
+    funds_confirmed_at: "2026-09-16T02:00:00Z", ready_at: "2026-09-16T02:00:00Z" };
+  const reads = [];
+  const harness = load("components/requests/RequestDetailView.tsx", { states: {
+    0: detail, 1: false, 9: "1025", 15: "aud-account", 21: true, 22: fundingAccounts,
+  }, actions: {
+    mutateAdminRequest: async () => ({ data: updated }),
+    getAdminRequest: () => new Promise(resolve => reads.push(resolve)),
+  } });
+  const props = { id: request.id, admin: true, locale: "en" };
+  let tree = harness.rerender("RequestDetailView", props);
+  elements(tree, node => node.type === "button" && textOf(node) === "Refresh")[0].props.onClick();
+  const submission = elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });
+  try {
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(reads.length, 1, "An active read is reused while a follow-up is queued");
+    tree = harness.rerender("RequestDetailView", props);
+    assert.match(markup(tree), /Reconcile destination payment/);
+    const conversation = elements(tree, node => node.type?.name === "RequestConversation")[0];
+    assert.equal(conversation.props.disabled, false);
+    await conversation.props.onUpdated(); // Another refresh request shares the same queued follow-up.
+    reads[0]({ data: detail });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(reads.length, 2);
+    tree = harness.rerender("RequestDetailView", props);
+    assert.equal(elements(tree, node => node.type?.name === "RequestConversation")[0].props.version, updated.version);
+    reads[1]({ data: { ...detail, request: updated, messages: [{ id: "fresh-message", event_id: "fresh-event", body: "Latest supplementary record" }] } });
+    await new Promise(resolve => setImmediate(resolve));
+    tree = harness.rerender("RequestDetailView", props);
+    assert.equal(elements(tree, node => node.type?.name === "RequestConversation")[0].props.messages[0].id, "fresh-message");
+    assert.equal(reads.length, 2);
+  } finally {
+    reads.forEach(resolve => resolve({ data: { ...detail, request: updated } }));
+    await submission;
   }
 });
 
@@ -1231,7 +1591,7 @@ test("after a customer reply staff can resume fully funded transfers during a Pr
     assert.equal(calls.length, 0);
     requiredField(tree, "request-honour-quote").props.onChange({ target: { checked: true } });
     requiredField(tree, "request-confirmation").props.onChange({ target: { checked: true } });
-    const email = elements(tree, node => node.type === "label" && /Send email to customer and management/.test(textOf(node)))[0];
+    const email = elements(tree, node => node.type === "label" && /Send email to customer/.test(textOf(node)))[0];
     elements(email, node => node.type === "input")[0].props.onChange({ target: { checked: false } });
     tree = harness.rerender("RequestDetailView", props);
     await elements(tree, node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });

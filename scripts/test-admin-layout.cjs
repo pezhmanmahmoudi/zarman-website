@@ -181,78 +181,87 @@ test("admin errors recover stale deployments with a full document navigation", (
 });
 
 function mountAdminError() {
-  const slots = [];
-  let cursor = 0;
   const effects = [];
   const react = {
     ...React,
-    useState: initial => {
-      const index = cursor++;
-      if (!(index in slots)) slots[index] = typeof initial === "function" ? initial() : initial;
-      return [slots[index], next => { slots[index] = typeof next === "function" ? next(slots[index]) : next; }];
-    },
     useEffect: fn => { effects.push(fn); },
   };
   const AdminError = compile("app/(panel)/admin/(protected)/error.tsx", { react }).default;
   const fakeError = Object.assign(new Error("Synthetic render failure"), { digest: "test-digest-123" });
+  const tree = AdminError({ error: fakeError, reset: () => {} });
+  const actions = [];
+  const collectActions = node => {
+    if (!React.isValidElement(node)) return;
+    if (typeof node.props.onClick === "function") actions.push(node);
+    React.Children.forEach(node.props.children, collectActions);
+  };
+  collectActions(tree);
   return {
-    render: () => { cursor = 0; return renderToStaticMarkup(AdminError({ error: fakeError, reset: () => {} })); },
+    render: () => renderToStaticMarkup(tree),
     runEffects: () => effects.splice(0).forEach(fn => fn()),
+    actions,
     fakeError,
   };
 }
 
-test("an admin render error auto-reloads once instead of leaving a stuck error card, then stops looping", () => {
-  const reloadCalls = [];
-  const store = {};
+test("admin errors stay visible until the user explicitly retries or opens the dashboard", () => {
+  const navigationCalls = [];
+  const storageCalls = [];
+  const loggedErrors = [];
   const previousWindow = global.window;
   const previousSessionStorage = global.sessionStorage;
-  global.window = { location: { reload: () => reloadCalls.push(Date.now()), assign: () => {} } };
+  const previousConsoleError = console.error;
+  global.window = { location: {
+    reload: () => navigationCalls.push("reload"),
+    assign: url => navigationCalls.push(url),
+  } };
   global.sessionStorage = {
-    getItem: key => (key in store ? store[key] : null),
-    setItem: (key, value) => { store[key] = value; },
+    getItem: key => { storageCalls.push(["get", key]); return null; },
+    setItem: (key, value) => storageCalls.push(["set", key, value]),
   };
+  console.error = (...args) => loggedErrors.push(args);
   try {
     const first = mountAdminError();
-    assert.match(first.render(), /Refreshing…/);
-    const loggedErrors = [];
-    const previousConsoleError = console.error;
-    console.error = (...args) => loggedErrors.push(args);
+    assert.match(first.render(), /role="alert"/);
+    assert.match(first.render(), /This page couldn.t load/);
+    assert.match(first.render(), /Try again/);
+    assert.doesNotMatch(first.render(), /Refreshing/);
     first.runEffects();
-    console.error = previousConsoleError;
-    assert.equal(reloadCalls.length, 1);
+    assert.deepEqual(navigationCalls, []);
     assert.ok(loggedErrors.some(args => args.includes(first.fakeError)), "the caught error must be logged for diagnosis");
 
-    // A second, independent mount shortly after (the underlying failure is
-    // persistent) must not auto-reload again — it should fall back to the
-    // manual recovery card instead of looping forever.
+    // A persistent failure also waits for manual recovery on subsequent mounts.
     const second = mountAdminError();
     assert.match(second.render(), /This page couldn.t load/);
     second.runEffects();
-    assert.equal(reloadCalls.length, 1);
+    assert.deepEqual(navigationCalls, []);
+    assert.deepEqual(storageCalls, []);
+
+    first.actions.find(action => action.type === "button").props.onClick();
+    assert.deepEqual(navigationCalls, ["reload"]);
+    let prevented = false;
+    first.actions.find(action => action.props.href === "/admin/dashboard").props.onClick({
+      preventDefault: () => { prevented = true; },
+    });
+    assert.equal(prevented, true);
+    assert.deepEqual(navigationCalls, ["reload", "/admin/dashboard"]);
   } finally {
+    console.error = previousConsoleError;
     global.window = previousWindow;
     global.sessionStorage = previousSessionStorage;
   }
 });
 
-test("admin mutations reload a fresh document instead of refreshing the RSC tree", () => {
-  const adminRoot = path.join(projectRoot, "components/admin");
-  const componentFiles = [];
-  const visit = directory => {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      const filename = path.join(directory, entry.name);
-      if (entry.isDirectory()) visit(filename);
-      else if (entry.name.endsWith(".tsx")) componentFiles.push(filename);
-    }
-  };
-  visit(adminRoot);
-
-  const offenders = componentFiles
-    .filter(filename => /router\.refresh\(\)/.test(fs.readFileSync(filename, "utf8")))
-    .map(filename => path.relative(projectRoot, filename));
-  assert.deepEqual(offenders, []);
-
-  const helperSource = fs.readFileSync(path.join(projectRoot, "lib/admin-refresh.ts"), "utf8");
-  assert.match(helperSource, /window\.location\.reload\(\)/);
+test("admin status refresh requests fresh server data immediately without reloading the document", () => {
+  const calls = [];
+  const { useAdminRefresh } = compile("components/admin/ui/useAdminRefresh.ts", {
+    react: {
+      useCallback: callback => callback,
+      startTransition: callback => { calls.push("transition"); callback(); },
+    },
+    "next/navigation": { useRouter: () => ({ refresh: () => calls.push("refresh") }) },
+  });
+  // No window/timer implementation: a full reload or artificial delay fails here.
+  useAdminRefresh()();
+  assert.deepEqual(calls, ["transition", "refresh"]);
 });

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Check, RefreshCw } from "lucide-react";
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import Stepper, { Step } from "@/components/Stepper";
 import { DashboardMagicCard, DashboardButton, DashboardPageHeader, DashboardReveal, StatusBadge, dashboardInputClass } from "@/components/dashboard/dashboard-ui";
 import { DashboardLottieScene } from "@/components/dashboard/DashboardLottieScene";

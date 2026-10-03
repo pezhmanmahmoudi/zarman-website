@@ -2,7 +2,7 @@
 // No env files, real accounts, database connections or email sends are used.
 import assert from "node:assert/strict";
 import { createHmac, randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import vm from "node:vm";
 import { test } from "node:test";
@@ -49,15 +49,16 @@ function delivery(overrides = {}) {
     ...overrides };
 }
 
-test("funding emails include snapshotted instructions, reference, clearance and priority timing in both locales", () => {
+test("funding emails use English instructions and the transaction code for every stored locale", () => {
   for (const locale of ["en", "fa"]) {
     const result = templates.renderRequestNotification(delivery({ locale }), settings);
     assert.match(result.text, /ZE123456/);
     assert.match(result.text, /BSB: 000000/);
     assert.match(result.text, /1,025\.00/);
-    assert.match(result.text, locale === "fa" ? /فقط پس از تأیید دریافت وجه/ : /starts only after funds are confirmed received/);
-    assert.match(result.text, locale === "fa" ? /۲۴|24/ : /24 hours/);
-    assert.match(result.html, new RegExp(`/${locale}/dashboard/requests/${requestId}`));
+    assert.match(result.text, /starts only after funds are confirmed received/);
+    assert.match(result.text, /24 hours/);
+    assert.match(result.text, /Transaction code: ZE123456/);
+    assert.match(result.html, new RegExp(`/en/dashboard/requests/${requestId}`));
   }
   assert.throws(() => templates.renderRequestNotification(delivery({ payload_snapshot: {} }), settings), /funding_instructions/);
   assert.throws(() => templates.renderRequestNotification(delivery({ recipient_email: "victim@example.test\r\nBcc: other@example.test" }), settings), /recipient_unavailable/);
@@ -68,7 +69,7 @@ test("funding emails include snapshotted instructions, reference, clearance and 
 test("receipt and status templates escape content and do not confuse upload evidence with cleared funds", () => {
   const receipt = templates.renderRequestNotification(delivery({ event_type: "complete", workflow_status: "completed", payload_snapshot: { receipt: { ...completion, sender_name: "<script>bad()</script>" } } }), settings);
   assert.match(receipt.text, /final PDF receipt is attached/);
-  assert.match(receipt.text, /Express processing fee: AUD 25.00/);
+  assert.match(receipt.text, /Your transfer was successful/);
   assert.doesNotMatch(receipt.html, /<script>/);
   assert.match(receipt.html, /&lt;script&gt;/);
   assert.throws(() => templates.renderRequestNotification(delivery({ event_type: "complete", workflow_status: "completed" }), settings), /completion_receipt_unavailable/);
@@ -80,13 +81,13 @@ test("receipt and status templates escape content and do not confuse upload evid
 test("bank delay advice is conditional on the incoming currency and ends after funds confirmation", () => {
   for (const locale of ["en", "fa"]) {
     const aud = templates.renderRequestNotification(delivery({ locale }), settings);
-    assert.match(aud.text, locale === "fa" ? /انتظار اجباری ۲۴ ساعته نداریم/ : /do not impose a 24-hour wait/);
+    assert.match(aud.text, /do not impose a 24-hour wait/);
     assert.doesNotMatch(aud.text, /700|۷۰۰/);
     const irt = templates.renderRequestNotification(delivery({ locale, payload_snapshot: {
       payment_instructions: "Test bank", funding_currency: "IRT", funding_total: 234675000,
     } }), settings);
     assert.doesNotMatch(irt.text, /24|۲۴|Satna|ساتنا/);
-    assert.match(irt.text, locale === "fa" ? /پرداخت تومانی/ : /incoming Toman payment/);
+    assert.match(irt.text, /incoming Toman payment/);
     for (const event_type of ["ready", "resume_funded_request", "start_processing"]) {
       const ready = templates.renderRequestNotification(delivery({ event_type, workflow_status: "ready", locale }), settings);
       assert.doesNotMatch(ready.text, /24|۲۴|first-time/);
@@ -98,14 +99,14 @@ test("submission waits for approval and never releases bank details, even from a
   for (const locale of ["en", "fa"]) {
     const message = templates.renderRequestNotification(delivery({ event_type: "submitted", workflow_status: "submitted", locale }), settings);
     assert.doesNotMatch(message.text, /BSB|Number: 123456|Account: Zarman|Description Code/mi);
-    assert.match(message.text, locale === "fa" ? /منتظر تأیید درخواست/ : /Wait for approval/);
+    assert.match(message.text, /Wait for approval/);
     assert.match(message.text, /13 Sept 2026/);
     assert.doesNotMatch(message.text, /[۰-۹]/);
     assert.equal(templates.renderRequestNotification(delivery({ event_type: "submitted", workflow_status: "submitted", locale, payload_snapshot: {} }), settings).to[0], "customer@example.test");
   }
 });
 
-test("new bank snapshots preserve copy values and Persian notes without English fallback prose", () => {
+test("bank snapshots preserve copy values and consistently use their English instructions", () => {
   const payload_snapshot = {
     payment_details: { account_name: "TEST ONLY", bsb: "000-000", account_number: "00123456" },
     funding_currency: "AUD", funding_total: 1025,
@@ -119,35 +120,34 @@ test("new bank snapshots preserve copy values and Persian notes without English 
     assert.match(result.text, /00123456/);
   }
   assert.match(en.text, /English note only/);
-  assert.match(fa.text, /فقط یادداشت فارسی/);
-  assert.match(fa.text, /یادداشت چرخه بانکی فارسی/);
-  assert.doesNotMatch(fa.text, /English/);
-  assert.match(fa.html, /lang="fa" dir="rtl"/);
-  const noNote = templates.renderRequestNotification(delivery({ locale: "fa", payload_snapshot: { ...payload_snapshot, payment_instructions_fa: null, iran_banking_notice_fa: undefined } }), settings);
-  assert.doesNotMatch(noNote.text, /English/);
-  assert.match(noNote.text, /ساتنا و پایا/);
+  assert.deepEqual(fa, en);
+  assert.match(fa.text, /English banking notice/);
+  assert.doesNotMatch(fa.text, /فقط یادداشت فارسی|یادداشت چرخه بانکی فارسی/);
+  assert.match(fa.html, /lang="en" dir="ltr"/);
+  const noNote = templates.renderRequestNotification(delivery({ locale: "fa", payload_snapshot: { ...payload_snapshot, payment_instructions: null, iran_banking_notice: undefined } }), settings);
+  assert.doesNotMatch(noNote.text, /English|فقط یادداشت فارسی|یادداشت چرخه بانکی فارسی/);
+  assert.match(noNote.text, /Iranian payouts follow Satna\/Paya/);
 });
 
-test("conversation emails have concise localized subjects, escaped messages and audience-specific reply links", () => {
-  for (const locale of ["en", "fa"]) for (const audience of ["customer", "management"]) {
-    const event_type = audience === "customer" ? "admin_message" : "customer_message";
-    const result = templates.renderRequestNotification(delivery({ locale, audience, event_type,
+test("conversation emails have English subjects, escaped messages and English customer reply links", () => {
+  for (const locale of ["en", "fa"]) {
+    const result = templates.renderRequestNotification(delivery({ locale, event_type: "admin_message",
       payload_snapshot: { public_message: "<b>Test reply</b>\nSecond line" } }), settings);
-    assert.match(result.subject, locale === "fa" ? /پیام زرمان|پاسخ مشتری/ : /Message from Zarman|Customer reply/);
+    assert.match(result.subject, /Message from Zarman|Customer reply/);
     assert.match(result.html, /&lt;b&gt;Test reply&lt;\/b&gt;/);
     assert.doesNotMatch(result.html, /<b>Test reply/);
     assert.match(result.text, /Test reply/);
     assert.doesNotMatch(result.text, /24 hours|additional fee|Bank clearance/);
-    assert.match(result.html, new RegExp(audience === "management" ? `/admin/transactions/requests/${requestId}` : `/${locale}/dashboard/requests/${requestId}`));
+    assert.match(result.html, new RegExp(`/en/dashboard/requests/${requestId}`));
   }
 });
 
-test("received funds under finance review do not ask the customer to act in either language", () => {
+test("received funds under finance review do not ask the customer to act for either stored locale", () => {
   for (const locale of ["en", "fa"]) for (const workflow_status of ["action_required", "under_review"]) {
     const result = templates.renderRequestNotification(delivery({ locale, workflow_status, event_type: "funds_recorded",
       payload_snapshot: { funds_confirmed_at: "2026-09-15T03:55:16Z", customer_action_required: null } }), settings);
-    assert.match(result.subject, locale === "fa" ? /وجه دریافت شد؛ در حال بررسی توسط مدیر/ : /Funds received · under admin review/);
-    assert.match(result.text, locale === "fa" ? /نیازی به اقدام شما نیست/ : /No action is needed from you/);
+    assert.match(result.subject, /Funds received · under admin review/);
+    assert.match(result.text, /No action is needed from you/);
     assert.doesNotMatch(result.text, /Reply on the request page|پاسخ خود را|24 hours|BSB/);
   }
 });
@@ -156,16 +156,16 @@ test("only an explicit question requires a reply; ordinary admin messages are op
   for (const locale of ["en", "fa"]) {
     const optional = templates.renderRequestNotification(delivery({ locale, workflow_status: "action_required", event_type: "admin_message",
       payload_snapshot: { public_message: "Progress update", customer_action_required: null } }), settings);
-    assert.match(optional.text, locale === "fa" ? /در صورت نیاز/ : /if needed/);
+    assert.match(optional.text, /if needed/);
     assert.doesNotMatch(optional.text, /Reply on the request page|پاسخ خود را/);
     const required = templates.renderRequestNotification(delivery({ locale, workflow_status: "under_review", event_type: "funds_recorded",
       payload_snapshot: { funds_confirmed_at: "2026-09-15T03:55:16Z", customer_action_required: "Please confirm the sender name." } }), settings);
     assert.match(required.text, /Please confirm the sender name/);
-    assert.match(required.text, locale === "fa" ? /پاسخ خود را/ : /Reply on the request page/);
+    assert.match(required.text, /Reply on the request page/);
     assert.doesNotMatch(required.text, /No action is needed|نیازی به اقدام شما نیست/);
     const legacy = templates.renderRequestNotification(delivery({ locale, workflow_status: "action_required", event_type: "request_info",
       payload_snapshot: { public_message: "Please confirm the sender name." } }), settings);
-    assert.match(legacy.text, locale === "fa" ? /پاسخ خود را/ : /Reply on the request page/);
+    assert.match(legacy.text, /Reply on the request page/);
   }
 });
 
@@ -189,6 +189,8 @@ function workerDb(row, options = {}) {
     calls.push({ name, args });
     if (name === "claim_request_notifications_for_request") {
       assert.equal(args.p_request_id, requestId);
+      assert.equal(args.p_limit, 1, "never pre-lease a batch the worker may not finish");
+      assert.equal(args.p_lease_seconds, 120);
       if (claimed) return { data: [], error: null }; claimed = true; return { data: [row], error: null };
     }
     if (name === "prepare_request_notification") {
@@ -292,8 +294,66 @@ test("stale ambiguity requires reconciliation; permanent errors fail; DB acknowl
   await assert.rejects(sendNow({ db: workerDb(delivery(), { failFinish: true }), send: async () => { sends++; return { data: { id: "accepted" }, error: null, headers: null }; } }), /notification_rpc_failed/);
   assert.equal(sends, 1);
   assert.equal(notifications.notificationRetryAt(1, now(), "120", 0), "2026-09-13T01:02:00.000Z");
-  assert.equal(notifications.authorizedNotificationCron, undefined);
+});
+
+test("legacy management payloads and extra recipients cannot bypass the customer-only boundary", async () => {
+  const base = delivery({ event_type: "review", workflow_status: "under_review" });
+  const payload = templates.renderRequestNotification(base, settings);
+  for (const row of [
+    delivery({ audience: "management", rendered_payload: payload }),
+    delivery({ rendered_payload: { ...payload, to: ["other@example.test"] } }),
+    delivery({ rendered_payload: { ...payload, to: [base.recipient_email, "extra@example.test"] } }),
+    delivery({ rendered_payload: { ...payload, bcc: "extra@example.test" } }),
+    delivery({ rendered_payload: { ...payload, cc: ["extra@example.test"] } }),
+  ]) {
+    const result = await sendNow({ db: workerDb(row), send: async () => assert.fail("Unsafe recipient must never send") });
+    assert.equal(result.failed, 1);
+  }
+  const database = workerDb(base);
+  const result = await sendNow({ db: { async rpc(name, args) {
+    const response = await database.rpc(name, args);
+    if (name === "prepare_request_notification") response.data.rendered_payload.bcc = "extra@example.test";
+    return response;
+  } }, send: async () => assert.fail("Prepared stored payload must be checked again") });
+  assert.equal(result.failed, 1);
+  assert.throws(() => templates.renderRequestNotification({ ...base, audience: "management" }, settings), /management_email_disabled/);
+});
+
+test("manual retry selects only its delivery, preserves its key and bounds claim starts", async () => {
+  const row = delivery({ rendered_payload: templates.renderRequestNotification(delivery(), settings),
+    first_attempt_at: "2026-09-13T00:59:00Z", attempts: 2 });
+  const database = workerDb(row);
+  const result = await sendNow({ deliveryId, db: database, send: async (payload, key) => {
+    assert.deepEqual(payload, row.rendered_payload);
+    assert.equal(key, `request-notification/${deliveryId}`);
+    return { data: { id: "provider-recovered" }, error: null, headers: null };
+  } });
+  assert.equal(result.accepted, 1);
+  assert.equal(database.calls[0].name, "claim_request_notifications_for_request");
+  assert.equal(database.calls[0].args.p_request_id, requestId);
+  assert.equal(database.calls[0].args.p_delivery_id, deliveryId);
+  assert.equal(database.calls.filter(call => call.name.startsWith("claim_")).length, 1, "selected retry cannot continue to other pending deliveries");
+  for (const unexpected of [delivery({ id: randomUUID() }), delivery({ request_id: randomUUID() })]) {
+    const mismatch = workerDb(unexpected);
+    await assert.rejects(sendNow({ deliveryId, db: mismatch, send: async () => assert.fail("Only the selected delivery may send") }), /scope_mismatch/);
+    assert.equal(mismatch.calls.length, 1, "out-of-scope deliveries are never prepared or changed");
+  }
+
+  let current = now();
+  const timed = workerDb(delivery());
+  await sendNow({ now: () => current, db: timed, send: async () => {
+    current += 21_000;
+    return { data: { id: "provider-id" }, error: null, headers: null };
+  } });
+  assert.equal(timed.calls.filter(call => call.name.startsWith("claim_")).length, 1);
+});
+
+test("request mail has no automatic worker, cron endpoint or scheduler", () => {
   assert.equal(notifications.runRequestNotificationWorker, undefined);
+  assert.equal(notifications.authorizedNotificationCron, undefined);
+  assert.equal(existsSync(new URL("../app/api/cron/request-email/route.ts", import.meta.url)), false);
+  const configuration = JSON.parse(read("vercel.json"));
+  assert.ok(!configuration.crons?.some(cron => cron.path === "/api/cron/request-email"));
 });
 
 test("send failures produce only allowlisted diagnostics and never expose RPC secrets", async () => {
@@ -357,7 +417,7 @@ async function loadNotificationDatabase(db) {
   ]) await db.exec(read(`supabase/migrations/${migration}`));
 }
 
-test("after _44 only admin-approved events are sendable, stale queue rows retire, and one admin action sends its emails at once", async () => {
+test("before customer-only migration the worker already refuses legacy management mail and sends only approved customer events", async () => {
   const db = new PGlite();
   try {
     await loadNotificationDatabase(db);
@@ -408,12 +468,13 @@ test("after _44 only admin-approved events are sendable, stale queue rows retire
     const result = await notifications.sendRequestNotifications({ ...settings, db: adapter, requestId, send: async (payload, key) => {
       sent.push({ key, to: payload.to[0] }); return { data: { id: randomUUID() }, error: null, headers: null };
     } });
-    assert.equal(result.accepted, 4); assert.equal(sent.length, 4); assert.equal(new Set(sent.map(s => s.key)).size, 4);
+    assert.equal(result.accepted, 2); assert.equal(result.failed, 2);
+    assert.equal(sent.length, 2); assert.equal(new Set(sent.map(s => s.key)).size, 2);
     const byId = new Map((await rows()).map(d => [d.id, d]));
-    assert.deepEqual(sent.map(s => byId.get(s.key.replace("request-notification/", "")).event_type), ["review", "review", "reject", "reject"]);
+    assert.deepEqual(sent.map(s => byId.get(s.key.replace("request-notification/", "")).event_type), ["review", "reject"]);
     assert.ok((await rows()).every(d => d.status !== "pending" && d.status !== "leased"));
     assert.equal((await rows(otherRequest)).filter(d => d.status === "pending").length, 2, "other requests are untouched");
-    assert.deepEqual(new Set(sent.map(s => s.to)), new Set(["customer@example.test", "manager@example.test"]));
+    assert.deepEqual(new Set(sent.map(s => s.to)), new Set(["customer@example.test"]));
 
     await db.exec("set role authenticated");
     await assert.rejects(db.query("select * from claim_request_notifications_for_request($1,$2,1,60)", [randomUUID(), otherRequest]), /permission denied/);

@@ -7,7 +7,7 @@ import { rejectTransaction } from "@/app/actions/admin.actions";
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminToast } from "@/components/admin/ui/AdminToast";
-import { reloadAdminPage } from "@/lib/admin-refresh";
+import { useAdminRefresh } from "@/components/admin/ui/useAdminRefresh";
 
 export function RejectApprovedButton({
   transactionId,
@@ -15,6 +15,7 @@ export function RejectApprovedButton({
   transactionId: string | number;
 }) {
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
+  const refreshAdmin = useAdminRefresh();
 
   const handleReject = () => {
     confirm({
@@ -25,7 +26,7 @@ export function RejectApprovedButton({
       onConfirm: async () => {
         const result = await rejectTransaction(transactionId);
         if (result.error) showToast({ type: "error", message: result.error });
-        else { showToast({ type: "success", message: "Transaction rejected." }); reloadAdminPage(600); }
+        else { showToast({ type: "success", message: "Transaction rejected." }); refreshAdmin(); }
       },
     });
   };

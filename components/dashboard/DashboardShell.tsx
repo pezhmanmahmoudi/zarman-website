@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { usePathname, useSearchParams } from "next/navigation";
 import { RefreshCw, BotMessageSquare } from "lucide-react";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import type { DashboardInitialAccount } from "@/lib/dashboard/approved-summary";
 import { useLocale } from "@/context/LocaleContext";
 import { dashboardCopy, dashboardTab } from "@/lib/dashboard/navigation";
 import { DashboardSidebar } from "./DashboardSidebar";
@@ -20,8 +21,8 @@ export function useDashboard() {
   if (!value) throw new Error("Dashboard provider is required");
   return value;
 }
-export function DashboardShell({ children }: { children: ReactNode }) {
-  const data = useDashboardData(), locale = useLocale(), pathname = usePathname(), query = useSearchParams();
+export function DashboardShell({ children, initialAccount = null }: { children: ReactNode; initialAccount?: DashboardInitialAccount | null }) {
+  const data = useDashboardData(initialAccount), locale = useLocale(), pathname = usePathname(), query = useSearchParams();
   const tab = dashboardTab(pathname, query), copy = dashboardCopy[locale];
   const [privateAmounts, setPrivateAmounts] = useState(false);
   const [motion, setMotion] = useState(true);

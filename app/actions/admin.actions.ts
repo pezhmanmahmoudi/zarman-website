@@ -217,6 +217,13 @@ const getAuthorizedServerClient = cache(async () => {
   return db;
 });
 
+// Privileged reads share the same verified authorization during one server
+// render. Direct action calls and all writes still perform fresh checks.
+const getAuthorizedServiceReadClient = cache(async () => {
+  await getAuthorizedServerClient();
+  return makeServiceRoleClient();
+});
+
 // ---------------------------------------------------------------------------
 // Internal: write a structured audit log entry using the service role client
 // ---------------------------------------------------------------------------
@@ -1726,8 +1733,11 @@ export async function deletePromoCode(id: string) {
 }
 
 export async function getPendingTransactionsWithDetails() {
-  await requireAdmin(); // auth + role check only
-  const db = makeServiceRoleClient(); // service role bypasses RLS on recipients
+  const db = await getAuthorizedServiceReadClient();
+  return readPendingTransactionsWithDetails(db);
+}
+
+async function readPendingTransactionsWithDetails(db: ReturnType<typeof makeServiceRoleClient>) {
   const selection = `
       id, user_id, recipient_id, type, amount_aud, equivalent_toman, status, created_at,
       reference_code, payment_link, reason_for_transfer, receipt_sent,
@@ -1800,9 +1810,11 @@ export async function getPendingTransactionsWithDetails() {
 }
 
 export async function getActiveBankAccountsForAdmin() {
-  await requireAdmin();
-  const db = makeServiceRoleClient();
+  const db = await getAuthorizedServiceReadClient();
+  return readActiveBankAccounts(db);
+}
 
+async function readActiveBankAccounts(db: ReturnType<typeof makeServiceRoleClient>) {
   const { data, error } = await db
     .from("bank_accounts")
     .select("id, account_name, currency, is_active")
@@ -1826,8 +1838,16 @@ export async function getTransactionHistoryWithDetails(
   pageSize = 10,
   filters: TransactionHistoryFilters = {},
 ) {
-  await requireAdmin(); // auth + role check only
-  const db = makeServiceRoleClient(); // service role bypasses RLS on recipients
+  const db = await getAuthorizedServiceReadClient();
+  return readTransactionHistoryWithDetails(db, page, pageSize, filters);
+}
+
+async function readTransactionHistoryWithDetails(
+  db: ReturnType<typeof makeServiceRoleClient>,
+  page: number,
+  pageSize: number,
+  filters: TransactionHistoryFilters,
+) {
   const safePage = clampInt(page, 1, MAX_AUDIT_PAGE, 1);
   const safePageSize = clampInt(pageSize, 1, 50, 10);
   const offset = (safePage - 1) * safePageSize;
@@ -1965,9 +1985,11 @@ export async function bulkDeleteTransactions(transactionIds: string[]) {
 }
 
 export async function getTransactionHistoryStatusCounts() {
-  await requireAdmin();
-  const db = makeServiceRoleClient();
+  const db = await getAuthorizedServiceReadClient();
+  return readTransactionHistoryStatusCounts(db);
+}
 
+async function readTransactionHistoryStatusCounts(db: ReturnType<typeof makeServiceRoleClient>) {
   const [approvedRes, rejectedRes, archivedRes] = await Promise.all([
     db.from("transactions").select("id", { count: "exact", head: true }).eq("status", "approved"),
     db.from("transactions").select("id", { count: "exact", head: true }).eq("status", "rejected"),
@@ -1986,6 +2008,25 @@ export async function getTransactionHistoryStatusCounts() {
     rejected,
     archived,
   };
+}
+
+/** One browser action per refresh, with independent reads parallelized on the server. */
+export async function getAdminTransactionWorkspace(
+  view: "active" | "history" = "active",
+  page = 1,
+  pageSize = 10,
+  filters: TransactionHistoryFilters = {},
+) {
+  const db = await getAuthorizedServiceReadClient();
+  const [pending, historyPage, statusCounts, bankAccounts] = await Promise.all([
+    readPendingTransactionsWithDetails(db),
+    view === "history"
+      ? readTransactionHistoryWithDetails(db, page, pageSize, filters)
+      : Promise.resolve({ data: [], total: 0 }),
+    readTransactionHistoryStatusCounts(db),
+    readActiveBankAccounts(db),
+  ]);
+  return { pending, history: historyPage.data, total: historyPage.total, statusCounts, bankAccounts };
 }
 
 // ===========================================================================

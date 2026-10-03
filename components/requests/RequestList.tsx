@@ -35,12 +35,13 @@ export function RequestList({ admin = false, locale = "en", embedded = false }: 
 
   useEffect(() => {
     void refresh();
+    if (admin) return;
     const onFocus = () => { if (document.visibilityState === "visible" && dashboardRefreshDue(lastRefresh.current)) void refresh(); };
     const timer = window.setInterval(onFocus, DASHBOARD_AUTO_REFRESH_MS);
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     return () => { window.clearInterval(timer); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
-  }, [refresh]);
+  }, [admin, refresh]);
 
   const filters = [
     { id: "active", label: fa ? "فعال" : "Active" },

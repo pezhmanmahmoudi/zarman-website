@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { DashboardTabLink as Link } from "./DashboardTabLink";
 import type { Profile } from "@/app/[locale]/dashboard/dashboard.types";
 import { useLocale } from "@/context/LocaleContext";
 import { dashboardHref } from "@/lib/dashboard/navigation";

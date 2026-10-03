@@ -11,10 +11,11 @@ const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 
-function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_000, projectColumns = false } = {}) {
+function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_000, projectColumns = false, serverRender = false, readGate = () => undefined } = {}) {
   const calls = [];
   let authChecks = 0;
   let serviceClients = 0;
+  let currentRole = role;
 
   class ReadQuery {
     constructor(table) {
@@ -59,11 +60,12 @@ function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_0
         const fields = this.columns.split(",").map(field => field.trim());
         page = page.map(row => Object.fromEntries(fields.map(field => [field, row[field]])));
       }
-      return Promise.resolve({
+      const response = {
         data: this.options.head ? null : page,
         count: this.options.count === "exact" ? filtered.length : null,
         error: null,
-      }).then(resolve, reject);
+      };
+      return Promise.resolve(readGate(this)).then(() => response).then(resolve, reject);
     }
   }
 
@@ -71,7 +73,7 @@ function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_0
     from: (table) => new ReadQuery(table),
     auth: { getUser: async () => {
       authChecks++;
-      return { data: { user: role ? { id: "offline-admin", app_metadata: { role } } : null }, error: null };
+      return { data: { user: currentRole ? { id: "offline-admin", app_metadata: { role: currentRole } } : null }, error: null };
     } },
   };
   const compiledModule = { exports: {} };
@@ -79,8 +81,13 @@ function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_0
     (name) => {
       if (name === "@supabase/supabase-js") return { createClient: () => { serviceClients++; return db; } };
       if (name === "@/lib/supabase-server") return { createSupabaseServerActionClient: async () => db };
-      // Direct action calls do not run in a React Server Component cache scope.
-      if (name === "react") return { cache: (fn) => fn };
+      // Model one RSC request scope only when explicitly requested. Direct
+      // action calls have no React render cache and always recheck access.
+      if (name === "react") return { cache: fn => {
+        if (!serverRender) return fn;
+        let value;
+        return () => value ??= fn();
+      } };
       if (name === "@/lib/requests/receipt-upload") return { REQUEST_RECEIPTS_BUCKET: "exchange-request-receipts" };
       if (["next/cache", "@/lib/rates", "@/lib/pricing", "@/lib/iran-bank-transfer-fees", "@/lib/jalali"].includes(name)) return {};
       throw new Error(`Unexpected dependency: ${name}`);
@@ -89,7 +96,7 @@ function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_0
     compiledModule.exports,
     { env: {} },
   );
-  return { actions: compiledModule.exports, calls, get authChecks() { return authChecks; }, get serviceClients() { return serviceClients; } };
+  return { actions: compiledModule.exports, calls, setRole: value => { currentRole = value; }, get authChecks() { return authChecks; }, get serviceClients() { return serviceClients; } };
 }
 
 const ledgerRows = (length) => Array.from({ length }, (_, index) => ({
@@ -121,6 +128,103 @@ test("navigation reads only pending queues and verifies capability without count
 test("dashboard counters reject unavailable data instead of displaying false zeroes", async () => {
   const context = setup({ fail: (query) => query.table === "testimonials" });
   await assert.rejects(context.actions.getAdminStats(), /Synthetic read failure/);
+});
+
+test("transaction server rendering shares one fresh authorization with sidebar counts", async () => {
+  for (let request = 0; request < 2; request++) {
+    const context = setup({ serverRender: true });
+    await Promise.all([
+      context.actions.getAdminNavigationCounts(),
+      context.actions.getPendingTransactionsWithDetails(),
+      context.actions.getTransactionHistoryWithDetails(),
+      context.actions.getTransactionHistoryStatusCounts(),
+      context.actions.getActiveBankAccountsForAdmin(),
+    ]);
+    assert.equal(context.authChecks, 1);
+    assert.equal(context.calls.filter(query => query.table === "audit_logs").length, 1);
+    assert.equal(context.serviceClients, 1);
+  }
+});
+
+test("the transaction workspace uses one fresh authorization per browser action and skips hidden history", async () => {
+  const context = setup({ tables: {
+    transactions: [
+      { id: "pending-1", status: "pending", created_at: "2026-09-15T01:00:00Z" },
+      { id: "approved-1", status: "approved", created_at: "2026-09-14T01:00:00Z" },
+      { id: "approved-2", status: "approved", created_at: "2026-09-13T01:00:00Z" },
+    ],
+    bank_accounts: [{ id: "active-account", account_name: "AUD", currency: "AUD", is_active: true }, { id: "hidden-account", is_active: false }],
+  } });
+  const active = await context.actions.getAdminTransactionWorkspace("active");
+  assert.deepEqual(Array.from(active.pending, row => row.id), ["pending-1"]);
+  assert.equal(active.history.length, 0);
+  assert.equal(active.total, 0);
+  assert.equal(active.statusCounts.approved, 2);
+  assert.equal(active.bankAccounts.length, 1);
+  assert.equal(context.authChecks, 1);
+  assert.equal(context.serviceClients, 1);
+  assert.equal(context.calls.length, 7, "authorization, pending/refund queues, three badge counts and accounts only");
+  assert.equal(context.calls.filter(query => query.table === "transactions" && !query.options.head).length, 1);
+
+  const previousCalls = context.calls.length;
+  const history = await context.actions.getAdminTransactionWorkspace("history", 2, 1, { status: "approved" });
+  assert.deepEqual(Array.from(history.history, row => row.id), ["approved-2"]);
+  assert.equal(history.total, 2);
+  assert.equal(history.pending.length, 1);
+  assert.equal(context.authChecks, 2, "a new browser action rechecks the live admin session");
+  assert.equal(context.serviceClients, 2);
+  assert.equal(context.calls.length - previousCalls, 9, "history adds its filtered count and visible page");
+  const page = context.calls.slice(previousCalls).find(query => query.table === "transactions" && query.window?.[0] === 1);
+  assert.deepEqual(page.window, [1, 1]);
+  const authorizedReadCount = context.calls.length;
+  context.setRole("customer");
+  await assert.rejects(context.actions.getAdminTransactionWorkspace("active"), /Forbidden/);
+  assert.equal(context.authChecks, 3);
+  assert.equal(context.serviceClients, 2, "a revoked role cannot reuse privileged access from the previous action");
+  assert.equal(context.calls.length, authorizedReadCount);
+});
+
+test("transaction workspace reads independent history, counts and accounts while the queue is still loading", async () => {
+  let releaseQueue;
+  const queueGate = new Promise(resolve => { releaseQueue = resolve; });
+  const context = setup({ readGate: query => query.table === "transactions"
+    && query.orders.some(order => order.field === "created_at" && order.ascending) ? queueGate : undefined });
+  const response = context.actions.getAdminTransactionWorkspace("history");
+  try {
+    await new Promise(setImmediate);
+    assert.equal(context.authChecks, 1);
+    assert.equal(context.calls[0].table, "audit_logs", "privileged reads must follow the capability check");
+    assert.ok(context.calls.some(query => query.table === "bank_accounts"), "accounts do not wait for the queue");
+    assert.ok(context.calls.some(query => query.table === "transactions" && query.orders.some(order => order.field === "created_at" && !order.ascending)), "history does not wait for the queue");
+    assert.equal(context.calls.filter(query => query.table === "transactions" && query.options.head).length, 4, "the history count and three badge counts start independently");
+  } finally { releaseQueue(); }
+  assert.equal((await response).pending.length, 0);
+});
+
+test("transaction workspace denies unauthorized and failed-capability reads before service access", async () => {
+  for (const role of [null, "customer"]) {
+    const context = setup({ role });
+    await assert.rejects(context.actions.getAdminTransactionWorkspace("history"), /Unauthorized|Forbidden/);
+    assert.equal(context.serviceClients, 0);
+    assert.equal(context.calls.length, 0);
+  }
+  const forbidden = setup({ fail: query => query.table === "audit_logs" });
+  await assert.rejects(forbidden.actions.getAdminTransactionWorkspace("active"), /capability check failed/);
+  assert.equal(forbidden.serviceClients, 0);
+  const unavailable = setup({ fail: query => query.table === "bank_accounts" });
+  await assert.rejects(unavailable.actions.getAdminTransactionWorkspace("active"), /Synthetic read failure/);
+});
+
+test("transaction read actions reauthorize outside render scope and reject non-admins before service access", async () => {
+  const reads = ["getPendingTransactionsWithDetails", "getTransactionHistoryWithDetails", "getTransactionHistoryStatusCounts", "getActiveBankAccountsForAdmin"];
+  const context = setup();
+  for (const read of reads) await context.actions[read]();
+  assert.equal(context.authChecks, reads.length);
+  for (const role of [null, "customer"]) {
+    const denied = setup({ role, serverRender: true });
+    for (const read of reads) await assert.rejects(denied.actions[read]());
+    assert.equal(denied.serviceClients, 0);
+  }
 });
 
 test("verification queue and history return the saved contact, address and identity fields used by View", async () => {

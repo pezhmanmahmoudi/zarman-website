@@ -107,7 +107,8 @@ function harness(overrides = {}) {
     from(table) {
       const query = { table, filters: {}, operation: "read", value: undefined };
       const builder = {};
-      for (const name of ["limit", "gte", "not", "in", "is"]) builder[name] = () => builder;
+      for (const name of ["gte", "not", "in", "is"]) builder[name] = () => builder;
+      builder.limit = limit => { query.limit = limit; return builder; };
       builder.select = columns => { query.columns = columns; return builder; };
       builder.order = (column, options) => { query.order = { column, ...options }; return builder; };
       builder.eq = (field, value) => { query.filters[field] = value; return builder; };
@@ -145,11 +146,17 @@ function harness(overrides = {}) {
             return { data: query.single ? request : [request], error: null };
           }
           case "exchange_request_receipts": return state.receipt ? { data: state.receipt, error: null } : { data: null, count: 0, error: null };
+          case "exchange_request_notification_deliveries": return { data: state.deliveries || [], error: state.deliveryReadError || null };
           default: return { data: [], error: null };
         }
       };
-      builder.single = builder.maybeSingle = async () => { query.single = true; return finish(); };
-      builder.then = (onSuccess, onFailure) => Promise.resolve(finish()).then(onSuccess, onFailure);
+      const execute = async () => {
+        const response = finish();
+        await state.readGate?.(query);
+        return response;
+      };
+      builder.single = builder.maybeSingle = async () => { query.single = true; return execute(); };
+      builder.then = (onSuccess, onFailure) => execute().then(onSuccess, onFailure);
       return builder;
     },
     rpc: async (name, args) => { state.calls.push({ rpc: name, args }); return state.rpc ? state.rpc(name, args) : { data: { id: REQUEST, ...state.rpcRequest }, error: null }; },
@@ -171,6 +178,7 @@ function harness(overrides = {}) {
       notificationWorkerFailureDiagnostic: () => ({ event: "request_notification_worker_unavailable", stage: "unknown" }),
       sendRequestNotifications: async options => {
         state.emailSends = (state.emailSends || []).concat([options]);
+        if (state.mailGate) await state.mailGate;
         if (state.mailError) throw state.mailError;
         return { claimed: 2, accepted: 2, retrying: 0, failed: 0, reconciliation: 0 };
       },
@@ -336,6 +344,41 @@ test("admin payment read failures do not masquerade as an empty deposit history"
   assert.equal(state.calls.some(call => call.rpc || call.operation === "insert"), false);
 });
 
+test("admin detail starts independent delivery and deposit reads while event history is still loading", async () => {
+  let releaseHistory;
+  const historyGate = new Promise(resolve => { releaseHistory = resolve; });
+  const { actions, state } = harness({ admin: true, readGate: query => query.table === "exchange_request_events" ? historyGate : undefined });
+  const response = actions.getAdminRequest(REQUEST);
+  try {
+    await new Promise(setImmediate);
+    for (const table of ["exchange_request_events", "exchange_request_receipts", "exchange_request_messages", "exchange_request_notification_deliveries", "exchange_request_payments"]) {
+      assert.ok(state.calls.some(call => call.table === table), `${table} should not wait for event history`);
+    }
+    assert.equal(state.calls[0].table, "exchange_requests", "authorize the request before related reads");
+  } finally { releaseHistory(); }
+  assert.equal((await response).error, undefined);
+});
+
+test("delivery progress reads are admin-only, bounded and do not reload unrelated request data", async () => {
+  const customer = harness();
+  assert.ok((await customer.actions.getAdminRequestDeliveries(REQUEST)).error);
+  assert.equal(customer.state.calls.length, 0);
+  const admin = harness({ admin: true, deliveries: [{ id: COMMAND, request_id: REQUEST, status: "pending" }] });
+  assert.ok((await admin.actions.getAdminRequestDeliveries("not-a-uuid")).error);
+  assert.equal(admin.state.calls.length, 0);
+  const response = await admin.actions.getAdminRequestDeliveries(REQUEST);
+  assert.equal(response.error, undefined);
+  assert.equal(response.data[0].status, "pending");
+  assert.equal(admin.state.calls.length, 1);
+  const read = admin.state.calls[0];
+  assert.equal(read.table, "exchange_request_notification_deliveries");
+  assert.deepEqual(read.filters, { request_id: REQUEST });
+  assert.equal(read.limit, 100);
+  assert.equal(read.columns, "id,event_id,request_id,audience,recipient_email,locale,status,attempts,last_error,created_at,first_attempt_at,lease_expires_at,provider_id");
+  admin.state.deliveryReadError = { code: "FETCH_ERROR", message: "Temporary read failure" };
+  assert.ok((await admin.actions.getAdminRequestDeliveries(REQUEST)).error);
+});
+
 test("file validation rejects HTML, mismatched MIME and oversized data; sanitises supplied filenames", () => {
   const pdf = Buffer.from("%PDF-1.7\nfixture");
   assert.equal(upload.inspectReceiptUpload(pdf, "../../receipt.pdf", "application/pdf").filename.includes("/"), false);
@@ -344,9 +387,9 @@ test("file validation rejects HTML, mismatched MIME and oversized data; sanitise
   assert.throws(() => upload.inspectReceiptUpload(new Uint8Array(upload.MAX_REQUEST_RECEIPT_BYTES + 1), "large.pdf", "application/pdf"));
 });
 
-test("service enablement requires bank instructions and notification recipients; clearance buffer cannot undercut 24h", () => {
+test("service enablement requires bank instructions without management recipients; clearance buffer cannot undercut 24h", () => {
   assert.equal(validation.settingsInputError(settings), null);
-  assert.ok(validation.settingsInputError({ ...settings, management_emails: [] }));
+  assert.equal(validation.settingsInputError({ ...settings, management_emails: [] }), null);
   assert.ok(validation.settingsInputError({ ...settings, australian_clearance_minutes: 60 }));
   assert.ok(validation.settingsInputError({ ...settings, priority_fee_aud: NaN }));
   assert.ok(validation.settingsInputError({ ...settings, priority_minutes: settings.standard_minutes }));
@@ -404,24 +447,34 @@ test("each admin approval requires an email decision, and customer payloads cann
   assert.equal(Object.hasOwn(state.calls.filter(call => call.rpc).at(-1).args.p_payload, "send_email"), false);
 });
 
-test("emails are sent immediately only when an admin ticks send email; mail problems never undo the action", async () => {
+test("only approved admin emails run after the response; mail problems never undo the action", async () => {
   const { actions, state } = harness({ admin: true });
   const base = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, action: "await_funds" };
   assert.equal((await actions.mutateAdminRequest({ ...base, sendEmail: false })).error, undefined);
   assert.equal(state.emailSends, undefined);
+  assert.equal(state.after, undefined);
   assert.equal((await actions.mutateAdminRequest({ ...base, sendEmail: true })).error, undefined);
+  assert.equal(state.emailSends, undefined);
+  assert.equal(state.after.length, 1);
+  await state.after.shift()();
   assert.equal(state.emailSends.length, 1);
   assert.equal(state.emailSends[0].requestId, REQUEST);
   assert.deepEqual(state.emailSends[0].send, { apiKey: "test-key" });
   const message = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, message: "Your transfer is complete." };
   assert.equal((await actions.sendAdminRequestMessage({ ...message, sendEmail: false })).error, undefined);
   assert.equal(state.emailSends.length, 1);
+  assert.equal(state.after.length, 0);
   assert.equal((await actions.sendAdminRequestMessage({ ...message, sendEmail: true })).error, undefined);
+  assert.equal(state.emailSends.length, 1);
+  await state.after.shift()();
   assert.equal(state.emailSends.length, 2);
   state.mailError = new Error("PRIVATE provider detail");
   const logged = [], original = console.error;
   console.error = (...args) => logged.push(args);
-  try { assert.equal((await actions.mutateAdminRequest({ ...base, sendEmail: true })).error, undefined); }
+  try {
+    assert.equal((await actions.mutateAdminRequest({ ...base, sendEmail: true })).error, undefined);
+    await state.after.shift()();
+  }
   finally { console.error = original; }
   assert.doesNotMatch(JSON.stringify(logged), /PRIVATE/);
   state.mailError = undefined;
@@ -433,6 +486,32 @@ test("emails are sent immediately only when an admin ticks send email; mail prob
   state.admin = true;
   assert.ok((await actions.mutateAdminRequest({ ...base, sendEmail: true })).error);
   assert.equal(state.emailSends.length, 3);
+  assert.equal(state.after.length, 0);
+  assert.ok((await actions.sendAdminRequestMessage({ ...message, sendEmail: true })).error);
+  assert.equal(state.after.length, 0);
+});
+
+test("status and message commits return while deferred email delivery remains unresolved", async () => {
+  for (const action of ["mutateAdminRequest", "sendAdminRequestMessage"]) {
+    let releaseMail;
+    const mailGate = new Promise(resolve => { releaseMail = resolve; });
+    const { actions, state } = harness({ admin: true, mailGate });
+    const args = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, sendEmail: true,
+      ...(action === "mutateAdminRequest" ? { action: "await_funds" } : { message: "Your transfer is being reviewed." }) };
+    let background;
+    try {
+      const response = await Promise.race([actions[action](args), new Promise(resolve => setImmediate(() => resolve("blocked-on-mail")))]);
+      assert.notEqual(response, "blocked-on-mail", `${action} must return the committed result before mail completes`);
+      assert.equal(response.error, undefined);
+      assert.equal(state.emailSends, undefined);
+      assert.equal(state.after.length, 1);
+      let finished = false;
+      background = state.after[0]().then(() => { finished = true; });
+      await new Promise(setImmediate);
+      assert.equal(state.emailSends.length, 1);
+      assert.equal(finished, false, "the provider is still pending after the action has returned");
+    } finally { releaseMail(); if (background) await background; }
+  }
 });
 
 test("opening the admin queue runs the deadline sweep without a scheduler, and a sweep failure never hides the list", async () => {
@@ -622,4 +701,48 @@ test("authentication, financial action permissions and payload validation preced
   state.admin = true;
   assert.ok((await actions.mutateAdminRequest({ ...input, payload: { ...input.payload, received_amount: -1 } })).error);
   assert.equal(state.calls.some(call => call.table === "exchange_request_commands" || call.rpc), false);
+});
+
+
+test("manual email retry authenticates, isolates one delivery and never replays financial actions", async () => {
+  const input = { requestId: REQUEST, deliveryId: COMMAND };
+  const denied = harness();
+  assert.ok((await denied.actions.retryAdminRequestEmail(input)).error);
+  assert.equal(denied.state.calls.length, 0);
+  const invalid = harness({ admin: true });
+  assert.ok((await invalid.actions.retryAdminRequestEmail({ ...input, deliveryId: "invalid" })).error);
+  assert.equal(invalid.state.calls.length, 0);
+  const h = harness({ admin: true, rpc: () => ({ data: { id: COMMAND, status: "pending", last_error: null, first_attempt_at: null, lease_expires_at: null, rendered_payload: { private: "never return email body" } }, error: null }) });
+  const response = await h.actions.retryAdminRequestEmail(input);
+  assert.equal(response.error, undefined);
+  assert.equal(response.data.rendered_payload, undefined);
+  assert.equal(h.state.calls.length, 1);
+  assert.equal(h.state.calls[0].rpc, "retry_request_notification");
+  assert.equal(h.state.calls[0].args.p_delivery_id, COMMAND);
+  assert.equal(h.state.after.length, 1);
+  assert.equal(h.state.emailSends, undefined);
+  await h.state.after[0]();
+  assert.equal(h.state.emailSends[0].deliveryId, COMMAND);
+  assert.equal(h.state.emailSends[0].requestId, REQUEST);
+});
+
+test("manual retry never sends when the database requires reconciliation or rejects the retry", async () => {
+  for (const rpc of [
+    () => ({ data: { id: COMMAND, status: "reconciliation_required" }, error: null }),
+    () => ({ data: null, error: { code: "22023", message: "Email cannot be retried." } }),
+  ]) {
+    const h = harness({ admin: true, rpc });
+    await h.actions.retryAdminRequestEmail({ requestId: REQUEST, deliveryId: COMMAND });
+    assert.equal(h.state.after, undefined);
+    assert.equal(h.state.emailSends, undefined);
+  }
+});
+
+test("retired management email settings are discarded on read and write", async () => {
+  const h = harness({ admin: true, rpc: (name, args) => ({ data: { version: 2, settings: args.p_settings }, error: null }) });
+  const read = await h.actions.getRequestSettings();
+  assert.equal(read.data.settings.management_emails, undefined);
+  const saved = await h.actions.saveRequestSettings({ expectedVersion: 1, settings: { ...settings, enabled: false, priority_enabled: false } });
+  assert.equal(saved.error, undefined);
+  assert.equal(h.state.calls.find(call => call.rpc === "save_exchange_request_settings").args.p_settings.management_emails, undefined);
 });
