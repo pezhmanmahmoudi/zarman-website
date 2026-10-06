@@ -2,6 +2,10 @@
   "name": "zarman-next",
   "version": "0.1.0",
   "private": true,
+  "allowScripts": {
+    "sharp@0.34.5": true,
+    "unrs-resolver@1.11.1": true
+  },
   "scripts": {
     "dev": "next dev",
     "dev:turbopack": "next dev",

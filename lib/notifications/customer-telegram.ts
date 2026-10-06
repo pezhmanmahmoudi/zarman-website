@@ -26,6 +26,29 @@ export function telegramDatabase() {
     global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8_000) }) } });
 }
 
+/** Check setup only when creating a link, so a missing webhook cannot leave customers waiting. */
+export async function customerTelegramReady(config: NonNullable<ReturnType<typeof customerTelegramConfig>>) {
+  try {
+    const read = async (method: "getMe" | "getWebhookInfo") => {
+      const response = await fetch(`https://api.telegram.org/bot${config.token}/${method}`, {
+        method: "POST", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(5_000),
+      });
+      if (!response.ok) throw new Error("telegram_unavailable");
+      const data = await response.json();
+      if (data.ok !== true) throw new Error("telegram_unavailable");
+      return data.result;
+    };
+    const [bot, webhook] = await Promise.all([read("getMe"), read("getWebhookInfo")]);
+    return bot?.is_bot === true && typeof bot.username === "string"
+      && bot.username.toLowerCase() === config.username.toLowerCase()
+      && webhook?.url === `${config.siteUrl}/api/webhooks/customer-telegram`
+      && (!Array.isArray(webhook.allowed_updates) || !webhook.allowed_updates.length || webhook.allowed_updates.includes("message"));
+  } catch {
+    // Fetch errors can contain the bot token. Return a fixed result, never log them.
+    return false;
+  }
+}
+
 export function telegramSecretMatches(received: string | null, expected: string) {
   if (!received || !expected) return false;
   return timingSafeEqual(createHash("sha256").update(received).digest(), createHash("sha256").update(expected).digest());

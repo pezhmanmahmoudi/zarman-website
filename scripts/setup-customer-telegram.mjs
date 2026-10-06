@@ -22,13 +22,23 @@ async function main() {
   if (!/^\d+:[A-Za-z0-9_-]{20,}$/.test(token) || !/^[A-Za-z0-9_]{5,32}$/.test(username)) throw new Error("Set the dedicated customer bot token and username in the environment.");
   if (token.split(":")[0] === process.env.TELEGRAM_BOT_TOKEN?.split(":")[0]) throw new Error("Use a different bot from the internal admin bot.");
   const bot = await api("getMe");
-  if (!bot.is_bot || bot.username?.toLowerCase() !== username.toLowerCase()) throw new Error("The customer bot token and username do not match.");
+  if (!bot.is_bot || !/^[A-Za-z0-9_]{5,32}$/.test(bot.username || "")) throw new Error("The token did not identify a Telegram bot.");
+  const usernameMatches = bot.username.toLowerCase() === username.toLowerCase();
+  if (configure && !usernameMatches) throw new Error(`Set CUSTOMER_TELEGRAM_BOT_USERNAME to ${bot.username}; the token belongs to this bot, not ${username}.`);
   if (configure) {
     let site;
     try { site = new URL(process.env.REQUEST_SITE_URL || ""); } catch { throw new Error("Configure REQUEST_SITE_URL."); }
     if (site.protocol !== "https:" || site.username || site.password) throw new Error("REQUEST_SITE_URL must use HTTPS.");
     if (!/^[A-Za-z0-9_-]{32,256}$/.test(secret)) throw new Error("Configure a webhook secret of at least 32 URL-safe characters.");
-    await api("setWebhook", { url: `${site.origin}/api/webhooks/customer-telegram`, secret_token: secret,
+    const endpoint = `${site.origin}/api/webhooks/customer-telegram`;
+    let endpointResponse;
+    try { endpointResponse = await fetch(endpoint, { method: "HEAD", redirect: "manual", signal: AbortSignal.timeout(10_000) }); }
+    catch { throw new Error("Could not reach the public webhook endpoint. Check REQUEST_SITE_URL and the deployment."); }
+    if (endpointResponse.status >= 300 && endpointResponse.status < 400) {
+      throw new Error("REQUEST_SITE_URL redirects. Use the final production origin (including www when applicable) in Vercel and .env.local before configuring the webhook.");
+    }
+    if (![200,204,405].includes(endpointResponse.status)) throw new Error(`The webhook endpoint returned HTTP ${endpointResponse.status}. Check the deployment before configuring Telegram.`);
+    await api("setWebhook", { url: endpoint, secret_token: secret,
       allowed_updates: ["message","my_chat_member"], max_connections: 5, drop_pending_updates: false });
     await api("setMyCommands", { commands: [{ command: "start", description: "Connect from your Zarman dashboard" }, { command: "stop", description: "Disconnect Telegram notifications" }, { command: "help", description: "How to connect or contact Zarman" }] });
     await api("setMyCommands", { language_code: "fa", commands: [{ command: "start", description: "اتصال از طریق داشبورد زرمان" }, { command: "stop", description: "قطع اعلان‌های تلگرام" }, { command: "help", description: "راهنمای اتصال و ارتباط با زرمان" }] });
@@ -36,9 +46,14 @@ async function main() {
     await api("setMyDescription", { language_code: "fa", description: "اعلان‌های انتقال صرافی زرمان. از داشبورد خود متصل شوید و وضعیت تراکنش و پیام‌های تیم را دریافت کنید. پاسخ‌ها را در داشبورد بنویسید. رمز عبور خود را برای ربات ارسال نکنید." });
   }
   const webhook = await api("getWebhookInfo");
+  let expectedWebhook;
+  try { expectedWebhook = `${new URL(process.env.REQUEST_SITE_URL).origin}/api/webhooks/customer-telegram`; } catch { /* Report missing configuration without printing it. */ }
+  const webhookHttpStatus = String(webhook.last_error_message || "").match(/(?:response|status).*?\b([345]\d{2})\b/i)?.[1];
   // Emit only public identity and coarse health, never API URLs containing a token or provider errors.
-  console.log(JSON.stringify({ bot: `@${bot.username}`, configured: configure, webhookSet: Boolean(webhook.url),
+  console.log(JSON.stringify({ bot: `@${bot.username}`, configuredUsername: `@${username}`, usernameMatches, configured: configure, webhookSet: Boolean(webhook.url),
+    webhookMatchesSite: Boolean(expectedWebhook && webhook.url === expectedWebhook),
     pendingUpdates: webhook.pending_update_count, webhookHasError: Boolean(webhook.last_error_date),
+    webhookHttpStatus: webhookHttpStatus ? Number(webhookHttpStatus) : null,
     groupJoiningEnabled: bot.can_join_groups }, null, 2));
 }
 main().catch(error => { console.error(error.message); process.exitCode = 1; });

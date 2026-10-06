@@ -3,7 +3,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { after } from "next/server";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
-import { customerTelegramConfig, telegramDatabase, dispatchCustomerTelegramSafely } from "@/lib/notifications/customer-telegram";
+import { customerTelegramConfig, customerTelegramReady, telegramDatabase, dispatchCustomerTelegramSafely } from "@/lib/notifications/customer-telegram";
 import type { TelegramConnectionState } from "@/lib/notifications/customer-telegram-types";
 import type { ActionResult } from "@/lib/requests/types";
 import { isUuid } from "@/lib/requests/validation";
@@ -21,7 +21,7 @@ async function actionResult<T>(work: () => Promise<T>): Promise<ActionResult<T>>
   try { return { data: await work() }; }
   catch (error) {
     const code = error && typeof error === "object" && "message" in error ? String(error.message) : "";
-    return { error: ["sign_in_required","verified_account_required","please_wait","already_connected","link_expired","telegram_already_connected","connection_changed","disconnected","duplicate_confirmation_required","delivery_changed"].includes(code) ? code : "telegram_unavailable" };
+    return { error: ["sign_in_required","verified_account_required","please_wait","already_connected","link_expired","telegram_already_connected","connection_changed","disconnected","duplicate_confirmation_required","delivery_changed","telegram_setup_required"].includes(code) ? code : "telegram_unavailable" };
   }
 }
 
@@ -39,6 +39,7 @@ export async function beginCustomerTelegram(locale: string): Promise<ActionResul
   return actionResult(async () => {
     const id = await userId(), config = customerTelegramConfig();
     if (!config || !["en","fa"].includes(locale)) throw new Error("telegram_unavailable");
+    if (!await customerTelegramReady(config)) throw new Error("telegram_setup_required");
     const token = randomBytes(32).toString("base64url");
     const { data, error } = await telegramDatabase().rpc("customer_telegram_settings", {
       p_user_id: id, p_bot_id: config.botId, p_action: "begin", p_locale: locale,
