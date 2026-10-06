@@ -21,6 +21,8 @@ import { supabase } from "@/lib/supabase";
 import { DashboardButton } from "@/components/dashboard/dashboard-ui";
 import { DASHBOARD_AUTO_REFRESH_MS, dashboardRefreshDue } from "@/lib/dashboard/refresh-policy";
 import { DashboardLottieScene } from "@/components/dashboard/DashboardLottieScene";
+import { TelegramNotifications } from "@/components/dashboard/TelegramNotifications";
+import { TelegramDeliveryActivity } from "./TelegramDeliveryActivity";
 import styles from "@/styles/requests/Requests.module.css";
 import workspace from "@/styles/requests/RequestWorkspace.module.css";
 import customer from "@/styles/requests/RequestCustomerDetail.module.css";
@@ -459,7 +461,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
             <div className={styles.fact}><dt>Source of funds</dt><dd dir="auto">{request.quote.source_of_funds}</dd></div>
             <div className={styles.fact}><dt>Purpose</dt><dd dir="auto">{request.quote.reason_for_transfer}</dd></div>
           </dl></div></details>
-          <details className={`${styles.card} ${workspace.disclosure}`}><summary>Activity & email history<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}>
+          <details className={`${styles.card} ${workspace.disclosure}`}><summary>Activity & notification history<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}>
             <ol className={workspace.activityList}>{[...detail.events].reverse().map(event => {
               const eventMessages = messages.filter(item => item.event_id === event.id);
               const actor = eventMessages[0]?.sender_role === "customer" || event.actor_id === request.user_id ? "Customer" : event.actor_id ? "Zarman team" : "System";
@@ -467,6 +469,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
               const privateNote = event.internal_message && event.internal_message !== event.public_message && !/^[\s]*[\[{]/.test(event.internal_message) ? event.internal_message : null;
               return <li key={event.id}><div className={workspace.activityHeading}><strong>{requestActivityLabel(event.event_type, locale)}</strong><time dir="ltr" dateTime={event.created_at}>{requestDate(event.created_at, locale)}</time></div><span className={workspace.activityActor}>{actor}</span>{privateNote && <details className={workspace.activityNotes}><summary>Internal note</summary><p dir="auto">{privateNote}</p></details>}{deliveries.length > 0 && <ul className={workspace.emailActivity}>{deliveries.map(delivery => <li key={delivery.id}><span><Mail size={13} />{fa ? "ایمیل مشتری" : "Customer email"}</span><span>{requestEmailStatus(delivery.status, delivery.last_error, locale, delivery.lease_expires_at)}</span>{canRetryRequestEmail(delivery) && <button type="button" className={workspace.emailRetry} disabled={retryingEmail !== null} onClick={() => void retryEmail(delivery.id)}>{retryingEmail === delivery.id ? (fa ? "در حال ثبت…" : "Queuing…") : (fa ? "تلاش مجدد ارسال ایمیل" : "Retry customer email")}</button>}</li>)}</ul>}</li>;
             })}</ol>
+            <TelegramDeliveryActivity requestId={id} deliveries={detail.telegramDeliveries || []} unavailable={detail.telegramUnavailable} onUpdated={refresh}/>
           </div></details>
         </div>
       </div></> : <>
@@ -479,6 +482,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
           </div>
           <div className={`${workspace.column} ${customer.column}`}>
             <RequestTransactionSummary request={request} locale={locale}/>
+            <TelegramNotifications locale={locale} compact/>
             {journey?.canPay && journey.receiptSubmitted && <RequestPaymentInstructions request={request} locale={locale} />}
             {actionPanel && <details className={`${customer.accordion} ${customer.exceptionPanel}`} open={Boolean(currentAction) || undefined}><summary><span>{fa ? "سایر اقدامات" : "Other actions"}</span><ChevronDown size={17} aria-hidden="true"/></summary><div className={customer.accordionBody}>{actionPanel}</div></details>}
           </div>

@@ -4,7 +4,7 @@ import { useContext, useEffect, useRef, useState, type ComponentType } from "rea
 import { DashboardLottieReplay } from "./DashboardLottieReplay";
 import { useReducedMotion } from "framer-motion";
 import {
-  BadgeCheck, ChartNoAxesCombined, CircleAlert, CircleCheck, CircleX, Clock3,
+  BadgeCheck, BotMessageSquare, ChartNoAxesCombined, CircleAlert, CircleCheck, CircleX, Clock3,
   CreditCard, Fingerprint, Gift, Hand, Heart, Hourglass, LoaderCircle, Megaphone,
   MessageCircleHeart, ReceiptText, Send, Smartphone, TriangleAlert, UserRound,
   WalletCards, CloudUpload, type LucideIcon,
@@ -27,6 +27,7 @@ const fallbacks: Record<DashboardLottieSceneName, LucideIcon> = {
   "document-upload": CloudUpload,
   "receipt-upload": ReceiptText,
   chat: MessageCircleHeart,
+  "telegram-chatbot": BotMessageSquare,
   "feedback-heart": Heart,
   alert: CircleAlert,
   announcement: Megaphone,
@@ -106,7 +107,7 @@ function LottieScene({ name, size, className, animate, replayKey }: Omit<Props, 
     className={cn("pointer-events-none relative inline-grid shrink-0 select-none place-items-center overflow-hidden align-middle", className)}
     style={{ width: size, height: size, maxWidth: "100%" }}>
     <span className={cn("absolute inset-[12%] grid place-items-center transition-opacity motion-reduce:transition-none", name === "dashboard-loading" ? "text-[#3d4853]" : "rounded-[28%] border border-white/75 bg-white/65 text-[#67558c] shadow-[0_10px_35px_-24px_#392b66]", showPlayer && "opacity-0")}>
-      <Fallback size={Math.max(20, Math.min(40, size * .34))} strokeWidth={1.55} />
+      <Fallback size={Math.max(20, Math.min(40, size * .34))} strokeWidth={1.55} className={name === "telegram-chatbot" ? "text-[#1685ba]" : undefined} />
     </span>
     {mounted && <span className={showPlayer ? undefined : "invisible"}>
       <Player name={name} replayKey={replayKey} playing={animate && visible && foreground && !complete}

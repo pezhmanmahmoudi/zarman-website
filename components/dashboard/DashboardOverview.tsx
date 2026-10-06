@@ -14,7 +14,7 @@ import { RecentActivityList } from "./recent-activity-list";
 import { useDashboard } from "./DashboardShell";
 import { useDashboardRequests } from "@/hooks/useDashboardRequests";
 import { TransferOverviewCard } from "./TransferOverviewCard";
-import { DashboardIdentityCard } from "./DashboardIdentityCard";
+import { DashboardOverviewNotice } from "./DashboardOverviewNotice";
 import { LoyaltyMilestoneCelebration } from "./LoyaltyMilestoneCelebration";
 import { DashboardOverviewRecipients } from "./DashboardOverviewRecipients";
 import { DashboardLoyaltyCard, type DashboardLoyaltyRateProps } from "./DashboardLoyaltyCard";
@@ -63,7 +63,7 @@ export function DashboardOverview({ volume, completedCount, baseBuyRate, baseSel
   return <div className="min-w-0 space-y-6 sm:space-y-7">
     <LoyaltyMilestoneCelebration userId={profile?.id} volume={volume} motionEnabled={motionEnabled} />
     <DashboardPageHeader title={<AuroraText className="max-w-full break-words [overflow-wrap:anywhere]" motionEnabled={motionEnabled} colors={["#6841b8", "#ac3978", "#30699d", "#287a70"]}>{fa ? customerName ? "سلام، " : "به زرمان خوش آمدید" : customerName ? "Welcome back, " : "Welcome to Zarman"}{customerName && <bdi dir="auto">{customerName}</bdi>}</AuroraText>} description={fa ? "به پنل جدید مدیریت تراکنش خوش آمدید." : "Welcome to your newtransaction panel."} action={focus ? <DashboardButton asChild><Link href={dashboardHref(locale, "transfer")}>{copy.newTransfer}</Link></DashboardButton> : undefined} />
-    <DashboardIdentityCard profile={profile} motionEnabled={motionEnabled} />
+    <DashboardOverviewNotice profile={profile} motionEnabled={motionEnabled} />
     <TransferOverviewCard request={focus} locale={locale} loading={feed.loading} error={feed.error} refreshing={feed.refreshing} onRetry={() => void feed.refresh()} motionEnabled={motionEnabled} />
     <DashboardReveal motionEnabled={motionEnabled}>
       <BentoGrid className="grid-cols-2 gap-3 lg:grid-cols-4 sm:gap-4">

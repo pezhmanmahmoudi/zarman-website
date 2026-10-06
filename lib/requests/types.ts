@@ -1,3 +1,5 @@
+import type { CustomerTelegramDelivery } from "@/lib/notifications/customer-telegram-types";
+
 export type RequestLocale = "en" | "fa";
 export type ServiceTier = "standard" | "priority";
 export type RequestStatus = "submitted" | "under_review" | "action_required" | "awaiting_funds" | "ready" | "processing" | "reconciliation" | "completed" | "cancelled" | "rejected" | "expired";
@@ -135,7 +137,7 @@ export type RequestFundingPayment = {
   id: string; request_id: string; payment_reference: string; amount: number | string;
   currency: "AUD" | "IRT"; account_id: string; created_at: string;
 };
-export type RequestDetail = { request: ExchangeRequest; events: RequestEvent[]; receipts: RequestReceipt[]; messages: RequestMessage[]; deliveries?: RequestDelivery[]; payments?: RequestFundingPayment[] };
+export type RequestDetail = { request: ExchangeRequest; events: RequestEvent[]; receipts: RequestReceipt[]; messages: RequestMessage[]; deliveries?: RequestDelivery[]; payments?: RequestFundingPayment[]; telegramDeliveries?: CustomerTelegramDelivery[]; telegramUnavailable?: boolean };
 export type RequestMutationInput = {
   requestId: string;
   expectedVersion: number;

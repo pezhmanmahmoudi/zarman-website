@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-01T06:23:36.318Z",
+  "generatedAt": "2026-10-06T12:57:14.972Z",
   "animations": [
     {
       "name": "3D mobile payment",
@@ -65,6 +65,11 @@
       "name": "Isometric data analysis",
       "source": "Isometric data analysis.lottie",
       "src": "/animations/dashboard/preview/isometric-data-analysis-ec95196da0f2.json"
+    },
+    {
+      "name": "Live chatbot",
+      "source": "Live chatbot.lottie",
+      "src": "/animations/dashboard/preview/live-chatbot-930197740966.json"
     },
     {
       "name": "loading animation",

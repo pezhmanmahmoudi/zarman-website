@@ -51,6 +51,16 @@ export function paymentInstitution(id: string | null | undefined) {
   return paymentInstitutions.find(institution => institution.id === id);
 }
 
+export function normalizeInstitutionPaymentLink(value: string): string {
+  const link = value.trim();
+  // Preserve explicit schemes so validation can reject non-HTTPS links.
+  if (!link || /^[a-z][a-z\d+.-]*:/i.test(link)) return link;
+  const candidate = link.startsWith("//") ? `https:${link}` : `https://${link}`;
+  try {
+    return new URL(candidate).hostname.includes(".") && isInstitutionPaymentLink(candidate) ? candidate : link;
+  } catch { return link; }
+}
+
 export function isInstitutionPaymentLink(value: string): boolean {
   try {
     const url = new URL(value);

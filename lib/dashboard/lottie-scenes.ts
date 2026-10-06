@@ -19,6 +19,7 @@ export const dashboardLottieScenes = {
   "document-upload": { src: "/animations/dashboard/preview/uploading-to-cloud-bb09e4b9bba7.json", loop: true, holdOnComplete: true },
   "receipt-upload": { src: "/animations/dashboard/preview/bill-paid-successful.json", holdOnComplete: true },
   chat: { src: "/animations/dashboard/preview/chat-53dcf8299cbb.json", holdOnComplete: true },
+  "telegram-chatbot": { src: "/animations/dashboard/preview/live-chatbot-930197740966.json", holdOnComplete: true },
   "feedback-heart": { src: "/animations/dashboard/preview/add-to-favorites.json", holdOnComplete: true },
   alert: { src: "/animations/dashboard/preview/alert.json", holdOnComplete: true },
   announcement: { src: "/animations/dashboard/preview/announcement.json", holdOnComplete: true },

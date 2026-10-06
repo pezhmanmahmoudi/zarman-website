@@ -8,6 +8,16 @@ Management recipients, settings and template branches have been removed. The wor
 
 ## Deployment
 
+Run `scripts/check-request-email-schema.sql` against the target database before and after every email deployment. Require `all_checks_passed = true`; checking only claim/prepare/retry is insufficient. The check includes the finish function, its internal event aggregator, the callback RPC, the event table, permissions and the provider uniqueness index. It is read-only and sends no mail.
+
+After `_46`, apply `20261005_47_restore_request_email_results.APPLY_MANUALLY.sql`. This additive repair installs the missing `_19` event table and result functions without reinstalling older claim/prepare implementations. It does not reset a queue, change financial records, resend mail, or infer delivery. No application deployment is needed for this database repair; the existing worker and webhook already call these functions.
+
+The October 5 production catalog inspection confirmed that `finish_request_notification` existed but `apply_request_email_events`, `record_request_email_event` and `exchange_request_email_events` were absent. Both successful and failed send outcomes therefore rolled back at the missing function call, leaving a prepared delivery leased. Eleven customer deliveries had a first attempt but no provider ID, and five were pending. The base provider index and service-only restrictions on prepare/finish were also missing; `_47` restores them. The earlier `_46` deployment checks covered claim/prepare/retry, but omitted these completion dependencies. The new regression reproduces that partial schema and verifies failure before the repair, acceptance/failure persistence after it, callback ordering and permissions.
+
+`_47` was applied to the production project on October 5 after 31 offline notification tests and a transactional production dry run. Postflight returned `all_checks_passed = true`. The dry run verified that every delivery row remained unchanged. No customer email was sent or marked delivered by this repair; real provider/inbox delivery remains a separate verification step.
+
+Existing ambiguous attempts must still be reconciled separately: installing the missing functions cannot reconstruct a lost provider ID. Inspect Resend history before resolving older attempts; do not reset their payload, first-attempt time or idempotency key. A manual retry inside the existing safe window reuses the original key and bytes. A restricted sending-only Resend key cannot read provider history.
+
 Apply migrations in repository order, including `_24` (immutable receipts), `_28` (structured bank details), `_44` (admin opt-in) and **`20261003_46_customer_only_email_recovery.APPLY_MANUALLY.sql`**. Deploy this application version with `_46`.
 
 The new migration removes management enqueue/settings, retires unsent management jobs, removes global claiming, and adds the selected-delivery retry RPC. It normalizes abandoned customer leases: a never-prepared email becomes pending; an old ambiguous prepared attempt requires reconciliation. Applying it does not send an email or change a financial stage. It neither deletes nor regenerates completion receipts.
@@ -39,6 +49,8 @@ Resend retains idempotency keys for 24 hours. This implementation uses a conserv
 The October 3 read-only production investigation found the reported completion email's management job leased with a first attempt recorded, and its customer job leased with **no first attempt**. Both leases had expired the previous day. This is consistent with the old batch being interrupted before reaching the customer. `_46` makes that customer delivery eligible for an explicit retry and retires the management job. No production recovery or send was performed during development.
 
 ## Delivery confirmation
+
+For production, use `https://www.zarman.com.au/api/webhooks/request-email`. A public POST probe on October 5 confirmed that the apex URL (`https://zarman.com.au/...`) returns **308** with a Location pointing to `www`; the Resend dashboard showed these callback attempts still retrying. The `www` endpoint reaches the signature verifier directly (an intentionally unsigned probe returns 400). Edit the existing webhook URL in Resend, then replay a real signed event and require HTTP 200 plus the matching database outcome before claiming end-to-end delivery tracking works. Replaying the webhook retransmits the event notification, not the customer email. Existing older deliveries without a stored provider ID still need separate reconciliation; receiving their callback alone does not identify the original delivery row.
 
 Configure a Resend webhook for `https://<canonical-host>/api/webhooks/request-email`, subscribed to `email.sent`, `email.delivered`, `email.bounced`, `email.failed`, `email.complained` and `email.suppressed` where available. The endpoint verifies the signature against the original body before database access. It updates delivery records only; it does not trigger sending.
 

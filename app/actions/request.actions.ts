@@ -4,6 +4,7 @@ import { createClient, type User } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { after } from "next/server";
 import { newRequestTelegramMessage, sendTelegramAdminMessage } from "@/lib/notifications/telegram";
+import { customerTelegramConfig, dispatchCustomerTelegramSafely } from "@/lib/notifications/customer-telegram";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import { applyPromoCode, calcAppliedFee, calcEquivalentTomanForRequestType, calcLoyaltyDiscount, FINANCE_CONFIG_DEFAULTS, toCompanyTradeType, type PromoCodeData } from "@/lib/pricing";
@@ -293,12 +294,13 @@ async function readDetail(id: string, userId?: string): Promise<RequestDetail> {
       .eq("request_id", id).order("sequence", { ascending: true });
   // These reads depend on the authorized request lookup above, not on one another.
   // Keep admin-only data out of customer queries while avoiding a second read wave.
-  const [events, receipts, messages, deliveries, payments] = await Promise.all([
+  const [events, receipts, messages, deliveries, payments, telegram] = await Promise.all([
     eventQuery,
     db.from("exchange_request_receipts").select("id,request_id,original_name,content_type,size_bytes,sha256,uploaded_by,created_at").eq("request_id", id).order("created_at", { ascending: false }),
     db.from("exchange_request_messages").select("id,request_id,event_id,event_sequence,sender_id,sender_role,body,send_email,created_at").eq("request_id", id).order("event_sequence", { ascending: true }),
     userId ? null : db.from("exchange_request_notification_deliveries").select(REQUEST_DELIVERY_COLUMNS).eq("request_id", id).order("created_at", { ascending: false }).limit(100),
     userId ? null : db.from("exchange_request_payments").select("id,request_id,payment_reference,amount,currency,account_id,created_at").eq("request_id", id).order("created_at", { ascending: false }),
+    userId || !customerTelegramConfig() ? null : db.from("customer_telegram_deliveries").select("id,event_id,event_type,status,attempts,last_error,created_at,sent_at,lease_expires_at").eq("request_id", id).order("created_at", { ascending: false }).limit(100),
   ]);
   if (events.error) throw events.error;
   if (receipts.error) throw receipts.error;
@@ -309,6 +311,12 @@ async function readDetail(id: string, userId?: string): Promise<RequestDetail> {
     if (payments.error) throw payments.error;
     detail.deliveries = deliveries.data as RequestDetail["deliveries"];
     detail.payments = (payments.data || []) as RequestDetail["payments"];
+    if (telegram) {
+      detail.telegramUnavailable = !!telegram.error;
+      detail.telegramDeliveries = telegram.error ? [] : (telegram.data || []).map(delivery => ({ ...delivery,
+        status: delivery.status === "sending" && delivery.lease_expires_at && Date.parse(delivery.lease_expires_at) < Date.now() ? "uncertain" : delivery.status,
+      })) as RequestDetail["telegramDeliveries"];
+    }
   }
   return detail;
 }
@@ -359,6 +367,7 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
     p_command_key: input.commandKey, p_action: input.action, p_payload: payload,
   });
   if (error) throw error;
+  if (admin) after(() => dispatchCustomerTelegramSafely(input.requestId));
   if (admin && input.action === "confirm_funds") await saveAccountingTerms(db, data as ExchangeRequest, supplied);
   if (admin && input.sendEmail === true) after(() => sendApprovedEmails(input.requestId));
   return admin ? data as ExchangeRequest : customerRequest(data as ExchangeRequest);
@@ -467,6 +476,7 @@ async function sendMessage(input: RequestMessageInput, admin: boolean): Promise<
     p_command_key: input.commandKey, p_message: input.message.trim(), p_send_email: admin ? input.sendEmail : false,
   });
   if (error) throw error;
+  if (admin) after(() => dispatchCustomerTelegramSafely(input.requestId));
   if (admin && input.sendEmail === true) after(() => sendApprovedEmails(input.requestId));
   return data as RequestMessageResult;
 }

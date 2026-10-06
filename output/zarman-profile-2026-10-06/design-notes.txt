@@ -1,0 +1,15 @@
+Zarman profile avatar
+
+Deliverables:
+zarman-profile-1024.png: 1024 x 1024 upload-ready square PNG.
+zarman-profile.svg: editable vector artwork, retaining the original logo paths, colors, gradients and proportions.
+
+Original source:
+C:/Users/z5340863/OneDrive - UNSW/Desktop/Zarman/Design & Logo/Logo/logo-no-text-light3.svg
+
+Method:
+The visual concept was generated with the built-in image_gen tool, not the CLI.
+The final SVG and PNG were then constructed directly from the supplied SVG to preserve the original logo exactly. They use a pearl-white circle, an ink-navy gradient background and a centered 744 x 744 logo on a 1024 x 1024 canvas. Circular crop previews were inspected at 256, 128, 64 and 40 pixels.
+
+Exact image generation prompt:
+Use case: logo-brand / compositing. Create one finished premium square 1024x1024 social profile avatar for Zarman, suitable for Telegram and WhatsApp circular cropping. The supplied local PNG is the existing brand logo and the exact visual identity reference: a rounded diamond outline enclosing a large geometric Z with blue gradient facets, a white mountain/cliff motif at the top and a smaller white mountain at the bottom. Preserve the existing logo's exact silhouette, paths, proportions, mountain contours, rounded diamond outline, and indigo/cyan colors as faithfully as possible; do not reinterpret or redesign the logo. Compose the complete original logo large and optically centered inside a flat pearl-white circular field, whose diameter is about 87 percent of the square canvas. The logo diamond should occupy about 73 percent of total canvas width and height, fully within the white circle with clean comfortable margins. The square background beyond the white circle is deep ink navy #131D3D with an extremely restrained royal-blue gradient toward the lower right. White circle surface is almost flat ivory-white #F9FAFF with only a whisper of cool edge shading. Refined contemporary corporate identity, crisp vector-like print-quality logo edges, high contrast, disciplined symmetry. The image IS the avatar, front-on, perfectly centered, edge-to-edge square artwork, not a presentation or mockup. Keep the circle and all critical logo detail safe inside a centered circular crop. No text, no wordmark, no initials beyond the original Z, no app icons, no robot, no extra decorative shapes, no added outlines or rings, no metal, no gold, no neon, no excessive glow, no 3D extrusion, no perspective, no watermark.

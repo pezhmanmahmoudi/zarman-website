@@ -18,5 +18,7 @@
 .form .field input:focus,.form .field input:focus-visible{outline:none!important;border-color:#8970b6!important;box-shadow:0 0 0 2px rgb(118 103 189 / 8%)!important}
 .hint{display:flex;align-items:flex-start;gap:8px;margin:10px 0 0;font-size:12px;line-height:1.9;color:#756782}
 .hint svg{flex-shrink:0;margin-top:4px}
+.error{margin:8px 0 0;font-size:13px;line-height:1.8;color:#be123c}
+.form .field input[aria-invalid="true"]{border-color:#be123c}
 .form:disabled{opacity:.6}
 @media(max-width:639px){.form{padding-top:20px}.company{padding:14px}.optionGrid{gap:10px}}

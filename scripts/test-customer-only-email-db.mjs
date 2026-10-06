@@ -7,6 +7,8 @@ import { PGlite } from '@electric-sql/pglite';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const migration = 'supabase/migrations/20261003_46_customer_only_email_recovery.APPLY_MANUALLY.sql';
+const resultRepair = 'supabase/migrations/20261005_47_restore_request_email_results.APPLY_MANUALLY.sql';
+const emailSchemaCheck = 'scripts/check-request-email-schema.sql';
 const payload = { to: ['customer@example.test'], from: 'Zarman <mail@example.test>', subject: 'Transfer update', html: '<p>Update</p>', text: 'Update' };
 async function setup(apply = true, latest = false) {
   const db = new PGlite();
@@ -64,6 +66,92 @@ async function setup(apply = true, latest = false) {
   const retry = async (requestId, deliveryId, actor = admin) => (await one('select retry_request_notification($1,$2,$3) result', [actor, requestId, deliveryId])).result;
   return { db, one, user, admin, request, emit, customer, delivery, retry };
 }
+
+test('_47 repairs the production missing-function failure without resetting or resending any delivery', async () => {
+  const f = await setup();
+  try {
+    // Match production: _24/_46 functions exist, but _19 result dependencies do not.
+    await f.db.exec(`drop function record_request_email_event(text,text,text,timestamptz,text);
+      drop function apply_request_email_events(uuid);
+      drop table exchange_request_email_events;
+      drop index exchange_request_notification_provider_idx;
+      drop index exchange_request_notification_retry_idx;
+      grant execute on function prepare_request_notification(uuid,uuid,jsonb,text) to public,anon,authenticated;
+      grant execute on function finish_request_notification(uuid,uuid,text,text,text,timestamptz) to public,anon,authenticated;`);
+    const check = async () => (await f.db.exec(read(emailSchemaCheck))).flatMap(r => r.rows).find(r => 'all_checks_passed' in r);
+    assert.equal((await check()).all_checks_passed, false);
+    const r = await f.request(), d = await f.customer(await f.emit(r.id)), worker = randomUUID();
+    await f.db.query('select * from claim_request_notifications_for_request($1,$2,1,120)', [worker, r.id]);
+    await f.db.query("select prepare_request_notification($1,$2,$3,'persisted-version')", [d.id, worker, payload]);
+    const frozen = await f.delivery(d.id);
+    for (const [status, provider, error] of [['provider_accepted', 'synthetic-accepted', null], ['failed', null, 'validation_error']]) {
+      await assert.rejects(f.db.query('select finish_request_notification($1,$2,$3,$4,$5,null)',
+        [d.id, worker, status, provider, error]), e => e.code === '42883' && /apply_request_email_events/.test(e.message));
+      assert.deepEqual(await f.delivery(d.id), frozen, 'both outcomes rolled back, leaving Sending');
+    }
+    const finishBefore = (await f.one("select pg_get_functiondef('finish_request_notification(uuid,uuid,text,text,text,timestamptz)'::regprocedure) definition")).definition;
+    await f.db.exec(read(resultRepair));
+    assert.equal((await check()).all_checks_passed, true);
+    assert.deepEqual(await f.delivery(d.id), frozen, 'repair does not change attempts, leases, payload, or identity');
+    assert.equal((await f.one("select pg_get_functiondef('finish_request_notification(uuid,uuid,text,text,text,timestamptz)'::regprocedure) definition")).definition, finishBefore);
+    await f.db.exec('set role service_role');
+    await f.db.query("select finish_request_notification($1,$2,'provider_accepted','synthetic-accepted',null,null)", [d.id, worker]);
+    await f.db.exec('reset role');
+    const accepted = await f.delivery(d.id);
+    assert.equal(accepted.status, 'provider_accepted'); assert.equal(accepted.provider_id, 'synthetic-accepted');
+    assert.equal(accepted.lease_owner, null); assert.equal(accepted.lease_expires_at, null);
+    assert.equal(accepted.delivered_at, null, 'acceptance alone must not claim inbox delivery');
+    for (const field of ['id', 'attempts', 'first_attempt_at', 'rendered_payload', 'template_version']) assert.deepEqual(accepted[field], frozen[field]);
+    await f.db.exec(read(resultRepair));
+    assert.deepEqual(await f.delivery(d.id), accepted, 'repair can be reapplied without rewriting history');
+
+    const failed = await f.customer(await f.emit(r.id)), worker2 = randomUUID();
+    await f.db.query('select * from claim_request_notifications_for_request($1,$2,1,120)', [worker2, r.id]);
+    await f.db.query("select finish_request_notification($1,$2,'failed',null,'validation_error',null)", [failed.id, worker2]);
+    assert.equal((await f.delivery(failed.id)).status, 'failed');
+    assert.equal((await f.delivery(failed.id)).last_error, 'validation_error');
+    assert.equal((await f.delivery(failed.id)).lease_owner, null);
+  } finally { await f.db.close(); }
+});
+
+test('_47 restores verified early, duplicate and reordered callbacks with service-only access', async () => {
+  const f = await setup();
+  try {
+    await f.db.exec(read(resultRepair));
+    const r = await f.request(), d = await f.customer(await f.emit(r.id)), worker = randomUUID();
+    await f.db.query('select * from claim_request_notifications_for_request($1,$2,1,120)', [worker, r.id]);
+    await f.db.query("select prepare_request_notification($1,$2,$3,'test')", [d.id, worker, payload]);
+    const event = (id, type, hash) => f.db.query('select record_request_email_event($1,$2,$3,now(),$4)', [id, type, 'synthetic-early', hash.repeat(64)]);
+    await f.db.exec('set role service_role');
+    await event('early', 'email.delivered', 'a');
+    await f.db.query("select finish_request_notification($1,$2,'provider_accepted','synthetic-early',null,null)", [d.id, worker]);
+    await f.db.exec('reset role');
+    assert.equal((await f.delivery(d.id)).status, 'delivered');
+    await event('late', 'email.sent', 'b');
+    assert.equal((await f.delivery(d.id)).status, 'delivered');
+    await event('bounce', 'email.bounced', 'c');
+    await event('bounce', 'email.bounced', 'c');
+    assert.equal((await f.delivery(d.id)).status, 'failed');
+    assert.equal((await f.one("select count(*)::int n from exchange_request_tasks where kind='contact_update'")).n, 1);
+    await assert.rejects(event('bounce', 'email.bounced', 'd'), /payload conflict/);
+    await event('suppressed', 'email.suppressed', 'e');
+    await event('late-delivered', 'email.delivered', 'f');
+    assert.equal((await f.delivery(d.id)).status, 'suppressed');
+    const eventsBefore = (await f.db.query('select * from exchange_request_email_events order by event_id')).rows;
+    const deliveryBefore = await f.delivery(d.id);
+    await f.db.exec(read(resultRepair));
+    assert.deepEqual((await f.db.query('select * from exchange_request_email_events order by event_id')).rows, eventsBefore);
+    assert.deepEqual(await f.delivery(d.id), deliveryBefore);
+    for (const role of ['anon', 'authenticated']) {
+      await f.db.exec(`set role ${role}`);
+      await assert.rejects(event('forbidden', 'email.delivered', 'a'), /permission denied/);
+      await assert.rejects(f.db.query('select * from exchange_request_email_events'), /permission denied/);
+      await assert.rejects(f.db.query("select prepare_request_notification($1,$2,$3,'test')", [d.id, worker, payload]), /permission denied/);
+      await assert.rejects(f.db.query("select finish_request_notification($1,$2,'failed',null,'test',null)", [d.id, worker]), /permission denied/);
+      await f.db.exec('reset role');
+    }
+  } finally { await f.db.close(); }
+});
 
 test('_46 recovers the observed never-prepared Sending job and retires management without losing immutable history', async () => {
   const f = await setup(false);

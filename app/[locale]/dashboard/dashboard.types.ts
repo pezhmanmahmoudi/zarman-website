@@ -22,6 +22,7 @@ export type Profile = {
   national_id?: string | null;
   passport_number?: string | null;
   kyc_status?: string | null;
+  kyc_approval_notice_seen_at?: string | null;
   [key: string]: unknown;
 };
 

@@ -17,6 +17,7 @@ import type { Profile as BaseProfile } from "@/app/[locale]/dashboard/dashboard.
 import { normalizeAustralianState } from "@/lib/australian-driver-licence";
 import { useLocale } from "@/context/LocaleContext";
 import { KycDocumentEvidence } from "@/components/dashboard/KycDocumentEvidence";
+import { TelegramNotifications } from "./TelegramNotifications";
 import { emptyKycEvidence, validateKycEvidence, type KycEvidenceDraft } from "@/lib/kyc/evidence";
 import flow from "@/styles/dashboard/DashboardProfileFlow.module.css";
 
@@ -429,5 +430,6 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
       </footer>
       </div>
     </DashboardMagicCard>}
+    <TelegramNotifications locale={locale} overview motionEnabled={motionEnabled}/>
   </div>;
 }

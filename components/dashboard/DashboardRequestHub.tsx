@@ -5,8 +5,8 @@ import { Check, ServerCrash, PauseCircle } from "lucide-react";
 import { DashboardIdentityCard } from "./DashboardIdentityCard";
 import { DashboardLottieScene } from "./DashboardLottieScene";
 import { TransferRecipientPicker, EDUCATION_RECIPIENT_ID } from "./TransferRecipientPicker";
-import { InstitutionPaymentFields } from "./InstitutionPaymentFields";
-import { isInstitutionPaymentLink, paymentInstitution } from "@/lib/payments/institutions";
+import { InstitutionPaymentFields, type InstitutionPaymentErrors } from "./InstitutionPaymentFields";
+import { isInstitutionPaymentLink, normalizeInstitutionPaymentLink, paymentInstitution } from "@/lib/payments/institutions";
 import Stepper, { Step } from "@/components/Stepper";
 import { DashboardCard, DashboardMagicCard, DashboardButton, DashboardPageHeader, DashboardReveal, StatusBadge, dashboardInputClass } from "@/components/dashboard/dashboard-ui";
 import { cn } from "@/lib/utils";
@@ -111,6 +111,8 @@ export function DashboardRequestHub({
   const amountInputRef = React.useRef<HTMLInputElement>(null);
   const t = useT();
   const locale = useLocale();
+  const fa = locale === "fa";
+  const text = (en: string, persian: string) => fa ? persian : en;
 
   const keepAmountCaretAtEnd = () => {
     requestAnimationFrame(() => {
@@ -148,6 +150,7 @@ export function DashboardRequestHub({
   const [institutionId, setInstitutionId] = useState("");
   const [paymentUsername, setPaymentUsername] = useState("");
   const [paymentPassword, setPaymentPassword] = useState("");
+  const [showEducationErrors, setShowEducationErrors] = useState(false);
   const recipientReadVersion = React.useRef(0);
   const promoGeneration = React.useRef(0);
 
@@ -156,6 +159,7 @@ export function DashboardRequestHub({
     promoGeneration.current += 1;
     setSelectedRecipientId(""); setPaymentLink(""); setInstitutionName("");
     setInstitutionId(""); setPaymentUsername(""); setPaymentPassword("");
+    setShowEducationErrors(false);
     setPromoDiscount(null); setAppliedPromoCode(null); setPromoEffectiveRate(null); setPromoMsg(null);
     setPromoValidating(false);
   }, [txType]);
@@ -208,8 +212,27 @@ export function DashboardRequestHub({
   const filteredRecipients = recipients.filter((r) => r.direction === recipientDirection);
 
   const isEduPayment = selectedRecipientId === EDU_RECIPIENT_VALUE;
-  const paymentAccountComplete = (!paymentUsername.trim() && !paymentPassword) || (!!paymentUsername.trim() && !!paymentPassword);
-  const educationDetailsComplete = (!!paymentInstitution(institutionId) || (institutionId === "other" && !!institutionName.trim())) && isInstitutionPaymentLink(paymentLink.trim()) && paymentAccountComplete;
+  const normalizedPaymentLink = normalizeInstitutionPaymentLink(paymentLink);
+  const educationErrors: InstitutionPaymentErrors = {};
+  if (!paymentInstitution(institutionId) && institutionId !== "other") {
+    educationErrors.institution = text("Choose a payment recipient.", "دریافت‌کنندهٔ پرداخت را انتخاب کنید.");
+  }
+  if (institutionId === "other" && !institutionName.trim()) {
+    educationErrors.companyName = text("Enter the company receiving payment.", "نام شرکت دریافت‌کنندهٔ پرداخت را وارد کنید.");
+  }
+  if (!normalizedPaymentLink) {
+    educationErrors.paymentLink = text("Enter the payment link.", "لینک پرداخت را وارد کنید.");
+  } else if (!isInstitutionPaymentLink(normalizedPaymentLink)) {
+    educationErrors.paymentLink = text("Enter a valid HTTPS payment link without account credentials in the link.", "یک لینک پرداخت معتبر با https:// وارد کنید؛ اطلاعات ورود به حساب نباید داخل لینک باشد.");
+  }
+  if (paymentPassword && !paymentUsername.trim()) {
+    educationErrors.username = text("Enter the username for this payment account.", "نام کاربری این حساب پرداخت را وارد کنید.");
+  }
+  if (paymentUsername.trim() && !paymentPassword) {
+    educationErrors.password = text("Enter the password for this payment account.", "رمز عبور این حساب پرداخت را وارد کنید.");
+  }
+  const educationValidationMessage = Object.values(educationErrors)[0] || null;
+  const educationDetailsComplete = !educationValidationMessage;
   const hasValidRecipient = isEduPayment || filteredRecipients.some(recipient => recipient.id === selectedRecipientId);
 
   const handleRecipientChange = (val: string) => {
@@ -226,6 +249,7 @@ export function DashboardRequestHub({
       if (reasonForTransfer === "International Payment") setReasonForTransfer("");
     }
     setStepError("");
+    setShowEducationErrors(false);
     if (val === NEW_RECIPIENT_VALUE) {
       setRecipientModalMode("standard");
       setShowRecipientModal(true);
@@ -385,17 +409,19 @@ export function DashboardRequestHub({
 
   function goToStep(next: number) {
     if (submitted) return;
-    setStep(next); setStepError("");
+    setStep(next); setStepError(""); setShowEducationErrors(false);
     requestAnimationFrame(()=>{ stepHeading.current?.focus({preventScroll:true}); stepHeading.current?.scrollIntoView({block:"nearest",behavior:"auto"}); });
   }
   function nextStep() {
     if (step === 0 && (!Number.isFinite(rawAmount) || rawAmount <= 0 || isRateOffline)) { setStepError(locale === "fa" ? "مبلغ معتبر وارد کنید." : "Enter a valid amount."); return; }
-    if (step === 1 && (!hasValidRecipient || (isEduPayment && !educationDetailsComplete))) { setStepError(isEduPayment ? (locale === "fa" ? "دریافت‌کننده و لینک پرداخت را کامل کنید. در صورت ورود یوزر یا پسورد، هر دو را وارد کنید." : "Complete the recipient and payment link. If entering account details, enter both username and password.") : t.hub.allFieldsRequired); return; }
+    if (step === 1 && !hasValidRecipient) { setStepError(t.hub.allFieldsRequired); return; }
+    if (step === 1 && isEduPayment) {
+      setPaymentLink(normalizedPaymentLink);
+      if (!educationDetailsComplete) { setStepError(""); setShowEducationErrors(true); return; }
+    }
     goToStep(Math.min(2,step+1));
   }
 
-  const fa = locale === "fa";
-  const text = (en: string, persian: string) => fa ? persian : en;
   const labels = fa ? ["مبلغ", "گیرنده", "بررسی و ثبت"] : ["Amount", "Recipient", "Review"];
   const formLabel = "mb-2 block text-sm font-medium text-[#182027]";
   const selectStyle = "[&>button]:min-h-12 [&>button]:rounded-2xl [&>button]:border-[#e9ecf0] [&>button]:bg-white [&>button]:text-[#182027]";
@@ -459,7 +485,7 @@ export function DashboardRequestHub({
               </>}
               {step === 1 && <>
                 <TransferRecipientPicker key={recipientDirection} recipients={filteredRecipients} direction={recipientDirection} selectedId={selectedRecipientId} locale={locale} status={recipientStatus} disabled={isSubmitting} onSelect={handleRecipientChange} onAdd={() => handleRecipientChange(NEW_RECIPIENT_VALUE)} onAddSelf={() => handleRecipientChange(SELF_DESTINATION_RECIPIENT_VALUE)} onRetry={() => { setRecipientStatus("loading"); setRecipientAttempt(value => value + 1); }}/>
-                {isEduPayment && <InstitutionPaymentFields institutionId={institutionId} companyName={institutionName} username={paymentUsername} password={paymentPassword} onCompanyNameChange={setInstitutionName} onUsernameChange={setPaymentUsername} onPasswordChange={setPaymentPassword} paymentLink={paymentLink} locale={locale} disabled={isSubmitting} onInstitutionChange={id => { const institution = paymentInstitution(id); if (!institution && id !== "other") return; setInstitutionId(id); setInstitutionName(institution?.companyName || ""); setPaymentUsername(""); setPaymentPassword(""); setPaymentLink(""); setStepError(""); }} onPaymentLinkChange={setPaymentLink}/>}
+                {isEduPayment && <InstitutionPaymentFields institutionId={institutionId} companyName={institutionName} username={paymentUsername} password={paymentPassword} onCompanyNameChange={setInstitutionName} onUsernameChange={setPaymentUsername} onPasswordChange={setPaymentPassword} paymentLink={paymentLink} locale={locale} disabled={isSubmitting} errors={showEducationErrors ? educationErrors : undefined} onInstitutionChange={id => { const institution = paymentInstitution(id); if (!institution && id !== "other") return; setInstitutionId(id); setInstitutionName(institution?.companyName || ""); setPaymentUsername(""); setPaymentPassword(""); setPaymentLink(""); setStepError(""); setShowEducationErrors(false); }} onPaymentLinkChange={setPaymentLink}/>}
               </>}
               {step === 2 && <>
                 <div className="flex items-center justify-between gap-4 rounded-2xl bg-[#f7f8fa] p-4"><div className="min-w-0"><span className="text-xs text-[#626a76]">{t.hub.recipient}</span><p className="mb-0 mt-1 break-words text-sm font-semibold text-[#182027]" data-private-value>{isEduPayment ? institutionName : selectedRecipient?.label || text("Selected account", "حساب انتخاب‌شده")}</p></div><DashboardButton tone="quiet" disabled={isSubmitting} onClick={() => goToStep(1)}>{text("Edit", "ویرایش")}</DashboardButton></div>
@@ -469,7 +495,7 @@ export function DashboardRequestHub({
               </>}
             </DashboardReveal>
           </>}
-          {step === 2 && <div className="mt-6"><OnlineRequestSubmit key="request-submit" paymentAccount={isEduPayment && (paymentUsername.trim() || paymentPassword) ? { username: paymentUsername, password: paymentPassword } : undefined} input={{ rawAmount, txType, sourceOfFunds, reasonForTransfer, recipientId: selectedRecipientId, promoCode: appliedPromoCode, paymentLink: isEduPayment ? paymentLink.trim() || null : null, institutionId: isEduPayment ? institutionId : undefined, institutionName: isEduPayment ? institutionName : undefined, locale }} disabled={!isApproved || !profile || rawAmount <= 0 || isRateOffline || !marketActive} validationMessage={!sourceOfFunds || !reasonForTransfer || !hasValidRecipient ? t.hub.allFieldsRequired : isEduPayment && !educationDetailsComplete ? text("Complete the company name and payment link, and both account fields if used.", "نام شرکت و لینک پرداخت را کامل کنید؛ در صورت استفاده از اطلاعات اکانت، یوزر و پسورد را با هم وارد کنید.") : null} onBusyChange={setIsSubmitting} onSubmitted={() => { setPaymentUsername(""); setPaymentPassword(""); setSubmitted(true); }}/></div>}
+          {step === 2 && <div className="mt-6"><OnlineRequestSubmit key="request-submit" paymentAccount={isEduPayment && (paymentUsername.trim() || paymentPassword) ? { username: paymentUsername, password: paymentPassword } : undefined} input={{ rawAmount, txType, sourceOfFunds, reasonForTransfer, recipientId: selectedRecipientId, promoCode: appliedPromoCode, paymentLink: isEduPayment ? normalizedPaymentLink || null : null, institutionId: isEduPayment ? institutionId : undefined, institutionName: isEduPayment ? institutionName : undefined, locale }} disabled={!isApproved || !profile || rawAmount <= 0 || isRateOffline || !marketActive} validationMessage={!sourceOfFunds || !reasonForTransfer || !hasValidRecipient ? t.hub.allFieldsRequired : isEduPayment ? educationValidationMessage : null} onBusyChange={setIsSubmitting} onSubmitted={() => { setPaymentUsername(""); setPaymentPassword(""); setSubmitted(true); }}/></div>}
           {!submitted && stepError && <p role="alert" className="mt-5 text-sm text-rose-700">{stepError}</p>}
           </div>
           {!submitted && <div className="wizardFooter flex flex-col items-stretch justify-between gap-3 border-t border-[#e4ddef] bg-white/40 px-5 py-5 sm:flex-row sm:items-center sm:px-7">{step > 0 ? <DashboardButton tone="secondary" asChild><button type="button" className="wizardBack order-last sm:order-none" disabled={isSubmitting} onClick={() => goToStep(step - 1)}>{text("Back", "بازگشت")}</button></DashboardButton> : <span className="text-xs text-[#626a76]">{text("Step 1 of 3", "مرحله ۱ از ۳")}</span>}{step < 2 && <DashboardButton asChild><button type="button" className="wizardNext" disabled={isSubmitting || (step === 1 && !hasValidRecipient)} onClick={nextStep}>{step === 0 ? text("Next: Recipient Details", "مرحله بعد: اطلاعات گیرنده") : text("Review transfer", "بررسی انتقال")}</button></DashboardButton>}</div>}

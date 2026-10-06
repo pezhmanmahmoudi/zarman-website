@@ -14,6 +14,7 @@ export function useDashboardData(initial?: DashboardInitialAccount | null) {
   const router = useRouter(), locale = useLocale();
   const generation = useRef(0), abort = useRef<AbortController | null>(null);
   const lastRefresh = useRef(0), skipInitialRefresh = useRef(Boolean(initial));
+  const seenIdentityNotices = useRef(new Map<string, string>());
   const [loading, setLoading] = useState(!initial), [sessionChecked, setSessionChecked] = useState(Boolean(initial));
   const [profile, setProfile] = useState<Profile | null>(initial?.profile ?? null), [approved, setApproved] = useState<ApprovedSummary>(initial?.approved ?? noSummary);
   const [error, setError] = useState(false);
@@ -40,13 +41,29 @@ export function useDashboardData(initial?: DashboardInitialAccount | null) {
       ]);
       if (current !== generation.current) return;
       if (profileRes.error) throw new Error("dashboard_read_failed");
-      setProfile(profileRes.data as Profile);
+      const nextProfile = profileRes.data as Profile;
+      // Keep an acknowledgement made during this read from being overwritten by its older snapshot.
+      const seenAt = seenIdentityNotices.current.get(user.id);
+      setProfile(seenAt ? { ...nextProfile, kyc_approval_notice_seen_at: nextProfile.kyc_approval_notice_seen_at || seenAt } : nextProfile);
       setApproved(summary);
       setSessionChecked(true);
     } catch {
       if (current === generation.current && !controller.signal.aborted) setError(true);
     } finally { if (current === generation.current) setLoading(false); }
   }, [locale, router]);
+  const acknowledgeIdentityNotice = useCallback(async (profileId: string) => {
+    if (seenIdentityNotices.current.has(profileId)) return;
+    const seenAt = new Date().toISOString();
+    seenIdentityNotices.current.set(profileId, seenAt);
+    setProfile(current => current?.id === profileId && current.kyc_status === "approved"
+      ? { ...current, kyc_approval_notice_seen_at: current.kyc_approval_notice_seen_at || seenAt } : current);
+    try {
+      // The RPC checks auth.uid() and approval itself; callers cannot mark another account.
+      await supabase.rpc("acknowledge_kyc_approval_notice", { p_profile_id: profileId });
+    } catch {
+      // A cosmetic acknowledgement must never interrupt the dashboard. A later visit can save it again.
+    }
+  }, []);
   useEffect(() => {
     if (skipInitialRefresh.current) {
       skipInitialRefresh.current = false;
@@ -59,11 +76,12 @@ export function useDashboardData(initial?: DashboardInitialAccount | null) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(event => {
       if (event === "SIGNED_OUT") {
         invalidate();
+        seenIdentityNotices.current.clear();
         setProfile(null); setApproved(noSummary); setSessionChecked(false);
         router.replace(`/${locale}/login`);
       }
     });
     return () => { invalidate(); subscription.unsubscribe(); window.clearInterval(timer); window.removeEventListener("focus", onVisible); document.removeEventListener("visibilitychange", onVisible); };
   }, [refresh, locale, router, invalidate]);
-  return { profile, approvedVolume: approved.volume, approvedCount: approved.count, loading, sessionChecked, error, refresh };
+  return { profile, approvedVolume: approved.volume, approvedCount: approved.count, loading, sessionChecked, error, refresh, acknowledgeIdentityNotice };
 }

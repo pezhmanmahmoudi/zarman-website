@@ -36,10 +36,13 @@ function recordPresentation(row: TransactionRow) {
   const request = transactionRequest(row);
   const state = transactionQueueState(row);
   const successful = request ? request.status === "completed" : row.status === "approved";
+  // Customer identity follows profile corrections; the quote retains its original snapshot.
+  const customerName = [row.profiles?.first_name, row.profiles?.last_name]
+    .map(part => part?.trim()).filter(Boolean).join(" ");
   return {
     request, state,
     reference: request?.reference_code || row.reference_code || row.id,
-    name: request?.quote.sender_snapshot?.name || [row.profiles?.first_name, row.profiles?.last_name].filter(Boolean).join(" ") || "Unknown customer",
+    name: customerName || request?.quote.sender_snapshot?.name || "Unknown customer",
     requestHref: request ? transactionRequestHref(request.id) : null,
     fundingCurrency: request?.quote.funding_currency || (row.type === "buy_aud" ? "AUD" : "IRT"),
     recipientCurrency: request?.quote.recipient_currency || (row.type === "buy_aud" ? "IRT" : "AUD"),
