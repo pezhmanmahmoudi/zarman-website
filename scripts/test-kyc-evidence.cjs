@@ -14,14 +14,14 @@ test("each supported document has the required sides and maps to the existing ad
   const types=dashboardHarness().load("lib/compliance/austrac-id-types.ts").AUSTRAC_ID_TYPES;
   for(const doc of policy.KYC_ID_DOCUMENTS){
     assert.ok(types.includes(doc.reportType));
-    const roles=policy.requiredKycUploads(doc.value);assert.ok(roles.includes("front"));
+    const roles=policy.requiredKycUploads(doc.value);assert.equal(roles.includes("front"),!doc.textOnly);
     assert.equal(roles.includes("back"),doc.back);assert.equal(roles.includes("address"),doc.address);
-    assert.deepEqual(policy.validateKycEvidence(doc.value,draft(),new Date("2026-09-29")),{});
+    assert.deepEqual(policy.validateKycEvidence(doc.value,doc.textOnly ? policy.emptyKycEvidence() : draft(),new Date("2026-09-29")),doc.value === "medicare" ? {documentNumber:"Enter the document number or registration number."} : {});
     const missing=policy.validateKycEvidence(doc.value,undefined,new Date("2026-09-29"));
     for(const role of roles)assert.ok(missing[`evidence-${role}`]);
   }
-  assert.deepEqual(policy.requiredKycUploads("passport"),["front"]);
-  assert.deepEqual(policy.requiredKycUploads("driver_license"),["front","back"]);
+  for(const type of ["passport","driver_license","medicare"]) assert.deepEqual(policy.requiredKycUploads(type),[]);
+  assert.deepEqual(policy.requiredKycUploads("photo_id"),["front","back","address"]);
   for(const type of ["none","Credit/debit card","Telephone/fax number","Membership ID"]){assert.ok(policy.validateKycEvidence(type,draft()).docType);}
 });
 test("proof of address type and actual issue date are mandatory, future and stale dates fail",()=>{
@@ -52,27 +52,79 @@ function actionHarness({rows,auth=true,role="customer",rpcError=null}={}){
   }});
   return {actions:h.load("app/actions/kyc-evidence.actions.ts"),calls};
 }
-const passport=()=>({first_name:"Alex",last_name:"Morgan",mobile_number:"0412345678",dob:"1990-01-01",country:"Australia",address:"1 Test Street",city:"Sydney",state:"NSW",postcode:"2000",document_type:"passport",passport_number:"N100",expiry_date:"2090-01-01",consent_notice:true,consent_dvs:true,evidence:{...draft(),back:undefined,address:undefined}});
-const frontRow={id:FRONT,user_id:OWNER,role:"front",document_type:"passport",sha256:"unique"};
-test("server submission rejects missing evidence, false consent, foreign slots and invalid identifiers before any write",async()=>{
-  for(const payload of [{...passport(),evidence:undefined},{...passport(),consent_dvs:false},{...passport(),expiry_date:"2000-01-01"},{...passport(),evidence:{...draft(),front:{id:"https://example.com/document",name:"fake"}}}]){
+const passport=()=>({first_name:"Alex",last_name:"Morgan",mobile_number:"0412345678",dob:"1990-01-01",country:"Australia",address:"1 Test Street",city:"Sydney",state:"NSW",postcode:"2000",document_type:"passport",passport_number:"N100",expiry_date:"2090-01-01",consent_notice:true,consent_dvs:true,evidence:policy.emptyKycEvidence()});
+const foreign=()=>({...passport(),document_type:"foreign_passport",evidence:{...draft(),back:undefined,address:undefined}});
+const frontRow={id:FRONT,user_id:OWNER,role:"front",document_type:"foreign_passport",sha256:"unique"};
+test("Iran residence requires an Iranian passport and an owner-bound photo-page upload on the server",async()=>{
+  const iranian=()=>({...foreign(),country:"Iran",evidence:{...foreign().evidence,documentIssuer:"Iran"}});
+  for(const country of ["Iran"," IR ","irn","ایران","Iran (Islamic Republic of)"]){
+    const h=actionHarness({rows:[frontRow]});
+    assert.equal((await h.actions.submitCustomerKycEvidence({...iranian(),country})).success,true);
+    const args=h.calls.find(c=>c[0]==="rpc")[2];
+    assert.equal(args.p_details.country,"Iran");assert.equal(args.p_details.document_issuer,"Iran");
+    assert.equal(args.p_details.document_number,"ID100");assert.deepEqual(args.p_upload_ids,[FRONT]);
+    for(const document_type of ["passport","driver_license","medicare","national_id","certified_copy"]){
+      const invalid=actionHarness({rows:[frontRow]});
+      assert.ok((await invalid.actions.submitCustomerKycEvidence({...iranian(),country,document_type})).error);
+      assert.equal(invalid.calls.length,0);
+    }
+  }
+  for(const changes of [{front:undefined},{documentIssuer:"Australia"},{documentIssuer:""},{documentNumber:""}]){
+    const h=actionHarness({rows:[frontRow]});
+    assert.ok((await h.actions.submitCustomerKycEvidence({...iranian(),evidence:{...iranian().evidence,...changes}})).error);
+    assert.equal(h.calls.length,0);
+  }
+  for(const expiry_date of [null,"2000-01-01"]){
+    const h=actionHarness();assert.ok((await h.actions.submitCustomerKycEvidence({...iranian(),expiry_date})).error);assert.equal(h.calls.length,0);
+  }
+  for(const rows of [[],[{...frontRow,user_id:"other"}],[{...frontRow,document_type:"passport"}],[{...frontRow,role:"source_of_funds"}]]){
+    const h=actionHarness({rows});assert.ok((await h.actions.submitCustomerKycEvidence(iranian())).error);assert.equal(h.calls.filter(c=>c[0]==="rpc").length,0);
+  }
+});
+test("server submission rejects primary images, false consent, expired IDs and invalid alternative evidence before any write",async()=>{
+  for(const payload of [{...passport(),evidence:draft()},{...passport(),consent_dvs:false},{...passport(),expiry_date:"2000-01-01"},{...passport(),passport_number:123},{...foreign(),evidence:undefined},{...foreign(),evidence:{...draft(),front:{id:"https://example.com/document",name:"fake"}}}]){
     const h=actionHarness({rows:[frontRow]});const result=await h.actions.submitCustomerKycEvidence(payload);assert.ok(result.error);assert.equal(h.calls.filter(c=>c[0]==="rpc").length,0);
   }
   for(const rows of [[],[{...frontRow,role:"back"}],[{...frontRow,document_type:"photo_id"}]]){
-    const h=actionHarness({rows});assert.ok((await h.actions.submitCustomerKycEvidence(passport())).error);assert.equal(h.calls.filter(c=>c[0]==="rpc").length,0);
+    const h=actionHarness({rows});assert.ok((await h.actions.submitCustomerKycEvidence(foreign())).error);assert.equal(h.calls.filter(c=>c[0]==="rpc").length,0);
   }
 });
 test("server checks authenticated ownership and commits consent/evidence through the atomic pending-only RPC",async()=>{
-  const h=actionHarness({rows:[frontRow]});const result=await h.actions.submitCustomerKycEvidence(passport());assert.equal(result.success,true);
+  const h=actionHarness({rows:[frontRow]});const result=await h.actions.submitCustomerKycEvidence(foreign());assert.equal(result.success,true);
   assert.ok(h.calls.some(c=>c[0]==="customer_kyc_uploads"&&c[1]==="eq"&&c[2]==="user_id"&&c[3]===OWNER));
   const rpc=h.calls.find(c=>c[0]==="rpc");assert.equal(rpc[1],"submit_customer_kyc_evidence");assert.equal(rpc[2].p_user_id,OWNER);
-  assert.equal(rpc[2].p_details.profile_document_type,"passport");assert.equal(rpc[2].p_details.consent_version,"customer-evidence-2026-09-29");
+  assert.equal(rpc[2].p_details.profile_document_type,"none");assert.equal(rpc[2].p_details.consent_version,"customer-details-2026-10-07");
   assert.equal(rpc[2].p_details.compliance_dvs_status,undefined);
-  const fail=actionHarness({rows:[frontRow],rpcError:{message:"rollback"}});assert.ok((await fail.actions.submitCustomerKycEvidence(passport())).error);
+  const fail=actionHarness({rows:[frontRow],rpcError:{message:"rollback"}});assert.ok((await fail.actions.submitCustomerKycEvidence(foreign())).error);
 });
-test("identical front and back files cannot satisfy a licence submission",async()=>{
-  const rows=[{...frontRow,document_type:"driver_license"},{...frontRow,id:BACK,role:"back",document_type:"driver_license"}];
-  const h=actionHarness({rows});const result=await h.actions.submitCustomerKycEvidence({...passport(),document_type:"driver_license",license_number:"123",card_number:"456",state_of_issue:"NSW",evidence:draft()});assert.match(result.error,/different file/);assert.equal(h.calls.filter(c=>c[0]==="rpc").length,0);
+test("identical front and back files cannot satisfy an alternative identity submission",async()=>{
+  const rows=[{...frontRow,document_type:"photo_id"},{...frontRow,id:BACK,role:"back",document_type:"photo_id"},{...frontRow,id:ADDRESS,role:"address",document_type:"photo_id",address_type:"utility_bill"}];
+  const h=actionHarness({rows});const result=await h.actions.submitCustomerKycEvidence({...passport(),document_type:"photo_id",evidence:{...draft(),addressDate:policy.kycToday()}});assert.match(result.error,/different file/);assert.equal(h.calls.filter(c=>c[0]==="rpc").length,0);
+});
+test("DVS identity details submit without any file or upload lookup and preserve the exact consent",async()=>{
+  const consent=dashboardHarness().load("lib/kyc/consent.ts");
+  for(const payload of [ {...passport(),evidence:undefined}, {...passport(),document_type:"driver_license",license_number:"12345",card_number:"6789",state_of_issue:"NSW"}, {...passport(),document_type:"medicare",expiry_date:null,evidence:{...policy.emptyKycEvidence(),documentNumber:"1234567890",medicareIRN:"1",medicareColour:"green",medicareExpiry:"2090-01"}} ]){
+    const h=actionHarness();assert.equal((await h.actions.submitCustomerKycEvidence(payload)).success,true);
+    assert.equal(h.calls.filter(c=>c[0]==="customer_kyc_uploads").length,0);
+    const args=h.calls.find(c=>c[0]==="rpc")[2];assert.deepEqual(args.p_upload_ids,[]);
+    assert.equal(args.p_details.consent_statement,consent.KYC_DVS_CONSENT_STATEMENT);
+    assert.equal(args.p_details.document_number,payload.document_type==="passport"?"N100":payload.document_type==="driver_license"?"12345":"1234567890");
+    if(payload.document_type==="medicare")assert.equal(args.p_details.medicare_expiry,"2090-01");
+  }
+});
+test("primary front and back uploads are blocked before storage or metadata access",async()=>{
+  const FileClass=globalThis.File||require("node:buffer").File;
+  for(const type of ["passport","driver_license","medicare"])for(const role of ["front","back"]){
+    const h=actionHarness();const result=await h.actions.uploadCustomerKycEvidence({documentType:type,role,file:new FileClass(["%PDF-1.7"],"primary.pdf",{type:"application/pdf"})});
+    assert.match(result.error,/text details only/);assert.equal(h.calls.length,0);
+  }
+});
+test("supporting source-of-funds files are owner-bound and use the optional slot",async()=>{
+  const evidence={...policy.emptyKycEvidence(),source_of_funds:{id:ADDRESS,name:"funds.pdf"}};
+  const row={id:ADDRESS,user_id:OWNER,role:"source_of_funds",document_type:"passport",sha256:"funds"};
+  const h=actionHarness({rows:[row]});assert.equal((await h.actions.submitCustomerKycEvidence({...passport(),evidence})).success,true);
+  assert.deepEqual(h.calls.find(c=>c[0]==="rpc")[2].p_upload_ids,[ADDRESS]);
+  for(const bad of [{...row,user_id:"other"},{...row,role:"front"}])assert.ok((await actionHarness({rows:[bad]}).actions.submitCustomerKycEvidence({...passport(),evidence})).error);
 });
 test("unsigned users cannot submit and ordinary customers cannot read admin evidence or signed links",async()=>{
   const h=actionHarness({auth:false});await assert.rejects(()=>h.actions.submitCustomerKycEvidence(passport()),/Sign in/);
@@ -87,6 +139,54 @@ test("migration is private, atomic, audited and cannot promote an account to app
 });
 
 function elements(tree,predicate){const out=[];function walk(n){if(!React.isValidElement(n))return;if(predicate(n))out.push(n);React.Children.forEach(n.props.children,walk);}walk(tree);return out;}
+test("primary documents expose text fields and no identity file control; alternative uploads remain available",()=>{
+  const h=dashboardHarness({mocks:{
+    "@/components/ui/SelectBox/SelectBox":{SelectBox:()=>null},
+    "@/components/ui/DatePicker/CustomDatePicker":{__esModule:true,default:()=>null},
+    "@/components/dashboard/DashboardLottieScene":{DashboardLottieScene:()=>null},
+    "@/app/actions/kyc-evidence.actions":{uploadCustomerKycEvidence:async()=>{throw Error("Unexpected upload");}},
+  }});
+  const {KycDocumentEvidence}=h.load("components/dashboard/KycDocumentEvidence.tsx");
+  for(const documentType of ["passport","driver_license","medicare"]){
+    const tree=h.render(KycDocumentEvidence,{documentType,evidence:policy.emptyKycEvidence(),errors:{},disabled:false,motionEnabled:false,onDocumentTypeChange(){},onChange(){},onBusyChange(){}});
+    const files=elements(tree,n=>n.type==="input"&&n.props.type==="file");
+    assert.deepEqual(files.map(n=>n.props["aria-label"]),["Upload source of funds"]);
+    if(documentType==="medicare")for(const id of ["kyc-document-number","kyc-medicare-irn","kyc-medicare-expiry"])assert.ok(elements(tree,n=>n.props.id===id).length);
+  }
+  for(const documentType of ["photo_id","proof_of_age","national_id","foreign_passport","certified_copy"]){
+    const tree=h.render(KycDocumentEvidence,{documentType,evidence:draft(),errors:{},disabled:false,motionEnabled:false,onDocumentTypeChange(){},onChange(){},onBusyChange(){}});
+    assert.equal(elements(tree,n=>n.type==="input"&&n.props.type==="file").length,policy.requiredKycUploads(documentType).length+1);
+  }
+});
+test("Iran resident UI fixes the document to Iranian passport and exposes its required photo-page upload",()=>{
+  const h=dashboardHarness({mocks:{
+    "@/components/ui/SelectBox/SelectBox":{SelectBox:()=>null},
+    "@/components/ui/DatePicker/CustomDatePicker":{__esModule:true,default:()=>null},
+    "@/components/dashboard/DashboardLottieScene":{DashboardLottieScene:()=>null},
+    "@/app/actions/kyc-evidence.actions":{uploadCustomerKycEvidence:async()=>{throw Error("Unexpected upload");}},
+  }});
+  const {KycDocumentEvidence}=h.load("components/dashboard/KycDocumentEvidence.tsx");
+  const tree=h.render(KycDocumentEvidence,{country:"Iran",documentType:"foreign_passport",evidence:{...policy.emptyKycEvidence(),documentIssuer:"Iran"},errors:{},disabled:false,motionEnabled:false,onDocumentTypeChange(){},onChange(){},onBusyChange(){}});
+  const selector=elements(tree,n=>n.props.placeholder==="Choose an identity document")[0];
+  assert.deepEqual(selector.props.labeledOptions,[{value:"foreign_passport",label:"Iranian passport"}]);assert.equal(selector.props.disabled,true);
+  const issuer=elements(tree,n=>n.props.id==="kyc-document-issuer")[0];assert.equal(issuer.props.value,"Iran");assert.equal(issuer.props.readOnly,true);
+  const files=elements(tree,n=>n.type==="input"&&n.props.type==="file");
+  assert.deepEqual(files.map(n=>n.props["aria-label"]),["Upload iranian passport photo page","Upload source of funds"]);
+  const passportSlot=elements(tree,n=>n.type==="section"&&elements(n,child=>child.type==="input"&&child.props["aria-label"]==="Upload iranian passport photo page").length&&n.props["aria-busy"]!==undefined)[0];
+  assert.equal(elements(passportSlot,n=>n.type==="span"&&n.props.children==="Required").length,1);
+});
+test("Medicare supports month precision on green cards and requires IRN, colour and a valid expiry",()=>{
+  const now=new Date("2026-10-07T01:00:00Z"),evidence={...policy.emptyKycEvidence(),documentNumber:"1234567890",medicareIRN:"1",medicareColour:"green",medicareExpiry:"2026-10"};
+  assert.deepEqual(policy.validateKycIdentityDetails("medicare",{evidence},now),{});
+  for(const changes of [{documentNumber:"123"},{medicareIRN:"0"},{medicareColour:"purple"},{medicareExpiry:"2026-09"},{medicareExpiry:"2026-13"}])assert.ok(Object.keys(policy.validateKycIdentityDetails("medicare",{evidence:{...evidence,...changes}},now)).length);
+  assert.deepEqual(policy.validateKycIdentityDetails("medicare",{evidence:{...evidence,medicareColour:"blue",medicareExpiry:"2026-10-07"}},now),{});
+  assert.ok(policy.validateKycIdentityDetails("medicare",{evidence:{...evidence,medicareColour:"blue",medicareExpiry:"2026-10"}},now).medicareExpiry);
+});
+test("legacy untyped uploader cannot bypass the primary-image prohibition",async()=>{
+  const h=dashboardHarness({mocks:{"@supabase/supabase-js":{createClient:()=>({})},"@/app/actions/kyc-evidence.actions":{submitCustomerKycEvidence:async()=>{throw Error("Unexpected submission");}}}});
+  const actions=h.load("app/actions/kyc.actions.ts");
+  for(const key of ["doc-front","doc-back"])await assert.rejects(()=>actions.uploadKycDocumentSecurely({userId:OWNER,key,file:{size:100,type:"image/jpeg"}}),/Invalid document key/);
+});
 test("upload UI preserves previous successful files when replacement fails and stops its animation",async()=>{
   let busy=false,changed=false;
   const h=dashboardHarness({mocks:{
@@ -96,7 +196,7 @@ test("upload UI preserves previous successful files when replacement fails and s
     "@/app/actions/kyc-evidence.actions":{uploadCustomerKycEvidence:async()=>{throw Error("Upload failed");}},
   }});
   const {KycDocumentEvidence}=h.load("components/dashboard/KycDocumentEvidence.tsx");
-  const props={documentType:"passport",evidence:draft(),errors:{},disabled:false,motionEnabled:true,onDocumentTypeChange(){},onChange(){changed=true;},onBusyChange(value){busy=value;}};
+  const props={documentType:"foreign_passport",evidence:draft(),errors:{},disabled:false,motionEnabled:true,onDocumentTypeChange(){},onChange(){changed=true;},onBusyChange(value){busy=value;}};
   const render=()=>h.render(KycDocumentEvidence,props);
   assert.equal(elements(render(),n=>n.props.name==="document-upload-success").length,1);
   const file=elements(render(),n=>n.type==="input"&&n.props.type==="file")[0];
@@ -105,7 +205,7 @@ test("upload UI preserves previous successful files when replacement fails and s
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(busy,false);assert.equal(changed,false);assert.equal(elements(render(),n=>n.props.name==="document-upload").length,0);
   assert.equal(elements(render(),n=>n.props.name==="document-upload-success").length,0);
-  assert.equal(elements(render(),n=>n.props.name==="document-upload-idle").length,1);
+  assert.equal(elements(render(),n=>n.props.name==="document-upload-idle").length,2);
   assert.ok(elements(render(),n=>n.props.role==="alert").length);
   assert.equal(elements(render(),n=>n.props.name==="warning").length,1);
 });
@@ -119,9 +219,9 @@ test("each upload slot shows idle, uploading and success independently and respe
     "@/app/actions/kyc-evidence.actions":{uploadCustomerKycEvidence:()=>new Promise(resolve=>{resolveUpload=resolve;})},
   }});
   const {KycDocumentEvidence}=h.load("components/dashboard/KycDocumentEvidence.tsx");
-  const props={documentType:"driver_license",evidence:policy.emptyKycEvidence(),errors:{},disabled:false,motionEnabled:true,onDocumentTypeChange(){},onChange(value){props.evidence=value;},onBusyChange(){}};
+  const props={documentType:"national_id",evidence:policy.emptyKycEvidence(),errors:{},disabled:false,motionEnabled:true,onDocumentTypeChange(){},onChange(value){props.evidence=value;},onBusyChange(){}};
   const render=()=>h.render(KycDocumentEvidence,props);
-  const scenes=()=>elements(render(),n=>String(n.props.name||"").startsWith("document-upload"));
+  const scenes=()=>elements(render(),n=>String(n.props.name||"").startsWith("document-upload") && !String(n.key).includes("-source_of_funds-") && !String(n.key).includes("-address-"));
   assert.equal(elements(render(),n=>n.props.name==="announcement").length,1);
   assert.equal(elements(render(),n=>n.props.name==="warning").length,0);
   assert.deepEqual(scenes().map(n=>n.props.name),["document-upload-idle","document-upload-idle"]);
@@ -144,11 +244,11 @@ test("document selections replay their illustrations without clearing files on s
     "@/app/actions/kyc-evidence.actions":{uploadCustomerKycEvidence:async()=>{}},
   }});
   const {KycDocumentEvidence}=h.load("components/dashboard/KycDocumentEvidence.tsx");
-  const props={documentType:"driver_license",evidence:policy.emptyKycEvidence(),errors:{},disabled:false,motionEnabled:true,
+  const props={documentType:"national_id",evidence:policy.emptyKycEvidence(),errors:{},disabled:false,motionEnabled:true,
     onDocumentTypeChange(value){props.documentType=value;props.evidence=policy.emptyKycEvidence();},
     onChange(value){props.evidence=value;},onBusyChange(){}};
   const render=()=>h.render(KycDocumentEvidence,props);
-  const scenes=()=>elements(render(),n=>String(n.props.name||"").startsWith("document-upload"));
+  const scenes=()=>elements(render(),n=>String(n.props.name||"").startsWith("document-upload") && !String(n.key).includes("-source_of_funds-"));
   const select=(placeholder,value)=>elements(render(),n=>n.props.placeholder===placeholder)[0].props.onChange(value);
   let previous=scenes().map(n=>n.key);
   select("Choose an identity document","photo_id");

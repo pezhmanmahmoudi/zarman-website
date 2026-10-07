@@ -40,7 +40,7 @@ export default async function PrivacyPolicyPage({ params }: { params: Promise<{ 
 
         <header className={styles.header}>
           <h1 className={styles.title}>Privacy Policy</h1>
-          <p className={styles.lastUpdated}>Last Updated: 26 March 2026</p>
+          <p className={styles.lastUpdated}>Last Updated: 7 October 2026</p>
         </header>
 
         <div className={styles.content}>
@@ -49,7 +49,7 @@ export default async function PrivacyPolicyPage({ params }: { params: Promise<{ 
             <strong>ZARMAN EXCHANGE PTY LTD</strong> (ABN: 70 692 742 957) (referred to as “we”, “us”, or “our”) is committed to protecting your privacy. We are bound by the <em>Privacy Act 1988 (Cth)</em> (Privacy Act) and the Australian Privacy Principles (APPs).
           </p>
           <p>
-            This Privacy Policy outlines how we collect, use, hold, and disclose your personal information. It also covers your rights to access and correct your information and how to make a complaint. This policy is available free of charge on our website: zarman.com.au
+            This Privacy Policy outlines how we collect, use, hold, and disclose your personal information. It also covers your rights to access and correct your information and how to make a complaint. This policy is available free of charge on our website: <a href="https://zarman.com.au">zarman.com.au</a>
           </p>
 
           <h2>2. What Personal Information We Collect</h2>
@@ -57,7 +57,7 @@ export default async function PrivacyPolicyPage({ params }: { params: Promise<{ 
           <ul>
             <li><strong>Identity Information:</strong> e.g., Full name, date of birth, occupation.</li>
             <li><strong>Contact Information:</strong> e.g., Proof of address, phone numbers, email addresses.</li>
-            <li><strong>Identification Documents:</strong> e.g., Australian Driving Licence, Australian Government-issued ID, or International Passport.</li>
+            <li><strong>Identification Documents:</strong> e.g., Details of your Australian Driving Licence, Australian Government-issued ID, or International Passport.</li>
             <li><strong>Financial Information:</strong> e.g., Beneficiary bank account details, transaction history.</li>
             <li><strong>Technical Information:</strong> e.g., IP address, device type.</li>
           </ul>
@@ -73,6 +73,15 @@ export default async function PrivacyPolicyPage({ params }: { params: Promise<{ 
           </ul>
           <p>
             <strong>Why we collect it:</strong> Our primary purpose for collecting your information is to provide you with our financial exchange services. This includes verifying your identity in line with our legal obligations, processing transactions, and managing risks.
+          </p>
+
+          <h3>Identity Verification and Express Consent</h3>
+          <p>
+            To comply with our legal obligations, we use third-party electronic verification systems to check the personal details and identification documents you provide against official records. We perform these electronic checks only after you expressly consent using our identity verification consent statement. For more information about how these third-party document verification systems operate, please visit the official IDMatch website (<a href="https://www.idmatch.gov.au">www.idmatch.gov.au</a>).
+          </p>
+          <h3>Consequences of Not Consenting &amp; Alternative Methods</h3>
+          <p>
+            If you do not consent to the collection and electronic verification of your identification information, we will not be able to process your application or provide our services to you automatically. However, alternative methods of identity verification are available, such as providing manually certified copies of your identification documents or conducting a live video verification. Please contact us to arrange an alternative method.
           </p>
 
           <h2>4. Anonymity and Pseudonymity</h2>
@@ -93,6 +102,9 @@ export default async function PrivacyPolicyPage({ params }: { params: Promise<{ 
           <p>
             We take reasonable steps to protect your information from misuse, interference, loss, and from unauthorised access. These steps include Technical Measures (encryption, firewalls, two-factor authentication), Access Controls, and Physical Security.
           </p>
+          <p>
+            Our standard online verification form does not collect or retain photos or scans of Australian passports, Australian driver licences, Medicare cards. We retain relevant document details (such as document numbers and expiry dates) and verification records for our legal record-keeping obligations. For alternative verification, we may securely collect and retain supporting documents, including certified copies, proof of address and source-of-funds evidence, where needed for verification and our legal obligations.
+          </p>
 
           <h2>7. Cookies and Website Analytics</h2>
           <p>
@@ -106,14 +118,14 @@ export default async function PrivacyPolicyPage({ params }: { params: Promise<{ 
 
           <h2>9. How to Make a Complaint</h2>
           <p>
-            If you have a concern about how we handled your personal information, please contact our Privacy Officer first. If you are not satisfied, you have the right to lodge a complaint with the Office of the Australian Information Commissioner (OAIC) at www.oaic.gov.au.
+            If you have a concern about how we handled your personal information or our use of third-party verification systems, please contact our Privacy Officer first. If you are not satisfied, you have the right to lodge a complaint with the Office of the Australian Information Commissioner (OAIC) at <a href="https://www.oaic.gov.au">www.oaic.gov.au</a>.
           </p>
 
           <h2>10. Contact Us</h2>
           <p>For any privacy-related queries, please contact us:</p>
           <ul>
-            <li><strong>Email:</strong> info@zarman.com.au</li>
-            <li><strong>Phone:</strong> 0497851631</li>
+            <li><strong>Email:</strong> <a href="mailto:info@zarman.com.au">info@zarman.com.au</a></li>
+            <li><strong>Phone:</strong> <a href="tel:0497851631">0497851631</a></li>
           </ul>
 
         </div>

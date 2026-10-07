@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import styles from "@/styles/Legal.module.css";
+import { KYC_DVS_CONSENT_STATEMENT } from "@/lib/kyc/consent";
 
 export const metadata: Metadata = getPageMetadata({
   locale: "en",
@@ -45,7 +46,7 @@ export default async function DVSConsentPage({ params }: { params: Promise<{ loc
 
         <div className={styles.consentBlock}>
           <p>
-            &quot;I confirm that I am authorised to provide the personal details and identity documents presented. I consent to <strong>Zarman Exchange Pty Ltd</strong> checking my personal information and documents with the official document issuer or official record holder via third-party verification systems for the sole purpose of confirming my identity.&quot;
+            {KYC_DVS_CONSENT_STATEMENT}
           </p>
         </div>
         

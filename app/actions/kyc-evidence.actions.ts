@@ -3,7 +3,8 @@
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
-import { KYC_ADDRESS_DOCUMENTS, kycDocument, kycToday, matchesKycFileSignature, requiredKycUploads, validIsoDate, validateKycEvidence, validateKycFile, type KycEvidenceDraft, type KycUploadRole } from "@/lib/kyc/evidence";
+import { KYC_ADDRESS_DOCUMENTS, allowedKycUploads, emptyKycEvidence, isIranCountry, kycDocument, kycToday, matchesKycFileSignature, requiredKycUploads, validIsoDate, validateKycEvidence, validateKycIdentityDetails, validateKycFile, type KycEvidenceDraft, type KycUploadRole } from "@/lib/kyc/evidence";
+import { KYC_CONSENT_VERSION, KYC_DVS_CONSENT_STATEMENT } from "@/lib/kyc/consent";
 
 const BUCKET = "customer-kyc-evidence";
 const uuid = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -35,7 +36,7 @@ export async function uploadCustomerKycEvidence(input: UploadInput) {
 async function performCustomerKycUpload(input: UploadInput) {
   const user = await identity();
   if (!(input.file instanceof File)) throw new UploadValidationError("Choose a file to upload.");
-  if (!requiredKycUploads(input.documentType).includes(input.role)) throw new UploadValidationError("Invalid document upload slot.");
+  if (!allowedKycUploads(input.documentType).includes(input.role)) throw new UploadValidationError("Invalid document upload slot. Primary identity documents must be provided as text details only.");
   if (input.role === "address" && !KYC_ADDRESS_DOCUMENTS.some(doc => doc.value === input.addressType)) throw new UploadValidationError("Choose the proof of address type first.");
   const invalid = validateKycFile(input.file);
   if (invalid) throw new UploadValidationError(invalid);
@@ -72,7 +73,7 @@ export type CustomerKycSubmission = {
 export async function submitCustomerKycEvidence(payload: CustomerKycSubmission) {
   const user = await identity();
   const doc = kycDocument(payload.document_type);
-  const errors = validateKycEvidence(payload.document_type, payload.evidence);
+  const errors = { ...validateKycEvidence(payload.document_type, payload.evidence), ...validateKycIdentityDetails(payload.document_type, payload) };
   if (!doc || Object.keys(errors).length) return { error: Object.values(errors)[0] || "Choose a document." };
   for (const key of ["first_name", "last_name", "mobile_number", "country", "address", "city", "state", "postcode"] as const) {
     if (typeof payload[key] !== "string" || !payload[key]?.trim() || payload[key]!.length > 500) return { error: "Complete your personal details and residential address." };
@@ -80,37 +81,39 @@ export async function submitCustomerKycEvidence(payload: CustomerKycSubmission) 
   const today = kycToday();
   if (!validIsoDate(payload.dob) || payload.dob >= today) return { error: "Enter a valid date of birth in the past." };
   if (payload.consent_notice !== true || payload.consent_dvs !== true) return { error: "Please accept both verification consents." };
-  if (doc.value === "driver_license" && (!payload.license_number?.trim() || !payload.card_number?.trim() || !["ACT","NSW","NT","QLD","SA","TAS","VIC","WA"].includes(payload.state_of_issue || ""))) return { error: "Enter the licence number, card number and issuing state." };
-  if (doc.value === "passport" && !payload.passport_number?.trim()) return { error: "Enter the passport number." };
-  if (["driver_license", "passport", "foreign_passport"].includes(doc.value) && (!validIsoDate(payload.expiry_date || "") || payload.expiry_date! < today)) return { error: "Provide a current, unexpired document and its expiry date." };
-  if (payload.expiry_date && (!validIsoDate(payload.expiry_date) || payload.expiry_date < today)) return { error: "The document expiry date must be valid and not in the past." };
-  const evidence = payload.evidence!;
-  const roles = requiredKycUploads(doc.value);
+  const evidence = payload.evidence ?? emptyKycEvidence();
+  const roles = [...requiredKycUploads(doc.value), ...(evidence.source_of_funds ? ["source_of_funds" as const] : [])];
   const ids = roles.map(role => evidence[role]!.id);
   if (!ids.every(uuid) || new Set(ids).size !== ids.length) return { error: "Each required side needs its own uploaded file." };
   const db = service();
-  const { data: uploads, error: readError } = await db.from("customer_kyc_uploads").select("id,user_id,document_type,role,address_type,sha256").in("id", ids).eq("user_id", user.id);
-  if (readError || !uploads || roles.some((role, i) => !uploads.some(row => row.id === ids[i] && row.role === role && row.document_type === doc.value && (role !== "address" || row.address_type === evidence.addressType)))) return { error: "Some required uploads are missing or belong to another document selection. Upload them again." };
-  if (new Set(uploads.map(row => row.sha256)).size !== uploads.length) return { error: "Use a different file for each side and for proof of address." };
+  // Do not query an empty .in() list or require evidence for text-only identity details.
+  if (ids.length) {
+    const { data: uploads, error: readError } = await db.from("customer_kyc_uploads").select("id,user_id,document_type,role,address_type,sha256").in("id", ids).eq("user_id", user.id);
+    if (readError || !uploads || uploads.length !== ids.length || roles.some((role, i) => !uploads.some(row => row.id === ids[i] && row.user_id === user.id && row.role === role && row.document_type === doc.value && (role !== "address" || row.address_type === evidence.addressType)))) return { error: "Some required uploads are missing or belong to another document selection. Upload them again." };
+    if (new Set(uploads.map(row => row.sha256)).size !== uploads.length) return { error: "Use a different file for each side and supporting document." };
+  }
   const addressDoc = KYC_ADDRESS_DOCUMENTS.find(item => item.value === evidence.addressType);
   const details = {
     first_name: payload.first_name!.trim(), last_name: payload.last_name!.trim(), mobile_number: payload.mobile_number!.trim(),
-    dob: payload.dob, country: payload.country.trim(), address: payload.address.trim(), city: payload.city.trim(), state: payload.state.trim(), postcode: payload.postcode.trim(),
+    dob: payload.dob, country: isIranCountry(payload.country) ? "Iran" : payload.country.trim(), address: payload.address.trim(), city: payload.city.trim(), state: payload.state.trim(), postcode: payload.postcode.trim(),
     document_type: doc.value, profile_document_type: doc.profileType, report_type: doc.reportType,
-    license_number: doc.value === "driver_license" ? payload.license_number : null,
-    card_number: doc.value === "driver_license" ? payload.card_number : null,
+    license_number: doc.value === "driver_license" ? payload.license_number!.trim() : null,
+    card_number: doc.value === "driver_license" ? payload.card_number!.trim() : null,
     state_of_issue: doc.value === "driver_license" ? payload.state_of_issue : null,
-    passport_number: doc.value === "passport" ? payload.passport_number : null,
+    passport_number: doc.value === "passport" ? payload.passport_number!.trim() : null,
     expiry_date: payload.expiry_date || null,
-    document_number: evidence.documentNumber?.trim().slice(0, 200) || null,
-    document_issuer: evidence.documentIssuer?.trim().slice(0, 200) || null,
+    document_number: doc.value === "driver_license" ? payload.license_number!.trim() : doc.value === "passport" ? payload.passport_number!.trim() : evidence.documentNumber.trim(),
+    document_issuer: isIranCountry(payload.country) ? "Iran" : doc.value === "medicare" ? "Services Australia" : doc.profileType === "none" ? evidence.documentIssuer.trim() : "Australia",
+    medicare_irn: doc.value === "medicare" ? evidence.medicareIRN : null,
+    medicare_colour: doc.value === "medicare" ? evidence.medicareColour : null,
+    medicare_expiry: doc.value === "medicare" ? evidence.medicareExpiry : null,
     address_type: doc.address ? evidence.addressType : null,
     address_report_type: doc.address ? addressDoc?.reportType : null,
     address_date: doc.address ? evidence.addressDate : null,
-    consent_notice: true, consent_dvs: true, consent_version: "customer-evidence-2026-09-29",
+    consent_notice: true, consent_dvs: true, consent_version: KYC_CONSENT_VERSION, consent_statement: KYC_DVS_CONSENT_STATEMENT,
   };
   const { data, error } = await db.rpc("submit_customer_kyc_evidence", { p_user_id: user.id, p_details: details, p_upload_ids: ids });
-  if (error) return { error: "We could not submit your documents. Check your account status or try again; your uploaded files are still saved." };
+  if (error) return { error: "We could not submit verification. Check your account status or try again; your details are still in the form." };
   return { success: true, submissionId: data as string };
 }
 

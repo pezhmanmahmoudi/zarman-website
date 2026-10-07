@@ -61,7 +61,7 @@ export default async function DVSNoticePage({ params }: { params: Promise<{ loca
             We collect your personal information through our website, online forms, and in-person interactions. The information you provide will be sent to the DVS Hub, administered by the Attorney-General&apos;s Department, and matched against official records held by the government agency responsible for issuing the identity document.
           </p>
           <p>
-            We do store copies of your identity documents after the DVS check is complete. This information will be retained for 7 years as prescribed by our obligations under the AML/CTF Act.
+            For Australian passports, Australian driver licences, Medicare cards, our standard online verification form collects document details rather than photos or scans. We retain the relevant identity details and verification records for our legal record-keeping obligations. Alternative verification may require supporting documents, such as certified copies, proof of address or source-of-funds evidence. These files are stored securely for review and retained only as required for verification and our legal obligations.
           </p>
 
           <h2>How will the Attorney-General&apos;s Department handle your personal information?</h2>
@@ -71,7 +71,7 @@ export default async function DVSNoticePage({ params }: { params: Promise<{ loca
 
           <h2>What happens if you don&apos;t provide your personal information?</h2>
           <p>
-            You do not have to agree to verify your identity documents through the DVS. You can choose instead to attend a branch so we can verify your identity in person using original physical documents. However, if you do not provide the personal information we require, we may not be able to provide you with certain products, services or offerings.
+            You do not have to agree to electronic identity verification. Contact us to arrange an alternative method, such as manually certified copies or live video verification. If you do not provide the information needed to verify your identity, we may not be able to provide our services. Information about third-party document verification systems is available at <a href="https://www.idmatch.gov.au">www.idmatch.gov.au</a>.
           </p>
 
           <h2>Other disclosures</h2>

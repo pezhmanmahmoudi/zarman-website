@@ -16,7 +16,9 @@ const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const MIN_SIGNED_URL_EXPIRY_SECONDS = 60;
 const DEFAULT_SIGNED_URL_EXPIRY_SECONDS = 300;
 const MAX_SIGNED_URL_EXPIRY_SECONDS = 900;
-const ALLOWED_DOCUMENT_KEYS = new Set(["doc-front", "doc-back", "proof-of-address"]);
+// Legacy uploads cannot identify which primary document a front/back belongs to.
+// Identity copies must use the typed alternative-document evidence action.
+const ALLOWED_DOCUMENT_KEYS = new Set(["proof-of-address", "certified-copy", "source-of-funds"]);
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
   "image/jpg",
@@ -209,7 +211,7 @@ async function sendTelegramKycNotification({
 }
 
 // ---------------------------------------------------------------------------
-// submitKycData — Identity submission with required private document evidence.
+// submitKycData — Text identity details with private supporting evidence where required.
 // Must run server-side: uses service role to bypass RLS so that kyc_status
 // is set atomically and can never be forged from the browser.
 // ---------------------------------------------------------------------------

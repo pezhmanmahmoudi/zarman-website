@@ -8,6 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { runManualAmlCheck } from "@/lib/compliance/manual";
 import { generateAmlPdf } from "@/lib/compliance/pdf";
+import { getCustomerVerificationConsent } from "@/lib/compliance/customer-consent";
 
 const PRIVILEGED_ROLES = new Set(["admin", "supabase_admin", "service_role"]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -58,7 +59,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Customer profile not found." }, { status: 404 });
   }
 
-  // 4. Run AML/CTF check via NameScan (in-memory, no storage).
+  const consent = await getCustomerVerificationConsent(db, userId, profile);
+  if (!consent.ok) return NextResponse.json({ message: consent.message }, { status: consent.status });
+
+  // 4. Run AML/CTF only after checking the server-held customer consent record.
   const amlResult = await runManualAmlCheck(profile);
 
   // 5. Generate in-memory PDF.
@@ -111,6 +115,9 @@ export async function POST(req: NextRequest) {
       target_type: "profile",
       target_id:   userId,
       new_value: {
+        consentSubmissionId: consent.submissionId,
+        consentVersion: consent.version,
+        consentGrantedAt: consent.grantedAt,
         outcome:           amlResult.outcome,
         matchCount:        amlResult.matchCount,
         possibleMatchCount: amlResult.possibleMatchCount,

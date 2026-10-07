@@ -18,7 +18,8 @@ import { normalizeAustralianState } from "@/lib/australian-driver-licence";
 import { useLocale } from "@/context/LocaleContext";
 import { KycDocumentEvidence } from "@/components/dashboard/KycDocumentEvidence";
 import { TelegramNotifications } from "./TelegramNotifications";
-import { emptyKycEvidence, validateKycEvidence, type KycEvidenceDraft } from "@/lib/kyc/evidence";
+import { emptyKycEvidence, isIranCountry, KYC_AU_STATES, validateKycEvidence, validateKycIdentityDetails, type KycEvidenceDraft } from "@/lib/kyc/evidence";
+import { KYC_DVS_CONSENT_STATEMENT } from "@/lib/kyc/consent";
 import flow from "@/styles/dashboard/DashboardProfileFlow.module.css";
 
 // ایمپورت کردن دیتابیس‌های استان و شهر
@@ -88,12 +89,12 @@ function buildPersonalData(profile: DashboardProfileData | null | undefined): Pe
 function buildFormData(profile: DashboardProfileData | null | undefined): FormDataState {
   return {
     dob: profile?.dob || profile?.date_of_birth || "",
-    country: profile?.country || "Australia",
+    country: isIranCountry(profile?.country) ? "Iran" : profile?.country || "Australia",
     address: profile?.address || "",
     city: profile?.city || "",
     state: profile?.country === "Australia" ? normalizeAustralianState(profile?.state || "") : profile?.state || "",
     postalCode: profile?.postcode || profile?.post_code || "",
-    docType: profile?.document_type || "",
+    docType: isIranCountry(profile?.country) ? "foreign_passport" : profile?.document_type || "",
     licenseNumber: profile?.license_number || "",
     cardNumber: profile?.card_number || "",
     passportNumber: profile?.passport_number || "",
@@ -124,7 +125,7 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: "success" | "error" | ""; msg: string }>({ type: "", msg: "" });
-  const [evidence, setEvidence] = useState<KycEvidenceDraft>(emptyKycEvidence);
+  const [evidence, setEvidence] = useState<KycEvidenceDraft>(() => ({ ...emptyKycEvidence(), documentIssuer: isIranCountry(profile?.country) ? "Iran" : "" }));
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -214,13 +215,12 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
 
 
     Object.assign(newErrors, validateKycEvidence(formData.docType, evidence));
-    if (formData.docType === "driver_license") {
-      if (!formData.licenseNumber) newErrors.licenseNumber = "Licence number is required.";
-      if (!formData.cardNumber) newErrors.cardNumber = "Card number is required.";
-      if (!formData.stateOfIssue) newErrors.stateOfIssue = "State of issue is required.";
-    }
-    if (formData.docType === "passport" && !formData.passportNumber) newErrors.passportNumber = "Passport number is required.";
-    if (["driver_license","passport","foreign_passport"].includes(formData.docType) && !formData.expiryDate) newErrors.expiryDate = "Expiry date is required.";
+    Object.assign(newErrors, validateKycIdentityDetails(formData.docType, {
+      country: formData.country,
+      license_number: formData.licenseNumber, card_number: formData.cardNumber,
+      passport_number: formData.passportNumber, state_of_issue: formData.stateOfIssue,
+      expiry_date: formData.expiryDate, evidence,
+    }));
     if (!formData.consentNotice || !formData.consentDVS) newErrors.consents = "Please accept both verification consents.";
     setErrors(newErrors);
     if (Object.keys(newErrors).length) {
@@ -372,7 +372,7 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
     {!isEditingPersonal && fieldError("lastName")}
     {personalStatus && <p role={personalStatus.type === "error" ? "alert" : "status"} className={cn("m-0 text-sm leading-relaxed",personalStatus.type === "success" ? "text-emerald-700" : "text-rose-700")}>{personalStatus.msg}</p>}
   </section>;
-  const stepLabels = ["Personal Details", "Residential Address", "Document Upload"];
+  const stepLabels = ["Personal Details", "Residential Address", "Identity Details"];
 
   return <div className={cn(flow.profile,"min-w-0 space-y-6 sm:space-y-7")} dir={isEn ? "ltr" : "rtl"}>
     <DashboardPageHeader title={text("Your Account", "حساب کاربری")} description={text("Manage your personal details and verification status in one place.", "مدیریت اطلاعات فردی و بررسی وضعیت تأیید حساب.")}/>
@@ -393,22 +393,31 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
       <DashboardReveal key={verificationStep} motionEnabled={motionEnabled} className="space-y-6">
         {verificationStep === 0 && <>{personalSection}<div className="grid gap-5 border-t border-[#e4ddef] pt-6 sm:grid-cols-2">{date("dob","Date of birth","تاریخ تولد")}</div></>}
         {verificationStep === 1 && <>
-          <div className={fieldClass}><label className={labelClass}>{formText("Country of residence", "کشور محل اقامت")}</label><SelectBox value={formData.country} onChange={value => {if(value === formData.country) return;setFormData(previous => ({...previous,country:value,state:"",city:"",postalCode:""}));setErrors({});}} groups={countryGroups} placeholder={formText("Select country", "انتخاب کشور")} disabled={isSubmitting || uploadingEvidence} dir="ltr" className={selectClass}/></div>
+          <div className={fieldClass}><label className={labelClass}>{formText("Country of residence", "کشور محل اقامت")}</label><SelectBox value={formData.country} onChange={value => {
+            if (value === formData.country) return;
+            const passportRequirementChanged = isIranCountry(value) !== isIranCountry(formData.country);
+            setFormData(previous => ({...previous,country:value,state:"",city:"",postalCode:"", ...(passportRequirementChanged ? {
+              docType:isIranCountry(value) ? "foreign_passport" : "", licenseNumber:"", cardNumber:"", passportNumber:"", expiryDate:"", stateOfIssue:"", consentNotice:false, consentDVS:false,
+            } : {})}));
+            if (passportRequirementChanged) setEvidence({...emptyKycEvidence(),documentIssuer:isIranCountry(value) ? "Iran" : ""});
+            setErrors({});
+          }} groups={countryGroups} placeholder={formText("Select country", "انتخاب کشور")} disabled={isSubmitting || uploadingEvidence} dir="ltr" className={selectClass}/></div>
           {input("address","Street address","نشانی خیابان","Unit number, alley, and street name or number")}
           <div className={flow.addressGrid}>{formData.country === "Australia" ? <AustralianLocationFields key={normalizeAustralianState(formData.state) || "Australia"} state={normalizeAustralianState(formData.state)} city={formData.city} postalCode={formData.postalCode} disabled={isSubmitting || uploadingEvidence} errors={{state:errors.state,city:errors.city,postalCode:errors.postalCode}} ui={{fieldGroupClassName:fieldClass,labelClassName:labelClass,inputClassName:dashboardInputClass,selectClassName:selectClass,stateLabel:"State / Territory",postcodeLabel:"Postcode",errorTextClassName:"text-xs text-rose-700",hintTextClassName:"text-xs text-[#626a76]",requiredMarkClassName:"sr-only"}} onStateChange={value => {setFormData(previous => ({...previous,state:value,city:"",postalCode:""}));setErrors(previous => ({...previous,state:"",city:"",postalCode:""}));}} onCityChange={value => changeField("city",value)} onPostalCodeChange={value => changeField("postalCode",value)}/> : formData.country === "Iran" ? <><div className={fieldClass}><label className={labelClass}>{formText("Province", "استان")}</label><SelectBox value={formData.state} onChange={value => {setFormData(previous => ({...previous,state:value,city:""}));setErrors(previous => ({...previous,state:"",city:""}));}} labeledOptions={iranProvinces} disabled={isSubmitting || uploadingEvidence} dir="ltr" className={selectClass} placeholder={formText("Select province", "انتخاب استان")}/>{fieldError("state")}</div><div className={fieldClass}><label className={labelClass}>{formText("City", "شهر")}</label><SelectBox value={formData.city} onChange={value => changeField("city",value)} labeledOptions={iranCities} disabled={!formData.state || isSubmitting} dir="ltr" className={selectClass} placeholder={formText("Select city", "انتخاب شهر")}/>{fieldError("city")}</div>{input("postalCode","Postcode","کد پستی")}</> : <>{input("state","State / province","استان")}{input("city","City / suburb","شهر / محله")}{input("postalCode","Postcode","کد پستی")}</>}</div>
         </>}
 
         {verificationStep === 2 && <>
-          <KycDocumentEvidence documentType={formData.docType} evidence={evidence} errors={errors}
+          <KycDocumentEvidence country={formData.country} documentType={formData.docType} evidence={evidence} errors={errors}
             disabled={isSubmitting || uploadingEvidence} motionEnabled={motionEnabled} onBusyChange={setUploadingEvidence}
-            onChange={value => { setEvidence(value); setErrors(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !key.startsWith("evidence-") && !["addressType","addressDate","documentNumber","documentIssuer"].includes(key)))); }}
+            onChange={value => { setEvidence(value); setErrors(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !key.startsWith("evidence-") && !["addressType","addressDate","documentNumber","documentIssuer","medicareIRN","medicareColour","medicareExpiry","identityUpload"].includes(key)))); }}
             onDocumentTypeChange={value => {
+              if (isIranCountry(formData.country) && value !== "foreign_passport") return;
               if (value === formData.docType) return;
-              setFormData(previous => ({...previous, docType:value, licenseNumber:"", cardNumber:"", passportNumber:"", expiryDate:"", stateOfIssue:""}));
-              setEvidence(emptyKycEvidence()); setErrors({});
+              setFormData(previous => ({...previous, docType:value, licenseNumber:"", cardNumber:"", passportNumber:"", expiryDate:"", stateOfIssue:"", consentNotice:false, consentDVS:false}));
+              setEvidence({...emptyKycEvidence(),documentIssuer:isIranCountry(formData.country) ? "Iran" : ""}); setErrors({});
             }}>
+            {formData.docType === "driver_license" && <div className={fieldClass}><label className={labelClass}>State of issue</label><SelectBox value={formData.stateOfIssue} onChange={value => changeField("stateOfIssue",value)} options={[...KYC_AU_STATES]} disabled={isSubmitting || uploadingEvidence} dir="ltr" className={selectClass} placeholder="Select state"/>{fieldError("stateOfIssue")}</div>}
             {formData.docType === "driver_license" && <>
-              <div className={fieldClass}><label className={labelClass}>State of issue</label><SelectBox value={formData.stateOfIssue} onChange={value => changeField("stateOfIssue",value)} options={["ACT","NSW","NT","QLD","SA","TAS","VIC","WA"]} disabled={isSubmitting || uploadingEvidence} dir="ltr" className={selectClass} placeholder="Select state"/>{fieldError("stateOfIssue")}</div>
               <div className="grid gap-5 sm:grid-cols-2">{input("licenseNumber","Licence number","Licence number")}{input("cardNumber","Card number","Card number")}</div>
             </>}
             {formData.docType === "passport" && input("passportNumber","Passport number","Passport number")}
@@ -416,8 +425,9 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
             {["photo_id","proof_of_age","national_id","concession_card"].includes(formData.docType) && date("expiryDate","Expiry date (if shown on the card)","Expiry date (if shown on the card)")}
           </KycDocumentEvidence>
           <div className="space-y-4 border-t border-[#e9ecf0] pt-6">
-            <label className="flex items-start gap-3 text-sm leading-relaxed text-[#626a76]"><input type="checkbox" name="consentNotice" checked={formData.consentNotice} onChange={handleChange} disabled={isSubmitting || uploadingEvidence} className="mt-1 size-4 shrink-0 accent-[#635bff]"/><span>I have read and agree to the <a className="text-[#5147cc] underline underline-offset-4" href={"/" + locale + "/legal/privacy-policy"} target="_blank" rel="noopener noreferrer">Privacy Policy</a> and <a className="text-[#5147cc] underline underline-offset-4" href={"/" + locale + "/legal/dvs-notice"} target="_blank" rel="noopener noreferrer">Verification Notice</a>, including the collection and secure review of my uploaded documents.</span></label>
-            <label className="flex items-start gap-3 text-sm leading-relaxed text-[#626a76]"><input type="checkbox" name="consentDVS" checked={formData.consentDVS} onChange={handleChange} disabled={isSubmitting || uploadingEvidence} className="mt-1 size-4 shrink-0 accent-[#635bff]"/><span>I confirm that these are my documents and I am authorised to provide this information. I consent to Zarman Exchange checking my details with document issuers or official records, using authorised verification providers (including DVS where available), as described in the <a className="text-[#5147cc] underline underline-offset-4" href={"/" + locale + "/legal/dvs-consent"} target="_blank" rel="noopener noreferrer">Identity Verification Consent</a>.</span></label>
+            <label className="flex items-start gap-3 text-sm leading-relaxed text-[#626a76]"><input type="checkbox" name="consentNotice" checked={formData.consentNotice} onChange={handleChange} disabled={isSubmitting || uploadingEvidence} className="mt-1 size-4 shrink-0 accent-[#635bff]"/><span>I have read and agree to the <a className="text-[#5147cc] underline underline-offset-4" href={"/" + locale + "/legal/privacy-policy"} target="_blank" rel="noopener noreferrer">Privacy Policy</a> and <a className="text-[#5147cc] underline underline-offset-4" href={"/" + locale + "/legal/dvs-notice"} target="_blank" rel="noopener noreferrer">Verification Notice</a>, including how my identity details and any supporting documents are handled.</span></label>
+            <label className="flex items-start gap-3 text-sm leading-relaxed text-[#626a76]"><input type="checkbox" name="consentDVS" checked={formData.consentDVS} onChange={handleChange} disabled={isSubmitting || uploadingEvidence} className="mt-1 size-4 shrink-0 accent-[#635bff]"/><span>{KYC_DVS_CONSENT_STATEMENT}</span></label>
+            <p className="text-sm leading-relaxed text-[#626a76]">You can read the <a className="text-[#5147cc] underline underline-offset-4" href={"/" + locale + "/legal/dvs-consent"} target="_blank" rel="noopener noreferrer">Identity Verification Consent</a> before choosing. If you decline electronic verification, <a className="text-[#5147cc] underline underline-offset-4" href="mailto:info@zarman.com.au">contact us</a> to arrange an alternative method.</p>
             {fieldError("consents")}
           </div>
         </>}

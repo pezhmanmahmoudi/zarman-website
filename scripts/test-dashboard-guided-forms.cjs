@@ -38,7 +38,7 @@ test("account headings stay bilingual while the stepper uses English copy and re
   for (const locale of ["en", "fa"]) {
     const h = profileHarness({ locale });
     const html = markup(h.render());
-    const phrases = [locale === "en" ? "Your Account" : "حساب کاربری", locale === "en" ? "Identity Verification" : "تأیید هویت", "Personal Details", "Residential Address", "Document Upload", "Please enter your details in English, exactly as they appear on your ID documents.", "Full name", "Step 1 of 3", "Next Step"];
+    const phrases = [locale === "en" ? "Your Account" : "حساب کاربری", locale === "en" ? "Identity Verification" : "تأیید هویت", "Personal Details", "Residential Address", "Identity Details", "Please enter your details in English, exactly as they appear on your ID documents.", "Full name", "Step 1 of 3", "Next Step"];
     const countryLabel = "Country of residence";
     for (const phrase of phrases.filter(phrase => phrase !== countryLabel)) assert.ok(html.replace(/<[^>]*>/g, "").includes(phrase), `Missing ${phrase}`);
     const englishEmphasis = elements(h.render(), node => node.type === "strong" && nodeText(node) === "English")[0];
@@ -105,7 +105,9 @@ test("guided identity flow validates each stage, prevents skipping and retains d
     h.button(next).props.onClick(); assert.equal(elements(h.render(), node => node.props.name === "passportNumber")[0].props.value, "N0123456");
     const html = markup(h.render()); assert.match(html, locale === "en" ? /dir="ltr"/ : /dir="rtl"/); assert.doesNotMatch(html, /\?\?\?/);
     assert.match(html, /I have read and agree to the/); assert.match(html, /Privacy Policy/); assert.match(html, /Verification Notice/);
-    assert.match(html, /I consent to Zarman Exchange checking my details/);
+    assert.match(html, /I confirm that I am authorised to provide the personal details presented and I consent to my information being checked/);
+    const consentLabel=elements(h.render(),node=>node.type==="label"&&elements(node,child=>child.props.name==="consentDVS").length)[0];
+    assert.equal(nodeText(consentLabel),"I confirm that I am authorised to provide the personal details presented and I consent to my information being checked with the document issuer or official record holder via third party systems for the purpose of confirming my identity.");
   }
 });
 
@@ -117,7 +119,6 @@ test("identity submission requires both original consents and preserves document
     h.button(next).props.onClick(); h.button(next).props.onClick();
     h.documents().props.onDocumentTypeChange("passport"); h.input("passportNumber", "N0012345");
     elements(h.render(), node => node.type === h.DatePicker)[0].props.onChange("2030-04-05");
-    h.documents().props.onChange({...h.documents().props.evidence,front:{id:"passport-front",name:"passport.pdf"}});
     await h.button(submit).props.onClick(); assert.equal(calls.length, 0); assert.ok(elements(h.render(), node => node.props.id === "profile-error-consents").length);
     h.consent("consentNotice", true); await h.button(submit).props.onClick(); assert.equal(calls.length, 0);
     h.consent("consentDVS", true); await h.button(submit).props.onClick(); assert.equal(calls.length, 1);
@@ -143,18 +144,51 @@ test("personal editing blocks forward navigation until saved and retains the dra
   assert.match(markup(h.render()), /Updated Morgan/); h.button("Next Step").props.onClick(); assert.equal(h.stepper().props.currentStep, 2);
 });
 
-test("non-Australian residents must supply documents and explicitly consent without claiming a DVS result", async () => {
+test("Iran residents are assigned an Iranian passport and cannot submit without its details, file and consent", async () => {
   const calls = [], h = profileHarness({ profile: { ...base, country: "Iran", state: "Tehran", city: "Tehran" }, submit: async payload => { calls.push(payload); return { success: true }; } });
   h.button("Next Step").props.onClick(); h.button("Next Step").props.onClick();
-  h.documents().props.onDocumentTypeChange("foreign_passport");
+  assert.equal(h.documents().props.documentType,"foreign_passport");assert.equal(h.documents().props.country,"Iran");
+  assert.equal(h.documents().props.evidence.documentIssuer,"Iran");
+  h.documents().props.onDocumentTypeChange("passport");assert.equal(h.documents().props.documentType,"foreign_passport");
+  h.consent("consentNotice",true); h.consent("consentDVS",true);
+  await h.button("Submit verification").props.onClick();assert.equal(calls.length,0);
+  assert.ok(h.documents().props.errors["evidence-front"]);assert.ok(h.documents().props.errors.documentNumber);assert.ok(h.documents().props.errors.expiryDate);
   elements(h.render(), node => node.type === h.DatePicker)[0].props.onChange("2030-04-05");
+  h.documents().props.onChange({...h.documents().props.evidence,documentNumber:"N100"});
+  await h.button("Submit verification").props.onClick();assert.equal(calls.length,0);assert.ok(h.documents().props.errors["evidence-front"]);
   h.documents().props.onChange({...h.documents().props.evidence,documentNumber:"N100",documentIssuer:"Iran",front:{id:"foreign-front",name:"passport.pdf"}});
+  h.consent("consentDVS",false);
   await h.button("Submit verification").props.onClick(); assert.equal(calls.length,0);
   h.consent("consentNotice",true); h.consent("consentDVS",true);
   await h.button("Submit verification").props.onClick();
   assert.equal(calls[0].country, "Iran"); assert.equal(calls[0].document_type, "foreign_passport");
   assert.equal(calls[0].consent_notice, true); assert.equal(calls[0].consent_dvs, true);
   assert.match(markup(h.render()), /We’re checking your details/); assert.doesNotMatch(markup(h.render()), /Identity verified/);
+});
+
+test("changing residence into or out of Iran resets identity evidence and consent",()=>{
+  const h=profileHarness();h.button("Next Step").props.onClick();h.button("Next Step").props.onClick();
+  h.documents().props.onDocumentTypeChange("foreign_passport");
+  h.documents().props.onChange({...h.documents().props.evidence,documentNumber:"OLD100",documentIssuer:"Canada",front:{id:"old-front",name:"old.pdf"}});
+  elements(h.render(),node=>node.type===h.DatePicker)[0].props.onChange("2030-04-05");
+  h.consent("consentNotice",true);h.consent("consentDVS",true);
+  h.button("Back").props.onClick();elements(h.render(),node=>node.type===h.SelectBox&&node.props.placeholder==="Select country")[0].props.onChange("Iran");
+  h.input("postalCode","1234567890");
+  const selects=elements(h.render(),node=>node.type===h.SelectBox);
+  selects.find(node=>node.props.placeholder==="Select province").props.onChange("Tehran");
+  elements(h.render(),node=>node.type===h.SelectBox&&node.props.placeholder==="Select city")[0].props.onChange("Tehran");
+  h.button("Next Step").props.onClick();
+  assert.equal(h.documents().props.documentType,"foreign_passport");assert.equal(h.documents().props.evidence.documentIssuer,"Iran");
+  assert.equal(h.documents().props.evidence.front,undefined);assert.equal(h.documents().props.evidence.documentNumber,"");
+  assert.equal(elements(h.render(),node=>node.type===h.DatePicker)[0].props.value,"");
+  for(const name of ["consentNotice","consentDVS"])assert.equal(elements(h.render(),node=>node.props.name===name)[0].props.checked,false);
+  h.documents().props.onChange({...h.documents().props.evidence,documentNumber:"IR100",front:{id:"iran-front",name:"iran.pdf"}});
+  h.consent("consentNotice",true);h.consent("consentDVS",true);
+  h.button("Back").props.onClick();elements(h.render(),node=>node.type===h.SelectBox&&node.props.placeholder==="Select country")[0].props.onChange("Canada");
+  h.input("state","Ontario");h.input("city","Toronto");h.input("postalCode","M5V 1A1");h.button("Next Step").props.onClick();
+  assert.equal(h.documents().props.country,"Canada");assert.equal(h.documents().props.documentType,"");assert.equal(h.documents().props.evidence.front,undefined);assert.equal(h.documents().props.evidence.documentIssuer,"");
+  for(const name of ["consentNotice","consentDVS"])assert.equal(elements(h.render(),node=>node.props.name===name)[0].props.checked,false);
+  h.documents().props.onDocumentTypeChange("national_id");assert.equal(h.documents().props.documentType,"national_id");
 });
 
 test("verified and pending profile screens show one relevant next action without reopening verification", () => {
