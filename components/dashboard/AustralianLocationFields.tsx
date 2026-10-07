@@ -140,9 +140,12 @@ export function SuggestionField({
     }
   }, [showDropdown, activeIndex]);
   const choose = (suggestion: string) => {
-    onSelect(suggestion);
+    // Touch can focus the option button. Restore the input before closing so
+    // its onFocus handler cannot reopen the suggestions after selection.
+    inputRef.current?.focus({ preventScroll: true });
     setIsOpen(false);
     setActiveIndex(-1);
+    onSelect(suggestion);
   };
 
   return (
@@ -179,6 +182,10 @@ export function SuggestionField({
               event.preventDefault();
               choose(visibleSuggestions[activeIndex]);
             } else if (event.key === "Escape" || event.key === "Tab") {
+              if (event.key === "Escape" && showDropdown) {
+                event.preventDefault();
+                event.stopPropagation();
+              }
               setIsOpen(false);
               setActiveIndex(-1);
             }
@@ -192,7 +199,10 @@ export function SuggestionField({
           type="button"
           className={styles.auSuggestionToggle}
           onClick={() => {
-            if (!disabled && hasSuggestions) setIsOpen((open) => !open);
+            if (!disabled && hasSuggestions) {
+              inputRef.current?.focus({ preventScroll: true });
+              setIsOpen(!showDropdown);
+            }
           }}
           disabled={disabled || !hasSuggestions}
           aria-label={`Toggle ${label} suggestions`}

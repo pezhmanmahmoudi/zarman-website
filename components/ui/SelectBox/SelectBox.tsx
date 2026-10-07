@@ -61,7 +61,8 @@ export function SelectBox({
     maxHeight: DROPDOWN_MAX_HEIGHT,
     onClose: reason => {
       setOpen(false);
-      if (reason === "escape") triggerRef.current?.focus();
+      typeaheadRef.current = { text: "", time: 0 };
+      if (reason === "escape") triggerRef.current?.focus({ preventScroll: true });
     },
   });
 
@@ -82,7 +83,9 @@ export function SelectBox({
     ? labeledOptions.map((o) => o.value)
     : options;
 
-  const displayLabel = labeledOptions
+  const labels = groups ? allOptions : labeledOptions ? labeledOptions.map(option => option.label) : allOptions;
+  const expanded = open && !disabled && !isIOS;
+  const displayLabel = !groups && labeledOptions
     ? (labeledOptions.find((o) => o.value === value)?.label ?? "")
     : value;
 
@@ -94,56 +97,80 @@ export function SelectBox({
     return label;
   };
 
+  const closeList = () => {
+    setOpen(false);
+    typeaheadRef.current = { text: "", time: 0 };
+  };
   const openList = () => {
+    if (disabled || !allOptions.length) return;
+    typeaheadRef.current = { text: "", time: 0 };
     setActiveIndex(Math.max(0, allOptions.indexOf(value)));
     setOpen(true);
   };
   const choose = (index: number) => {
     const option = allOptions[index];
-    if (option !== undefined) onChange(option);
-    setOpen(false);
+    closeList();
+    if (disabled || option === undefined) return;
+    triggerRef.current?.focus({ preventScroll: true });
+    onChange(option);
   };
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return;
-    if (e.key === "Escape" && open) {
+    if (e.key === "Escape" && expanded) {
       e.preventDefault();
       e.stopPropagation();
-      setOpen(false);
+      closeList();
       return;
     }
-    if (e.key === "Tab") { setOpen(false); return; }
+    if (e.key === "Tab") {
+      if (expanded) choose(activeIndex);
+      return;
+    }
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      if (open) choose(activeIndex);
+      if (expanded) choose(activeIndex);
       else openList();
       return;
     }
     if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
       e.preventDefault();
       if (!allOptions.length) return;
-      const current = open ? activeIndex : allOptions.indexOf(value);
-      setOpen(true);
-      if (e.key === "Home") setActiveIndex(0);
+      if (!expanded) {
+        openList();
+        if (e.key === "Home") setActiveIndex(0);
+        else if (e.key === "End") setActiveIndex(allOptions.length - 1);
+      } else if (e.altKey && e.key === "ArrowUp") choose(activeIndex);
+      else if (e.key === "Home") setActiveIndex(0);
       else if (e.key === "End") setActiveIndex(allOptions.length - 1);
-      else setActiveIndex(Math.max(0, Math.min(allOptions.length - 1, current + (e.key === "ArrowDown" ? 1 : -1))));
+      else setActiveIndex(Math.max(0, Math.min(allOptions.length - 1, activeIndex + (e.key === "ArrowDown" ? 1 : -1))));
       return;
     }
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      const now = Date.now();
-      const text = (now - typeaheadRef.current.time > 600 ? "" : typeaheadRef.current.text) + e.key.toLocaleLowerCase();
+      e.preventDefault();
+      const now = e.timeStamp;
+      const key = e.key.toLocaleLowerCase();
+      const text = (now - typeaheadRef.current.time > 600 ? "" : typeaheadRef.current.text) + key;
       typeaheadRef.current = { text, time: now };
-      const labels = labeledOptions ? labeledOptions.map(option => option.label) : allOptions;
-      const match = labels.findIndex(label => label.toLocaleLowerCase().startsWith(text));
-      if (match !== -1) { setOpen(true); setActiveIndex(match); }
+      const repeatedKey = [...text].every(character => character === key);
+      const query = repeatedKey ? key : text;
+      const start = repeatedKey ? (expanded ? activeIndex : allOptions.indexOf(value)) + 1 : 0;
+      for (let offset = 0; offset < labels.length; offset++) {
+        const index = (start + offset) % labels.length;
+        if (labels[index].toLocaleLowerCase().startsWith(query)) {
+          setOpen(true);
+          setActiveIndex(index);
+          break;
+        }
+      }
     }
   };
 
-  const wrapperClasses = [styles.wrapper, open ? styles.wrapperOpen : ""].filter(Boolean).join(" ");
+  const wrapperClasses = [styles.wrapper, expanded ? styles.wrapperOpen : ""].filter(Boolean).join(" ");
   
   const triggerClasses = [
     styles.trigger,
     variant === "ghost" ? styles.triggerGhost : styles.triggerDefault,
-    open ? styles.triggerOpen : "",
+    expanded ? styles.triggerOpen : "",
     disabled ? styles.triggerDisabled : "",
     className,
   ].join(" ");
@@ -154,12 +181,11 @@ export function SelectBox({
 
   ].join(" ");
 
-  const renderOptionItem = (val: string, label: string) => {
-    const isSelected = val === value;
-    const index = allOptions.indexOf(val);
+  const renderOptionItem = (val: string, label: string, index: number) => {
+    const isSelected = index === allOptions.indexOf(value);
     return (
       <li
-        key={val}
+        key={`${index}-${val}`}
         id={`${id}-option-${index}`}
         role="option"
         aria-selected={isSelected}
@@ -183,7 +209,7 @@ export function SelectBox({
   // رندر مخصوص iOS
   if (isIOS) {
     return (
-      <div className={wrapperClasses} data-dir={dir}>
+      <div className={wrapperClasses} data-dir={dir} dir={dir}>
         <div className={triggerClasses}>
           {!disabled && <ChevronDown size={16} strokeWidth={2.5} className={styles.chevron} />}
           <span
@@ -200,8 +226,9 @@ export function SelectBox({
           className={styles.nativeOverlay}
           id={controlId}
           aria-label={ariaLabel ?? placeholder}
+          dir={dir}
         >
-          <option value="" disabled hidden>{placeholder}</option>
+          {!allOptions.includes("") && <option value="" disabled hidden>{placeholder}</option>}
           {groups
             ? groups.map((group) => (
                 <optgroup key={group.label} label={normalizeGroupLabel(group.label)}>
@@ -222,24 +249,25 @@ export function SelectBox({
 
   // رندر دسکتاپ و سایر دستگاه‌ها
   return (
-    <div ref={wrapperRef} className={wrapperClasses} data-dir={dir}>
+    <div ref={wrapperRef} className={wrapperClasses} data-dir={dir} dir={dir}>
       <button
         ref={triggerRef}
         id={controlId}
         type="button"
         role="combobox"
         aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={open ? id : undefined}
+        aria-expanded={expanded}
+        aria-autocomplete="none"
+        aria-controls={expanded ? id : undefined}
         aria-label={ariaLabel ?? placeholder}
-        aria-activedescendant={open && activeIndex >= 0 ? `${id}-option-${activeIndex}` : undefined}
+        aria-activedescendant={expanded && activeIndex >= 0 && activeIndex < allOptions.length ? `${id}-option-${activeIndex}` : undefined}
         disabled={disabled}
         tabIndex={disabled ? -1 : 0}
         className={triggerClasses}
-        onClick={() => open ? setOpen(false) : openList()}
+        onClick={() => expanded ? closeList() : openList()}
         onKeyDown={handleKeyDown}
       >
-        {!disabled && <ChevronDown size={16} strokeWidth={2.5} className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`} />}
+        {!disabled && <ChevronDown size={16} strokeWidth={2.5} className={`${styles.chevron} ${expanded ? styles.chevronOpen : ""}`} />}
         <span
           className={`${styles.triggerValue} ${!value ? styles.triggerPlaceholder : ""} ${getTextAlignClass(displayLabel || placeholder)}`}
           dir={hasPersianChars(displayLabel || placeholder) ? "rtl" : "ltr"}
@@ -248,25 +276,33 @@ export function SelectBox({
         </span>
       </button>
 
-      {open && !disabled && (
-        <div ref={popoverRef} popover="manual" className={dropdownClasses}>
-          <ul id={id} ref={listRef} role="listbox" className={styles.list}>
+      {expanded && (
+        <div ref={popoverRef} popover="manual" className={dropdownClasses} onClick={event => {
+          // Cancel the enclosing label's default click on the trigger, which
+          // would otherwise reopen the popup after mouse or touch selection.
+          event.preventDefault();
+          event.stopPropagation();
+        }}>
+          <ul id={id} ref={listRef} role="listbox" aria-label={ariaLabel ?? placeholder} className={styles.list}>
             {groups
-              ? groups.map((group) => (
-                  <React.Fragment key={group.label}>
-                    <li
+              ? groups.map((group, groupIndex) => {
+                  const startIndex = groups.slice(0, groupIndex).reduce((count, previous) => count + previous.options.length, 0);
+                  const groupId = `${id}-group-${groupIndex}`;
+                  return <li key={groupId} role="presentation">
+                    <div id={groupId}
                       className={`${styles.groupHeader} ${getTextAlignClass(normalizeGroupLabel(group.label))}`}
-                      role="presentation"
                       dir={hasPersianChars(normalizeGroupLabel(group.label)) ? "rtl" : "ltr"}
                     >
                       {normalizeGroupLabel(group.label)}
-                    </li>
-                    {group.options.map(opt => renderOptionItem(opt, opt))}
-                  </React.Fragment>
-                ))
+                    </div>
+                    <ul role="group" aria-labelledby={groupId} className={styles.groupOptions}>
+                      {group.options.map((opt, index) => renderOptionItem(opt, opt, startIndex + index))}
+                    </ul>
+                  </li>;
+                })
               : labeledOptions
-              ? labeledOptions.map(opt => renderOptionItem(opt.value, opt.label))
-              : options.map(opt => renderOptionItem(opt, opt))}
+              ? labeledOptions.map((opt, index) => renderOptionItem(opt.value, opt.label, index))
+              : options.map((opt, index) => renderOptionItem(opt, opt, index))}
           </ul>
         </div>
       )}
