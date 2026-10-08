@@ -4,7 +4,15 @@ const dialogs: HTMLDialogElement[] = [];
 const listeners = new Set<() => void>();
 let restoreScroll: (() => void) | undefined;
 
-export const getActiveAdminDialog = () => dialogs[dialogs.length - 1] ?? null;
+// A dialog can disappear in React's commit before its cleanup unregisters it.
+// Never publish a detached/closed portal host, including underneath a nested dialog.
+export const getActiveAdminDialog = () => {
+  for (let index = dialogs.length - 1; index >= 0; index--) {
+    const dialog = dialogs[index];
+    if (dialog.isConnected && dialog.open) return dialog;
+  }
+  return null;
+};
 export const getServerAdminDialog = () => null;
 export function subscribeAdminDialogs(listener: () => void) {
   listeners.add(listener);

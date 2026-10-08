@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { PlusCircle, Building2, UserCircle, RefreshCw, Pencil, ChevronDown, Lock, Unlock } from "lucide-react";
 import { addBankAccount, updateBankAccount, closeBankAccount, reopenBankAccount } from "@/app/actions/treasury.actions";
 import Tooltip from "@/components/ui/Tooltip/Tooltip";
@@ -29,7 +30,7 @@ const EMPTY = {
 };
 
 export default function BankAccountManager({ bankAccounts, defaultOpen = false }: Props) {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition({ refreshAfter: true });
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...EMPTY });

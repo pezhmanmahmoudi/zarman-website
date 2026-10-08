@@ -6,14 +6,14 @@ import styles from "@/styles/admin/AdminWorkspace.module.css";
 export type AdminColumn = { key: string; label: ReactNode; align?: "end"; selection?: boolean; actions?: boolean };
 
 /** Shared semantic table. The same cells become labeled cards on narrow screens. */
-export function AdminDataTable({ label, columns, children, selection, empty }: {
-  label: string; columns: AdminColumn[]; children: ReactNode; selection?: ReactNode; empty?: ReactNode;
+export function AdminDataTable({ label, columns, children, selection, empty, className }: {
+  label: string; columns: AdminColumn[]; children: ReactNode; selection?: ReactNode; empty?: ReactNode; className?: string;
 }) {
   if (empty) return <div className={styles.empty} role="status">{empty}</div>;
   return <div className={styles.dataViewport}>
     {selection && <div className={styles.mobileSelection}>{selection}<span>Select page</span></div>}
     <div className={`${base.tableWrap} ${styles.tableScroll}`} role="region" aria-label={label} tabIndex={0}>
-      <table className={`${base.table} ${styles.table}`} role="table">
+      <table className={`${base.table} ${styles.table}${className ? ` ${className}` : ""}`} role="table">
         <thead role="rowgroup"><tr role="row">{columns.map(column => <th key={column.key} scope="col" className={column.selection ? styles.selectionCell : column.align === "end" ? styles.moneyHeading : undefined}>
           {column.actions || column.selection ? <span className={styles.srOnly}>{column.label}</span> : column.label}
           {column.selection && selection}

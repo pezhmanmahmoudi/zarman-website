@@ -42,6 +42,9 @@ export type PublicRequestSettings = Omit<RequestSettings, "payment_instructions_
 
 export type QuoteInput = {
   rawAmount: number;
+  /** Preserve which side the customer entered; legacy clients default to AUD. */
+  amountCurrency?: "AUD" | "IRT";
+  amountValue?: number;
   txType: "buy_aud" | "sell_aud";
   sourceOfFunds: string;
   reasonForTransfer: string;
@@ -84,6 +87,13 @@ export type QuoteSnapshot = {
   policy_version: number;
   policy_snapshot: PublicRequestSettings;
   rate_id: string;
+  locked_amount_currency?: "AUD" | "IRT";
+  locked_amount_value?: number;
+  rounding_adjustment_toman?: number;
+  base_rate?: number;
+  loyalty_rate_discount?: number;
+  promo_rate_discount?: number;
+  admin_adjusted?: boolean;
 };
 export type RequestQuote = { id: string; user_id: string; snapshot: QuoteSnapshot; expires_at: string; created_at: string };
 export type ExchangeRequest = {
@@ -114,6 +124,8 @@ export type ExchangeRequest = {
   clearance_due_at: string | null;
   created_at: string;
   updated_at: string;
+  pricing_pending_acceptance?: boolean;
+  original_quote?: QuoteSnapshot | null;
 };
 export type RequestEvent = { id: string; request_id: string; sequence: number; event_type: string; status: RequestStatus; public_message: string | null; internal_message?: string | null; actor_id: string | null; created_at: string; send_email?: boolean };
 export type RequestMessage = {

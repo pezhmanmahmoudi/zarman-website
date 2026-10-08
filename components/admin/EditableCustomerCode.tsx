@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { updateCustomerCode } from "@/app/actions/admin.actions";
 import { AdminFieldEditor } from "@/components/admin/ui/AdminFieldEditor";
-import { reloadAdminPage } from "@/lib/admin-refresh";
+import { useAdminRefresh } from "@/components/admin/ui/useAdminRefresh";
 
 interface EditableCustomerCodeProps {
   userId: string;
@@ -11,6 +11,7 @@ interface EditableCustomerCodeProps {
 }
 
 export function EditableCustomerCode({ userId, currentCode }: EditableCustomerCodeProps) {
+  const refreshAdmin = useAdminRefresh();
   const [savedCode, setSavedCode] = useState<{ source: string | null; value: string | null } | null>(null);
   const displayCode = savedCode?.source === currentCode ? savedCode.value : currentCode;
 
@@ -28,7 +29,7 @@ export function EditableCustomerCode({ userId, currentCode }: EditableCustomerCo
         const result = await updateCustomerCode(userId, code);
         if ("error" in result && result.error) throw new Error(result.error);
         setSavedCode({ source: currentCode, value: code || null });
-        reloadAdminPage(600);
+        refreshAdmin();
       }}
     />
   );

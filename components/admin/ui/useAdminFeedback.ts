@@ -18,7 +18,7 @@
  *     onConfirm: async () => {
  *       const result = await approveKyc(userId);
  *       if (result.error) showToast({ type: "error", message: result.error });
- *       else { showToast({ type: "success", message: "KYC approved." }); reloadAdminPage(600); }
+ *       else { showToast({ type: "success", message: "KYC approved." }); refreshAdmin(); }
  *     },
  *   });
  *
@@ -29,7 +29,8 @@
  *     // ...your buttons...
  *   </>
  */
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useContext, useEffect, useRef } from "react";
+import { AdminFeedbackContext } from "./AdminFeedbackProvider";
 import type { ConfirmVariant, AdminConfirmDialogProps } from "./AdminConfirmDialog";
 import type { ToastType, AdminToastProps } from "./AdminToast";
 
@@ -62,6 +63,7 @@ export interface UseAdminFeedbackReturn {
 
 // ── Hook ───────────────────────────────────────────────────────────────────
 export function useAdminFeedback(): UseAdminFeedbackReturn {
+  const sharedFeedback = useContext(AdminFeedbackContext);
   // ── Dialog state ─────────────────────────────────────────────────────────
   const [dialogOpts, setDialogOpts] = useState<ConfirmOptions | null>(null);
   const [dialogLoading, setDialogLoading] = useState(false);
@@ -71,6 +73,7 @@ export function useAdminFeedback(): UseAdminFeedbackReturn {
   const confirmingRef = useRef(false);
 
   const confirm = useCallback((opts: ConfirmOptions) => {
+    if (confirmingRef.current) return;
     onConfirmRef.current = opts.onConfirm;
     setDialogOpts(opts);
   }, []);
@@ -81,20 +84,25 @@ export function useAdminFeedback(): UseAdminFeedbackReturn {
     setDialogLoading(true);
     try {
       await onConfirmRef.current();
-    } catch {
+    } catch (error) {
+      console.error("[admin confirmed action]", error);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      setToastOpts({ type: "error", message: "The action could not be completed. Please try again." });
+      const notice: ToastOptions = { type: "error", duration: 10000, message: "We couldn’t confirm the result. Refresh the information before trying the action again." };
+      if (sharedFeedback) sharedFeedback.showToast(notice);
+      else setToastOpts(notice);
     } finally {
       confirmingRef.current = false;
+      onConfirmRef.current = null;
       setDialogLoading(false);
       setDialogOpts(null);
     }
-  }, []);
+  }, [sharedFeedback]);
 
   const handleDialogCancel = useCallback(() => {
-    if (dialogLoading) return; // block cancel while in-flight
+    if (confirmingRef.current) return; // also block before loading has rendered
+    onConfirmRef.current = null;
     setDialogOpts(null);
-  }, [dialogLoading]);
+  }, []);
 
   // ── Toast state ──────────────────────────────────────────────────────────
   const [toastOpts, setToastOpts] = useState<ToastOptions | null>(null);
@@ -102,13 +110,14 @@ export function useAdminFeedback(): UseAdminFeedbackReturn {
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
   const showToast = useCallback((opts: ToastOptions) => {
+    if (sharedFeedback) { sharedFeedback.showToast(opts); return; }
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToastOpts(opts);
     toastTimerRef.current = setTimeout(
       () => setToastOpts(null),
       opts.duration ?? 4000,
     );
-  }, []);
+  }, [sharedFeedback]);
 
   const handleToastClose = useCallback(() => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);

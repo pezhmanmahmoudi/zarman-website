@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { CheckCircle2, AlertTriangle, ChevronDown, Landmark, Trash2, Wand2 } from "lucide-react";
 import {
   getComputedBalancesAsOf,
@@ -59,7 +60,7 @@ function statusPill(status: ReconciliationRecord["status"]) {
 }
 
 export default function ReconciliationAudit({ bankAccounts, accounting, reconciliations }: Props) {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition({ refreshAfter: true });
   const [asOfDate, setAsOfDate] = useState(today);
   const [historicalBalances, setHistoricalBalances] = useState<Record<string, number> | null>(null);
   const [loadingBalances, setLoadingBalances] = useState(false);

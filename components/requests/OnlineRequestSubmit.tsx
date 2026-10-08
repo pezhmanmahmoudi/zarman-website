@@ -6,7 +6,7 @@ import { ChevronDown, Clock3, RefreshCw } from "lucide-react";
 import { DashboardButton, StatusBadge } from "@/components/dashboard/dashboard-ui";
 import { DashboardLottieScene } from "@/components/dashboard/DashboardLottieScene";
 import { createRequestQuote, getRequestPolicy, submitExchangeRequest } from "@/app/actions/request.actions";
-import type { ExchangeRequest, PublicRequestSettings, QuoteInput, RequestQuote, ServiceTier } from "@/lib/requests/types";
+import type { ExchangeRequest, PublicRequestSettings, QuoteInput, QuoteSnapshot, RequestQuote, ServiceTier } from "@/lib/requests/types";
 import { getRequestJourney } from "@/lib/requests/journey";
 import { RequestQuoteFacts } from "./RequestQuoteFacts";
 import { RequestPaymentInstructions } from "./RequestPaymentInstructions";
@@ -17,9 +17,9 @@ import type { PaymentAccountAccess } from "@/lib/payments/account-access";
 
 
 
-type Props = { input: Omit<QuoteInput, "serviceTier">; paymentAccount?: PaymentAccountAccess; disabled: boolean; validationMessage: string | null; onBusyChange?: (busy: boolean) => void; onSubmitted?: (request: ExchangeRequest) => void };
+type Props = { input: Omit<QuoteInput, "serviceTier">; paymentAccount?: PaymentAccountAccess; disabled: boolean; validationMessage: string | null; onBusyChange?: (busy: boolean) => void; onSubmitted?: (request: ExchangeRequest) => void; onQuoteChange?: (quote: QuoteSnapshot | null) => void };
 
-export function OnlineRequestSubmit({ input, paymentAccount, disabled, validationMessage, onBusyChange, onSubmitted }: Props) {
+export function OnlineRequestSubmit({ input, paymentAccount, disabled, validationMessage, onBusyChange, onSubmitted, onQuoteChange }: Props) {
   const fa = input.locale === "fa";
   const numbers = new Intl.NumberFormat(fa ? "fa-IR" : "en-AU", { maximumFractionDigits: 2 });
   const duration = (minutes: number) => {
@@ -43,13 +43,14 @@ export function OnlineRequestSubmit({ input, paymentAccount, disabled, validatio
   const [now, setNow] = useState(() => Date.now());
   const commandKey = useRef("");
   const submitting = useRef(false);
-  const currentInput = JSON.stringify({ ...input, serviceTier: tier });
+  const currentInput = JSON.stringify({ ...input, rawAmount: input.amountCurrency === "IRT" ? undefined : input.rawAmount, serviceTier: tier });
   const activeQuote = quote && quotedInput === currentInput ? quote : null;
   const expired = activeQuote ? new Date(activeQuote.expires_at).getTime() <= now : false;
   const shownPolicy = activeQuote?.snapshot.policy_snapshot || policy;
   const bankingNotice = (fa ? shownPolicy?.iran_banking_notice_fa : shownPolicy?.iran_banking_notice)?.trim();
 
   useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
+  useEffect(() => { onQuoteChange?.(activeQuote && !expired ? activeQuote.snapshot : null); }, [activeQuote, expired, onQuoteChange]);
 
   useEffect(() => {
     let alive = true;

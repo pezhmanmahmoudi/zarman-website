@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState} from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { ShieldCheck, Pencil, Save, X } from "lucide-react";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import formStyles from "@/styles/admin/AdminForms.module.css";
@@ -21,6 +22,7 @@ type Profile = Awaited<ReturnType<typeof getUserFinancialProfile>>["profile"];
 interface UserKycManagerProps {
   profile: Profile;
   onProfileUpdated?: () => void;
+  onKycStatusCommitted?: (status: "approved" | "rejected" | "archived") => void;
 }
 
 const ROWS: [string, (p: NonNullable<Profile>) => string | null | undefined][] = [
@@ -37,7 +39,7 @@ const ROWS: [string, (p: NonNullable<Profile>) => string | null | undefined][] =
   ["Expiry Date",     (p) => (p as Record<string, unknown>).expiry_date      as string | null],
 ];
 
-export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProps) {
+export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted }: UserKycManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -372,7 +374,10 @@ export function UserKycManager({ profile, onProfileUpdated }: UserKycManagerProp
                 onSaved={onProfileUpdated}
               />
             )}
-            {profile && <KycActionButtons userId={profile.id} />}
+            {profile && <KycActionButtons userId={profile.id} currentStatus={profile.kyc_status ?? undefined} onCommitted={status => {
+              setForm(previous => ({ ...previous, kyc_status: status }));
+              onKycStatusCommitted?.(status);
+            }} />}
           </div>
         </div>
       </div>

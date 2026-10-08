@@ -107,6 +107,37 @@ const request = {
   },
 };
 const markup = element => renderToStaticMarkup(element);
+test("admin summary mounts the pricing editor and retains a committed correction when refresh fails", async () => {
+  const detail = { request, events: [], receipts: [], messages: [] };
+  const h = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false }, actions: {
+    getAdminRequest: async () => ({ error: "Supplementary read unavailable" }),
+  } });
+  const props = { id: request.id, admin: true, locale: "en" };
+  const tree = h.rerender("RequestDetailView", props);
+  const editor = elements(tree, n => n.type?.name === "RequestPricingEditor")[0];
+  assert.ok(editor);
+  const corrected = { ...request, version: request.version + 1, pricing_pending_acceptance: true,
+    payment_approved_at: null, quote: { ...request.quote, funding_total: 1050, recipient_amount: 57000000 } };
+  editor.props.onSaved(corrected); await new Promise(setImmediate);
+  const refreshed = h.rerender("RequestDetailView", props);
+  assert.equal(elements(refreshed, n => n.type?.name === "RequestPricingEditor")[0].props.request, corrected);
+  assert.match(markup(refreshed), /Amounts revised/);
+  assert.equal(elements(refreshed, n => n.type === "form" && n.props["data-request-action"] === "await_funds").length, 0);
+});
+test("revised pricing presents customer acceptance and hides payment instructions in both locales", () => {
+  const revised = { ...request, pricing_pending_acceptance: true, payment_approved_at: null,
+    status: "action_required", customer_action_required: "Please confirm the revised amounts" };
+  for (const locale of ["en", "fa"]) {
+    const h = load("components/requests/RequestDetailView.tsx", { states: { 0: { request: revised, events: [], receipts: [], messages: [] }, 1: false } });
+    const tree = h.rerender("RequestDetailView", { id: request.id, locale });
+    assert.equal(elements(tree, n => n.type?.name === "RequestPricingAcceptance").length, 1);
+    const html = markup(tree);
+    assert.match(html, locale === "en" ? /I accept these revised amounts/ : /مبالغ اصلاح‌شده را تأیید می‌کنم/);
+    assert.doesNotMatch(html, /012-345|0012345678/);
+    const closed = load("components/requests/RequestDetailView.tsx", { states: { 0: { request: { ...revised, status: "cancelled" }, events: [], receipts: [], messages: [] }, 1: false } });
+    assert.equal(elements(closed.rerender("RequestDetailView", { id: request.id, locale }), n => n.type?.name === "RequestPricingAcceptance").length, 0);
+  }
+});
 function render(name, props, options) {
   const exported = load(`components/requests/${name}.tsx`, options);
   return markup(React.createElement(exported[name], props));

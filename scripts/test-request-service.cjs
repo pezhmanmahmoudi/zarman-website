@@ -86,6 +86,7 @@ test("payment account reveal requires admin and confirmed customer funding", asy
   assert.equal(result.data.password, account.password);
 });
 const pricing = compile("lib/pricing.ts");
+const quoteMoney = compile("lib/requests/quote-money.ts", { "@/lib/pricing": pricing });
 const CUSTOMER = "10000000-0000-4000-8000-000000000001";
 const OTHER = "10000000-0000-4000-8000-000000000002";
 const RECIPIENT = "20000000-0000-4000-8000-000000000001";
@@ -124,8 +125,9 @@ function harness(overrides = {}) {
         switch (table) {
           case "exchange_request_settings": return { data: { version: 1, settings: state.settings }, error: null };
           case "profiles": return { data: { id: CUSTOMER, first_name: "Test", last_name: "Customer", kyc_status: state.kyc }, error: null };
-          case "rates_history": return { data: { id: 1, buy_aud: 50000, sell_aud: 52000, market_active: state.market !== false }, error: null };
-          case "transactions": return { data: [], error: null };
+          case "rates_history": return { data: { id: 1, buy_aud: 50000, sell_aud: 52000, market_active: state.market !== false, ...state.rate }, error: null };
+          case "transactions": return { data: state.volume || [], error: null };
+          case "promo_codes": return { data: state.promo || null, error: null };
           case "recipients": return query.filters.user_id !== state.recipientOwner ? { data: null, error: { code: "PGRST116" } } : {
             data: { id: RECIPIENT, user_id: state.recipientOwner, direction: state.direction, full_name: "Test Recipient", bank_type: "other", shaba_number: "IR" + "1".repeat(24), account_name: "Test Recipient", bsb: "062000", account_number: "12345678" }, error: null };
           case "exchange_request_quotes": return { data: [], count: 0, error: null };
@@ -169,6 +171,8 @@ function harness(overrides = {}) {
     "@supabase/supabase-js": { createClient: () => db },
     "@/lib/supabase-server": { createSupabaseServerActionClient: async () => auth },
     "@/app/actions/admin.actions": { requireAdmin: async () => { if (!state.admin) throw new Error("Administrator required"); return state.user; } },
+    "@/lib/requests/quote-money": quoteMoney,
+    "@/lib/notifications/customer-telegram": { customerTelegramConfig: () => ({ enabled: false }), dispatchCustomerTelegramSafely: async () => {} },
     "@/lib/requests/validation": validation, "@/lib/requests/receipt-upload": upload, "@/lib/pricing": pricing,
     "@/lib/requests/notification-config": notificationConfig,
     "@/lib/requests/notifications": {
@@ -452,28 +456,29 @@ test("only approved admin emails run after the response; mail problems never und
   const base = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, action: "await_funds" };
   assert.equal((await actions.mutateAdminRequest({ ...base, sendEmail: false })).error, undefined);
   assert.equal(state.emailSends, undefined);
-  assert.equal(state.after, undefined);
+  await Promise.all((state.after || []).splice(0).map(callback => callback()));
   assert.equal((await actions.mutateAdminRequest({ ...base, sendEmail: true })).error, undefined);
   assert.equal(state.emailSends, undefined);
-  assert.equal(state.after.length, 1);
-  await state.after.shift()();
+  assert.ok(state.after.length >= 1);
+  await Promise.all(state.after.splice(0).map(callback => callback()));
   assert.equal(state.emailSends.length, 1);
   assert.equal(state.emailSends[0].requestId, REQUEST);
   assert.deepEqual(state.emailSends[0].send, { apiKey: "test-key" });
   const message = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, message: "Your transfer is complete." };
   assert.equal((await actions.sendAdminRequestMessage({ ...message, sendEmail: false })).error, undefined);
   assert.equal(state.emailSends.length, 1);
+  await Promise.all(state.after.splice(0).map(callback => callback()));
   assert.equal(state.after.length, 0);
   assert.equal((await actions.sendAdminRequestMessage({ ...message, sendEmail: true })).error, undefined);
   assert.equal(state.emailSends.length, 1);
-  await state.after.shift()();
+  await Promise.all(state.after.splice(0).map(callback => callback()));
   assert.equal(state.emailSends.length, 2);
   state.mailError = new Error("PRIVATE provider detail");
   const logged = [], original = console.error;
   console.error = (...args) => logged.push(args);
   try {
     assert.equal((await actions.mutateAdminRequest({ ...base, sendEmail: true })).error, undefined);
-    await state.after.shift()();
+    await Promise.all(state.after.splice(0).map(callback => callback()));
   }
   finally { console.error = original; }
   assert.doesNotMatch(JSON.stringify(logged), /PRIVATE/);
@@ -481,6 +486,7 @@ test("only approved admin emails run after the response; mail problems never und
   state.admin = false;
   assert.equal((await actions.mutateMyRequest({ ...base, action: "cancel" })).error, undefined);
   assert.equal((await actions.sendMyRequestMessage(message)).error, undefined);
+  await Promise.all((state.after || []).splice(0).map(callback => callback()));
   assert.equal(state.emailSends.length, 3);
   state.rpc = () => ({ data: null, error: { code: "P0001", message: "Rejected" } });
   state.admin = true;
@@ -504,9 +510,9 @@ test("status and message commits return while deferred email delivery remains un
       assert.notEqual(response, "blocked-on-mail", `${action} must return the committed result before mail completes`);
       assert.equal(response.error, undefined);
       assert.equal(state.emailSends, undefined);
-      assert.equal(state.after.length, 1);
+      assert.ok(state.after.length >= 1);
       let finished = false;
-      background = state.after[0]().then(() => { finished = true; });
+      background = Promise.all(state.after.splice(0).map(callback => callback())).then(() => { finished = true; });
       await new Promise(setImmediate);
       assert.equal(state.emailSends.length, 1);
       assert.equal(finished, false, "the provider is still pending after the action has returned");
@@ -745,4 +751,42 @@ test("retired management email settings are discarded on read and write", async 
   const saved = await h.actions.saveRequestSettings({ expectedVersion: 1, settings: { ...settings, enabled: false, priority_enabled: false } });
   assert.equal(saved.error, undefined);
   assert.equal(h.state.calls.find(call => call.rpc === "save_exchange_request_settings").args.p_settings.management_emails, undefined);
+});
+
+test("server quote preserves the original Toman budget at fresh rates, including loyalty and promo", async () => {
+  const h = harness({ direction: "aud", rate: { buy_aud: 180000, sell_aud: 184000 }, volume: [{ amount_aud: 70000 }],
+    promo: { code: "SAVE", active: true, discount_type: "fixed", discount_value: 400, max_uses: null, used_count: 0, expires_at: null } });
+  const result = await h.actions.createRequestQuote({ ...input, txType: "buy_aud", rawAmount: 4777.59, amountCurrency: "IRT", amountValue: 870000000, promoCode: "save" });
+  assert.equal(result.error, undefined);
+  const q = result.data.snapshot;
+  assert.equal(q.funding_total, 870000000); assert.equal(q.applied_rate, 182600); assert.equal(q.recipient_amount, 4764.51);
+  assert.equal(q.loyalty_rate_discount, 1000); assert.equal(q.promo_rate_discount, 400);
+  assert.equal(q.loyalty_discount, 4764510); assert.equal(q.discount_amount, 1905804); assert.equal(q.promo_code, "SAVE");
+  assert.equal(q.locked_amount_value, 870000000); assert.equal(q.locked_amount_currency, "IRT");
+  const tooLarge = await h.actions.createRequestQuote({ ...input, txType: "buy_aud", rawAmount: 1, amountCurrency: "IRT", amountValue: 184000 * (settings.max_amount_aud + 1) });
+  assert.ok(tooLarge.error);
+});
+test("explicit amount precision and currency are validated before quoting", async () => {
+  for (const patch of [{ amountCurrency: "IRT", amountValue: 1.5 }, { amountCurrency: "AUD", amountValue: 12.345 },
+    { amountCurrency: "USD", amountValue: 100 }, { amountCurrency: "IRT" }, { amountValue: 100 }]) {
+    const h = harness(); assert.ok((await h.actions.createRequestQuote({ ...input, ...patch })).error); assert.equal(h.state.inserts.length, 0);
+  }
+});
+test("pricing correction requires admin and forwards the authenticated actor and atomic command", async () => {
+  const payload = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 7, fundingTotal: 870000000, recipientAmount: 4777.59, reason: " Correction requested " };
+  const customer = harness(); assert.ok((await customer.actions.updateAdminRequestPricing(payload)).error); assert.equal(customer.state.calls.length, 0);
+  const h = harness({ admin: true }); assert.equal((await h.actions.updateAdminRequestPricing(payload)).error, undefined);
+  assert.deepEqual(JSON.parse(JSON.stringify(h.state.calls[0])), { rpc: "admin_update_request_pricing", args: { p_actor_id: CUSTOMER, p_request_id: REQUEST, p_expected_version: 7,
+    p_command_key: COMMAND, p_funding_total: 870000000, p_recipient_amount: 4777.59, p_reason: "Correction requested" } });
+  for (const patch of [{ fundingTotal: NaN }, { recipientAmount: 12.345 }, { reason: " " }, { expectedVersion: 0 }, { commandKey: "invalid" }]) assert.ok((await h.actions.updateAdminRequestPricing({ ...payload, ...patch })).error);
+  assert.equal(h.state.calls.length, 1);
+});
+test("pricing acceptance uses the authenticated owner, masks bank details and rejects bad commands", async () => {
+  const h = harness({ rpcRequest: { payment_approved_at: null, payment_details: { private: true }, payment_instructions: "Private bank" } });
+  const payload = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 2 };
+  const response = await h.actions.acceptMyRequestPricing(payload); assert.equal(response.error, undefined);
+  assert.equal(h.state.calls[0].rpc, "accept_request_pricing"); assert.equal(h.state.calls[0].args.p_actor_id, CUSTOMER);
+  assert.equal(response.data.payment_details, null); assert.equal(response.data.payment_instructions, null);
+  assert.ok((await h.actions.acceptMyRequestPricing({ ...payload, expectedVersion: 0 })).error);
+  assert.equal(h.state.calls.length, 1);
 });

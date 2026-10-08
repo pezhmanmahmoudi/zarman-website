@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { AlertTriangle, CheckCircle2, Download, RotateCcw } from "lucide-react";
 import type { AustracTypeStatus } from "@/app/actions/report.actions";
-import { revertAustracReportBatch } from "@/app/actions/report.actions";
+import { getAustracComplianceStatus, revertAustracReportBatch } from "@/app/actions/report.actions";
 import type { AustracReportBatchSummary, AustracReportType } from "@/lib/reporting/austrac-compliance";
 import { AUSTRAC_REPORTING_BUSINESS_DAYS } from "@/lib/reporting/austrac-deadlines";
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import { AdminConfirmDialog } from "@/components/admin/ui/AdminConfirmDialog";
 import { AdminToast } from "@/components/admin/ui/AdminToast";
-import { reloadAdminPage } from "@/lib/admin-refresh";
+import { useAdminRefresh } from "@/components/admin/ui/useAdminRefresh";
+import { useAdminSnapshot } from "@/components/admin/ui/useAdminSnapshot";
+import { AdminRefreshScope } from "@/components/admin/ui/AdminRefreshScope";
+import { AdminRefreshNotice } from "@/components/admin/ui/AdminRefreshNotice";
 import s from "@/styles/admin/AustracCompliance.module.css";
 
 type Props = {
@@ -111,6 +115,7 @@ function PendingQueueSection({
   status: AustracTypeStatus;
   onExported: () => void;
 }) {
+  const refreshAdmin = useAdminRefresh();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -168,7 +173,7 @@ function PendingQueueSection({
       setMessage({ type: "success", text: `Report generated for ${selectedIds.size} transaction(s) and marked as reported.` });
       setSelectedIds(new Set());
       onExported();
-      reloadAdminPage(900);
+      refreshAdmin();
     } catch (error) {
       setMessage({ type: "error", text: error instanceof Error ? error.message : "Unexpected export error." });
     } finally {
@@ -230,6 +235,7 @@ function PendingQueueSection({
 }
 
 function BatchHistorySection({ batches, onReverted }: { batches: AustracReportBatchSummary[]; onReverted: () => void }) {
+  const refreshAdmin = useAdminRefresh();
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
   const [isPending, startTransition] = useTransition();
 
@@ -244,7 +250,7 @@ function BatchHistorySection({ batches, onReverted }: { batches: AustracReportBa
           startTransition(async () => {
             const result = await revertAustracReportBatch(batch.id);
             if ("error" in result) showToast({ type: "error", message: result.error });
-            else { showToast({ type: "success", message: "Batch reverted." }); onReverted(); reloadAdminPage(900); }
+            else { showToast({ type: "success", message: "Batch reverted." }); onReverted(); refreshAdmin(); }
             resolve();
           });
         });
@@ -301,12 +307,17 @@ function BatchHistorySection({ batches, onReverted }: { batches: AustracReportBa
   );
 }
 
-export function AustracComplianceDashboard({ outgoing, incoming, recentBatches }: Props) {
+export function AustracComplianceDashboard({ outgoing: initialOutgoing, incoming: initialIncoming, recentBatches: initialBatches }: Props) {
+  const initialData = useMemo(() => ({ outgoing: initialOutgoing, incoming: initialIncoming, recentBatches: initialBatches }), [initialOutgoing, initialIncoming, initialBatches]);
+  const load = useCallback(() => getAustracComplianceStatus(), []);
+  const { data, refresh, refreshing, refreshError } = useAdminSnapshot(initialData, load);
+  const { outgoing, incoming, recentBatches } = data;
   const totalOverdue = outgoing.overdueCount + incoming.overdueCount;
   const noop = () => {};
 
   return (
-    <div className={s.page}>
+    <AdminRefreshScope refresh={refresh}><div className={s.page}>
+      <AdminRefreshNotice error={refreshError} refreshing={refreshing} onRefresh={refresh} />
       {totalOverdue > 0 && (
         <p className={`${s.message} ${s.messageError}`}>
           <AlertTriangle size={14} style={{ verticalAlign: "-2px", marginRight: 6 }} />
@@ -325,6 +336,6 @@ export function AustracComplianceDashboard({ outgoing, incoming, recentBatches }
       <PendingQueueSection status={outgoing} onExported={noop} />
       <PendingQueueSection status={incoming} onExported={noop} />
       <BatchHistorySection batches={recentBatches} onReverted={noop} />
-    </div>
+    </div></AdminRefreshScope>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { Trash2, PlusCircle, Pencil, ChevronDown } from "lucide-react";
 import { addOwnerLoan, deleteOwnerLoan, updateOwnerLoan } from "@/app/actions/treasury.actions";
 import { fmtIRT, fmtAUD } from "@/lib/accounting-engine";
@@ -39,7 +40,7 @@ const EMPTY = {
 };
 
 export default function OwnerLoanForm({ loans, bankAccounts, defaultOpen = false }: Props) {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition({ refreshAfter: true });
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...EMPTY });

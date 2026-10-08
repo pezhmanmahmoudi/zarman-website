@@ -1,0 +1,37 @@
+Customer archive error investigation and validation — 2026-10-09 (Australia/Sydney)
+
+Observed screenshots
+- Hydration attribute mismatch on the pagination input: data-rtl-listener="true".
+- Runtime InvalidStateError from AdminToast.useEffect calling showPopover() on a disconnected element.
+
+Confirmed code cause
+KycActionButtons publishes the action result and updates the visible queue before the confirmation lifecycle finishes. Removing the queue row also removes its confirmation dialog. The previous global toast could still portal into that dialog using the dialog stack snapshot, then call showPopover() from a passive effect after the host had detached. The browser rejects showing disconnected popovers. This is a notification-rendering error; the screenshot alone does not establish whether the database archive succeeded or failed.
+The previous AdminToast implementation from git HEAD was exercised with an intentionally detached node; its effect reproduced InvalidStateError: Invalid on disconnected popover elements. This is an offline lifecycle simulation, not a live browser reproduction.
+
+Changes
+- AdminToast is an ordinary fixed React notification, hosted within a connected open admin dialog or document.body. It no longer calls showPopover/hidePopover or uses a popover attribute.
+- Hydration uses matching server/initial-client snapshots before rendering a portal; live-region roles and dismissal remain accessible.
+- The dialog stack skips disconnected and closed hosts, including nested dialogs. Native dialog setup/cleanup runs in a layout effect and never opens a detached node. Keyboard handling checks for a missing dialog.
+- Confirmation guards block double submits and premature cancellation; completed/cancelled callbacks are cleared so stale clicks cannot replay a write.
+- archiveKyc verifies authorization, checks read errors and profile existence, matches the displayed status when supplied, and conditionally updates the previous status. It confirms the returned row before claiming success. Already-archived profiles return success without another write/audit.
+- An audit logging failure after a committed archive is logged and returned as a warning, rather than silently discarded or presented as a failed archive. The existing audit insert remains separate from the profile update; this change does not claim a database transaction across both operations.
+- Both queue and profile display the committed status even if their follow-up read fails. The profile editor's status is updated with the commit so a later identity edit cannot restore its old status.
+- Pagination now has a numeric input with min/max/step and explicit LTR direction. Output is deterministic with browser globals present; hydration warnings are not suppressed.
+
+Hydration warning limits
+No data-rtl-listener writer was found in tracked project code or app/components/lib/public/scripts. An extension or externally injected RTL helper is a likely source, but the responsible browser script has not been identified. A fresh browser profile without extensions can distinguish that case. A numeric input may avoid text-input RTL helpers, but the app cannot guarantee that third-party DOM injection stops. No blanket suppressHydrationWarning was introduced.
+
+Validation
+- Final admin test selection: 133 passed, 0 failed. This includes archive, toast lifecycle, hydration, pagination, authorization, recovery, profile editing, tables and shared workspace integration.
+- test-ifti-dra-incoming.mjs was excluded from this selection because its previously identified OET beneficiary-truncation expectation is unrelated to this change. This is not a claim that the complete npm test:admin command passes.
+- TypeScript --noEmit: passed.
+- ESLint: 13 focused component/test files, 0 errors, 0 warnings. admin.actions.ts retains its 28 pre-existing lint errors; comparison against HEAD found the same error count and fewer warnings (13 -> 11).
+- git diff --check: passed.
+- Fault scenarios: detached dialog before effects, nested/closed dialog hosts, Strict Mode effect replay, notification after row unmount, stale/double confirmation, missing profile/read/write errors, concurrent decision/deletion, bounded audit failures, refresh failure after commit, and later profile editing.
+
+Deployment and data
+Changes are local; no deployment, live customer archive, data correction, migration application, commit or push was performed. This specific fix adds no new database migration. The earlier pricing migration remains a separate rollout dependency for the earlier pricing work. Live status of the customer shown in the screenshot was not inspected. Browser visual QA and a new production build were not performed in this investigation; the earlier production build was blocked by network access to Google Fonts.
+
+Primary references
+https://html.spec.whatwg.org/multipage/popover.html#check-popover-validity
+https://react.dev/reference/react-dom/client/hydrateRoot

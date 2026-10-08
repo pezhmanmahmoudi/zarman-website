@@ -29,6 +29,13 @@ function compile(file, mocks = {}) {
         throw new Error(`Missing CSS class ${id}: ${key}`);
       } }) };
     }
+    if (id.startsWith("@/") || id.startsWith(".")) {
+      const base = id.startsWith("@/") ? path.join(root, id.slice(2)) : path.resolve(root, path.dirname(file), id);
+      const canonical = "@/" + path.relative(root, base).replaceAll("\\", "/");
+      if (canonical in mocks) return mocks[canonical];
+      const dependency = [base + ".tsx", base + ".ts"].find(candidate => fs.existsSync(candidate));
+      if (dependency) return compile(path.relative(root, dependency), mocks);
+    }
     return require(id);
   }, compiled, compiled.exports);
   return compiled.exports;

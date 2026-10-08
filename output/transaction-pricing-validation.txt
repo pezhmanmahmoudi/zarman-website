@@ -1,0 +1,31 @@
+Zarman request pricing and admin redesign — 8 October 2026
+
+IMPLEMENTED
+The original amount and currency are sent to the server. Fresh rates, loyalty and promo terms are calculated there, and the chosen Toman budget or AUD principal is retained. The final review and dashboard summary share the same saved quote. Expired quotes cannot be submitted. Public rate/config caches are invalidated after saved finance settings.
+
+Example, buying AUD with an exact 870,000,000 Toman budget, no fee:
+182,100 Toman/AUD -> 4,777.59 AUD; currency rounding +861 Toman.
+182,600 Toman/AUD -> 4,764.51 AUD; currency rounding +474 Toman.
+The funding amount remains exactly 870,000,000 Toman. With a 25 AUD express fee, the fee fits inside the selected budget and payout is 4,739.51 AUD at 182,600.
+
+Admin summary includes a compact pricing box: stored exchange rate, applicable loyalty benefit, promo code and benefit, fees and currency rounding. Rate display retains fractional precision. Transaction tables include customer trade direction and exchange rate. Each row has one blue primary workflow action; email shortcuts and the duplicate final View action were removed. Responsive cards retain labeled fields on narrow screens.
+
+Both linked-request amounts can be edited in one correction with a required reason. The database locks and validates the request and transaction, rejects stale versions, commits quote/transaction/event/audit/command atomically, and retains the original accepted quote. Repeated commands do not duplicate changes. After any payment receipt, recorded deposit, funds or ledger entry, financial amounts are locked. A revision removes previous payment approval and requires the owning customer to explicitly accept the revised amounts. Ordinary replies do not accept financial terms. Cancellation closes pending acceptance without fabricating consent.
+
+Earlier admin recovery changes retain the last confirmed records when a refresh fails, allow scoped read retries, and avoid replaying writes or replacing an entire workspace following routine actions.
+
+VERIFIED
+- Complete request suite: 244/244 passed before the final two added cases.
+- Final pricing money/interaction suite: 9/9 passed, including actual dashboard input forwarding and authoritative summary.
+- Final PostgreSQL pricing suite: 14/14 passed, including quote submission, buy/sell corrections, version conflicts, authorization, command retries, audit rollback, customer acceptance, cancellation, full funding, settlement, ledger and completion receipts.
+- Final admin integration checks for pricing composition and closed-request handling passed.
+- Admin recovery/transaction/shared-table suite: 38/38 passed after adding the cache invalidation test double.
+- Remaining admin tests passed except the unchanged OET AUSTRAC beneficiary truncation expectation in test-ifti-dra-incoming.mjs. The complete earlier admin run was 113/117 before the three cache-double failures were corrected and rechecked.
+- TypeScript --noEmit passed on the final implementation.
+- Lint: 26 changed pricing files passed with zero errors or warnings; final edits were rechecked.
+- git diff --check passed.
+- Actual React components and CSS were rendered into transaction-pricing-preview.html with synthetic data. The preview contains eight table columns and the requested actions. Live browser screenshots could not be checked because browser automation is unavailable in this environment.
+- Production build could not complete: network EACCES prevented next/font from downloading Inter from Google Fonts.
+
+ROLLOUT
+Changes are local; no production database mutation or deployment was performed. Apply supabase/migrations/20261008_51_request_pricing_integrity.APPLY_MANUALLY.sql before deploying the application. The migration runs transactionally, adds nullable historical quote metadata and a default-false acceptance flag, updates the submission rounding equation without replacing unrelated deployed guards, and adds service-role-only correction/acceptance RPCs. Reapplication and compatibility with optional institution references were tested. Existing records are not automatically repriced. The observed live request ZE03625 could not be inspected over the restricted network and was not modified. Review that request's accepted terms before using the new correction UI.

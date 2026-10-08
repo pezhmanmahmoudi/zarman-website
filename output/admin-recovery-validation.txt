@@ -1,0 +1,29 @@
+Admin mutation recovery — local implementation, 2026-10-08
+
+Verified defect
+Admin authorization and cached admin reads used a Supabase client that could write renewed auth cookies during a Server Component render. The fault-injection test reproduces the old cookie-write exception and verifies the read-only path. This demonstrates a code defect; no production digest or server log was provided, so it does not establish the cause of every live occurrence.
+
+Implemented behavior
+- Read-only session client for render-time admin authorization; existing access and capability checks remain.
+- Scoped data refreshes for transactions, KYC, customers, treasury, ledger entries, feedback, reports and platform settings.
+- Retain last successful data, display a local retry notice, and preserve mounted forms on subsequent read failures.
+- Apply confirmed transaction deletion and KYC decisions locally; prevent older reads from undoing them.
+- Catch rejected admin transitions before the route error boundary. Never automatically replay a write after an interrupted response.
+- Receipt cleanup transport failure returns a warning after a committed database deletion.
+- Keep the full route recovery screen for initial/render failures and add a support reference.
+
+Validation
+- TypeScript: passed (tsc --noEmit --incremental false).
+- New recovery tests: 11 passed, including cookie renewal, overlapping reads, unmount, failed follow-up reads after an archive, and independent customer resource errors.
+- Complete test:admin: 117 tests; 116 passed, 1 failed. The failure is the existing OET beneficiary-name truncation expectation in test-ifti-dra-incoming.mjs. That test and its reporting/institution dependencies are unchanged from HEAD.
+- test:requests: 217 tests; 179 passed, 38 failed. The failures report an unresolved customer-telegram import in the unchanged request-service test harness; the corresponding action and notification files are unchanged from HEAD.
+- Lint: 56 checked changed/new files have zero errors and one existing unused-variable warning. The three other edited files retain all 56 baseline explicit-any errors; comparison against HEAD confirms no increase.
+- git diff --check: passed.
+- Production build: blocked by sandbox network access (EACCES) while next/font downloads Inter from Google Fonts.
+- Browser visual QA: unavailable; CUA browser inventory is empty and the in-app browser is unavailable.
+
+Preview
+admin-recovery-preview.html is a standalone rendering from the actual admin components and styles, with synthetic data illustrating a confirmed archive plus a subsequent read failure. It is a static preview, not the running production site.
+
+Delivery status
+Changes are local only. No deployment, push, commit or real customer/transaction mutation was performed.

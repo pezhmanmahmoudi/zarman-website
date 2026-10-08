@@ -3,8 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowUpRight, ChartNoAxesCombined, ListFilter } from "lucide-react";
 import { getLedgerData, getActiveBankAccountsForAdmin } from "@/app/actions/admin.actions";
-import { AdminPagination } from "@/components/admin/AdminPagination";
-import { LedgerEntriesTable, type LedgerRow } from "@/components/admin/ledger/LedgerEntriesTable";
+import { LedgerEntriesWorkspace } from "@/components/admin/ledger/LedgerEntriesWorkspace";
 import { AdminRefreshButton } from "@/components/admin/ui/AdminRefreshButton";
 import LedgerToolbar from "@/components/admin/ledger/LedgerToolbar";
 import LedgerInsights from "@/components/admin/ledger/LedgerInsights";
@@ -31,8 +30,6 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
     const next = { ...params, page: String(Math.max(1, Math.ceil(records.total / pageSize))) };
     redirect(ledgerViewHref(next, "entries"));
   }
-  const rows = (records?.pageLedgerRows ?? []) as LedgerRow[];
-  const total = records?.total ?? 0;
   const filterKey = JSON.stringify(params);
 
   return <>
@@ -52,17 +49,8 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
         </nav>
         <LedgerToolbar key={filterKey} currentParams={params} bankAccounts={bankAccounts} exportFilters={filters} />
         {insights ? <Suspense key={filterKey} fallback={<div className={styles.insightLoading} role="status">Loading ledger insights…</div>}><LedgerInsights filters={filters} /></Suspense> :
-          <section className={shared.panel} aria-labelledby="ledger-records-title">
-            <div className={styles.paginationTop}>
-              <AdminPagination label="Ledger pagination above entries" currentPage={currentPage} totalCount={total} pageSize={pageSize} />
-            </div>
-              <LedgerEntriesTable rows={rows} bankAccounts={bankAccounts} titleSlot={
-                <div className={shared.headerActions}><h2 id="ledger-records-title" className={shared.panelTitle}>All entries</h2><span className={shared.recordCount}>{total.toLocaleString("en-AU")} {total === 1 ? "record" : "records"}</span></div>
-              } />
-            <div className={styles.paginationBottom}>
-              <AdminPagination label="Ledger pagination below entries" currentPage={currentPage} totalCount={total} pageSize={pageSize} />
-            </div>
-          </section>
+          records && <LedgerEntriesWorkspace key={filterKey} initialRecords={records} initialAccounts={bankAccounts}
+            currentPage={currentPage} pageSize={pageSize} filters={filters} />
         }
       </div>
     </div>

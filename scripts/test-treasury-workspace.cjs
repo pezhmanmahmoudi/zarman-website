@@ -36,6 +36,13 @@ function compile(file, mocks = {}) {
       return React.createElement("a", linkProps);
     } };
     if (id.startsWith("@/lib/")) return compile(`${id.slice(2)}.ts`, mocks);
+    if (id.startsWith("@/") || id.startsWith(".")) {
+      const base = id.startsWith("@/") ? path.join(root, id.slice(2)) : path.resolve(root, path.dirname(file), id);
+      const canonical = "@/" + path.relative(root, base).replaceAll("\\", "/");
+      if (canonical in mocks) return mocks[canonical];
+      const dependency = [base + ".tsx", base + ".ts"].find(candidate => fs.existsSync(candidate));
+      if (dependency) return compile(path.relative(root, dependency), mocks);
+    }
     return require(id);
   };
   vm.runInThisContext(`(function(require,module,exports){${js}\n})`, { filename: file })(localRequire, compiled, compiled.exports);

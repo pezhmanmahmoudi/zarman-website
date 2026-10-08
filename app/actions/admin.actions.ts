@@ -2,8 +2,8 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
-import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { revalidateTag } from "next/cache";
+import { createSupabaseServerComponentClient } from "@/lib/supabase-server";
 import { getRatesSnapshot } from "@/lib/rates";
 import { calcExecutionRateFromSettlement, toCompanyTradeType } from "@/lib/pricing";
 import { toJalaliStr } from "@/lib/jalali";
@@ -84,8 +84,15 @@ async function removeHardDeletedReceiptFiles(
   ));
   if (uniquePaths.length === 0) return null;
 
-  const { error } = await db.storage.from(REQUEST_RECEIPTS_BUCKET).remove(uniquePaths);
-  return error ? `Database records were deleted, but ${uniquePaths.length} receipt file(s) could not be removed: ${error.message}` : null;
+  // The database deletion has already committed. A storage outage is a cleanup
+  // warning, never a failed deletion that would invite another destructive try.
+  try {
+    const { error } = await db.storage.from(REQUEST_RECEIPTS_BUCKET).remove(uniquePaths);
+    return error ? `Records were deleted, but ${uniquePaths.length} receipt file(s) still need cleanup.` : null;
+  } catch (error) {
+    console.error("[admin deleted receipt cleanup]", error);
+    return `Records were deleted, but ${uniquePaths.length} receipt file(s) still need cleanup.`;
+  }
 }
 
 function clampInt(value: number, min: number, max: number, fallback: number) {
@@ -181,9 +188,12 @@ function isPrivilegedRole(role: unknown): role is string {
 // requireAdmin — validates every sensitive admin action.
 // ---------------------------------------------------------------------------
 export async function requireAdmin(
-  supabaseServer?: Awaited<ReturnType<typeof createSupabaseServerActionClient>>
+  supabaseServer?: Awaited<ReturnType<typeof createSupabaseServerComponentClient>>
 ) {
-  const db = supabaseServer ?? (await createSupabaseServerActionClient());
+  // Authorization is a read. This guard also runs during Server Component renders,
+  // where refreshing a token must never attempt to write cookies. The proxy owns
+  // session-cookie renewal; every call still verifies the user and RLS capability.
+  const db = supabaseServer ?? (await createSupabaseServerComponentClient());
   const { data, error } = await db.auth.getUser();
   if (error || !data.user) {
     throwAdminAuthError("AUTH_UNAUTHORIZED", "Unauthorized: no active admin session.");
@@ -212,7 +222,7 @@ export async function requireAdmin(
 // Share read authorization only within the current Server Component request.
 // React invalidates this cache for every request; writes still call requireAdmin.
 const getAuthorizedServerClient = cache(async () => {
-  const db = await createSupabaseServerActionClient();
+  const db = await createSupabaseServerComponentClient();
   await requireAdmin(db);
   return db;
 });
@@ -367,7 +377,7 @@ export async function getKycHistory(page: number = 1, pageSize: number = 10) {
       .range(offset, offset + safePageSize - 1),
   ]);
 
-  if (dataRes.error) throw new Error(dataRes.error.message);
+  if (countRes.error || dataRes.error) throw new Error((countRes.error ?? dataRes.error)!.message);
   return { data: dataRes.data ?? [], total: countRes.count ?? 0 };
 }
 
@@ -421,14 +431,27 @@ export async function rejectKyc(userId: string) {
   return { success: true };
 }
 
-export async function archiveKyc(userId: string) {
+export async function archiveKyc(userId: string, expectedStatus?: string) {
   const admin = await requireAdmin();
-  if (!userId) return { error: "Missing user ID." };
+  if (typeof userId !== "string" || !userId.trim()) return { error: "Missing user ID." };
 
   const db = makeServiceRoleClient();
-  const { data: before } = await db.from("profiles").select("kyc_status").eq("id", userId).single();
-  const { error } = await db.from("profiles").update({ kyc_status: "archived" }).eq("id", userId);
+  const { data: before, error: readError } = await db.from("profiles").select("id, kyc_status").eq("id", userId).maybeSingle();
+  if (readError) return { error: readError.message };
+  if (!before) return { error: "Customer profile not found. Refresh the information before trying again." };
+  // A lost response/repeated click must not create another mutation or audit entry.
+  if (before.kyc_status === "archived") return { success: true };
+  if (expectedStatus !== undefined && before.kyc_status !== expectedStatus) {
+    return { error: "The KYC status has changed. Refresh the information before archiving." };
+  }
+
+  const update = db.from("profiles").update({ kyc_status: "archived" }).eq("id", userId);
+  const matchedUpdate = before.kyc_status === null
+    ? update.is("kyc_status", null)
+    : update.eq("kyc_status", before.kyc_status);
+  const { data: archived, error } = await matchedUpdate.select("id, kyc_status").maybeSingle();
   if (error) return { error: error.message };
+  if (!archived) return { error: "The customer record has changed. Refresh the information before archiving." };
 
   try {
     await writeAuditLog({
@@ -437,10 +460,14 @@ export async function archiveKyc(userId: string) {
       action: "KYC_ARCHIVED",
       targetType: "profile",
       targetId: userId,
-      oldValue: { kyc_status: before?.kyc_status ?? "unknown" },
+      oldValue: { kyc_status: before.kyc_status },
       newValue: { kyc_status: "archived" },
     });
-  } catch (auditError) {}
+  } catch (auditError) {
+    // The profile update is committed; do not invite a second write to fix logging.
+    console.error("[admin KYC archive audit]", auditError);
+    return { success: true, warning: "KYC was archived, but its audit entry could not be recorded. Contact support to reconcile the audit log." };
+  }
   return { success: true };
 }
 
@@ -963,6 +990,12 @@ export async function updateSystemSettings(payload: any) {
     .from("rates_history")
     .upsert(patch, { onConflict: "date" });
   if (error) return { error: error.message };
+
+  // Public rate previews and finance settings must expire together.
+  try {
+    revalidateTag("rates-snapshot-v1", { expire: 0 });
+    revalidateTag("system-settings", { expire: 0 });
+  } catch (error) { console.error("[admin pricing cache invalidation]", error); }
 
   // ثبت در لاگ حسابرسی (Audit Log)
   await writeAuditLog({
@@ -1740,7 +1773,7 @@ export async function getPendingTransactionsWithDetails() {
 async function readPendingTransactionsWithDetails(db: ReturnType<typeof makeServiceRoleClient>) {
   const selection = `
       id, user_id, recipient_id, type, amount_aud, equivalent_toman, status, created_at,
-      reference_code, payment_link, reason_for_transfer, receipt_sent,
+      reference_code, payment_link, reason_for_transfer, receipt_sent, applied_rate, ledger_fee_aud,
       request:exchange_requests(*),
       profiles(first_name, last_name, email, customer_code),
       recipients(label, full_name, account_name, bank_name, bsb, account_number,
@@ -1862,7 +1895,7 @@ async function readTransactionHistoryWithDetails(
     .from("transactions")
     .select(`
       id, user_id, recipient_id, type, amount_aud, equivalent_toman, status, created_at,
-      reference_code, payment_link, reason_for_transfer, receipt_sent,
+      reference_code, payment_link, reason_for_transfer, receipt_sent, applied_rate, ledger_fee_aud,
       request:exchange_requests(*),
       profiles(first_name, last_name, email, customer_code),
       recipients(label, full_name, account_name, bank_name, bsb, account_number,

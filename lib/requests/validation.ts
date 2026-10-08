@@ -40,7 +40,11 @@ function boundedText(value: unknown, maximum: number, required = true): boolean 
 export function quoteInputError(input: QuoteInput, settings: RequestSettings): string | null {
   if (!input || typeof input !== "object") return "Invalid request details.";
   if (!settings.enabled) return "Online requests are temporarily unavailable. Please contact support.";
-  if (!isMoney(input.rawAmount, settings.max_amount_aud)) return "Enter a valid AUD amount within the service limit, with at most two decimal places.";
+  if (input.amountCurrency !== undefined || input.amountValue !== undefined) {
+    if (!["AUD", "IRT"].includes(input.amountCurrency || "")) return "Choose the amount currency.";
+    if (input.amountCurrency === "AUD" ? !isMoney(input.amountValue, settings.max_amount_aud)
+      : !isMoney(input.amountValue) || !Number.isSafeInteger(input.amountValue)) return "Enter a valid amount in the selected currency.";
+  } else if (!isMoney(input.rawAmount, settings.max_amount_aud)) return "Enter a valid AUD amount within the service limit, with at most two decimal places.";
   if (!["buy_aud", "sell_aud"].includes(input.txType)) return "Choose a transfer direction.";
   if (!["en", "fa"].includes(input.locale)) return "Choose a supported language.";
   if (!["standard", "priority"].includes(input.serviceTier)) return "Choose a service level.";

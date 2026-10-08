@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import React, { useState, useTransition, useOptimistic } from "react";
+import React, { useState, useOptimistic } from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { Plus, Trash2, ToggleLeft, ToggleRight, Tag } from "lucide-react";
 import formStyles from "@/styles/admin/AdminForms.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
@@ -16,7 +17,7 @@ import { AdminToast } from "@/components/admin/ui/AdminToast";
 import { useAdminFeedback } from "@/components/admin/ui/useAdminFeedback";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
-import { reloadAdminPage } from "@/lib/admin-refresh";
+import { useAdminRefresh } from "@/components/admin/ui/useAdminRefresh";
 
 // ΓöÇΓöÇΓöÇ Empty creation form state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
@@ -36,6 +37,7 @@ export function PromoCodeManager({
 }: {
   initialCodes: PromoCode[];
 }) {
+  const refreshAdmin = useAdminRefresh();
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
 
   const [codes, setCodesOptimistic] = useOptimistic(initialCodes);
@@ -76,7 +78,7 @@ export function PromoCodeManager({
         showToast({ type: "success", message: `Promo code "${code}" created.` });
         setForm(EMPTY_FORM);
         setShowForm(false);
-        reloadAdminPage(600);
+        refreshAdmin();
       }
     });
   };
@@ -91,7 +93,7 @@ export function PromoCodeManager({
       );
       const result = await updatePromoCode(c.id, { active: next });
       if (result.error) showToast({ type: "error", message: result.error });
-      else reloadAdminPage(600);
+      else refreshAdmin();
     });
   };
 
@@ -108,7 +110,7 @@ export function PromoCodeManager({
         if (result.error) showToast({ type: "error", message: result.error });
         else {
           showToast({ type: "success", message: `"${c.code}" deleted.` });
-          reloadAdminPage(600);
+          refreshAdmin();
         }
       },
     });

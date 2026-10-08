@@ -5,7 +5,8 @@ export type RequestJourneyStage = "approval" | "payment" | "receipt_review" | "f
 /** Customer milestones are facts, not the reversible internal review status. */
 export function getRequestJourney(request: ExchangeRequest) {
   const closed = ["cancelled", "rejected", "expired"].includes(request.status);
-  const approved = Boolean(request.payment_approved_at);
+  const pricingPending = Boolean(request.pricing_pending_acceptance) && !closed && request.status !== "completed";
+  const approved = Boolean(request.payment_approved_at) && !pricingPending;
   const receiptSubmitted = Boolean(request.evidence_submitted_at);
   const fundsReceived = Boolean(request.funds_confirmed_at) || request.funding_status === "confirmed";
   const stage: 0 | 1 | 2 | 3 | 4 = request.status === "completed" ? 4 : fundsReceived ? 3 : approved && receiptSubmitted ? 2 : approved ? 1 : 0;
@@ -14,10 +15,10 @@ export function getRequestJourney(request: ExchangeRequest) {
   const unpaid = ["unpaid", "partial"].includes(request.funding_status);
   const customerActionMessage = !closed && request.status !== "completed" && !["refund_pending", "refunded"].includes(request.funding_status)
     ? request.customer_action_required?.trim() || null : null;
-  const customerActionRequired = Boolean(customerActionMessage);
+  const customerActionRequired = pricingPending || Boolean(customerActionMessage);
   return {
     approved, receiptSubmitted, fundsReceived, closed, stage, stageKey,
-    customerActionRequired, customerActionMessage,
+    customerActionRequired, customerActionMessage, pricingPending,
     readyForSettlement: request.status === "ready" && request.funding_status === "confirmed" && !customerActionRequired,
     canPay: approved && !closed && !refundable && !fundsReceived && unpaid && request.status === "awaiting_funds",
     canUpload: approved && !closed && !refundable && !fundsReceived && unpaid && ["submitted", "awaiting_funds", "under_review", "action_required"].includes(request.status),
@@ -34,6 +35,7 @@ export function requestStageLabel(request: ExchangeRequest, locale: RequestLocal
   if (request.funding_status === "refund_pending") return ["Refund in progress", "بازپرداخت در حال انجام"][index];
   if (request.funding_status === "refunded") return ["Funds returned", "وجه بازپرداخت شد"][index];
   const journey = getRequestJourney(request);
+  if (journey.pricingPending) return ["Accept revised amounts", "تأیید مبالغ اصلاح‌شده"][index];
   if (journey.customerActionRequired) return ["Reply needed", "نیاز به پاسخ شما"][index];
   if (request.priority_fee_status === "refund_pending") return ["Express processing fee refund in progress", "بازپرداخت هزینه پردازش اکسپرس در حال انجام"][index];
   if (["under_review", "action_required"].includes(request.status) && journey.fundsReceived) return ["Funds received · under admin review", "وجه دریافت شد · در حال بررسی توسط مدیر"][index];
@@ -70,6 +72,8 @@ export function requestMilestones(request: ExchangeRequest, events: RequestEvent
 export function requestActivityLabel(eventType: string, locale: RequestLocale): string {
   const labels: Record<string, [string, string]> = {
     submitted: ["Customer submitted the request", "مشتری درخواست را ثبت کرد"],
+    pricing_revised: ["Admin revised the transfer amounts", "مدیر مبالغ انتقال را اصلاح کرد"],
+    pricing_accepted: ["Customer accepted the revised amounts", "مشتری مبالغ اصلاح‌شده را تأیید کرد"],
     await_funds: ["Payment approved · bank details released", "پرداخت تأیید و مشخصات بانکی نمایش داده شد"],
     receipt_uploaded: ["Customer sent a payment receipt", "مشتری رسید واریز را ارسال کرد"],
     payment_evidence: ["Customer sent a payment update", "مشتری اطلاعات واریز را ارسال کرد"],

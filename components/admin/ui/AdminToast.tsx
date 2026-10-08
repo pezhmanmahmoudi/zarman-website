@@ -3,13 +3,14 @@
 /**
  * AdminToast — replaces native alert().
  *
- * Uses the browser top layer, attached to the active dialog when one is open.
+ * Uses a fixed notification inside the active dialog's top layer, or the body.
+ * It has no imperative popover lifecycle that can fail when a row/dialog closes.
  *
  * Usage (via useAdminFeedback hook):
  *   const { showToast, toastProps } = useAdminFeedback();
  *   <AdminToast {...toastProps} />
  */
-import React, { useEffect, useRef, useSyncExternalStore } from "react";
+import React, { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
 import { getActiveAdminDialog, getServerAdminDialog, subscribeAdminDialogs } from "./admin-dialog-stack";
@@ -38,21 +39,18 @@ const TOAST_CLASS: Record<ToastType, string> = {
   info:    styles.toastInfo,
 };
 
+const subscribeHydration = () => () => {};
+const getHydrated = () => true;
+const getServerHydrated = () => false;
+
 export function AdminToast({ visible, type, message, onClose }: AdminToastProps) {
+  const hydrated = useSyncExternalStore(subscribeHydration, getHydrated, getServerHydrated);
   const activeDialog = useSyncExternalStore(subscribeAdminDialogs, getActiveAdminDialog, getServerAdminDialog);
-  const toastRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const toast = toastRef.current;
-    if (!visible || !toast) return;
-    if (typeof toast.showPopover === "function") toast.showPopover();
-    else toast.removeAttribute("popover");
-    return () => { if (toast.isConnected && typeof toast.hidePopover === "function" && toast.matches(":popover-open")) toast.hidePopover(); };
-  }, [visible, activeDialog]);
-  if (!visible || typeof document === "undefined") return null;
+  if (!visible || !hydrated) return null;
   const isFa = /[\u0600-\u06FF]/.test(message);
 
   return createPortal(
-    <div ref={toastRef} popover="manual" className={styles.container} role={type === "error" ? "alert" : "status"} aria-live={type === "error" ? "assertive" : "polite"} aria-atomic="true">
+    <div className={styles.container} role={type === "error" ? "alert" : "status"} aria-live={type === "error" ? "assertive" : "polite"} aria-atomic="true">
       <div className={`${styles.toast} ${TOAST_CLASS[type]} ${isFa ? styles.toastFa : ""}`} dir={isFa ? "rtl" : "ltr"}>
         <span className={styles.icon}>{TOAST_ICON[type]}</span>
         <span className={styles.message}>{message}</span>
@@ -60,7 +58,7 @@ export function AdminToast({ visible, type, message, onClose }: AdminToastProps)
           type="button"
           className={styles.close}
           onClick={onClose}
-          aria-label="Dismiss notification"
+          aria-label={isFa ? "بستن پیام" : "Dismiss notification"}
         >
           <X size={14} />
         </button>

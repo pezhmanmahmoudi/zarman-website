@@ -1,0 +1,1759 @@
+<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin recovery preview</title><style>body{margin:0} .AdminPageState_loadingContent {
+  display: grid;
+  gap: 1.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.AdminPageState_refreshStatus { display: flex; align-items: center; gap: 0.5rem; color: var(--text-soft, #526079); font-size: 0.875rem; }
+.AdminPageState_refreshNotice { display: flex; align-items: flex-start; gap: 0.875rem; margin-bottom: 1rem; padding: 1rem 1.25rem; border: 1px solid #f5d9ac; border-radius: 0.875rem; background: #fff9ef; color: #75420d; }
+.AdminPageState_refreshNotice > svg { flex-shrink: 0; margin-top: 0.125rem; }
+.AdminPageState_refreshNotice > div { flex: 1; min-width: 0; }
+.AdminPageState_refreshNotice strong { font-size: 0.875rem; }
+.AdminPageState_refreshNotice p { margin: 0.25rem 0 0; font-size: 0.8125rem; line-height: 1.6; }
+.AdminPageState_refreshNotice button { display: inline-flex; align-items: center; gap: 0.5rem; flex-shrink: 0; min-height: 2.75rem; padding: 0.5rem 0.875rem; border: 1px solid #d8b585; border-radius: 0.5rem; background: #fff; color: inherit; font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
+.AdminPageState_refreshNotice button:focus-visible { outline: 3px solid var(--accent, #4338ca); outline-offset: 3px; }
+.AdminPageState_refreshNotice button:disabled { cursor: wait; opacity: 0.6; }
+@media (max-width: 600px) { .AdminPageState_refreshNotice { flex-wrap: wrap; } .AdminPageState_refreshNotice button { margin-left: 2.125rem; } }
+
+.AdminPageState_loadingLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  color: var(--text-soft, #526079);
+  font-size: 0.875rem;
+}
+
+.AdminPageState_spinner {
+  flex-shrink: 0;
+  animation: spin 1s linear infinite;
+}
+
+.AdminPageState_metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.AdminPageState_skeletonCard,
+.AdminPageState_skeletonPanel {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+  padding: 1.5rem;
+  border: 1px solid var(--border-soft, #e3e8ef);
+  border-radius: 1rem;
+  background: var(--bg-card, #fff);
+}
+
+.AdminPageState_skeletonLine,
+.AdminPageState_skeletonValue,
+.AdminPageState_skeletonRow {
+  display: block;
+  border-radius: 0.375rem;
+  background: var(--bg-soft, #f0f3f7);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.AdminPageState_skeletonLine { width: 60%; height: 0.75rem; }
+.AdminPageState_skeletonValue { width: 40%; height: 1.75rem; }
+.AdminPageState_skeletonRow { width: 100%; height: 2.75rem; }
+
+.AdminPageState_errorCard {
+  width: min(100%, 36rem);
+  margin: clamp(1rem, 6vh, 4rem) auto;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid var(--border-soft, #e3e8ef);
+  border-radius: 1.25rem;
+  background: var(--bg-card, #fff);
+  text-align: center;
+}
+
+.AdminPageState_errorIcon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin: 0 auto 1.25rem;
+  border-radius: 1rem;
+  color: #b54708;
+  background: #fff4e5;
+}
+
+.AdminPageState_errorCard h1 {
+  margin: 0 0 0.75rem;
+  color: var(--text-main, #172234);
+  font-size: clamp(1.25rem, 3vw, 1.625rem);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.AdminPageState_errorCard p {
+  margin: 0;
+  color: var(--text-soft, #526079);
+  line-height: 1.7;
+}
+
+.AdminPageState_errorActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.AdminPageState_errorActions button,
+.AdminPageState_errorActions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--border-med, #cdd5df);
+  border-radius: 0.625rem;
+  color: var(--text-main, #172234);
+  background: var(--bg-card, #fff);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.AdminPageState_errorActions button {
+  border-color: var(--accent, #4338ca);
+  color: #fff;
+  background: var(--accent, #4338ca);
+}
+
+.AdminPageState_errorActions button:hover { background: var(--accent-hover, #3730a3); }
+.AdminPageState_errorActions a:hover { background: var(--bg-soft, #f0f3f7); }
+
+.AdminPageState_errorActions :is(button, a):focus-visible {
+  outline: 3px solid var(--accent, #4338ca);
+  outline-offset: 3px;
+}
+
+.AdminPageState_chartLoadingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 1.5rem;
+  min-width: 0;
+  margin-bottom: 1.5rem;
+}
+
+.AdminPageState_chartPlaceholder {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 340px;
+  border: 1px solid var(--border-soft, #e3e8ef);
+  border-radius: 1rem;
+  background: var(--bg-card, #fff);
+}
+
+@keyframes pulse { 50% { opacity: 0.45; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 960px) {
+  .AdminPageState_metricGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 420px) {
+  .AdminPageState_skeletonCard { padding: 1rem; }
+  .AdminPageState_errorActions { flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .AdminPageState_spinner,
+  .AdminPageState_skeletonLine,
+  .AdminPageState_skeletonValue,
+  .AdminPageState_skeletonRow { animation: none; }
+}
+
+/**
+ * AdminTable.module.css
+ * Shared table shell, cells, badges, action buttons, filters, and pagination
+ * for all admin panel tables.
+ */
+
+/* ── Scroll wrapper ────────────────────────────────────────── */
+.AdminTable_tableWrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-med, #e2e8f0) transparent;
+  border-radius: 0 0 1rem 1rem;
+  box-shadow: inset -10px 0 10px -10px rgba(0, 0, 0, 0.05);
+  width: 100%;
+}
+.AdminTable_tableWrap::-webkit-scrollbar { height: 5px; }
+.AdminTable_tableWrap::-webkit-scrollbar-track { background: transparent; }
+.AdminTable_tableWrap::-webkit-scrollbar-thumb {
+  background: var(--border-med, #e2e8f0);
+  border-radius: 99px;
+}
+
+/* ── Table base ───────────────────────────────────────────── */
+.AdminTable_table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.AdminTable_table thead tr {
+  border-bottom: 1px solid var(--border-med);
+  background: #f8fafc;
+}
+
+.AdminTable_table th {
+  padding: 0.75rem 1.25rem;
+  text-align: start;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-soft, #526078);
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.AdminTable_table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-main);
+  font-weight: 400;
+  vertical-align: middle;
+  transition: background-color 0.2s ease;
+}
+
+.AdminTable_table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.AdminTable_table tbody tr:hover td {
+  background-color: #fafbfe;
+}
+
+.AdminTable_table tbody tr:focus-within td { background-color: #f5f7ff; }
+.AdminTable_table tbody tr[data-selected="true"] td { background-color: #f0f3ff; }
+.AdminTable_tableWrap:focus-visible, .AdminTable_table :where(a, button, input, select):focus-visible {
+  outline: 2px solid var(--accent, #4338ca);
+  outline-offset: 3px;
+}
+
+.AdminTable_table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.AdminTable_cellMono {
+  font-family: var(--font-en-stack);
+  letter-spacing: 0.01em;
+}
+
+.AdminTable_cellDim {
+  color: var(--text-soft);
+}
+
+.AdminTable_cellSmall {
+  font-size: 0.75rem;
+}
+
+.AdminTable_cellActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+
+/* ── Compact pill-button group ─────────────────────────────── */
+.AdminTable_btnGroup {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.AdminTable_btnGroup .AdminTable_btnAction {
+  border-radius: 0;
+  border: none;
+  border-right: 1px solid var(--border-soft);
+  box-shadow: none;
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  gap: 5px;
+}
+
+.AdminTable_btnGroup .AdminTable_btnAction:last-child { border-right: none; }
+
+.AdminTable_btnGroup .AdminTable_btnAction:first-child {
+  border-top-left-radius: calc(0.5rem - 1px);
+  border-bottom-left-radius: calc(0.5rem - 1px);
+}
+
+.AdminTable_btnGroup .AdminTable_btnAction:last-child {
+  border-top-right-radius: calc(0.5rem - 1px);
+  border-bottom-right-radius: calc(0.5rem - 1px);
+}
+
+/* Stand-alone compact action button (icon + label) */
+.AdminTable_btnActionCompact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  height: auto;
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  gap: 3px;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.AdminTable_cellTruncate {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.AdminTable_cellRtl {
+  direction: rtl;
+  text-align: right;
+  font-family: var(--font-fa-stack, 'IRANSansX', 'Peyda', sans-serif);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.AdminTable_badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.AdminTable_badgePending  { color: #b45309;  background: #fef3c7; border: 1px solid #fde68a; }
+.AdminTable_badgeApproved { color: #09644e;  background: #e6f5ee; border: 1px solid #cee9dc; }
+.AdminTable_badgeRejected { color: #dc2626;  background: #fee2e2; border: 1px solid #fecaca; }
+.AdminTable_badgeReview   { color: #2563eb;  background: #dbeafe; border: 1px solid #bfdbfe; }
+.AdminTable_badgeArchived { color: #475569;  background: #f1f5f9; border: 1px solid #e2e8f0; }
+
+.AdminTable_badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.AdminTable_txBuy  { color: var(--accent); background: rgba(var(--accent-rgb), 0.1); border: 1px solid rgba(var(--accent-rgb), 0.2); }
+.AdminTable_txSell { color: var(--success); background: rgba(var(--success-rgb), 0.1); border: 1px solid rgba(var(--success-rgb), 0.2); }
+
+.AdminTable_btnAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.AdminTable_btnAction:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.AdminTable_btnAction:not(:disabled):active {
+  filter: brightness(0.97);
+}
+
+.AdminTable_btnApprove {
+  background: #ffffff;
+  color: #09644e;
+  border-color: #bbf7d0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.AdminTable_btnApprove:not(:disabled):hover {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.AdminTable_btnReject {
+  background: #ffffff;
+  color: #b4233d;
+  border-color: #fecaca;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.AdminTable_btnReject:not(:disabled):hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.AdminTable_btnArchive {
+  background: #ffffff;
+  color: #64748b;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.AdminTable_btnArchive:not(:disabled):hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.AdminTable_btnViewDocs {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+.AdminTable_btnViewDocs:not(:disabled):hover {
+  background: #dbeafe;
+}
+
+.AdminTable_stars {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--warning);
+}
+
+.AdminTable_starFilled { color: var(--warning); }
+.AdminTable_starEmpty  { color: var(--border-med); }
+
+.AdminTable_filterBar {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.AdminTable_searchInput {
+  flex: 1 1 100%;
+  min-width: 0;
+  width: 100%;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-med);
+  border-radius: 0.5rem;
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-family: var(--font-en-stack);
+  padding: 0.625rem 1rem;
+  height: 42px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.AdminTable_searchInput::placeholder {
+  color: var(--text-dim);
+}
+
+.AdminTable_searchInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
+
+/* .pagination / .paginationBtn kept for backward-compat with any direct users */
+.AdminTable_pagination {
+  flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  font-size: 0.75rem;
+  color: var(--text-soft);
+}
+
+.AdminTable_paginationBtn {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.375rem;
+  color: var(--text-main);
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.AdminTable_paginationBtn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-med);
+}
+
+.AdminTable_paginationBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.AdminTable_badgeCompact {
+  font-size: 0.75rem;
+  padding: 6px 12px;
+}
+
+.AdminTable_badgeArchivedMuted {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.AdminTable_rowTintWarning {
+  background: rgba(var(--warning-rgb), 0.02);
+}
+
+.AdminTable_rowTransparent {
+  background: transparent;
+}
+
+.AdminTable_cellStrong, .AdminTable_table td.AdminTable_cellStrong {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.AdminTable_cellSubtleTop {
+  margin-top: 2px;
+}
+
+.AdminTable_cellSmallEmail {
+  font-size: 0.8125rem;
+}
+
+.AdminTable_cellSmallPhone {
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.AdminTable_cellUpper {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.AdminTable_cellCapitalize {
+  text-transform: capitalize;
+}
+
+.AdminTable_cellProcessed {
+  font-size: 0.75rem;
+}
+
+/* ── Wrapping text cells ── */
+.AdminTable_cellWrap {
+  max-width: 160px;
+  white-space: normal;
+}
+
+.AdminTable_cellWrapNarrow {
+  max-width: 140px;
+  white-space: normal;
+}
+
+/* ── Action button cluster inside a table cell ── */
+.AdminTable_cellActionGroup {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Dim text used for empty cell placeholders ── */
+.AdminTable_cellEmpty {
+  color: var(--text-dim);
+}
+
+/* Recipient name cell */
+.AdminTable_cellRecipient {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+/* ── Discounts cell ── */
+.AdminTable_discountCell {
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.AdminTable_discountPromo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+}
+
+.AdminTable_discountPromoCode {
+  font-weight: 700;
+}
+
+.AdminTable_discountAmount {
+  color: var(--success);
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.AdminTable_discountLoyalty {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--warning);
+}
+
+.AdminTable_discountLoyaltyLabel {
+  font-weight: 600;
+}
+
+.AdminTable_discountLoyaltyAmount {
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+/* ── Customer code sub-line inside a name cell ── */
+.AdminTable_cellCodeMini {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  font-family: var(--font-en-stack);
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+/* Constrained-width cell helpers — do not override padding on narrow cells */
+.AdminTable_cellMax150 { max-width: 150px; }
+.AdminTable_cellMax180 { max-width: 180px; }
+.AdminTable_cellMax280 { max-width: 280px; }
+.AdminTable_cellMax300 { max-width: 300px; }
+.AdminTable_cellMax320 { max-width: 320px; }
+
+.AdminTable_tableWrapTopBorder {
+  border-top: 1px solid var(--border-soft);
+}
+
+.AdminTable_tableWrapTopFlat {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* tableWrapNoBorder — kept for potential future use */
+.AdminTable_tableWrapNoBorder {
+  border-top: 1px solid var(--border-soft);
+}
+
+.AdminTable_theadTransparent {
+  background: transparent;
+}
+
+.AdminTable_codeChip {
+  background: var(--bg-soft);
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--text-soft);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-en-stack);
+  border: 1px solid var(--border-soft);
+  font-size: 0.75rem;
+}
+
+.AdminTable_quotePending {
+  border-right: 3px solid var(--border-med);
+  padding-right: 12px;
+  font-style: italic;
+  color: var(--text-soft);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.AdminTable_quoteHistory {
+  border-right: 3px solid var(--border-soft);
+  padding-right: 12px;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.AdminTable_quoteUser {
+  border-right: 2px solid var(--border-soft);
+  padding-right: 10px;
+  color: var(--text-soft);
+  font-size: 0.875rem;
+}
+
+.AdminTable_iconShiftRight {
+  margin-right: 2px;
+}
+
+.AdminTable_paginationFooter {
+  padding: 0.875rem 1rem;
+  border-top: 1px solid var(--border-soft);
+  background: var(--bg-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.AdminTable_paginationNote {
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.AdminTable_paginationSummary,
+.AdminTable_paginationPages,
+.AdminTable_pageSizeControl {
+  flex-wrap: wrap;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.AdminTable_pageSizeControl {
+  color: var(--text-soft);
+  font-size: 0.75rem;
+}
+
+.AdminTable_pageSizeSelect {
+  width: 64px;
+  min-height: 34px;
+}
+
+.AdminTable_paginationIconBtn,
+.AdminTable_paginationNumber {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 0.375rem;
+  background: #ffffff;
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.AdminTable_paginationIconBtn:hover:not(:disabled),
+.AdminTable_paginationNumber:hover:not(:disabled) {
+  border-color: var(--border-med);
+  background: var(--bg-hover);
+}
+
+.AdminTable_paginationIconBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.AdminTable_paginationNumberActive {
+  color: #ffffff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.AdminTable_paginationEllipsis {
+  width: 22px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+/* ── History panel tab bar ── */
+.AdminTable_historyTabBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 1.25rem;
+  border-bottom: 1px solid var(--border-soft);
+  flex-wrap: wrap;
+  background: #ffffff;
+  border-radius: 1rem 1rem 0 0;
+}
+
+.AdminTable_historyTabBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  color: var(--text-soft);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.AdminTable_historyTotalCount {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--bg-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 100px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.AdminTable_historyTabs {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.AdminTable_historyTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+  margin-bottom: -1px;
+}
+
+.AdminTable_historyTab:hover {
+  color: var(--text-main);
+  border-bottom-color: var(--border-med);
+}
+
+.AdminTable_historyTabActive {
+  color: var(--accent);
+  font-weight: 700;
+  border-bottom-color: var(--accent);
+}
+
+.AdminTable_historyTabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 100px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  border: 1px solid var(--border-soft);
+}
+
+.AdminTable_historyTabCountActive {
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.2);
+}
+
+/* ── History filter bar ── */
+.AdminTable_historyFilters {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-soft);
+  flex-wrap: wrap;
+}
+
+.AdminTable_historyFilterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.AdminTable_historyFilterLabel {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.AdminTable_historyFilterSelect {
+  width: 160px;
+  min-height: 34px;
+}
+
+.AdminTable_historyFilterDivider {
+  width: 1px;
+  height: 32px;
+  background: var(--border-med);
+  align-self: flex-end;
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+
+.AdminTable_historyDateRange {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.AdminTable_historyDateRange > div { width: auto; flex: 0 1 160px; min-width: 0; }
+
+.AdminTable_historyDatePicker {
+  width: 138px;
+  min-height: 34px;
+}
+
+.AdminTable_historyDateRangeSep {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.AdminTable_historyApplyBtn {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 0.6875rem;
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+  border-radius: 0.375rem;
+}
+
+.AdminTable_historyApplyBtn:not(:disabled):hover {
+  opacity: 0.88;
+}
+
+.AdminTable_historyResetBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  height: 34px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  background: transparent;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+  align-self: flex-end;
+}
+
+.AdminTable_historyResetBtn:hover {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.AdminTable_transactionFilters {
+  display: flex;
+  align-items: end;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-top: 1px solid var(--border-soft);
+  background: #ffffff;
+  flex-wrap: wrap;
+}
+
+.AdminTable_filterTitle {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.4rem;
+  color: var(--text-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.AdminTable_filterControl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--text-soft);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.AdminTable_filterControl input {
+  height: 36px;
+  padding: 0 0.65rem;
+  border: 1px solid var(--border-med);
+  border-radius: 0.375rem;
+  background: #ffffff;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.AdminTable_filterSelect {
+  width: 170px;
+  min-height: 36px;
+}
+
+.AdminTable_filterDatePicker {
+  width: 160px;
+  min-height: 36px;
+}
+
+.AdminTable_bulkActionBar {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  border-top: 1px solid #bfdbfe;
+  border-bottom: 1px solid #bfdbfe;
+  background: #eff6ff;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
+}
+
+.AdminTable_bulkActionBar > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 170px;
+  font-size: 0.75rem;
+}
+
+.AdminTable_bulkActionBar > div:first-child span {
+  color: var(--text-soft);
+  font-size: 0.6875rem;
+}
+
+.AdminTable_bulkActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.AdminTable_bulkMessageError,
+.AdminTable_bulkMessageSuccess {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.AdminTable_bulkMessageError { color: #b91c1c; }
+.AdminTable_bulkMessageSuccess { color: #047857; }
+
+/* Row hover already handled via .table tbody tr:hover td above */
+
+
+/* کوچک کردن پدینگ جدول‌ها فقط در صفحه‌های موبایل */
+@media (max-width: 900px) {
+  .AdminTable_historyTabBar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    padding: 0.75rem 1rem 0;
+  }
+
+  .AdminTable_historyTabs {
+    width: 100%;
+    overflow-x: auto;
+    gap: 0;
+  }
+
+  .AdminTable_historyTab {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.6875rem;
+  }
+
+  .AdminTable_historyFilters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.875rem;
+    padding: 0.875rem 1rem 1rem;
+  }
+
+  .AdminTable_historyFilterGroup {
+    width: 100%;
+  }
+
+  .AdminTable_historyFilterDivider {
+    display: none;
+  }
+
+  .AdminTable_historyDateRange {
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .AdminTable_historyDatePicker {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 calc(50% - 0.25rem);
+  }
+
+  .AdminTable_historyApplyBtn {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .AdminTable_historyResetBtn {
+    width: 100%;
+    justify-content: center;
+    align-self: stretch;
+    min-height: 34px;
+    border: 1px solid var(--border-soft);
+    border-radius: 0.375rem;
+    background: var(--bg-card);
+  }
+
+  .AdminTable_historyResetBtn:hover {
+    background: var(--bg-hover);
+    color: #dc2626;
+  }
+
+  .AdminTable_paginationFooter,
+  .AdminTable_bulkActionBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .AdminTable_paginationSummary,
+  .AdminTable_paginationPages {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .AdminTable_paginationPages {
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding-bottom: 2px;
+  }
+
+  .AdminTable_transactionFilters > .AdminTable_filterControl {
+    flex: 1 1 150px;
+  }
+
+  .AdminTable_filterSelect {
+    width: 100%;
+  }
+
+  .AdminTable_filterControl input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .AdminTable_bulkActions {
+    width: 100%;
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+
+  .AdminTable_table th {
+    padding: 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .AdminTable_table td {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .AdminTable_btnAction {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .AdminTable_table td, .AdminTable_table tbody tr, .AdminTable_btnAction, .AdminTable_btnActionCompact { transition: none; }
+}
+
+.AdminWorkspace_settings { display: grid; gap: 1.25rem; min-width: 0; }
+.AdminWorkspace_description { color: var(--text-soft, #526078); font-size: .875rem; margin: 0; line-height: 1.6; }
+.AdminWorkspace_error { padding: .85rem 1rem; border: 1px solid #efc2cb; border-radius: .75rem; background: #fff3f5; color: #92344a; font-size: .875rem; }
+.AdminWorkspace_header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+.AdminWorkspace_header h1 { margin: 0; color: var(--text-main); font-size: 1.75rem; font-weight: 700; letter-spacing: -.035em; }
+.AdminWorkspace_header p { margin: .4rem 0 0; color: var(--text-soft); font-size: .875rem; }
+.AdminWorkspace_headerActions { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.AdminWorkspace_tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--border-soft); }
+.AdminWorkspace_tabs > :is(a, button) { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 48px; padding: .75rem 1rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--text-soft); text-decoration: none; font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; margin-bottom: -1px; }
+.AdminWorkspace_tabs > [aria-current="page"], .AdminWorkspace_tabs > [aria-pressed="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.AdminWorkspace_tabs span { border-radius: .4rem; background: rgba(var(--accent-rgb), .07); padding: .15rem .4rem; font-size: .75rem; font-variant-numeric: tabular-nums; }
+.AdminWorkspace_panel { border: 1px solid var(--border-soft); border-radius: 1rem; background: var(--bg-card, white); box-shadow: 0 2px 5px rgb(23 32 51 / 3%); min-width: 0; }
+.AdminWorkspace_panel[hidden] { display: none; }
+.AdminWorkspace_toolbar { padding: .75rem 1.25rem; display: flex; gap: 1rem; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-soft); }
+.AdminWorkspace_filters { display: flex; flex-wrap: wrap; gap: .25rem; min-width: 0; }
+.AdminWorkspace_filters :is(button, a) { display: inline-flex; align-items: center; gap: .5rem; border: 1px solid transparent; border-radius: .5rem; padding: .5rem .65rem; min-height: 44px; background: transparent; color: var(--text-soft); font: inherit; font-size: .8125rem; font-weight: 500; cursor: pointer; text-decoration: none; }
+.AdminWorkspace_filters button[aria-pressed="true"], .AdminWorkspace_filters a[aria-current="page"] { color: var(--accent); border-color: rgba(var(--accent-rgb), .15); background: rgba(var(--accent-rgb), .065); font-weight: 600; }
+.AdminWorkspace_filters span { font-size: .75rem; font-variant-numeric: tabular-nums; }
+.AdminWorkspace_recordCount { flex-shrink: 0; color: var(--text-soft); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.AdminWorkspace_search { display: flex; align-items: center; gap: .5rem; padding: 0 .8rem; min-height: 44px; border-radius: .625rem; border: 1px solid var(--border-med); color: var(--text-soft); background: white; min-width: 0; }
+.AdminWorkspace_search input { background: transparent; border: 0; color: var(--text-main); min-width: 0; width: 100%; font: inherit; font-size: .875rem; outline: none; height: 42px; }
+.AdminWorkspace_search > svg { flex-shrink: 0; }
+.AdminWorkspace_search:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.AdminWorkspace_searchForm { display: flex; gap: .5rem; flex: 1 1 280px; max-width: 480px; min-width: 0; }
+.AdminWorkspace_searchForm .AdminWorkspace_search { flex: 1; }
+.AdminWorkspace_historyControls { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; padding: 1rem 1.25rem; }
+.AdminWorkspace_historyControls > .AdminWorkspace_search { flex: 1 1 250px; max-width: 480px; }
+.AdminWorkspace_filterField { display: grid; gap: .4rem; min-width: 0; }
+.AdminWorkspace_fieldLabel { color: var(--text-soft); font-size: .75rem; font-weight: 500; }
+.AdminWorkspace_select { width: 180px; min-width: 0; }
+.AdminWorkspace_select button { min-height: 44px; font-size: .8125rem; border-radius: .625rem; }
+.AdminWorkspace_datePanel { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; padding: 1rem 1.25rem; border-top: 1px solid var(--border-soft); background: #f8fafc; }
+.AdminWorkspace_datePanel[hidden] { display: none; }
+.AdminWorkspace_datePanel .AdminWorkspace_filterField { flex: 0 1 180px; }
+.AdminWorkspace_datePicker { width: 100%; }
+.AdminWorkspace_datePicker > button { min-height: 44px; font-size: .8125rem; border-radius: .625rem; }
+.AdminWorkspace_dateError { flex-basis: 100%; margin: 0; color: #9e3349; font-size: .8125rem; }
+.AdminWorkspace_bulkBar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; padding: .75rem 1.25rem; background: rgba(var(--accent-rgb), .045); border-top: 1px solid var(--border-soft); font-size: .8125rem; }
+.AdminWorkspace_bulkBar > div:first-child { display: grid; gap: .2rem; }
+.AdminWorkspace_bulkBar > div:first-child span { color: var(--text-soft); font-size: .75rem; }
+.AdminWorkspace_tableScroll { border-radius: 0 0 1rem 1rem; box-shadow: none; }
+.AdminWorkspace_table.AdminWorkspace_table { min-width: 0; font-size: .875rem; }
+.AdminWorkspace_table.AdminWorkspace_table th { text-transform: none; letter-spacing: 0; padding: .75rem 1rem; font-size: .75rem; background: #f8fafc; border-top: 1px solid var(--border-soft); }
+.AdminWorkspace_table.AdminWorkspace_table td { padding: 1rem; }
+.AdminWorkspace_table .AdminWorkspace_selectionCell { width: 52px; padding: .25rem; }
+.AdminWorkspace_table .AdminWorkspace_selectionCell + .AdminWorkspace_identityCell { padding-inline-start: .5rem; }
+.AdminWorkspace_table .AdminWorkspace_identityCell { min-width: 180px; max-width: 300px; }
+.AdminWorkspace_customer { color: var(--text-main, #172033); text-decoration: none; line-height: 1.45; overflow-wrap: anywhere; }
+.AdminWorkspace_customer strong { font-weight: 700; font-size: .9375rem; }
+a.AdminWorkspace_customer:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.AdminWorkspace_identityMeta { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .35rem; font-size: .75rem; color: var(--text-soft); }
+.AdminWorkspace_priority { padding: .1rem .35rem; border-radius: .3rem; background: #fff4df; color: #835809; font-size: .6875rem; font-weight: 600; }
+.AdminWorkspace_table :is(.AdminWorkspace_numberCell, .AdminWorkspace_moneyHeading) { text-align: end; font-variant-numeric: tabular-nums; }
+.AdminWorkspace_table .AdminWorkspace_numberCell { white-space: nowrap; }
+.AdminWorkspace_table time { display: grid; gap: .25rem; }
+.AdminWorkspace_meta { display: block; color: var(--text-soft); font-size: .75rem; }
+.AdminWorkspace_detail { display: block; margin-top: .4rem; color: var(--text-soft); font-size: .75rem; }
+.AdminWorkspace_timeZone { display: block; margin-top: .2rem; font-size: .6875rem; font-weight: 400; }
+.AdminWorkspace_status { display: inline-flex; align-items: center; gap: .4rem; padding: .35rem .6rem; border-radius: .5rem; color: #475569; background: #f1f5f9; font-size: .75rem; font-weight: 600; line-height: 1.5; }
+.AdminWorkspace_status > span { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
+.AdminWorkspace_status[data-stage="review"] { color: #6341a4; background: #f1ebff; }
+.AdminWorkspace_status[data-stage="funding"], .AdminWorkspace_status[data-stage="refund"] { color: #87500c; background: #fff4df; }
+.AdminWorkspace_status[data-stage="ready"], .AdminWorkspace_status[data-stage="success"] { color: #09644e; background: #e6f5ee; }
+.AdminWorkspace_status[data-stage="rejected"] { color: #9e3349; background: #fff0f3; }
+.AdminWorkspace_rowActions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: .4rem; min-width: 205px; }
+.AdminWorkspace_rowActions .AdminWorkspace_action { max-width: 175px; }
+.AdminWorkspace_action, .AdminWorkspace_detailsToggle { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 44px; padding: .5rem .85rem; border: 1px solid var(--border-med); border-radius: .625rem; background: white; color: var(--text-main); font: inherit; font-size: .8125rem; line-height: 1.35; font-weight: 600; text-decoration: none; cursor: pointer; transition: background-color 150ms, border-color 150ms, color 150ms; }
+.AdminWorkspace_action:hover, .AdminWorkspace_detailsToggle:hover { background: #f6f7fc; border-color: #b8c2d8; color: var(--accent); }
+.AdminWorkspace_action:disabled { opacity: .6; cursor: wait; }
+.AdminWorkspace_action[data-tone="danger"] { color: #a43239; border-color: #efc2cb; background: #fff5f5; }
+.AdminWorkspace_rejectAction { color: #b4233d; border-color: #efc2cb; }
+.AdminWorkspace_rejectAction:hover { color: #9e1931; background: #fff3f5; border-color: #e4a6b3; }
+.AdminWorkspace_action[aria-expanded="true"] { background: rgba(var(--accent-rgb), .07); border-color: rgba(var(--accent-rgb), .3); color: var(--accent); }
+.AdminWorkspace_detailsToggle { background: transparent; border-color: transparent; color: var(--accent); min-width: 52px; }
+.AdminWorkspace_primaryAction { background: var(--accent); color: white; border-color: var(--accent); }
+.AdminWorkspace_primaryAction:hover { background: var(--accent); color: white; filter: brightness(.96); }
+.AdminWorkspace_checkTarget { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; cursor: pointer; }
+.AdminWorkspace_checkTarget input { width: 17px; height: 17px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.AdminWorkspace_checkTarget input:disabled { cursor: not-allowed; }
+.AdminWorkspace_mobileSelection, .AdminWorkspace_mobileLabel { display: none; }
+.AdminWorkspace_empty { padding: 3rem 1.5rem; text-align: center; color: var(--text-soft); display: grid; justify-items: center; gap: .7rem; border-top: 1px solid var(--border-soft); }
+.AdminWorkspace_empty strong { color: var(--text-main); font-size: 1rem; }
+.AdminWorkspace_empty p { margin: 0; font-size: .875rem; }
+.AdminWorkspace_srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.AdminWorkspace_panel :where(a, button, input, [tabindex]):focus-visible, .AdminWorkspace_tabs :focus-visible, .AdminWorkspace_header :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* A bounded reading/editing surface, outside the table's scroll container. */
+.AdminWorkspace_drawer { --admin-drawer-width: min(100vw, 600px); display: flex; flex-direction: column; }
+.AdminWorkspace_drawerHeader { position: sticky; top: 0; z-index: 1; display: flex; align-items: start; justify-content: space-between; gap: 1rem; padding: 1.5rem; border-bottom: 1px solid var(--border-soft); background: white; }
+.AdminWorkspace_drawerHeader > div { min-width: 0; }
+.AdminWorkspace_eyebrow { margin: 0 0 .5rem; font-size: .75rem; color: var(--text-soft); }
+.AdminWorkspace_drawerHeader h2 { margin: 0; color: var(--text-main); font-size: 1.25rem; line-height: 1.4; font-weight: 700; overflow-wrap: anywhere; letter-spacing: -.02em; }
+.AdminWorkspace_drawerReference { display: block; overflow-wrap: anywhere; margin-top: .4rem; font-size: .8125rem; color: var(--text-soft); }
+.AdminWorkspace_iconButton { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border: 1px solid var(--border-soft); border-radius: .625rem; background: white; color: var(--text-soft); cursor: pointer; }
+.AdminWorkspace_iconButton:hover { background: #f6f7fc; color: var(--text-main); }
+.AdminWorkspace_drawerBody { padding: 1.25rem 1.5rem; display: grid; gap: 1.5rem; }
+.AdminWorkspace_detailStatus { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
+.AdminWorkspace_detailStatus time { color: var(--text-soft); font-size: .75rem; }
+.AdminWorkspace_detailSection { min-width: 0; }
+.AdminWorkspace_detailSection + .AdminWorkspace_detailSection { border-top: 1px solid var(--border-soft); padding-top: 1.25rem; }
+.AdminWorkspace_detailSection h3 { margin: 0 0 1rem; font-size: .875rem; color: var(--text-main); font-weight: 650; }
+.AdminWorkspace_facts { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem 1.5rem; }
+.AdminWorkspace_facts > div { min-width: 0; }
+.AdminWorkspace_facts > [data-wide] { grid-column: 1 / -1; }
+.AdminWorkspace_facts dt, .AdminWorkspace_amountSummary dt { color: var(--text-soft); font-size: .75rem; margin-bottom: .4rem; }
+.AdminWorkspace_facts dd { margin: 0; color: var(--text-main); font-size: .875rem; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+.AdminWorkspace_amountSummary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin: 0; }
+.AdminWorkspace_amountSummary > div { min-width: 0; border: 1px solid var(--border-soft); border-radius: .75rem; background: #f8fafc; padding: 1rem; }
+.AdminWorkspace_amountSummary dd { margin: 0; font-size: 1rem; font-weight: 600; color: var(--text-main); overflow-wrap: anywhere; }
+.AdminWorkspace_currency { display: block; margin-top: .2rem; color: var(--text-soft); font-size: .75rem; font-weight: 400; }
+.AdminWorkspace_textLink { display: inline-flex; align-items: center; min-height: 44px; margin-top: .75rem; color: var(--accent); font-size: .8125rem; font-weight: 600; text-underline-offset: 3px; }
+.AdminWorkspace_detailSection > .AdminWorkspace_action { margin-top: .5rem; }
+.AdminWorkspace_drawerFooter { position: sticky; bottom: 0; margin-top: auto; padding: 1rem 1.5rem max(1rem, env(safe-area-inset-bottom)); border-top: 1px solid var(--border-soft); background: white; }
+.AdminWorkspace_drawerFooter > .AdminWorkspace_action { width: 100%; }
+@container admin-data (max-width: 1150px) {
+  .AdminWorkspace_table.AdminWorkspace_table, .AdminWorkspace_table tbody { display: block; }
+  .AdminWorkspace_table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); }
+  .AdminWorkspace_table thead .AdminWorkspace_checkTarget { visibility: hidden; }
+  .AdminWorkspace_table .AdminWorkspace_recordRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; padding: 1.25rem; border-top: 1px solid var(--border-soft); position: relative; }
+  .AdminWorkspace_table.AdminWorkspace_table .AdminWorkspace_recordRow > td { display: block; min-width: 0; max-width: none; padding: 0; border: 0; white-space: normal; }
+  .AdminWorkspace_table.AdminWorkspace_table .AdminWorkspace_identityCell { grid-column: 1 / -1; padding-inline-end: 40px; }
+  .AdminWorkspace_table .AdminWorkspace_numberCell { text-align: start; }
+  .AdminWorkspace_mobileLabel { display: block; margin-bottom: .35rem; color: var(--text-soft); font-size: .75rem; font-weight: 400; }
+
+  .AdminWorkspace_table .AdminWorkspace_actionsCell { grid-column: 1 / -1; }
+  .AdminWorkspace_table.AdminWorkspace_table .AdminWorkspace_selectionCell { position: absolute; inset-inline-end: .75rem; top: .75rem; width: auto; }
+  .AdminWorkspace_rowActions { justify-content: flex-start; min-width: 0; padding-top: .75rem; border-top: 1px solid var(--border-soft); }
+  .AdminWorkspace_rowActions .AdminWorkspace_action { max-width: none; }
+  .AdminWorkspace_mobileSelection { display: flex; align-items: center; gap: .25rem; padding-inline: .5rem; border-top: 1px solid var(--border-soft); font-size: .75rem; color: var(--text-soft); }
+  .AdminWorkspace_table.AdminWorkspace_table tbody tr:hover td { background: transparent; }
+  .AdminWorkspace_table .AdminWorkspace_recordRow:hover { background: #fafbfe; }
+  .AdminWorkspace_table .AdminWorkspace_recordRow[data-selected="true"] { background: #f0f3ff; }
+}
+@media (max-width: 640px) {
+  .AdminWorkspace_header { align-items: flex-start; }
+  .AdminWorkspace_toolbar { align-items: start; flex-direction: column; gap: .5rem; padding: .65rem .75rem; }
+  .AdminWorkspace_toolbar > .AdminWorkspace_recordCount { display: none; }
+  .AdminWorkspace_tabs > :is(a, button) { flex: 1; padding-inline: .5rem; }
+  .AdminWorkspace_historyControls { padding: .75rem; gap: .5rem; }
+  .AdminWorkspace_searchForm, .AdminWorkspace_historyControls > .AdminWorkspace_search { flex-basis: 100%; max-width: none; }
+  .AdminWorkspace_select { flex: 1; width: auto; min-width: 150px; }
+  .AdminWorkspace_datePanel { padding: .75rem; }
+  .AdminWorkspace_datePanel .AdminWorkspace_filterField { flex: 1 1 125px; }
+  .AdminWorkspace_datePanel > .AdminWorkspace_action { width: 100%; }
+  .AdminWorkspace_bulkBar { padding: .75rem; }
+  .AdminWorkspace_drawerHeader, .AdminWorkspace_drawerBody { padding: 1.1rem; }
+  .AdminWorkspace_drawerFooter { padding-inline: 1.1rem; }
+}
+@media (max-width: 380px) {
+  .AdminWorkspace_amountSummary, .AdminWorkspace_facts { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .AdminWorkspace_action, .AdminWorkspace_detailsToggle { transition: none; }
+}
+
+.AdminWorkspace_dataViewport { container: admin-data / inline-size; min-width: 0; }
+.AdminWorkspace_numberCell { font-variant-numeric: tabular-nums; }
+.AdminWorkspace_dataCell { overflow-wrap: anywhere; }
+.AdminWorkspace_panelTitle { margin: 0; color: var(--text-main); font-size: .95rem; font-weight: 650; }
+.AdminWorkspace_jsonValue { margin: 0; padding: 1rem; border: 1px solid var(--border-soft); border-radius: .75rem; background: #f8fafc; color: var(--text-main); font-size: .8rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.AdminWorkspace_editorForm { display: grid; gap: 1.25rem; }
+.AdminWorkspace_editorFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; border: 0; padding: 0; margin: 0; min-width: 0; }
+.AdminWorkspace_editorFields label { display: grid; gap: .5rem; color: var(--text-soft); font-size: .8125rem; min-width: 0; }
+.AdminWorkspace_editorFields input { width: 100%; min-width: 0; min-height: 46px; padding: .65rem .75rem; border: 1px solid var(--border-med); border-radius: .625rem; background: white; color: var(--text-main); font: inherit; font-size: 1rem; }
+.AdminWorkspace_editorFields > [data-wide] { grid-column: 1 / -1; }
+@media (max-width: 450px) { .AdminWorkspace_editorFields { grid-template-columns: minmax(0, 1fr); } }
+
+.AdminWorkspace_activeControl { background: rgba(var(--accent-rgb), .07); border-color: rgba(var(--accent-rgb), .3); color: var(--accent); }
+.AdminWorkspace_spinner { animation: admin-spin 1s linear infinite; }
+@keyframes admin-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .AdminWorkspace_spinner { animation: none; } }
+
+.AdminDialogSurface_surface {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  height: 100dvh;
+  max-height: none;
+  padding: max(1.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(1.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
+  margin: 0;
+  border: 0;
+  overflow: hidden;
+  background: transparent;
+  color: var(--text-main, #172033);
+  font-family: var(--font-en-stack, system-ui, sans-serif);
+  box-sizing: border-box;
+}
+
+.AdminDialogSurface_surface[open] { display: flex; align-items: center; justify-content: center; }
+.AdminDialogSurface_surface::backdrop { background: rgb(15 23 42 / 48%); }
+.AdminDialogSurface_surface *, .AdminDialogSurface_surface *::before, .AdminDialogSurface_surface *::after { box-sizing: border-box; }
+
+.AdminDialogSurface_panel {
+  width: min(100%, 560px);
+  min-width: 0;
+  max-height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--admin-dialog-background, var(--bg-card, #fff));
+  border: 1px solid var(--border-soft, #e3e8ef);
+  border-radius: 1rem;
+  box-shadow: 0 24px 72px rgb(15 23 42 / 24%);
+  outline: none;
+  animation: appear 160ms ease-out;
+}
+
+.AdminDialogSurface_surface[data-variant^="drawer"] { padding: 0; }
+.AdminDialogSurface_surface[data-variant="drawer-left"] { justify-content: flex-start; }
+.AdminDialogSurface_surface[data-variant="drawer-right"] { justify-content: flex-end; }
+.AdminDialogSurface_surface[data-variant^="drawer"] > .AdminDialogSurface_panel {
+  width: var(--admin-drawer-width, min(88vw, 480px));
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
+}
+
+.AdminDialogSurface_surface :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--accent, #4338ca);
+  outline-offset: 3px;
+}
+
+@keyframes appear { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 640px) {
+  .AdminDialogSurface_surface { padding: 0.75rem; }
+  .AdminDialogSurface_surface[data-variant="modal"] { align-items: flex-end; }
+  .AdminDialogSurface_surface[data-variant="drawer-right"] > .AdminDialogSurface_panel { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .AdminDialogSurface_panel { animation: none; } }
+
+.AdminFieldEditor_valueGroup { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.65rem; min-width: 0; }
+.AdminFieldEditor_value { color: var(--text-main, #172033); font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.AdminFieldEditor_valueGroup[data-variant="reference"] .AdminFieldEditor_value { color: var(--accent, #4f46e5); font-family: var(--font-mono, monospace); font-size: 0.78rem; letter-spacing: 0.02em; }
+.AdminFieldEditor_valueGroup[data-variant="customer"] .AdminFieldEditor_value { color: var(--text-soft, #64748b); font-family: var(--font-mono, monospace); font-size: 0.75rem; }
+.AdminFieldEditor_editButton { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; min-height: 44px; padding: 0.4rem 0.6rem; border: 1px solid var(--border-soft, #e3e8ef); border-radius: 0.5rem; background: white; color: var(--text-soft, #53627a); font: inherit; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+.AdminFieldEditor_editButton:hover { color: var(--accent, #4f46e5); background: var(--bg-soft, #f4f6fb); }
+.AdminFieldEditor_editButton:focus-visible { outline: 3px solid var(--accent, #4f46e5); outline-offset: 2px; }
+.AdminFieldEditor_dialog { width: min(100%, 480px); }
+.AdminFieldEditor_form { display: flex; flex-direction: column; margin: 0; text-align: left; white-space: normal; }
+.AdminFieldEditor_header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem 1rem; border-bottom: 1px solid var(--border-soft, #e3e8ef); }
+.AdminFieldEditor_title { margin: 0; color: var(--text-main, #172033); font-size: 1.1rem; line-height: 1.4; font-weight: 650; }
+.AdminFieldEditor_description { margin: 0.45rem 0 0; color: var(--text-soft, #64748b); font-size: 0.85rem; line-height: 1.5; }
+.AdminFieldEditor_closeButton { display: inline-flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; height: 44px; margin: -0.55rem -0.65rem 0 0; padding: 0; border: 0; border-radius: 0.5rem; color: var(--text-soft, #64748b); background: transparent; cursor: pointer; }
+.AdminFieldEditor_closeButton:hover { background: var(--bg-soft, #f4f6fb); }
+.AdminFieldEditor_body { padding: 1.25rem 1.5rem 1.5rem; }
+.AdminFieldEditor_currentValue { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem 1rem; margin-bottom: 1.35rem; padding: 0.85rem 1rem; border: 1px solid var(--border-soft, #e3e8ef); border-radius: 0.6rem; background: var(--bg-soft, #f7f8fb); color: var(--text-soft, #64748b); font-size: 0.8rem; }
+.AdminFieldEditor_currentValue strong { color: var(--text-main, #172033); font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.AdminFieldEditor_currentValue strong span { font-weight: 400; font-size: 0.75rem; color: var(--text-soft, #64748b); }
+.AdminFieldEditor_label { display: block; margin: 0 0 0.5rem; color: var(--text-main, #172033); font-size: 0.85rem; font-weight: 600; }
+.AdminFieldEditor_inputWrap { position: relative; display: flex; align-items: center; }
+.AdminFieldEditor_input { display: block; width: 100%; min-width: 0; min-height: 50px; padding: 0.75rem 1rem; border: 1px solid var(--border-strong, #b9c4d5); border-radius: 0.6rem; background: var(--bg-card, #fff); color: var(--text-main, #172033); font: inherit; font-size: 16px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.AdminFieldEditor_inputWrap:has(.AdminFieldEditor_suffix) .AdminFieldEditor_input { padding-right: 4.5rem; }
+.AdminFieldEditor_input:focus { border-color: var(--accent, #4f46e5); outline: 3px solid rgb(79 70 229 / 16%); outline-offset: 0; }
+.AdminFieldEditor_input[aria-invalid="true"] { border-color: var(--danger, #dc2626); }
+.AdminFieldEditor_suffix { position: absolute; right: 1rem; pointer-events: none; color: var(--text-soft, #64748b); font-size: 0.8rem; font-weight: 600; }
+.AdminFieldEditor_error { margin: 0.7rem 0 0; color: var(--danger, #b91c1c); font-size: 0.85rem; line-height: 1.5; overflow-wrap: anywhere; }
+.AdminFieldEditor_footer { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 0.65rem; padding: 1rem 1.5rem; padding-bottom: max(1rem, env(safe-area-inset-bottom)); border-top: 1px solid var(--border-soft, #e3e8ef); background: var(--bg-card, #fff); }
+.AdminFieldEditor_cancelButton, .AdminFieldEditor_saveButton { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 48px; padding: 0.75rem 1.2rem; border: 1px solid var(--border-soft, #dfe4ed); border-radius: 0.55rem; font: inherit; font-size: 0.875rem; font-weight: 600; line-height: 1.25; cursor: pointer; }
+.AdminFieldEditor_cancelButton { background: var(--bg-card, #fff); color: var(--text-main, #172033); }
+.AdminFieldEditor_cancelButton:hover { background: var(--bg-soft, #f7f8fb); }
+.AdminFieldEditor_saveButton { border-color: var(--accent, #4f46e5); background: var(--accent, #4f46e5); color: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 8%); }
+.AdminFieldEditor_saveButton:hover { filter: brightness(0.95); }
+.AdminFieldEditor_form :disabled { cursor: wait; opacity: 0.65; }
+.AdminFieldEditor_spinner { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 640px), (pointer: coarse) {
+  .AdminFieldEditor_editButton { min-width: 60px; min-height: 44px; }
+}
+@media (max-width: 640px) {
+  .AdminFieldEditor_header { padding: 1.2rem; }
+  .AdminFieldEditor_body { padding: 1.2rem; }
+  .AdminFieldEditor_footer { flex-direction: column-reverse; padding: 1rem 1.2rem max(1rem, env(safe-area-inset-bottom)); }
+  .AdminFieldEditor_saveButton, .AdminFieldEditor_cancelButton { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .AdminFieldEditor_spinner { animation: none; } }
+
+.AdminShell_adminShell {
+  --sidebar-width: 248px;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  direction: ltr;
+  background: var(--bg-app);
+  color: var(--text-main);
+  font-family: var(--font-en-stack);
+}
+.AdminShell_skipLink { position: fixed; top: -100px; left: 1rem; z-index: 500; padding: .75rem 1rem; background: var(--accent); color: #fff; border-radius: .5rem; }
+.AdminShell_skipLink:focus { top: 1rem; }
+.AdminShell_sidebar, .AdminShell_mobileSidebar { background: #111c31; color: #d0d8e8; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.AdminShell_sidebar { border-right: 1px solid #233049; }
+.AdminShell_sidebarHeader { padding: 1.5rem 1.25rem 1.25rem; flex-shrink: 0; }
+.AdminShell_sidebarBrand { display: flex; align-items: center; gap: .75rem; text-decoration: none; }
+.AdminShell_brandIconWrapper { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid #354460; border-radius: 12px; background: #21304b; }
+.AdminShell_brandText { display: flex; flex-direction: column; gap: 1px; }
+.AdminShell_brandName { font-size: 1.125rem; font-weight: 700; letter-spacing: -.04em; color: #fff; }
+.AdminShell_brandSub { font-size: .6875rem; color: #9aaac3; }
+.AdminShell_workspaceLabel { display: flex; align-items: center; gap: .5rem; margin-top: 1.5rem; padding: .625rem .75rem; font-size: .6875rem; font-weight: 500; border: 1px solid #2c3a53; border-radius: .5rem; color: #c0cce0; }
+.AdminShell_workspaceLabel svg { color: #a5b4fc; }
+.AdminShell_sidebarScrollArea { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: .125rem .75rem 1.25rem; scrollbar-width: thin; scrollbar-color: #40516e transparent; }
+.AdminShell_navGroup + .AdminShell_navGroup { margin-top: 1.5rem; }
+.AdminShell_navSection { display: block; padding: 0 .75rem .5rem; font-size: .625rem; font-weight: 600; color: #93a4be; letter-spacing: .1em; text-transform: uppercase; }
+.AdminShell_navItem { display: flex; align-items: center; gap: .6875rem; min-height: 42px; padding: .625rem .75rem; border: 1px solid transparent; border-radius: .5rem; color: #b8c5db; text-decoration: none; margin: 3px 0; transition: background-color .15s, color .15s, border-color .15s; }
+.AdminShell_navIconWrapper { display: flex; color: #8e9fbc; }
+.AdminShell_navLabel { font-size: .8125rem; font-weight: 500; }
+.AdminShell_navItem:hover { background: #1b2942; color: #fff; }
+.AdminShell_navItemActive, .AdminShell_navItemActive:hover { background: #303a76; border-color: #495497; color: #fff; }
+.AdminShell_navItemActive .AdminShell_navIconWrapper { color: #c7d2fe; }
+.AdminShell_navBadge { margin-left: auto; display: grid; place-items: center; min-width: 23px; height: 21px; padding: 0 5px; border-radius: 5px; font-size: .625rem; font-weight: 700; background: #35405d; color: #e3e9f5; font-variant-numeric: tabular-nums; }
+.AdminShell_sidebarFooter { flex-shrink: 0; padding: 1rem; border-top: 1px solid #2a3650; }
+.AdminShell_siteLink { display: flex; align-items: center; gap: .6rem; color: #aebcd3; font-size: .75rem; text-decoration: none; padding: 0 .25rem 1rem; }
+.AdminShell_siteLink:hover { color: #fff; }
+.AdminShell_adminProfileHeader { display: flex; gap: .625rem; align-items: center; min-width: 0; }
+.AdminShell_adminAvatar { width: 34px; height: 34px; border-radius: 50%; background: #2e3c58; color: #c7d2fe; display: grid; place-items: center; flex-shrink: 0; }
+.AdminShell_adminInfo { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 2px; }
+.AdminShell_adminRole { font-size: .75rem; font-weight: 600; color: #e8edf6; }
+.AdminShell_adminEmail { font-size: .625rem; color: #9dacc5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.AdminShell_logoutBtn { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; color: #aebcd3; border: 1px solid #35445e; border-radius: .5rem; background: transparent; cursor: pointer; }
+.AdminShell_logoutBtn:hover { background: #26344e; color: #fff; }
+.AdminShell_logoutBtn:disabled { opacity: .5; }
+.AdminShell_logoutError { color: #fecaca; font-size: .6875rem; margin: .625rem 0 0; }
+.AdminShell_mainArea { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; overflow: hidden; position: relative; }
+.AdminShell_mainArea:focus { outline: none; }
+.AdminShell_topBar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; padding: 1rem 2rem; min-height: 68px; flex-shrink: 0; border-bottom: 1px solid var(--border-soft); background: #fff; min-width: 0; }
+.AdminShell_topBar > * { min-width: 0; }
+.AdminShell_pageTitle { font-size: .9375rem; font-weight: 650; color: var(--text-main); letter-spacing: -.02em; margin: 0; line-height: 1.4; overflow-wrap: anywhere; }
+.AdminShell_topBarActions { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; min-width: 0; }
+.AdminShell_pageContent { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: stretch; gap: 1.5rem; padding: 2rem; padding-bottom: max(2rem, env(safe-area-inset-bottom)); overflow: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--border-med) transparent; scroll-padding-block: 1.5rem; }
+.AdminShell_pageContent > * { flex-shrink: 0; min-width: 0; max-width: 100%; }
+.AdminShell_pageContentNarrow > * { width: 100%; max-width: 1120px; margin-inline: auto; }
+.AdminShell_loadingState { display: flex; justify-content: center; align-items: center; gap: .75rem; min-height: 180px; padding: 2rem; color: var(--text-soft); font-size: .875rem; }
+.AdminShell_closeSidebarBtn, .AdminShell_mobileMenuBtn { display: none; }
+.AdminShell_mobileSidebar {
+  --admin-drawer-width: min(296px, calc(100vw - 40px));
+  --admin-dialog-background: #111c31;
+  padding: 0;
+  border-radius: 0;
+}
+@media (max-width: 1200px) {
+  .AdminShell_adminShell { --sidebar-width: 224px; }
+  .AdminShell_topBar { padding-inline: 1.5rem; }
+  .AdminShell_pageContent { padding: 1.5rem; }
+}
+@media (max-width: 900px) {
+  .AdminShell_adminShell { grid-template-columns: minmax(0, 1fr); }
+  .AdminShell_sidebar { display: none; }
+  .AdminShell_topBar { padding: .875rem 1rem .875rem 4.5rem; min-height: 64px; }
+  .AdminShell_pageContent { padding: 1rem; gap: 1.25rem; }
+  .AdminShell_mobileMenuBtn { display: grid; place-items: center; position: fixed; top: 10px; left: 12px; width: 44px; height: 44px; border: 1px solid var(--border-soft); border-radius: .625rem; background: #fff; color: var(--text-main); z-index: 30; cursor: pointer; }
+  .AdminShell_closeSidebarBtn { display: grid; place-items: center; width: 32px; height: 32px; margin-left: auto; border: 1px solid #35445e; border-radius: .5rem; background: transparent; color: #cbd5e1; cursor: pointer; }
+  .AdminShell_mobileSidebar .AdminShell_sidebarHeader { padding-top: 1.25rem; }
+}
+@media (pointer: coarse) {
+  .AdminShell_navItem { min-height: 44px; }
+  .AdminShell_logoutBtn, .AdminShell_closeSidebarBtn { min-width: 44px; min-height: 44px; }
+}
+
+.AdminDialogSurface_surface {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  height: 100dvh;
+  max-height: none;
+  padding: max(1.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(1.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
+  margin: 0;
+  border: 0;
+  overflow: hidden;
+  background: transparent;
+  color: var(--text-main, #172033);
+  font-family: var(--font-en-stack, system-ui, sans-serif);
+  box-sizing: border-box;
+}
+
+.AdminDialogSurface_surface[open] { display: flex; align-items: center; justify-content: center; }
+.AdminDialogSurface_surface::backdrop { background: rgb(15 23 42 / 48%); }
+.AdminDialogSurface_surface *, .AdminDialogSurface_surface *::before, .AdminDialogSurface_surface *::after { box-sizing: border-box; }
+
+.AdminDialogSurface_panel {
+  width: min(100%, 560px);
+  min-width: 0;
+  max-height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--admin-dialog-background, var(--bg-card, #fff));
+  border: 1px solid var(--border-soft, #e3e8ef);
+  border-radius: 1rem;
+  box-shadow: 0 24px 72px rgb(15 23 42 / 24%);
+  outline: none;
+  animation: appear 160ms ease-out;
+}
+
+.AdminDialogSurface_surface[data-variant^="drawer"] { padding: 0; }
+.AdminDialogSurface_surface[data-variant="drawer-left"] { justify-content: flex-start; }
+.AdminDialogSurface_surface[data-variant="drawer-right"] { justify-content: flex-end; }
+.AdminDialogSurface_surface[data-variant^="drawer"] > .AdminDialogSurface_panel {
+  width: var(--admin-drawer-width, min(88vw, 480px));
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
+}
+
+.AdminDialogSurface_surface :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--accent, #4338ca);
+  outline-offset: 3px;
+}
+
+@keyframes appear { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 640px) {
+  .AdminDialogSurface_surface { padding: 0.75rem; }
+  .AdminDialogSurface_surface[data-variant="modal"] { align-items: flex-end; }
+  .AdminDialogSurface_surface[data-variant="drawer-right"] > .AdminDialogSurface_panel { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .AdminDialogSurface_panel { animation: none; } }
+
+.AdminShell_adminShell {
+  --sidebar-width: 248px;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  direction: ltr;
+  background: var(--bg-app);
+  color: var(--text-main);
+  font-family: var(--font-en-stack);
+}
+.AdminShell_skipLink { position: fixed; top: -100px; left: 1rem; z-index: 500; padding: .75rem 1rem; background: var(--accent); color: #fff; border-radius: .5rem; }
+.AdminShell_skipLink:focus { top: 1rem; }
+.AdminShell_sidebar, .AdminShell_mobileSidebar { background: #111c31; color: #d0d8e8; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.AdminShell_sidebar { border-right: 1px solid #233049; }
+.AdminShell_sidebarHeader { padding: 1.5rem 1.25rem 1.25rem; flex-shrink: 0; }
+.AdminShell_sidebarBrand { display: flex; align-items: center; gap: .75rem; text-decoration: none; }
+.AdminShell_brandIconWrapper { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid #354460; border-radius: 12px; background: #21304b; }
+.AdminShell_brandText { display: flex; flex-direction: column; gap: 1px; }
+.AdminShell_brandName { font-size: 1.125rem; font-weight: 700; letter-spacing: -.04em; color: #fff; }
+.AdminShell_brandSub { font-size: .6875rem; color: #9aaac3; }
+.AdminShell_workspaceLabel { display: flex; align-items: center; gap: .5rem; margin-top: 1.5rem; padding: .625rem .75rem; font-size: .6875rem; font-weight: 500; border: 1px solid #2c3a53; border-radius: .5rem; color: #c0cce0; }
+.AdminShell_workspaceLabel svg { color: #a5b4fc; }
+.AdminShell_sidebarScrollArea { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: .125rem .75rem 1.25rem; scrollbar-width: thin; scrollbar-color: #40516e transparent; }
+.AdminShell_navGroup + .AdminShell_navGroup { margin-top: 1.5rem; }
+.AdminShell_navSection { display: block; padding: 0 .75rem .5rem; font-size: .625rem; font-weight: 600; color: #93a4be; letter-spacing: .1em; text-transform: uppercase; }
+.AdminShell_navItem { display: flex; align-items: center; gap: .6875rem; min-height: 42px; padding: .625rem .75rem; border: 1px solid transparent; border-radius: .5rem; color: #b8c5db; text-decoration: none; margin: 3px 0; transition: background-color .15s, color .15s, border-color .15s; }
+.AdminShell_navIconWrapper { display: flex; color: #8e9fbc; }
+.AdminShell_navLabel { font-size: .8125rem; font-weight: 500; }
+.AdminShell_navItem:hover { background: #1b2942; color: #fff; }
+.AdminShell_navItemActive, .AdminShell_navItemActive:hover { background: #303a76; border-color: #495497; color: #fff; }
+.AdminShell_navItemActive .AdminShell_navIconWrapper { color: #c7d2fe; }
+.AdminShell_navBadge { margin-left: auto; display: grid; place-items: center; min-width: 23px; height: 21px; padding: 0 5px; border-radius: 5px; font-size: .625rem; font-weight: 700; background: #35405d; color: #e3e9f5; font-variant-numeric: tabular-nums; }
+.AdminShell_sidebarFooter { flex-shrink: 0; padding: 1rem; border-top: 1px solid #2a3650; }
+.AdminShell_siteLink { display: flex; align-items: center; gap: .6rem; color: #aebcd3; font-size: .75rem; text-decoration: none; padding: 0 .25rem 1rem; }
+.AdminShell_siteLink:hover { color: #fff; }
+.AdminShell_adminProfileHeader { display: flex; gap: .625rem; align-items: center; min-width: 0; }
+.AdminShell_adminAvatar { width: 34px; height: 34px; border-radius: 50%; background: #2e3c58; color: #c7d2fe; display: grid; place-items: center; flex-shrink: 0; }
+.AdminShell_adminInfo { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 2px; }
+.AdminShell_adminRole { font-size: .75rem; font-weight: 600; color: #e8edf6; }
+.AdminShell_adminEmail { font-size: .625rem; color: #9dacc5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.AdminShell_logoutBtn { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; color: #aebcd3; border: 1px solid #35445e; border-radius: .5rem; background: transparent; cursor: pointer; }
+.AdminShell_logoutBtn:hover { background: #26344e; color: #fff; }
+.AdminShell_logoutBtn:disabled { opacity: .5; }
+.AdminShell_logoutError { color: #fecaca; font-size: .6875rem; margin: .625rem 0 0; }
+.AdminShell_mainArea { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; overflow: hidden; position: relative; }
+.AdminShell_mainArea:focus { outline: none; }
+.AdminShell_topBar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; padding: 1rem 2rem; min-height: 68px; flex-shrink: 0; border-bottom: 1px solid var(--border-soft); background: #fff; min-width: 0; }
+.AdminShell_topBar > * { min-width: 0; }
+.AdminShell_pageTitle { font-size: .9375rem; font-weight: 650; color: var(--text-main); letter-spacing: -.02em; margin: 0; line-height: 1.4; overflow-wrap: anywhere; }
+.AdminShell_topBarActions { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; min-width: 0; }
+.AdminShell_pageContent { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: stretch; gap: 1.5rem; padding: 2rem; padding-bottom: max(2rem, env(safe-area-inset-bottom)); overflow: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--border-med) transparent; scroll-padding-block: 1.5rem; }
+.AdminShell_pageContent > * { flex-shrink: 0; min-width: 0; max-width: 100%; }
+.AdminShell_pageContentNarrow > * { width: 100%; max-width: 1120px; margin-inline: auto; }
+.AdminShell_loadingState { display: flex; justify-content: center; align-items: center; gap: .75rem; min-height: 180px; padding: 2rem; color: var(--text-soft); font-size: .875rem; }
+.AdminShell_closeSidebarBtn, .AdminShell_mobileMenuBtn { display: none; }
+.AdminShell_mobileSidebar {
+  --admin-drawer-width: min(296px, calc(100vw - 40px));
+  --admin-dialog-background: #111c31;
+  padding: 0;
+  border-radius: 0;
+}
+@media (max-width: 1200px) {
+  .AdminShell_adminShell { --sidebar-width: 224px; }
+  .AdminShell_topBar { padding-inline: 1.5rem; }
+  .AdminShell_pageContent { padding: 1.5rem; }
+}
+@media (max-width: 900px) {
+  .AdminShell_adminShell { grid-template-columns: minmax(0, 1fr); }
+  .AdminShell_sidebar { display: none; }
+  .AdminShell_topBar { padding: .875rem 1rem .875rem 4.5rem; min-height: 64px; }
+  .AdminShell_pageContent { padding: 1rem; gap: 1.25rem; }
+  .AdminShell_mobileMenuBtn { display: grid; place-items: center; position: fixed; top: 10px; left: 12px; width: 44px; height: 44px; border: 1px solid var(--border-soft); border-radius: .625rem; background: #fff; color: var(--text-main); z-index: 30; cursor: pointer; }
+  .AdminShell_closeSidebarBtn { display: grid; place-items: center; width: 32px; height: 32px; margin-left: auto; border: 1px solid #35445e; border-radius: .5rem; background: transparent; color: #cbd5e1; cursor: pointer; }
+  .AdminShell_mobileSidebar .AdminShell_sidebarHeader { padding-top: 1.25rem; }
+}
+@media (pointer: coarse) {
+  .AdminShell_navItem { min-height: 44px; }
+  .AdminShell_logoutBtn, .AdminShell_closeSidebarBtn { min-width: 44px; min-height: 44px; }
+}
+
+.theme {
+  --bg-app: #f5f7fb;
+  --bg-sidebar: #fff;
+  --bg-card: #fff;
+  --bg-soft: #f1f4f9;
+  --bg-hover: #f8faff;
+  --text-main: #172238;
+  --text-soft: #526078;
+  --text-dim: #65738a;
+  --border-soft: #e3e8f0;
+  --border-med: #cbd3e1;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-rgb: 79, 70, 229;
+  --success: #087f5b;
+  --success-rgb: 8, 127, 91;
+  --warning: #a86208;
+  --warning-rgb: 168, 98, 8;
+  --danger: #c43246;
+  --danger-rgb: 196, 50, 70;
+  --info: #2563a6;
+  --info-rgb: 37, 99, 166;
+  --color-text-primary: var(--text-main);
+  --color-text-secondary: var(--text-soft);
+  --color-text-tertiary: var(--text-dim);
+  --shadow-sm: 0 1px 2px rgb(20 35 60 / 4%);
+  --shadow-card: 0 2px 8px rgb(20 35 60 / 3%);
+  --font-en-stack: var(--font-en, 'Inter'), system-ui, -apple-system, sans-serif;
+  --font-fa-stack: 'IRANSansX', 'Peyda', system-ui, sans-serif;
+  --font-fa-content: var(--font-fa-stack);
+  --font-primary: var(--font-en-stack);
+  background: var(--bg-app);
+  color: var(--text-main);
+  font-family: var(--font-en-stack);
+  font-size: .875rem;
+  line-height: 1.5;
+  color-scheme: light;
+}
+
+/* Portals inherit the admin theme independently of public-site resets. */
+html[dir='ltr'] .theme {
+  --font-fa-stack: 'IRANSansX', 'Peyda', system-ui, sans-serif;
+  --font-fa-content: var(--font-fa-stack);
+  --font-primary: var(--font-en-stack);
+}
+.theme *, .theme *::before, .theme *::after { box-sizing: border-box; }
+.theme :where(button, input, select, textarea) { font-family: inherit; }
+.theme :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #818cf8;
+  outline-offset: 3px;
+}
+.theme :where([dir='rtl'], [lang='fa']) { font-family: var(--font-fa-stack); }
+.theme :where(button):disabled { cursor: not-allowed; }
+.theme :where(svg) { flex-shrink: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .theme *, .theme *::before, .theme *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.previewRefresh{min-height:44px;border:1px solid #cbd3e1;border-radius:8px;background:white;color:#172238;padding:8px 14px}.fixtureSuccess{margin:0 0 1rem;padding:12px 16px;border:1px solid #bce0d3;border-radius:10px;background:#f0faf5;color:#087f5b} [hidden]{display:none!important}</style></head><body class="theme"><div class="AdminShell_adminShell"><link rel="preload" as="image" href="/images/logo-no-text-light.svg"/><aside class="AdminShell_sidebar"><div class="AdminShell_sidebarHeader"><div class="AdminShell_sidebarBrand"><a href="/admin/dashboard" class="AdminShell_sidebarBrand" aria-label="Zarman admin overview"><span class="AdminShell_brandIconWrapper"><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIwIDAgNTAwIDUwMCI+CiAgPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDMwLjMuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDIuMS4zIEJ1aWxkIDE4MikgIC0tPgogIDxkZWZzPgogICAgPHN0eWxlPgogICAgICAuc3QwIHsKICAgICAgICBmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudDIpOwogICAgICB9CgogICAgICAuc3QxLCAuc3QyLCAuc3QzIHsKICAgICAgICBmaWxsOiAjZmZmOwogICAgICB9CgogICAgICAuc3Q0IHsKICAgICAgICBmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudDEpOwogICAgICB9CgogICAgICAuc3QyIHsKICAgICAgICBvcGFjaXR5OiAuNTsKICAgICAgfQoKICAgICAgLnN0MiwgLnN0NSwgLnN0MyB7CiAgICAgICAgaXNvbGF0aW9uOiBpc29sYXRlOwogICAgICB9CgogICAgICAuc3QyLCAuc3QzIHsKICAgICAgICBtaXgtYmxlbmQtbW9kZTogb3ZlcmxheTsKICAgICAgfQoKICAgICAgLnN0NiB7CiAgICAgICAgZmlsbDogIzJmMmY3ZjsKICAgICAgfQoKICAgICAgLnN0NyB7CiAgICAgICAgZmlsbDogdXJsKCNsaW5lYXItZ3JhZGllbnQzKTsKICAgICAgfQoKICAgICAgLnN0MyB7CiAgICAgICAgb3BhY2l0eTogLjU4OwogICAgICB9CgogICAgICAuc3Q4IHsKICAgICAgICBmaWxsOiAjZDhkYmVhOwogICAgICB9CgogICAgICAuc3Q5IHsKICAgICAgICBmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudCk7CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudCIgeDE9IjExMi4yNSIgeTE9Ii0xMTg0LjkyIiB4Mj0iMzc3LjU1IiB5Mj0iLTgzMi4wOCIgZ3JhZGllbnRUcmFuc2Zvcm09InRyYW5zbGF0ZSgwIC03OTYpIHNjYWxlKDEgLTEpIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzJmMmY3ZiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMyZjJmN2YiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudDEiIHgxPSIyODYuNSIgeTE9Ii05MDIuNyIgeDI9IjIxMy44IiB5Mj0iLTExMTUuMzciIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtNzk2KSBzY2FsZSgxIC0xKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBvZmZzZXQ9Ii4zNCIgc3RvcC1jb2xvcj0iIzJmMmY3ZSIvPgogICAgICA8c3RvcCBvZmZzZXQ9Ii42NiIgc3RvcC1jb2xvcj0iIzA3NzZiNiIgc3RvcC1vcGFjaXR5PSIuNDciLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuODUiIHN0b3AtY29sb3I9IiMxMGFiZTMiIHN0b3Atb3BhY2l0eT0iLjIiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuOTkiIHN0b3AtY29sb3I9IiMyZjJmN2YiIHN0b3Atb3BhY2l0eT0iLjEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudDIiIHgxPSIxMTYuNTciIHkxPSItMTE4Ny4wOCIgeDI9IjM4NS43OCIgeTI9Ii04MjkuMDQiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtNzk2KSBzY2FsZSgxIC0xKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBvZmZzZXQ9Ii4xNSIgc3RvcC1jb2xvcj0iIzJmMmY3ZiIvPgogICAgICA8c3RvcCBvZmZzZXQ9Ii41MSIgc3RvcC1jb2xvcj0iIzFkNzZiYiIvPgogICAgICA8c3RvcCBvZmZzZXQ9Ii45MiIgc3RvcC1jb2xvcj0iIzJmMmY3ZiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ibGluZWFyLWdyYWRpZW50MyIgeDE9IjI0My44NSIgeTE9Ii05NDEuNjgiIHgyPSIyMTUuMDEiIHkyPSItMTAxNC41IiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDAgLTc5Nikgc2NhbGUoMSAtMSkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIuMzIiIHN0b3AtY29sb3I9IiMyZjJmN2YiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMWQ3NmJiIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxnIGNsYXNzPSJzdDUiPgogICAgPGcgaWQ9IkxheWVyXzExIj4KICAgICAgPHBhdGggY2xhc3M9InN0OCIgZD0iTTI0Ny42Myw0OTIuMmMtMjQuNDIsMC00Mi4yNS03Ljc2LTU5LjUzLTI1LjM1TDI5LjY3LDMwNi4zM2MtMzUuNjUtMzYuMjktMjMuNTItOTEuMjgsMTIuMTMtMTI3LjU3TDE4OC4xLDMzYzM1LjY1LTM2LjI5LDkzLjY4LTM2LjI5LDEyOS4zMywwbDE0OC40NywxNTEuMTNjMTcuMjgsMTcuNTksMjYuOCw0MC45NSwyNi44LDY1Ljg0cy05LjUyLDQ4LjI1LTI2LjgsNjUuODRsLTE0OC40MiwxNDguMjFjLTE3LjI4LDE3LjU5LTQwLjI3LDMwLjItNjQuNzIsMzAuMmwuMDMtLjA5LTUuMTUtMS45M2gwWk00NjUuNTcsMjY1LjM4Yy0yMS44MiwwLS4xNiwyMy41MS0xNi42NCw0MC40My0uMDUuMDUtLjExLjEtLjE3LjE0bC04My4wNCw1OC42NHMtLjA5LjA3LS4xMy4xMWMtMzIuNDIsMzIuODctNjgtMzYuMDEtMzguOTMtOC4wOC43NS43MiwxLjk5LjA4LDEuODItLjk1bC0xMy40MS04Mi42M2MxNi4xMiwxNi40MS02Ni4yMS03LjcxLTQzLjQxLTcuNzFzLTE0NC42NywyOS4xNS0xMzAuMDksMTMuMTZjLjEyLS4xMy4yMS0uMjkuMjYtLjQ2bDE3Ljg5LTY5LjAxYy4wNS0uMi4xNS0uMzcuMjktLjUxLDE3LjE3LTE2LjM3LDE2Mi4zMy0zNiwxNjIuMzMtNTkuMSwwLTIxLjc1LTMyLjAzLDEyMC45My00OS4zMiwxMjUuMzQtMS4yOC4zMy0xLjgyLTEuNi0uNTktMi4wN2wxNjQuNDktNjMuMzVjLjczLS4yOC45My0xLjIzLjM3LTEuNzktMTEuOTMtMTEuNzgsNDkuNTIsNTcuOCwyOC4yNiw1Ny44bC4wMy4wM2gwWiIvPgogICAgICA8Zz4KICAgICAgICA8Zz4KICAgICAgICAgIDxwYXRoIGNsYXNzPSJzdDkiIGQ9Ik0yNDguNTEsMzYwLjhsMTU0LjM4LTI0MC4xN2MtOC40Ni01LjY3LTM3Ljk5LTQxLjUtMzguMzctNDIuMjgtOS4yNy0xLTE5LjU0LTMuMDQtMzAuOTUtNi41MS0zLjA0LS45NC0xMy4xOSw2LjA4LTE2LjM4LDQuOTUtMzcuNjItMTMuNDQtNjQuOTMuNS0xMTAuNzgtMi42bC0xMzguODIsOTcuODVjMTcuNDEsMS41NywxNjcuMDEsMy4xOSwxNjcuMDEsMy4xOWwtMTMyLjkzLDIwNy43OWMxOS44LDcuODYsMzMuMDgsMzAuNzksNDcuMDgsNDUuMzguNi42MywxLjA2LDEuMjgsMS40NywxLjk3aDEzOC42YzQuMzItMTkuODYsMTAuMjQtMzkuNSwxOC4wNC01OC40OGgtNTEuNGMtNi4yLDAtMTAuMDktNi4yLTYuOTItMTEuMTJsLS4wMy4wM2gwWiIvPgogICAgICAgICAgPHBhdGggY2xhc3M9InN0NCIgZD0iTTIwNy43MywzNjIuNEwzNzEuMzYsMTAzLjI0bC0xNTkuNTUuMDlzOS45OSwyNS4zMSwxMi41LDM4LjY4Yy43NS4yMiwxLjQ3LjQ0LDIuMjIuNzIsMTQuMTksNS4yMywyMi43MSwyMC40OCwxOC4yOSwzNC4yLTguOTksMjcuODgtMjIuNDYsNTQuNDQtMzMuODYsODEuNS0xMC40MywyNC43OC0yNS41OSw0Ny4xMS00OC4zNiw2My45LTQuOTgsMy42Ni0xMC4zLDUuOTItMTUuNjMsNi45Mi0xLjYsMi0zLjIzLDMuOTgtNS4wMSw1LjkyLTYuMDUsNi42MS0xMy4xMiwxMi40Ny0xOC41MSwxOS41MS03LjcxLDEwLjA5LTEzLjE2LDIxLjgzLTE2Ljk0LDMzLjkyLjM4LjE5Ljc1LjQxLDEuMTMuNjYsNS41OCwzLjk4LDI3LjA5LDI1LjI1LDI4LjI4LDI3LjE2LDEyLjgxLTEsMjUuNS0yLjc2LDM4LjA2LTUuODMsMTMuNzUtMy4zNSwyOS03LjA1LDQzLjQ0LTExLjksMTAuMy0yNC40LTkuNjUtMzYuMy05LjY1LTM2LjNoLS4wNCwwWiIvPgogICAgICAgICAgPHBhdGggY2xhc3M9InN0MCIgZD0iTTMwNi4zNiwxNDEuODljLTQuMjMuNi04LjY4LjYtMTMuMTIuMDMtMTguNzMtMi4zNS0zOC44NywyLjE5LTU3LjY5LDIuNDRoLTQuNzNjLTguMjcsMTAuMTgtMTYuNDEsMjAuNDItMjQuMzEsMzAuODVoMjguMDZsLTEzMi44LDIwNy42Yy45MS41LDEuODIsMS4xNiwyLjY2LDIuMDQsMTQuODIsMTUuNjksMzIuNywyNy45NCw0NS40NSw0NS41MWg5LjUyYzE5LjgzLTM2LjksMTEuNjUtNzAuNjksMTEuNjUtNzAuNjlsMTM1LjMxLTIxNy44MXYuMDNoMFoiLz4KICAgICAgICAgIDxwYXRoIGNsYXNzPSJzdDciIGQ9Ik0zMDIuODksMTQ3LjQ3Yy0zLjc5LDEuNS03Ljk2LDIuNTEtMTIuMjUsMi45MS0xMS41MywxLjEtMjIuMDIsMi4xLTMzLjU4LDAtMy45OC0uNzItNy44LTEuNzktMTEuNjgtMi43OS0yLjE5LS42My00LjM5LTEuMTktNi42MS0xLjY5LTMuODUtLjg1LTQuNDItLjkxLTEuNjktLjI1LTIuMjYtLjA5LTQuNDUtLjQxLTYuNTgtLjg4LTguMTcsMTAuMDUtMTYuMjIsMjAuMTctMjMuOTksMzAuNDRoMjguMDZsLTE2My4yMiwyNTUuMTVoODguMDRjMTkuODMtMzYuOSwxMS42NS03MC42OSwxMS42NS03MC42OWwxMzEuODMtMjEyLjIzdi4wM2guMDJaIi8+CiAgICAgICAgPC9nPgogICAgICAgIDxnPgogICAgICAgICAgPHBvbHlnb24gY2xhc3M9InN0MyIgcG9pbnRzPSIyNjUuNzEgMjA5LjExIDIxMi40OSAyMDkuMTEgMTc5Ljg2IDI2MS4wMSAyMTIuNDkgMzEyLjg4IDI3Ny44IDMxMi44OCAzMTAuNDMgMjYxLjAxIDI2NS43MSAyMDkuMTEiLz4KICAgICAgICAgIDxwb2x5Z29uIGNsYXNzPSJzdDIiIHBvaW50cz0iMjMzLjk1IDI2MC4zOCAxNzkuMiAyNjAuMzggMTQ2LjU2IDMxMi4yNSAxNzkuMiAzNjQuMTUgMjQ0LjUgMzY0LjE1IDI3Ny4xNCAzMTIuMjUgMjMzLjk1IDI2MC4zOCIvPgogICAgICAgICAgPHBvbHlnb24gY2xhc3M9InN0MiIgcG9pbnRzPSIzMzkuNzIgMTA0Ljg3IDIzMS45NCAxMDQuODcgMjQ0Ljc4IDE1Ni43NCAyNjYuODcgMjA4LjY0IDM0Mi43MyAyMDguNjQgMzc1LjM2IDE1Ni43NCAzMzkuNzIgMTA0Ljg3Ii8+CiAgICAgICAgPC9nPgogICAgICA8L2c+CiAgICAgIDxnPgogICAgICAgIDxwYXRoIGNsYXNzPSJzdDYiIGQ9Ik0zODUuNjQsMTIwLjAzYy00LjE3LTcuNjctOC4zMy0xNS4zOC0xMi40LTIzLjEyLTIuNDctNC43My02LjExLTcuNzQtMTEuMTgtOS4wNS0yLjQ3LS42My00Ljk1LTEuNS03LjMtMi41NC03LjM5LTMuMzUtMTQuODItNi43LTE5Ljk1LTEzLjUtMi4xNi0yLjg1LTQuNzYtNC42Ny03Ljk5LTUuNzktNS4yLTEuODItMTAuNTItMi40MS0xNS45Ny0xLjk0LTUuNy41LTExLjQsMS4xLTE3LjEsMS42Ni00LjczLjQ3LTkuMTgtLjE5LTEzLjQxLTIuNzktMy4zMi0yLjA0LTYuOTUtMy42My0xMC41Ni01LjExLTExLjg3LTQuODUtMjMuMzctMy44Mi0zNC40MiwyLjc5LTIuNjYsMS42LTUuMzYsMy4xMy04LjExLDQuNDUtMi43NSwxLjMyLTUuNjcsMi4yOS04LjUyLDMuNDUtMS4zOC41Ni00LjMyLjYzLTQuNzYsMS4xNi0uNDEtLjMxLTYuNTUtNi42NC0xMC40LTcuMzYtNy45Ni0xLjUtMTUuNjMtLjM0LTIyLjY4LDMuNjMtMTEuNDYsNi40OC0yMy45OSw4LjQ5LTM2LjcxLDguNzdoLS40NGMtNC40Miw1LjQyLTkuNDMsMTAuNDktMTQuMzgsMTUuNTctNi4xNCwxOS44OS0xMi4zNCwzOS45LTE4LjQ4LDU5LjkyLS40NCwxLjQ0LTEuMSwxLjkxLTIuNTcsMi4wNC0yLjYzLjIyLTUuMjMuODUtNy44NiwxLjE5LS45Ny4xMy0yLC4xOS0yLjkxLS4wNi0zLjYzLS45MS00LjA3LTEuNi0zLjA0LTUuMDcsMi4zNS03LjkyLDYuNzctMjEuMzYsMTEuMjgtMzMuMi0xLjc5LDEuNzItMy42NiwzLjM4LTUuNTEsNS4wNy0yLjUxLDguNDktNC45OCwxNi45OC03LjQ5LDI1LjUtLjM0LDEuMTktLjY5LDIuMzgtMS4wMywzLjUxLTEzLjA5LS4yOC00MS44NSw5LjU4LTQ1LjE3LDI2Ljc1aDMwOS42MWM4LjMzLjM4LDE1Ljk3LTUuODksMTUuNzItMTAuOS0uMTktMy44OC02LjMzLTEuMjUtOS4yNC03LjkyLS44OC01LjczLTEuNzItMTEuMzQtMi41Ny0xNi45NC0uNS0zLjM4LS43OC02LjgtMS41LTEwLjEyLS4yOC0xLjM4LTEuMTktMi43OS0yLjIyLTMuNzktMi40MS0yLjM4LTMuNjMtNS4wMS0zLjg1LTguNTItLjM4LTUuOTUtMS4yMi0xMS44Ny0xLjk3LTE3Ljc5LS4xMy0uOTQtLjc1LTEuODItMS4xNi0yLjY5LS4yMiwwLS40NC4wMy0uNjYuMDYtLjA5LDEuMjUtLjMxLDIuNTQtLjI4LDMuNzkuMTYsNS4zOS40NywxMC43Ny42LDE2LjE2LjAzLDEuNjktLjE5LDMuNDEtLjUsNS4wNy0uMTYuNzUtLjg1LDEuMzgtMS4yOCwyLjA0LS42OS0uNS0xLjc5LS44NS0yLjA0LTEuNTMtMS4xOS0zLjI2LTIuNTQtNi41NS0zLjE2LTkuOTMtMS41Ny04LjM5LTIuOTEtMTYuODUtNC4zMi0yNS4yOCwxMC41Niw0LjQ1LDE5Ljk1LDEwLjQ5LDI2Ljk0LDE5LjM5LDIuOTEsMTYuNiw1Ljg2LDMzLjIsOC44LDQ5LjksMS42Ni02LjczLDQuMi0xMy4zMSw3Ljk5LTE5LjY0LDEuMzgtMi4yOSwzLjAxLTQuMDcsNC43OS01LjM5LjI4LTIuNDQsMS4wMy00LjY0LDIuMTktNi41OC0uOTctMS43NS0xLjk0LTMuNTQtMi44OC01LjMybC4wNi4wM3YtLjAzaDBaTTIxMi43Nyw5MC43MWMuNTMtNC41NywxLjc1LTkuMDgsMi43Mi0xMy41OS4xMy0uNjMuNjMtMS40NCwxLjEzLTEuNjYsMS4wMy0uNDQsMi4xLS44NSwzLjE2LTEuMjUsMy43OS0uNiw4LjMtMS4yOCwxMi40LTEuOTEtMi4yNiwxNC40Ny02Ljg2LDI4LjI4LTE2LjEzLDQwLjU5LTIuNjYtNy4yNy00LjItMTQuNi0zLjMyLTIyLjE4aC4wNFpNMTU0LjcsMTQ2LjgxYy0xLjgyLjE2LTMuNy0uMTktNC44OS41Ni0xLjMyLjg1LTIuMjIsMi42LTIuOTEsNC4xMy0xLjcyLDMuNy0yLjg4LDQuNjQtNy4xNyw0LjYuNi00Ljg5Ljg1LTkuNzcsMS44Mi0xNC41LDMuMDEtMTQuNDQsNi4zLTI4LjgyLDkuNDYtNDMuMjIuMDktLjQxLjEzLS44MS0uMTktMS4zOC0uNDQuODgtLjkxLDEuNzUtMS4zNSwyLjYzLTQuNDIsOC45My05LjA4LDE3Ljc2LTEwLjQ5LDI3Ljc4LS45Nyw2LjczLTEuNDcsMTMuNTMtMi4yNiwyMC4yNy0uMjUsMi4xMy0uNzUsNC4yMy0xLjEzLDYuMzYtLjE2LjI1LS4zMS40Ny0uNS43Mi0zLjg4LTYuMTEtOS42OC00LjAxLTE1LjEtMy45NS44MS05LjQ2LDEuOTQtMTguNjEsNS4xNC0yNy40NCw0Ljk4LTEzLjg4LDguNjgtMjguMjIsMTUuOTQtNDEuMTkuOTQtMS42NiwxLjgyLTIuMjYsMy43Ni0yLjMyLDkuNC0uMzEsMTguNjEtMiwyNy42My00LjY3Ljg1LS4yNSwxLjY5LS41LDIuMzgtLjY5LTEuNjMsNy41OC0zLjMyLDE1LjAzLTQuODksMjIuNTUtMS4wMyw0Ljk1LTEuNiw5Ljk5LTIuODUsMTQuOTEtMS4xMyw0LjQ1LTIuNDcsOC45Ni00LjUxLDEzLjA2LTMuNTEsNy4wOC03LjI3LDEzLjk3LTcuOTIsMjEuNzdoLjAzdi4wMmgwWk0zMTEuNTksMTU3Ljc0Yy00LjkyLS41LTkuODcuMDYtMTMuNDQtNC40OC0xLjUtMS45MS0zLjYtMy40OC01LjY0LTQuODUtMS4zMi0uODgtMS43Mi0xLjc1LTEuNjktMy4yMy4yNS0xMi41Ni0yLjk0LTI0LjY1LTUuMTctMzYuOS0uMDYtLjI4LS4yNS0uNTMtLjc4LS43MnYyLjM1Yy4zNCwxMS42Mi42NiwyMy4yNCwxLjA2LDM0Ljg5LjA2LDEuNTMtLjI4LDIuNTQtMS43OSwzLjM1LTEuNzksMS0zLjQ4LDIuMzItNC44MiwzLjg1LTIuNjksMy4xLTYuMzksMy44OC0xMC40Niw1LjIzLjA5LTIwLjI3LDMuMTYtMzkuODQsNS41NC01OS42NC0xLjk0LDIuNi02Ljg2LDE4LjkyLTkuNjIsMjkuNzYtMi42MywxMC4yNy0yLjg1LDIwLjY3LTIuNDQsMzEuMDctNC44NSwxLjYzLTEwLjAyLjY2LTEyLjMxLTMuNDgtMi44NS01LjE0LTYuODYtNy4wNS0xMi43NS02LjY3LS41LTEwLjQtLjk3LTIwLjU4LTEuNDctMzAuNzMtLjA2LDAtLjE2LS4wMy0uMjItLjA2LTEuNTMsNi4xNC0zLjQ4LDEyLjI1LTQuNDgsMTguNDgtLjUzLDMuNDEuMzgsNy4wOC45MSwxMC41OS4zOCwyLjUxLS42NiwzLjMyLTIuOTEsMy42Ni01Ljg5Ljg4LTExLjY4LDEuNS0xNy40MS0uODgtMS4xMy0uNDctMi40MS0uNi0zLjYzLS44NS00LjMyLS44NS01LjQyLS4zOC03LjgzLDMuNDEtMS44NSwyLjk0LTQuMjksMy45Mi03LjQyLDIuMzgtMi41Ny0xLjI4LTQuOTItMy4wNy03LjE3LTQuODUtLjYtLjQ3LS43OC0xLjgyLS42OS0yLjY5LjkxLTEwLjQsMS43OS0yMC44MywyLjkxLTMxLjIzLjYzLTUuODYsMS43Mi0xMS42NSwyLjY5LTE4LjE3LTUuODYsNi43Ny05LjQ5LDEzLjg4LTkuOTYsMjIuMzMtLjQ3LDguMjEtLjY5LDE2LjQ0LS45NywyNC42NS0uMDMsMS4zNS0uMTYsMi40NC0xLjYsMi45OC0uNDQuMTYtLjc4LjYtMS4xNi45NC0zLjg1LDMuODUtNC4yOSw0LjAxLTEwLjQzLDMuNjMuMjItMy41MS4zOC03LjA1LjY2LTEwLjU2LjcyLTkuMzMuNTYtMTguNzksMy4wMS0yNy45NCwzLjYtMTMuNTMsNy4yNC0yNy4wMywxMS4wMy00MC41My4zMS0xLjEzLDEuNTMtMi4zOCwyLjY2LTIuODgsNS45OC0yLjYsMTIuMjItMy43MywxOC43LTIuNDcsMS43NS4zNCwzLjU0LDEsNS4wNywxLjkxLDMuNDEsMi4wNCwzLjMyLDIuNTQsMi4yOSw2LjM2LTMuODgsMTQuMjgtNS4yOSwyOC41Ny0xLjE2LDQzLjIyLDEuNSw1LjMyLDEuMTMsMTEuMTUsMS43OSwxNi43Ni4xOSwxLjUuOTEsMi45NCwxLjM4LDQuNDIsMS4wMy0xLjI4LDIuMzgtMi40MSwzLjA3LTMuODUuODUtMS43NSwxLjM1LTMuNzYsMS42Ni01LjcsMS4xNi02LjkyLDUuNDgtMTIuNTksNy41NS0xOS4xNCwzLjgyLTEyLjE4LDE5LjI2LTQwLjk0LDE5LjQ1LTQxLjAzLDYuMy0zLjAxLDE0LjUtMS4wMywxNi42LDEuNzItLjAzLDMuNi0uMDYsNy4xNy0uNDQsMTAuNzEtLjM0LDMuMzUtMS45MSw2LjY0LTMuMTYsOS44Ny00LjA3LDEwLjcxLTYuODMsMjEuNjEtNS45MiwzMy4yMy4zMSw0LjA0LjA2LDguMTEuNSwxMi4yNSwxLjQxLTYuMjYsMi43OS0xMi41Myw0LjItMTguNzYsMi41Ny0xMS4yNCw1Ljc2LTIyLjMzLDEwLjU5LTMyLjgyLDEuOTEtNC4xNyw5LjkzLTEzLjA5LDExLjIxLTE1LjY5LDIuMTMsMy45OCwzLjQxLDguMTcsMy45Miw4LjUyLDUuNTgsMy45NSwzLjg1LTEuNDQsMTAuMzctMi41NCwxLjIyLS4xOSw1LjQyLS4xMyw3LjMzLjU2LDMuNjMsOC4zOSwxMi4wMyw0NC4yMywxMi4xNSw0OS42OC4yMiw5LjYyLjUzLDE5LjI2Ljc4LDI4Ljg4LDAsLjQ3LS4wOS45Ny0uMTksMS42OWguMDYsMFpNMzM4LjIyLDExOS43NWMuNjksOS41OC0uMDYsMTkuMjYtLjI1LDI4LjkxLS4wNiwzLjMyLS4zMSw2LjY0LS41MywxMC43NC0xLjgyLTEuMDMtMy43My0xLjQ3LTQuNTctMi42Ni0zLjM4LTQuNzYtNS44My00LjM1LTEwLjU2LTEuMzgtLjc1LjQ3LTEuNTMuOTEtMi42MywxLjUzLS45MS03Ljc3LTEuNzItMTUuMDMtMi43Mi0yMi40Ni0xLjEzLTguNDMtMS45NC0xNi44OC0yLjg4LTI1LjM0LS43OC03LjI0LTMuODUtMTMuNS02LjU4LTIwLjA1LTEuMTMtMi43Mi0yLjEzLTUuNTEtMy4xMy04LjM2LTIuNDEtOC4yNCwxNS40MS0zLjA0LDIzLjcxLDEuMzIsMy4xNiwxLjY2LDUuMzYsMy45NSw2LjUxLDguMzMsMS4zNSw5Ljc3LDIuODIsMTkuNTQsMy41NCwyOS4zOGwuMDkuMDNoMFpNMzcwLjU0LDEyMS42M2MtLjg1LTMuMDEtMS44NS01Ljk1LTIuOTgtOC44NiwzLjYzLDUuNTEsNi4zOSwxMiw3Ljk5LDE5LjczLjQxLDIuMDQuNiwzLjk4LjY2LDUuODYtMi40MS01LjM5LTQuMDctMTEuMDMtNS42Ny0xNi43M2gwWiIvPgogICAgICAgIDxnPgogICAgICAgICAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTI5Ny4yMiw3My43NGMtLjUzLTEuMjItMS4wMy0xLjgyLTIuNTQtMS41Ny02LjUxLDEuMDYtMTIuNzUuMzgtMTguMzItMy41Ny0uNS0uMzgtMS4xMy0uNTYtMS4yNS0uNi0zLjEsNi4zMy02LjIzLDEyLjQtOS4wOCwxOC42NC00LjgyLDEwLjUyLTguMDIsMjEuNTgtMTAuNTksMzIuODItMS40NCw2LjI2LTIuODIsMTIuNTMtNC4yLDE4Ljc2LS40Ny00LjEtLjE5LTguMjEtLjUtMTIuMjUtLjkxLTExLjYyLDEuODItMjIuNTIsNS45Mi0zMy4yMywxLjIyLTMuMjMsMi43OS02LjUxLDMuMTYtOS44Ny42My01Ljc2LjI4LTExLjYyLjYtMTcuNDEuMTMtMi41Ny0xLTMuMjMtMy4yMy0zLjU0LTcuMTQtMS0xMS41Ni4zOC0xNy44NSwzLjM4LS42My4yOC0xLjIyLDIyLjY4LTE1LjE2LDQ2LjE0LTIuMDQsNi41NS02LjM5LDEyLjE4LTcuNTUsMTkuMTQtLjMxLDEuOTQtLjgxLDMuOTUtMS42Niw1LjctLjY5LDEuNDQtMiwyLjU3LTMuMDcsMy44NS0uNDctMS40Ny0xLjIyLTIuOTEtMS4zOC00LjQyLS42My01LjU4LS4yOC0xMS40My0xLjc5LTE2Ljc2LTQuMTMtMTQuNjMtMi43Mi0yOC45MSwxLjE2LTQzLjIyLDEuMDMtMy44MiwxLjEtNC4zMi0yLjI5LTYuMzYtMS41My0uOTEtMy4zMi0xLjU3LTUuMDctMS45MS02LjQ4LTEuMjUtMTIuNzUtLjEzLTE4LjcsMi40Ny0xLjEzLjQ3LTIuMzUsMS43Mi0yLjY2LDIuODgtMy43NiwxMy40Ny03LjQyLDI3LTExLjAzLDQwLjUzLTIuNDQsOS4xNS0yLjI5LDE4LjYxLTMuMDEsMjcuOTQtLjI4LDMuNTEtLjQ0LDcuMDUtLjY2LDEwLjU2LDYuMTQuMzgsNi42MS4yMiwxMC40My0zLjYzLjM0LS4zNC43Mi0uNzgsMS4xNi0uOTQsMS40NC0uNTMsMS41Ny0xLjYzLDEuNi0yLjk4LjI1LTguMjEuNS0xNi40NC45Ny0yNC42NS40Ny04LjQzLDQuMS0xNS41Nyw5Ljk2LTIyLjMzLS45Nyw2LjUxLTIuMDcsMTIuMzEtMi42OSwxOC4xNy0xLjEzLDEwLjQtMiwyMC44LTIuOTEsMzEuMjMtLjA5LjkxLjA5LDIuMjIuNjksMi42OSwyLjI2LDEuNzksNC42LDMuNiw3LjE3LDQuODUsMy4xMywxLjU3LDUuNTguNTYsNy40Mi0yLjM4LDIuMzgtMy43NiwzLjQ4LTQuMjYsNy44My0zLjQxLDEuMjIuMjUsMi41MS4zOCwzLjYzLjg1LDUuNywyLjM1LDExLjUzLDEuNzUsMTcuNDEuODgsMi4yOS0uMzQsMy4yOS0xLjE2LDIuOTEtMy42Ni0uNTMtMy41MS0xLjQ0LTcuMi0uOTEtMTAuNTksMS02LjIzLDIuOTQtMTIuMzEsNC40OC0xOC40OC4wNiwwLC4xNi4wMy4yMi4wNi41LDEwLjE1Ljk3LDIwLjMzLDEuNDcsMzAuNzMsNS44OS0uMzgsOS45LDEuNTMsMTIuNzUsNi42NywyLjI5LDQuMTMsNy40NSw1LjE0LDEyLjMxLDMuNDgtLjQxLTEwLjQtLjE5LTIwLjgsMi40NC0zMS4wNywyLjc2LTEwLjg0LDcuNjctMjcuMTYsOS42Mi0yOS43Ni0yLjM1LDE5LjgtNS40NSwzOS4zNy01LjU0LDU5LjY0LDQuMDctMS4zNSw3Ljc0LTIuMTYsMTAuNDYtNS4yMywxLjM1LTEuNTMsMy4wNC0yLjg1LDQuODItMy44NSwxLjUtLjg1LDEuODItMS44MiwxLjc5LTMuMzUtLjM4LTExLjYyLS43Mi0yMy4yNC0xLjA2LTM0Ljg5di0yLjM1Yy41My4xOS43Mi40NC43OC43MiwyLjIyLDEyLjIyLDUuNDIsMjQuMzQsNS4xNywzNi45LDAsMS40Ny4zOCwyLjM1LDEuNjksMy4yMywyLjA0LDEuMzgsNC4xMywyLjkxLDUuNjQsNC44NSwzLjU3LDQuNTEsOC41MiwzLjk1LDEzLjQ0LDQuNDguMDktLjcyLjIyLTEuMjIuMTktMS42OS0uMjUtOS42Mi0uNTMtMTkuMjYtLjc4LTI4Ljg4LjMxLTE3LjI2LTcuMy0zNS43MS0xMy44MS01My40M3YuMDNoMFoiLz4KICAgICAgICAgIDxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0xNjkuOTYsOTcuMDdjMS41Ny03LjUyLDMuMjMtMTUsNC44OS0yMi41NS0uNjkuMTktMS41My40NC0yLjM4LjY5LTkuMDIsMi42Ni0xOC4yMyw0LjM5LTI3LjYzLDQuNjctMS45NC4wNi0yLjg1LjY5LTMuNzYsMi4zMi03LjI3LDEzLTEwLjk2LDI3LjM0LTE1Ljk0LDQxLjE5LTMuMTYsOC44My00LjI5LDE3Ljk4LTUuMTEsMjcuNDQsNS40Mi0uMDMsMTEuMjEtMi4xNiwxNS4xLDMuOTUuMTYtLjI1LjMxLS40Ny41LS43Mi4zOC0yLjEzLjg4LTQuMjMsMS4xMy02LjM2Ljc4LTYuNzcsMS4zMi0xMy41NiwyLjI2LTIwLjI3LDEuNDEtMTAuMDIsNi4wOC0xOC44NiwxMC40OS0yNy43OC40NC0uODguODgtMS43NSwxLjM1LTIuNjMuMzEuNi4yOCwxLC4xOSwxLjM4LTMuMTYsMTQuNDEtNi40NSwyOC43OC05LjQ2LDQzLjIyLS45Nyw0LjczLTEuMjIsOS42Mi0xLjgyLDE0LjUsNC4yOSwwLDUuNDUtLjkxLDcuMTctNC42LjcyLTEuNTMsMS42LTMuMjksMi45MS00LjEzLDEuMTYtLjc1LDMuMDctLjQxLDQuODktLjU2LjYzLTcuOCw0LjQyLTE0LjY5LDcuOTItMjEuNzcsMi4wNC00LjEsMy4zOC04LjYxLDQuNTEtMTMuMDYsMS4yNS00Ljg5LDEuODItOS45MywyLjg1LTE0LjkxaC0uMDZ2LS4wMmgwWiIvPgogICAgICAgICAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTMzMy41OCw4Mi4xOWMtLjQ3LTMuNzktMi42My02LjUxLTUuNzktOC4xNy04LjI3LTQuMzUtMTcuMTMtMy4zOC0yNi40Ny0yLjQ0LDIuMTYsNi4xMSwzLjkyLDExLjksNi4yMywxNy40OCwyLjk4LDcuMTcsNi4zNiwxMy45Nyw2LjczLDIyLjE0LjQ0LDkuODMsMi4yOSwxOS42MSwzLjQ4LDI5LjQxLjY2LDUuMzIsMS4yNSwxMC42OCwxLjk0LDE2LjMyLDEuMDYtLjYzLDEuODUtMS4wNiwyLjYzLTEuNTMsNC43My0yLjk4LDcuMTQtMy4zOCwxMC41NiwxLjM4Ljg1LDEuMTksMi43NiwxLjYzLDQuNTcsMi42Ni4yMi00LjEzLjQ3LTcuNDIuNTMtMTAuNzQuMTktOS42NS45NC0xOS4zMy4yNS0yOC45MS0uOTEtMTIuNTYtMy4wNC0yNS4wMy00LjY0LTM3LjUybC0uMDMtLjA2di0uMDJoMFoiLz4KICAgICAgICAgIDxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0zNzEuNywxMDUuMjJjLTIuMzgtNS43LTUuNzktMTAuMDItMTIuMjUtMTEuNTktNy41NS0xLjgyLTE0LjQxLTUuNDItMjAuODktOS42OC0uNTMtLjM0LTEuMDYtLjY2LTEuNjktMS4wMy0uMDYuNDctLjEzLjc1LS4wOS45NywxLjc1LDEwLjMsMy40MSwyMC42MSw1LjM5LDMwLjg1LjYzLDMuMjksMS45Nyw2LjQ4LDMuMTYsOS42NS4yNS42NiwxLjMyLDEsMi4wNCwxLjUuNDQtLjY2LDEuMTMtMS4yNSwxLjI4LTEuOTcuMzEtMS42My41My0zLjI5LjUtNC45NS0uMTMtNS4yMy0uNDQtMTAuNDYtLjYtMTUuNjktLjAzLTEuMjIuMTYtMi40NC4yOC0zLjcuMjIsMCwuNDQtLjAzLjY2LS4wNi40MS44OCwxLjAzLDEuNzIsMS4xNiwyLjYzLjc1LDUuNzYsMS42MywxMS41LDEuOTcsMTcuMjkuMjIsMy40MSwxLjQ0LDUuOTgsMy44NSw4LjMsMSwuOTcsMS45MSwyLjM1LDIuMjIsMy43LjcyLDMuMjMsMSw2LjU1LDEuNSw5LjgzLjg1LDUuNDUsMS42OSwxMC45LDIuNTcsMTYuNDgsNi4zMyw2LjQ4LDcuMy4zNCw3LjgtMS43Mi0zLjIzLTE3Ljc5LTMuNDEtMzMuOTgtNi42NC01MS42NSwyLjUxLDUuNjQsNC45NSwxMS4zNyw2LjYxLDE3LjMyLDEuOTQsNi45NSwzLjkyLDEzLjg0LDcuMzYsMjAuMjcuMjguNTYuNTMsMS4xNi44MSwxLjcyLjY5LTEuMzgsMS40MS0yLjcyLDIuMTktNC4wNy0yLjEtMTEuNjgtNC41Ny0yMy4yNy05LjE4LTM0LjMzbC0uMDMtLjA2aC4wMloiLz4KICAgICAgICAgIDxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0xMTguMywxMDAuN2MtLjE5LDIuODUtNDcuNDEsNDguOTktNDkuMTMsNTIuNDQtMS41MywzLjA0LDE4Ljg5LTQuMTcsMjEuODktMi41NywyLjMyLDEuMjUsNC44NSwyLjQ3LDYuNTEsMi44OC45NC4yMiwxLjk3LjE5LDIuOTEuMDYsMi42My0uMzQsNS4yMy0uOTcsNy44Ni0xLjE5LDEuNDctLjEzLDIuMTMtLjYsMi41Ny0yLjA0LDYuOC0yMi4xOCwxNS42LTQyLjcyLDIyLjM5LTY0LjcxLTEuNiwxLjQ0LTIuNTUsMS41Mi00LjQzLDIuNzRsLTIuNzQsMy0xLjgzLDIuNjEtNiw2Ljc4WiIvPgogICAgICAgICAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTIzMi42OSw2OS4xNmMtNS41MSwyLjEzLTEwLjgxLDQuMTctMTYuMDQsNi4zLS41My4yMi0xLDEuMDMtMS4xMywxLjY2LTEsNC41MS0yLjE5LDkuMDItMi43MiwxMy41OS0uODgsNy41OC42MywxNC45MSwzLjMyLDIyLjE4LDkuOTMtMTMuMTksMTQuNTYtMjguMSwxNi42My00My43MmgtLjA2WiIvPgogICAgICAgIDwvZz4KICAgICAgPC9nPgogICAgICA8Zz4KICAgICAgICA8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMzUxLjg3LDQyNy44M2MzLjYtNC4yNiw4LjIxLTcuMzksMTIuMDMtMTEuNDMsMi43Mi0yLjg1LDUuMTEtNS41OCw3Ljg2LTguMTQtMTAuMTgtNy44My0yMC44OS0xNC41LTMxLjk4LTE5Ljk1LTE2Ljk0LTguMzMtMzUuNTItMTQuMzUtNDguMzktMzAuODgtOS4zLTExLjk2LTE2LjQ4LTI5Ljg1LTI5LjQ3LTMxLjg5LTcuOTItMS4yNS0xNS41NCw3LjU4LTIyLjE4LDEzLjM0LTE3Ljk4LDE1LjYtMzQuNjQsMzIuMjYtNTQuNDcsNDIuMTYtMy40NSw2LjgzLTkuNTUsMTIuMjUtMTguODIsMTQuNDEtNC45MiwxLjEzLTExLjc1LDkuMDItMTYuMzgsMTIuNTktNC41MSwzLjQ4LTkuMjEsNi40OC0xNCw5LjMzLjYzLjM0LDEuMjIuNzUsMS44MiwxLjIyLDQuMzUsMy40NSw4LjM2LDcuMTcsMTIuMDMsMTEuMzcsNTUuNjktLjM0LDE0Ny42NS0uOTQsMjAxLjQtMS4yOC4xOS0uMjguMzQtLjU2LjU2LS44MXYtLjAzaDBaIi8+CiAgICAgICAgPHBhdGggY2xhc3M9InN0NiIgZD0iTTMzNi4zNCw0NDMuMDJjNi4xNC02LjU1LDEzLjAzLTEyLjMxLDE5LjQ1LTE4LjYxLTUuNzktMy40OC0xMi4zMS04LjE0LTE1LjI1LTEzLjA5LTIuODItNC43Ni01Ljc2LTkuNDMtOC43MS0xNC4wNiwxLjE2LDAsMi4zMi0uMDksMy41NC0uMzQsOS40Ni0xLjk0LDE4LjMyLS4zNCwyNi40LDcuOTIsMi4xNiwyLjIyLDQuNDIsNC4yOSw2LjcsNi4yNiwxLjUtMS41MywzLjA0LTMuMDEsNC42Ny00LjQyLTguMTQtNy4zLTE2LjMyLTE0LjUzLTI0LjUyLTIxLjY3LTIuMzUtMi4wNy01LjUxLTMuMTMtOC4yNy0zLjAxLTUuMTQuMjItOS45Ni0xLjAzLTE0LjUtNC4xMy02LjY3LTQuNTEtMTMuNTYtOC41OC0xOS42Ny0xNC40Ny0xMS41LTExLjA5LTIyLjYxLTIyLjk5LTMzLjU4LTM1LjE0LTYuNzMtNy40OS0xMy4zMS04LjcxLTIwLjctMi42Ni01Ljk4LDQuODktMTIuMDMsOS41Mi0xOC4wNywxNC4yNWgtLjA2cy0uMTYuMTMtLjIyLjIyYy0xLjEuODUtMi4xNiwxLjY5LTMuMjYsMi41NC0xMy4xOSwxMC40My0yNi4yNSwyMS4yNy0zOS42MiwzMS4yLTIsMS40Ny0zNS40OSwyNS41Ni01OC4yLDQxLjkxLDEwLjc3LDguNDMsMjIuNTUsMTcuNjcsMzEuODIsMjcuNjYuNzUuODEsMS4zNSwxLjc5LDEuODIsMi44Miw1NC40NywxLjIyLDEyMC44MSwyLjU3LDE2OC4xMy42My40NC0xLjQxLDEuMTMtMi42OSwyLjEzLTMuNzZsLS4wMy0uMDN2LS4wMmgwWk0yNTQuNjUsMzI5Ljc2YzYuNTUtNC4wMSwxMi41LTIsMTcuNTcsNS42NywzLjM4LDUuMTEsNi44MywxMC4yMSwxMC42NSwxNC42LDExLjcxLDEzLjQ3LDIzLjgsMjYuMzEsMzUuMzksNDAuMDMsMy4xLDMuNjYsNi4zMyw1LjgzLDkuNzQsNi43MywzLjMyLDUuNyw2Ljc3LDExLjMxLDEwLjM0LDE2Ljc2LDEuODUsMi44Miw0LjYsNy4yLDcuNDksMTEuMzQtLjE5LjE2LS4zOC4yNS0uNTYuNDQtNy45OSw0LjMyLTE2LjI2LDIuOTQtMTkuNy0uNzUtNS4zMi03LjI3LTEyLjQtMTUuNTctMTYuMjItMjEuOTMtNS45OC05LjkzLTEzLjc4LTE3LjIzLTIzLjA1LTIyLjMtOC4yMS00LjUxLTE0Ljg4LTEwLjg3LTE5LjA0LTIwLjgzLTQuMTctOS45My04LjcxLTE5LjYxLTEzLjEyLTI5LjM4LjE5LS4xMy4zOC0uMjUuNTYtLjM4aC0uMDUsMFpNMTY5LjgsNDIxLjVjLTMuNDgsMy4xLTIwLjY3LDQuMi0yNi44Ny0uNjYtLjc1LS40Ny0xLjM4LS45MS0xLjkxLTEuMzgsNC41Ny0zLjM1LDkuNjgtNy4wNSwxNC42OS0xMC42OCw1LjY3LTMuMzgsMTEuNS02LjMsMTcuNTEtOC42OCw1LjExLTIuMDQsOS45OS00LjY3LDE0LjY2LTcuOTItMS44NSwzLjQ4LTMuMzgsNy4yLTQuNDgsMTEuMzctMS40NCw1LjM2LTMuMTYsMTAuNjUtNC44OSwxNS45MS0yLjQxLTEuMTktNS4xNy0xLjEzLTguNjgsMmwtLjAzLjAzaDBaTTE5MC43Niw0MjguMmMtMy42My41My02LjU1LTQuMzktMTAuMTItNy4zMywzLjQxLTYuODksNi41NS0xMy45MSw5Ljk5LTIwLjY3LDMuNDEtNi43LDcuNTUtMTMuMTIsMTIuMTgtMTguNzksOC40My0xMC4zLDE3LjMyLTIwLjExLDI2LTMwLjEzLDIuNTEtMi40MSw1LjAxLTQuODIsNy41Mi03LjIuNjMsNy4yNywyLjc5LDIwLjM2LDcuOTYsMzIuOThsLS43NS43NWMtNi4xNyw1Ljk4LTEyLjE1LDEyLjM0LTE4LjU0LDE3Ljc5LTUuMjYsNC40OC05LjYyLDkuNzEtMTIuMzQsMTcuNTEtLjY2LDEuODgtMS4zOCwzLjctMi4xLDUuNTQtNy40OS0xLjQ0LTkuMTUsNi42NC0xOS44Myw5LjU4bC4wMy0uMDNaTTI1NS45NCw0MjEuMjJjLTguNzQsMi42My0xMi41NiwxLjM1LTIwLjU1LTMuMS05LjQ5LTEuMzItMTAuMTIsMTcuODItMjIuOSwxLjU3LDEuNDctMi43MiwyLjk0LTUuNDIsNC40OC04LjA1LDIuNDEtNC4xNyw1LjIzLTguMDIsOC4yNC0xMS4zNCw2LjIzLTYuODMsMTIuNzUtMTMuMTYsMTkuMTEtMTkuOC4zMS0uMzQuNi0uNzguODUtMS4yOCwyLjQ0LDUuNTEsNS40OCwxMC44Nyw5LjI0LDE1LjUsNC4wNywzLjYsOS45LDcuMTQsMTEuNjUsOC4zLDkuMTEsNS44OSwxNy40NSwxMy4xNiwyNC4wNSwyMy40My0xNSwyLjk4LTE4LjE0LTExLjkzLTM0LjIzLTUuMmwuMDYtLjAzaDBaTTMwNy4wOCw0MTguMTVjLTYuMyw0LjQyLTExLjI4LDYuOC0xNS40MSw3Ljg5LTIuNzItNy42NC02LjQ1LTE0LjI1LTEyLjA2LTE4LjctNC44OS0zLjg1LTkuOTktNy4zMy0xNS4yMi0xMC4xOC0xMS42NS02LjM2LTE5LjExLTIxLjU4LTE5Ljk4LTM0LjIzLS45NC04LjExLTEuNDEtMTYuMjktMi0yNC40NiwyLjgyLTIuMzgsNS43Ni00LjUxLDguNzQtNi40NSwxLjI1LDIuMjIsMi44Miw0LjEzLDMuODIsNi42NywzLjA0LDcuNzEsNi4zNiwxNS4yNSw5LjgzLDIyLjY4LDYuNDgsMTMuODQsMTUuMDMsMjQuOTksMjcuOTcsMzAuMzUsNi4wNSwyLjUxLDEwLjksNy4xMSwxNC45NywxMi45LDIuMDQsMi45MSw0LjA0LDUuODMsNi4wMSw4Ljc3LjA2LjA2LjA5LjE2LjE2LjIyLTEuNDQuNjYtMy40MSwyLjEzLTYuODMsNC41MXYuMDNoMFoiLz4KICAgICAgPC9nPgogICAgICA8cGF0aCBjbGFzcz0ic3Q2IiBkPSJNMjUwLjk4LDQ5NS4yNWMtMjUuMDYsMC00OC42NC05Ljc3LTY2LjM3LTI3LjVMMzIuMjcsMzE1LjRjLTM2LjU4LTM2LjU4LTM2LjU4LTk2LjEzLDAtMTMyLjcxTDE4NC42MSwzMC4zOGMzNi41OC0zNi41OCw5Ni4xMy0zNi41OCwxMzIuNzEsMGwxNTIuMzUsMTUyLjM1YzE3LjczLDE3LjczLDI3LjUsNDEuMjgsMjcuNSw2Ni4zN3MtOS43Nyw0OC42NC0yNy41LDY2LjM3bC0xNTIuMzUsMTUyLjM1Yy0xNy43MywxNy43My00MS4yOCwyNy41LTY2LjM3LDI3LjVsLjAzLS4wNmgwWk0yNTAuOTgsOS4yYy0yMi40MywwLTQ0Ljg1LDguNTItNjEuOTIsMjUuNjJMMzYuNzEsMTg3LjE3Yy0zNC4xNCwzNC4xNC0zNC4xNCw4OS43LDAsMTIzLjg1bDE1Mi4zNSwxNTIuMzVjMTYuNTQsMTYuNTQsMzguNTMsMjUuNjUsNjEuOTIsMjUuNjVzNDUuMzgtOS4xMSw2MS45Mi0yNS42NWwxNTIuMzUtMTUyLjM1YzE2LjU0LTE2LjU0LDI1LjY1LTM4LjUzLDI1LjY1LTYxLjkycy05LjExLTQ1LjM4LTI1LjY1LTYxLjkyTDMxMi45MSwzNC44MmMtMTcuMDctMTcuMDctMzkuNS0yNS42Mi02MS45Mi0yNS42MmgtLjAxWiIvPgogICAgPC9nPgogIDwvZz4KPC9zdmc+" alt="" width="28" height="28"/></span><span class="AdminShell_brandText"><span class="AdminShell_brandName">Zarman</span><span class="AdminShell_brandSub">Exchange administration</span></span></a></div><div class="AdminShell_workspaceLabel"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock-keyhole" aria-hidden="true"><circle cx="12" cy="16" r="1"></circle><rect x="3" y="10" width="18" height="12" rx="2"></rect><path d="M7 10V7a5 5 0 0 1 10 0v3"></path></svg> Administrator workspace</div></div><nav class="AdminShell_sidebarScrollArea" aria-label="Admin navigation"><div class="AdminShell_navGroup"><span class="AdminShell_navSection">Workspace</span><a href="/admin/dashboard" class="AdminShell_navItem "><span class="AdminShell_navIconWrapper"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layout-dashboard" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg></span><span class="AdminShell_navLabel">Overview</span></a><a href="/admin/transactions" class="AdminShell_navItem "><span class="AdminShell_navIconWrapper"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left-right" aria-hidden="true"><path d="M8 3 4 7l4 4"></path><path d="M4 7h16"></path><path d="m16 21 4-4-4-4"></path><path d="M20 17H4"></path></svg></span><span class="AdminShell_navLabel">Transactions</span><span class="AdminShell_navBadge" aria-label="3 pending">3</span></a><a href="/admin/kyc" aria-current="page" class="AdminShell_navItem AdminShell_navItemActive"><span class="AdminShell_navIconWrapper"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg></span><span class="AdminShell_navLabel">Identity verification</span><span class="AdminShell_navBadge" aria-label="1 pending">1</span></a><a href="/admin/users" class="AdminShell_navItem "><span class="AdminShell_navIconWrapper"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg></span><span class="AdminShell_navLabel">Customers</span></a><a href="/admin/feedback" class="AdminShell_navItem "><span class="AdminShell_navIconWrapper"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg></span><span class="AdminShell_navLabel">Feedback</span></a></div><div class="AdminShell_navGroup"><span class="AdminShell_navSection">Finance</span><a href="/admin/ledger" class="AdminShell_navItem "><span class="AdminShell_navIconWrapper"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open" aria-hidden="true"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg></span><span class="AdminShell_navLabel">Ledger</span></a><a href="/admin/treasury" class="AdminShell_navItem "><span class="AdminShell_navIconWrapper"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up" aria-hidden="true"><path d="M16 7h6v6"></path><path d="m22 7-8.5 8.5-5-5L2 17"></path></svg></span><span class="AdminShell_navLabel">Treasury</span></a><a href="/admin/reports" class="AdminShell_navItem "><span class="AdminShell_navIconWrapper"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-no-axes-combined" aria-hidden="true"><path d="M12 16v5"></path><path d="M16 14v7"></path><path d="M20 10v11"></path><path d="m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15"></path><path d="M4 18v3"></path><path d="M8 14v7"></path></svg></span><span class="AdminShell_navLabel">Reports</span></a><a href="/admin/reports/austrac" class="AdminShell_navItem "><span class="AdminShell_navIconWrapper"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-alert" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg></span><span class="AdminShell_navLabel">AUSTRAC reporting</span></a></div><div class="AdminShell_navGroup"><span class="AdminShell_navSection">Administration</span><a href="/admin/audit" class="AdminShell_navItem "><span class="AdminShell_navIconWrapper"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg></span><span class="AdminShell_navLabel">Audit log</span></a><a href="/admin/settings" class="AdminShell_navItem "><span class="AdminShell_navIconWrapper"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg></span><span class="AdminShell_navLabel">Settings</span></a></div></nav><div class="AdminShell_sidebarFooter"><a href="/en" class="AdminShell_siteLink" target="_blank" rel="noreferrer"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg> View public website</a><div class="AdminShell_adminProfileHeader"><span class="AdminShell_adminAvatar"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg></span><div class="AdminShell_adminInfo"><span class="AdminShell_adminRole">Administrator</span><span class="AdminShell_adminEmail" title="admin@example.test">admin@example.test</span></div><button class="AdminShell_logoutBtn" type="button" aria-label="Sign out" title="Sign out"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out" aria-hidden="true"><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg></button></div></div></aside><button type="button" class="AdminShell_mobileMenuBtn" aria-label="Open admin navigation" aria-expanded="false" aria-haspopup="dialog"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu" aria-hidden="true"><path d="M4 5h16"></path><path d="M4 12h16"></path><path d="M4 19h16"></path></svg></button><main id="admin-main" class="AdminShell_mainArea"><div class="AdminShell_topBar"><span class="AdminShell_pageTitle">Identity Verification</span></div><div class="AdminShell_pageContent"><div class="AdminWorkspace_header"><div><h1>Identity Verification</h1><p>Review customer documents and manage verification.</p></div><button type="button" class="previewRefresh">Refresh</button></div><div class="AdminPageState_refreshNotice" role="alert"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg><div><strong>Latest information is temporarily unavailable</strong><p>Showing the last loaded information. Refresh checks the latest state without repeating your action.</p></div><button type="button"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>Try refresh</button></div><p class="fixtureSuccess" role="status">KYC archived successfully. One customer remains awaiting review.</p><nav class="AdminWorkspace_tabs" aria-label="Verification views"><a href="/admin/kyc?view=active&amp;pageSize=10" aria-current="page">Awaiting review<span>1</span></a><a href="/admin/kyc?view=history&amp;pageSize=10">History<span>1</span></a></nav><section class="AdminWorkspace_panel" aria-label="Awaiting verification"><div class="AdminWorkspace_toolbar"><h2 class="AdminWorkspace_panelTitle">Awaiting review</h2><span class="AdminWorkspace_recordCount">1 records</span></div><div class="AdminWorkspace_dataViewport"><div class="AdminTable_tableWrap AdminWorkspace_tableScroll" role="region" aria-label="Identity verification" tabindex="0"><table class="AdminTable_table AdminWorkspace_table" role="table"><thead role="rowgroup"><tr role="row"><th scope="col">Customer</th><th scope="col">Contact</th><th scope="col">Identity document</th><th scope="col">Status</th><th scope="col">Joined</th><th scope="col"><span class="AdminWorkspace_srOnly">Actions</span></th></tr></thead><tbody role="rowgroup"><tr role="row" class="AdminWorkspace_recordRow"><td role="cell" class="AdminWorkspace_identityCell" data-kind="primary"><a href="/admin/users?userId=fixture-remaining" class="AdminWorkspace_customer"><strong><bdi>Alex Morgan</bdi></strong></a><div class="AdminWorkspace_identityMeta">ZM00124</div></td><td role="cell" class="AdminWorkspace_dataCell"><span class="AdminWorkspace_mobileLabel">Contact</span><bdi>alex@example.test</bdi><span class="AdminWorkspace_detail"><bdi>0400 000 000</bdi></span></td><td role="cell" class="AdminWorkspace_dataCell"><span class="AdminWorkspace_mobileLabel">Identity document</span>Passport</td><td role="cell" class="AdminWorkspace_dataCell"><span class="AdminWorkspace_mobileLabel">Status</span><span class="AdminWorkspace_status" data-stage="funding"><span aria-hidden="true"></span>Pending</span></td><td role="cell" class="AdminWorkspace_dataCell"><span class="AdminWorkspace_mobileLabel">Joined</span><time dateTime="2026-10-08T01:00:00Z" dir="ltr"><span>8 Oct 2026</span></time></td><td role="cell" class="AdminWorkspace_actionsCell" data-kind="actions"><div class="AdminWorkspace_rowActions"><span><button type="button">Approve</button><button type="button">Archive</button></span><button type="button" class="AdminWorkspace_detailsToggle" aria-label="View identity details for Alex Morgan" aria-haspopup="dialog">View</button></div></td></tr></tbody></table></div></div></section><section class="AdminWorkspace_panel" hidden="" aria-label="Verification history"><div class="AdminWorkspace_toolbar"><h2 class="AdminWorkspace_panelTitle">Verification history</h2><span class="AdminWorkspace_recordCount">1 records</span></div><div class="AdminWorkspace_empty" role="status"><strong>No history on this page. Choose another page below.</strong></div></section></div></main></div></body></html>

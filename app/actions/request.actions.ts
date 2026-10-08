@@ -7,8 +7,9 @@ import { newRequestTelegramMessage, sendTelegramAdminMessage } from "@/lib/notif
 import { customerTelegramConfig, dispatchCustomerTelegramSafely } from "@/lib/notifications/customer-telegram";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { requireAdmin } from "@/app/actions/admin.actions";
-import { applyPromoCode, calcAppliedFee, calcEquivalentTomanForRequestType, calcLoyaltyDiscount, FINANCE_CONFIG_DEFAULTS, toCompanyTradeType, type PromoCodeData } from "@/lib/pricing";
-import { DEFAULT_REQUEST_SETTINGS, isUuid, messageInputError, mutationInputError, publicRequestSettings, quoteInputError, settingsInputError } from "@/lib/requests/validation";
+import { applyPromoCode, calcLoyaltyDiscount, FINANCE_CONFIG_DEFAULTS, toCompanyTradeType, type PromoCodeData } from "@/lib/pricing";
+import { calculateQuoteMoney } from "@/lib/requests/quote-money";
+import { DEFAULT_REQUEST_SETTINGS, isMoney, isUuid, messageInputError, mutationInputError, publicRequestSettings, quoteInputError, settingsInputError } from "@/lib/requests/validation";
 import type { ActionResult, ExchangeRequest, PublicRequestSettings, QuoteInput, QuoteSnapshot, RequestDelivery, RequestDetail, RequestMessageInput, RequestMessageResult, RequestMutationInput, RequestQuote, RequestReceipt, RequestSettings, SettingsRecord } from "@/lib/requests/types";
 import { inspectReceiptUpload, MAX_REQUEST_RECEIPT_BYTES, REQUEST_RECEIPTS_BUCKET } from "@/lib/requests/receipt-upload";
 import { validatedNotificationSettings } from "@/lib/requests/notification-config";
@@ -123,7 +124,7 @@ export async function createRequestQuote(input: QuoteInput): Promise<ActionResul
       const lookup = await db.from("promo_codes").select("code,discount_type,discount_value,max_uses,used_count,active,expires_at").eq("code", promoCode).single();
       if (lookup.error || !lookup.data) throw new Error("This promotion code is not available.");
       promo = lookup.data as PromoCodeData;
-      const benefit = applyPromoCode(input.rawAmount, baseRate, input.txType, promo);
+      const benefit = applyPromoCode(1, baseRate, input.txType, promo);
       if (!benefit.valid) throw new Error(benefit.error);
       appliedRate = benefit.effectiveRate;
       discount = benefit.discount_amount;
@@ -140,18 +141,21 @@ export async function createRequestQuote(input: QuoteInput): Promise<ActionResul
       if (recipient.direction === "aud" && (!String(recipient.account_name || "").trim() || !/^\d{6}$/.test(String(recipient.bsb || "").replaceAll("-", "")) || !/^\d{5,12}$/.test(String(recipient.account_number || "")))) throw new Error("Complete the recipient's account name, six-digit BSB and account number.");
       if (recipient.direction === "irt" && (!String(recipient.full_name || "").trim() || (recipient.bank_type === "bank_melli" ? !/^\d{5,20}$/.test(String(recipient.irt_account_number || "")) : !/^IR\d{24}$/i.test(String(recipient.shaba_number || "").replaceAll(" ", ""))))) throw new Error("Complete the recipient's name and valid Iranian account or IBAN details.");
     }
-    const fee = calcAppliedFee(input.rawAmount, config);
-    const equivalent = calcEquivalentTomanForRequestType(input.rawAmount, appliedRate, fee, input.txType);
+    appliedRate = Math.round(appliedRate * 1_000_000) / 1_000_000;
     const priority = input.serviceTier === "priority" ? policy.settings.priority_fee_aud : 0;
     const currency = input.txType === "buy_aud" ? "IRT" : "AUD";
-    const priorityAmount = currency === "IRT" ? Math.round(priority * appliedRate) : priority;
-    const fundingTotal = currency === "IRT" ? equivalent + priorityAmount : Math.round((input.rawAmount + priorityAmount) * 100) / 100;
+    const amountCurrency = input.amountCurrency ?? "AUD";
+    const amountValue = input.amountValue ?? input.rawAmount;
+    const money = calculateQuoteMoney({ amount: amountValue, currency: amountCurrency, rate: appliedRate, txType: input.txType, config, priorityFeeAud: priority });
+    const { rawAmountAud, equivalentToman: equivalent, baseFeeAud: fee, priorityFeeAmount: priorityAmount, fundingTotal } = money;
+    if (rawAmountAud > policy.settings.max_amount_aud) throw new Error("The calculated AUD amount exceeds the service limit.");
+    discount = Math.round(Math.abs(baseRate - appliedRate) * rawAmountAud);
     if (!Number.isFinite(appliedRate) || appliedRate <= 0 || !Number.isSafeInteger(equivalent) || equivalent <= 0 || !Number.isFinite(fundingTotal) || fundingTotal <= 0 || fundingTotal > Number.MAX_SAFE_INTEGER / 100) throw new Error("This amount cannot be quoted. Please review the amount and fees.");
     const snapshot: QuoteSnapshot = {
       locale: input.locale, customer_request_type: input.txType, company_trade_type: toCompanyTradeType(input.txType),
-      raw_amount_aud: input.rawAmount, equivalent_toman: equivalent, applied_rate: appliedRate, base_fee_aud: fee,
+      raw_amount_aud: rawAmountAud, equivalent_toman: equivalent, applied_rate: appliedRate, base_fee_aud: fee,
       priority_fee_aud: priority, priority_fee_amount: priorityAmount, funding_currency: currency, funding_total: fundingTotal,
-      recipient_amount: input.txType === "buy_aud" ? input.rawAmount : equivalent,
+      recipient_amount: money.recipientAmount,
       recipient_currency: input.txType === "buy_aud" ? "AUD" : "IRT", service_tier: input.serviceTier,
       source_of_funds: input.sourceOfFunds.trim(), reason_for_transfer: input.reasonForTransfer.trim(),
       recipient_id: education ? null : input.recipientId, recipient_snapshot: recipient,
@@ -160,8 +164,12 @@ export async function createRequestQuote(input: QuoteInput): Promise<ActionResul
       institution_name: education ? institutionName! : null,
       invoice_reference: education ? input.invoiceReference?.trim() || null : null,
       promo_code: promoCode, promo_snapshot: promo ? { ...promo } : null, discount_amount: discount,
-      loyalty_discount: Math.round(loyalty * input.rawAmount), policy_version: policy.version,
+      loyalty_discount: Math.round(loyalty * rawAmountAud), policy_version: policy.version,
       policy_snapshot: publicRequestSettings(policy.settings), rate_id: String(rate.id),
+      locked_amount_currency: amountCurrency, locked_amount_value: amountValue,
+      rounding_adjustment_toman: money.roundingAdjustmentToman,
+      base_rate: input.txType === "buy_aud" ? sell : buy, loyalty_rate_discount: loyalty,
+      promo_rate_discount: Math.abs(baseRate - appliedRate),
     };
     const inserted = await db.from("exchange_request_quotes").insert({ user_id: user.id, snapshot, expires_at: new Date(Date.now() + policy.settings.quote_minutes * 60_000).toISOString() }).select("id,user_id,snapshot,expires_at,created_at").single();
     if (inserted.error) throw inserted.error;
@@ -593,5 +601,30 @@ export async function getRequestReceiptUrl(receiptId: string): Promise<ActionRes
     const url = await db.storage.from(REQUEST_RECEIPTS_BUCKET).createSignedUrl(receipt.data.storage_path, 60, { download: receipt.data.original_name });
     if (url.error || !url.data) throw new Error("The receipt download is temporarily unavailable.");
     return { url: url.data.signedUrl };
+  });
+}
+
+/** Change unpaid request amounts together, with database versioning and an audit reason. */
+export async function updateAdminRequestPricing(input: { requestId: string; expectedVersion: number; commandKey: string; fundingTotal: number; recipientAmount: number; reason: string }): Promise<ActionResult<ExchangeRequest>> {
+  return result(async () => {
+    const admin = await requireAdmin();
+    if (!input || !isUuid(input.requestId) || !isUuid(input.commandKey) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1
+      || !isMoney(input.fundingTotal) || !isMoney(input.recipientAmount) || typeof input.reason !== "string" || input.reason.trim().length < 3 || input.reason.trim().length > 1000) throw new Error("Enter valid amounts and a reason for the correction.");
+    const response = await database().rpc("admin_update_request_pricing", { p_actor_id: admin.id, p_request_id: input.requestId,
+      p_expected_version: input.expectedVersion, p_command_key: input.commandKey, p_funding_total: input.fundingTotal,
+      p_recipient_amount: input.recipientAmount, p_reason: input.reason.trim() });
+    if (response.error) throw response.error;
+    return response.data as ExchangeRequest;
+  });
+}
+
+export async function acceptMyRequestPricing(input: { requestId: string; expectedVersion: number; commandKey: string }): Promise<ActionResult<ExchangeRequest>> {
+  return result(async () => {
+    const user = await customer();
+    if (!input || !isUuid(input.requestId) || !isUuid(input.commandKey) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) throw new Error("Refresh the request before accepting revised amounts.");
+    const response = await database().rpc("accept_request_pricing", { p_actor_id: user.id, p_request_id: input.requestId,
+      p_expected_version: input.expectedVersion, p_command_key: input.commandKey });
+    if (response.error) throw response.error;
+    return customerRequest(response.data as ExchangeRequest);
   });
 }

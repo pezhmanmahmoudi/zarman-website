@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { updateTreasurySettings, type TreasurySettingsRow } from "@/app/actions/treasury.actions";
 import s from "@/styles/admin/Treasury.module.css";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
-import { reloadAdminPage } from "@/lib/admin-refresh";
 
 type Props = {
   settings: TreasurySettingsRow;
 };
 
 export default function TreasurySettingsForm({ settings }: Props) {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition({ refreshAfter: true });
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
@@ -71,7 +71,6 @@ export default function TreasurySettingsForm({ settings }: Props) {
       }
 
       setOk(true);
-      reloadAdminPage(600);
     });
   }
 

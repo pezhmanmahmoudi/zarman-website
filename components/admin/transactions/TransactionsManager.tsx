@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Archive, CalendarDays, Download, RefreshCw, Search, Settings, Trash2, X } from "lucide-react";
 import { bulkDeleteTransactions, getAdminTransactionWorkspace } from "@/app/actions/admin.actions";
 import { AdminPagination } from "@/components/admin/AdminPagination";
-import { useAdminRefresh } from "@/components/admin/ui/useAdminRefresh";
+import { AdminRefreshScope } from "@/components/admin/ui/AdminRefreshScope";
+import { AdminRefreshNotice } from "@/components/admin/ui/AdminRefreshNotice";
+import { useAdminSnapshot } from "@/components/admin/ui/useAdminSnapshot";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import type { ExchangeRequest } from "@/lib/requests/types";
@@ -26,6 +28,8 @@ export type TransactionRow = {
   type: "buy_aud" | "sell_aud" | string;
   amount_aud: number | string;
   equivalent_toman: number | string;
+  applied_rate?: number | string | null;
+  ledger_fee_aud?: number | string | null;
   status: string | null;
   created_at: string;
   reference_code?: string | null;
@@ -107,54 +111,23 @@ export function TransactionsManager({
   bankAccounts: initialBankAccounts,
 }: TransactionsManagerProps) {
   const router = useRouter();
-  const refreshAdmin = useAdminRefresh();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const initialData = { pending: initialPending, history: initialHistory, total: initialTotal, statusTabs: initialStatusTabs, bankAccounts: initialBankAccounts };
-  const [refreshedData, setRefreshedData] = useState<{ source: typeof initialData; value: typeof initialData } | null>(null);
-  // A router refresh supplies new server props without remounting this component.
-  // Only use refreshed data while it belongs to that same server snapshot. This also
-  // prevents an older in-flight read from overwriting a newly committed mutation.
-  const data = refreshedData
-    && refreshedData.source.pending === initialPending
-    && refreshedData.source.history === initialHistory
-    && refreshedData.source.total === initialTotal
-    && refreshedData.source.statusTabs === initialStatusTabs
-    && refreshedData.source.bankAccounts === initialBankAccounts
-    ? refreshedData.value : initialData;
+  const initialData = useMemo(() => ({ pending: initialPending, history: initialHistory, total: initialTotal,
+    statusTabs: initialStatusTabs, bankAccounts: initialBankAccounts }),
+  [initialPending, initialHistory, initialTotal, initialStatusTabs, initialBankAccounts]);
+  const load = useCallback(async () => {
+    const snapshot = await getAdminTransactionWorkspace(view, currentPage, pageSize, {
+      status: historyStatus, direction: historyDirection, startDate, endDate, search,
+    });
+    return { pending: snapshot.pending as TransactionRow[], history: snapshot.history as TransactionRow[], total: snapshot.total,
+      statusTabs: initialStatusTabs.map(tab => ({ ...tab, count: snapshot.statusCounts[tab.key] })), bankAccounts: snapshot.bankAccounts };
+  }, [view, currentPage, pageSize, historyStatus, historyDirection, startDate, endDate, search, initialStatusTabs]);
+  const { data, refresh, update, refreshing, refreshError } = useAdminSnapshot(initialData, load);
   const { pending, history, total, statusTabs, bankAccounts } = data;
-  const [refreshing, setRefreshing] = useState(false);
-  const [refreshError, setRefreshError] = useState("");
-  const reading = useRef(false);
-  const mounted = useRef(true);
-  const refresh = useCallback(async () => {
-    if (reading.current) return;
-    reading.current = true;
-    setRefreshing(true);
-    try {
-      const snapshot = await getAdminTransactionWorkspace(view, currentPage, pageSize, {
-        status: historyStatus, direction: historyDirection, startDate, endDate, search,
-      });
-      if (mounted.current) {
-        setRefreshedData({
-          source: { pending: initialPending, history: initialHistory, total: initialTotal, statusTabs: initialStatusTabs, bankAccounts: initialBankAccounts },
-          value: { pending: snapshot.pending as TransactionRow[], history: snapshot.history as TransactionRow[], total: snapshot.total,
-            statusTabs: initialStatusTabs.map(tab => ({ ...tab, count: snapshot.statusCounts[tab.key] })), bankAccounts: snapshot.bankAccounts },
-        });
-        setRefreshError("");
-      }
-    } catch {
-      if (mounted.current) setRefreshError("Could not refresh transactions. Showing the last loaded records. Please try Refresh again.");
-    } finally {
-      reading.current = false;
-      if (mounted.current) setRefreshing(false);
-    }
-  }, [view, currentPage, pageSize, historyStatus, historyDirection, startDate, endDate, search, initialPending, initialHistory, initialTotal, initialStatusTabs, initialBankAccounts]);
   useEffect(() => {
-    mounted.current = true;
     // Preserve old bookmarks to service settings after the queue is redirected.
     if (window.location.hash.startsWith("#request-")) router.replace(`/admin/settings${window.location.hash}`);
-    return () => { mounted.current = false; };
   }, [router]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   // A refresh must never turn an export selection into a deletion.
@@ -313,21 +286,29 @@ export function TransactionsManager({
   };
 
   const deleteSelected = async () => {
-    if (selectedCount === 0 || selectionAction !== "delete") return;
+    if (isDeleting || selectedCount === 0 || selectionAction !== "delete") return;
     if (!window.confirm(`Permanently delete ${selectedCount} selected transaction(s)? This cannot be undone.`)) return;
 
     try {
       setIsDeleting(true);
       setExportMessage(null);
-      const result = await bulkDeleteTransactions(selectedRows.map(row => String(row.id)));
+      const deletedRows = selectedRows;
+      const deletedIds = new Set(deletedRows.map(row => String(row.id)));
+      const result = await bulkDeleteTransactions([...deletedIds]);
       if ("error" in result && result.error) {
         setExportMessage({ type: "error", text: result.error });
         return;
       }
       const deletedCount = "deletedCount" in result ? result.deletedCount : selectedCount;
       clearSelection();
-      setExportMessage({ type: "success", text: `${deletedCount} transaction(s) deleted.` });
-      refreshAdmin();
+      // Apply only the confirmed deletion before reading again. If that read fails,
+      // the deleted records stay removed and the success message remains truthful.
+      update(previous => ({ ...previous, history: previous.history.filter(row => !deletedIds.has(String(row.id))),
+        total: Math.max(0, previous.total - deletedCount),
+        statusTabs: previous.statusTabs.map(tab => ({ ...tab, count: Math.max(0, tab.count
+          - deletedRows.filter(row => tab.key === "all" || row.status === tab.key).length) })) }));
+      setExportMessage({ type: "success", text: `${deletedCount} transaction(s) deleted.${"warning" in result && result.warning ? ` ${result.warning}` : ""}` });
+      void refresh();
     } catch (error) {
       setExportMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to delete transactions." });
     } finally {
@@ -336,7 +317,7 @@ export function TransactionsManager({
   };
 
   return (
-    <>
+    <AdminRefreshScope refresh={refresh}>
       <div className={shellStyles.topBar}>
         <span className={shellStyles.pageTitle}>Transactions</span>
       </div>
@@ -353,7 +334,7 @@ export function TransactionsManager({
           </div>
         </div>
 
-        {refreshError && <p className={workspace.error} role="alert">{refreshError}</p>}
+        <AdminRefreshNotice error={refreshError} refreshing={refreshing} onRefresh={refresh} />
         <nav className={workspace.tabs} aria-label="Transaction views">
           <Link href={viewHref("active")} aria-current={view === "active" ? "page" : undefined}>Active<span>{pending.length}</span></Link>
           <Link href={viewHref("history")} aria-current={view === "history" ? "page" : undefined}>History & reports<span>{statusTabs.find(tab => tab.key === "all")?.count ?? total}</span></Link>
@@ -509,6 +490,6 @@ export function TransactionsManager({
           <AdminPagination currentPage={currentPage} totalCount={total} pageSize={pageSize} />
         </div>}
       </div>
-    </>
+    </AdminRefreshScope>
   );
 }

@@ -1,7 +1,7 @@
 import React from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { getSystemSettings, getPromoCodes } from "@/app/actions/admin.actions";
-import { SystemSettingsForm } from "@/components/admin/SystemSettingsForm";
+import { PlatformSettings } from "@/components/admin/PlatformSettings";
 import { SettingsWorkspace } from "@/components/admin/SettingsWorkspace";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
@@ -11,7 +11,7 @@ export const metadata = { title: "System Settings | Zarman Admin" };
 export default async function SettingsPage() {
   const [settings, promoCodes] = await Promise.all([
     getSystemSettings(),
-    getPromoCodes().catch(() => []),
+    getPromoCodes(),
   ]);
 
   return (
@@ -37,7 +37,7 @@ export default async function SettingsPage() {
         </div>
 
         {/* Form Component — includes Promo Code Management section */}
-        <SettingsWorkspace platform={<SystemSettingsForm initialSettings={settings} initialCodes={promoCodes ?? []} />} />
+        <SettingsWorkspace platform={<PlatformSettings initialData={{ settings, promoCodes }} />} />
       </div>
     </>
   );

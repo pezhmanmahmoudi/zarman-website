@@ -3,12 +3,20 @@ const fs = require("node:fs"), path = require("node:path"), vm = require("node:v
 const ts = require("typescript"), postcss = require("postcss"), React = require("react");
 const root = path.resolve(__dirname, "../..");
 function dashboardHarness({ locale = "en", pathname = `/${locale}/dashboard`, query = "", mocks = {} } = {}) {
-  const cache = new Map(), css = new Map(), values = [], refs = [], effects = [], cleanups = [], dependencies = [];
-  let index = 0, refIndex = 0, effectIndex = 0;
+  const cache = new Map(), css = new Map(), values = [], refs = [], effects = [], cleanups = [], dependencies = [], memos = [];
+  let index = 0, refIndex = 0, effectIndex = 0, memoIndex = 0;
+  function memo(fn, deps) {
+    const i = memoIndex++;
+    if (!memos[i] || !deps || deps.some((value, j) => !Object.is(value, memos[i].deps[j]))) memos[i] = { value: fn(), deps };
+    return memos[i].value;
+  }
   const hookReact = { ...React,
     useState(initial) { const i = index++; if (!(i in values)) values[i] = typeof initial === "function" ? initial() : initial; return [values[i], value => { values[i] = typeof value === "function" ? value(values[i]) : value; }]; },
     useRef(initial) { const i = refIndex++; return refs[i] ||= { current: initial }; },
-    useCallback: fn => fn, useMemo: fn => fn(), useId: () => ":harness:",
+    useCallback: (fn, deps) => memo(() => fn, deps), useMemo: memo, useId: () => ":harness:",
+    useContext: context => React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE?.H ? React.useContext(context) : context._currentValue,
+    useTransition: () => [false, callback => callback()],
+    startTransition: callback => callback(),
     useEffect(fn, deps) { const i = effectIndex++; if (!dependencies[i] || !deps || deps.some((value,j) => !Object.is(value, dependencies[i][j]))) { effects.push(() => { cleanups[i]?.(); cleanups[i] = fn(); }); dependencies[i] = deps; } },
   };
   const navigation = { usePathname: () => pathname, useSearchParams: () => new URLSearchParams(query), useRouter: () => ({ replace() {}, refresh() {}, push() {} }) };
@@ -55,7 +63,7 @@ function dashboardHarness({ locale = "en", pathname = `/${locale}/dashboard`, qu
     cache.set(filename,output.exports); return output.exports;
   }
   return { load: compile, css, values, refs,
-    render(fn,props) { index = 0; refIndex = 0; effectIndex = 0; return fn(props); },
+    render(fn,props) { index = 0; refIndex = 0; effectIndex = 0; memoIndex = 0; return fn(props); },
     effects() { effects.splice(0).forEach(fn => fn()); },
     cleanup() { cleanups.forEach(fn => fn?.()); },
   };

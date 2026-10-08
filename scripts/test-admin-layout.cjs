@@ -257,9 +257,11 @@ test("admin status refresh requests fresh server data immediately without reload
   const { useAdminRefresh } = compile("components/admin/ui/useAdminRefresh.ts", {
     react: {
       useCallback: callback => callback,
+      useContext: () => null,
       startTransition: callback => { calls.push("transition"); callback(); },
     },
     "next/navigation": { useRouter: () => ({ refresh: () => calls.push("refresh") }) },
+    "./AdminRefreshScope": { AdminRefreshContext: {} },
   });
   // No window/timer implementation: a full reload or artificial delay fails here.
   useAdminRefresh()();

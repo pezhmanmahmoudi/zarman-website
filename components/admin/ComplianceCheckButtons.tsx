@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState} from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { ShieldCheck, Search, Download, AlertTriangle, Loader2, CheckCircle2, Flag, Save } from "lucide-react";
 import styles from "@/styles/admin/ComplianceButtons.module.css";
 import { recordCustomerComplianceCheck, saveCustomerComplianceReview } from "@/app/actions/admin.actions";

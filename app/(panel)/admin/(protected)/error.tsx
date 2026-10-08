@@ -30,6 +30,8 @@ export default function AdminError({ error }: { error: Error & { digest?: string
           <span className={styles.errorIcon}><AlertTriangle size={25} aria-hidden="true" /></span>
           <h1 id="admin-error-title">This page couldn’t load</h1>
           <p>We couldn’t retrieve the latest information. Try again, or return to the dashboard to continue.</p>
+          <p>If this happened after a change, check the latest records before repeating the action.</p>
+          {error.digest && <p>Support reference: <bdi>{error.digest}</bdi></p>}
           <div className={styles.errorActions}>
             <button type="button" onClick={reload}><RefreshCw size={16} aria-hidden="true" /> Try again</button>
             <Link href="/admin/dashboard" onClick={openDashboard}><ArrowLeft size={16} aria-hidden="true" /> Dashboard</Link>

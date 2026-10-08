@@ -39,6 +39,7 @@ async function _fetchFinanceConfig(): Promise<FinanceConfig> {
         "discount_step_volume, discount_percent_per_step, max_discount_percent, fee_threshold, applied_fee",
       )
       .order("date", { ascending: false })
+      .order("id", { ascending: false })
       .limit(1)
       .maybeSingle();
 

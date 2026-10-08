@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import { toJalaliStr } from "@/lib/jalali";
 import {
@@ -300,7 +299,6 @@ export async function updateTreasurySettings(
     newValue: payload,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -347,7 +345,6 @@ export async function addOwnerLoan(payload: {
     newValue: payload,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -408,7 +405,6 @@ export async function updateOwnerLoan(payload: {
     newValue: payload,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -458,7 +454,6 @@ export async function addExpense(payload: {
     newValue: payload,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -523,7 +518,6 @@ export async function updateExpense(payload: {
     newValue: payload,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -549,7 +543,6 @@ export async function deleteExpense(id: string): Promise<{ success: true } | { e
     oldValue: before,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -574,7 +567,6 @@ export async function deleteOwnerLoan(id: string): Promise<{ success: true } | {
     oldValue: before,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -643,7 +635,6 @@ export async function addRecurringExpense(payload: {
     newValue: payload,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -668,7 +659,6 @@ export async function deleteRecurringExpense(id: string): Promise<{ success: tru
     oldValue: before,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -691,7 +681,6 @@ export async function toggleRecurringExpense(id: string, isActive: boolean): Pro
     targetId: id,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -755,7 +744,6 @@ export async function postRecurringExpense(
     newValue: { postDate, nextDue },
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -802,7 +790,6 @@ export async function addBankAccount(payload: {
     newValue: payload,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -850,7 +837,6 @@ export async function updateBankAccount(payload: {
     newValue: payload,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -944,7 +930,6 @@ export async function closeBankAccount(id: string): Promise<{ success: true } | 
     newValue: { is_active: false },
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -969,7 +954,6 @@ export async function reopenBankAccount(id: string): Promise<{ success: true } |
     newValue: { is_active: true },
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -1095,7 +1079,6 @@ export async function saveAccountReconciliation(payload: {
     newValue: { ...payload, discrepancy, status },
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true, status };
 }
 
@@ -1166,7 +1149,6 @@ export async function postReconciliationAdjustment(
     newValue: { ledgerId: ledgerRow.id, amount, isCredit },
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }
 
@@ -1191,6 +1173,5 @@ export async function deleteAccountReconciliation(id: string): Promise<{ success
     oldValue: before,
   }).catch(() => {});
 
-  revalidatePath("/admin/treasury");
   return { success: true };
 }

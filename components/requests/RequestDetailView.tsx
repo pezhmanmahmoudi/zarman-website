@@ -8,6 +8,8 @@ import type { ExchangeRequest, RequestCommand, RequestDetail, RequestMutationInp
 import { requestDate, requestLabel, requestMoney, requestError, isRequestTerminal, type RequestLocale } from "./request-labels";
 import { canRetryRequestEmail, getRequestJourney, requestActivityLabel, requestEmailStatus, requestMilestones, requestStageLabel } from "@/lib/requests/journey";
 import { isMoney } from "@/lib/requests/validation";
+import { RequestPricingEditor } from "./RequestPricingEditor";
+import { RequestPricingAcceptance } from "./RequestPricingAcceptance";
 import { RequestTransactionSummary } from "./RequestTransactionSummary";
 import { RequestPaymentAccount } from "./RequestPaymentAccount";
 import { AdminCopyButton, AdminCopyRow } from "./AdminCopyField";
@@ -42,7 +44,7 @@ function allowedCommands(request: ExchangeRequest, admin: boolean): RequestComma
   const hasRefund = hasPrincipalRefund || ["refund_pending", "refunded"].includes(request.priority_fee_status);
   if (admin) {
     if (["submitted", "under_review", "awaiting_funds", "action_required", "ready"].includes(request.status)) commands.push("request_info");
-    if (!hasRefund && request.funding_status !== "confirmed" && ["submitted", "under_review", "action_required"].includes(request.status)) commands.push("await_funds");
+    if (!request.pricing_pending_acceptance && !hasRefund && request.funding_status !== "confirmed" && ["submitted", "under_review", "action_required"].includes(request.status)) commands.push("await_funds");
     if (request.payment_approved_at && !hasRefund && request.funding_status !== "confirmed" && ["submitted", "under_review", "awaiting_funds", "action_required", "expired"].includes(request.status)) commands.push("confirm_funds");
     if (!hasPrincipalRefund && request.funding_status === "confirmed" && ["under_review", "action_required"].includes(request.status)) commands.push("resume_funded_request");
     if (getRequestJourney(request).readyForSettlement) commands.push("reconcile_complete");
@@ -399,7 +401,8 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
     {loading && <p className={styles.loading} role="status">{fa ? "در حال بارگذاری…" : "Loading…"}</p>}
     {refreshing && !loading && <p className={styles.loading} role="status">{fa ? "در حال به‌روزرسانی…" : "Refreshing the latest status…"}</p>}
     {request && detail && <>
-      {!admin && <RequestAdminMessageBanner messages={messages} fallbackMessage={journey?.customerActionMessage} replyRequired={journey?.customerActionRequired} locale={locale} />}
+      {!admin && journey?.pricingPending && <RequestPricingAcceptance key={request.version} request={request} locale={locale} onRefresh={() => refresh()} onAccepted={updated => { setDetail(current => current && updated.version >= current.request.version ? { ...current, request: updated } : current); void refresh(); }}/>}
+      {!admin && <RequestAdminMessageBanner messages={messages} fallbackMessage={journey?.pricingPending ? null : journey?.customerActionMessage} replyRequired={journey?.customerActionRequired && !journey.pricingPending} locale={locale} />}
       {request.status === "reconciliation" && (admin ? <p className={styles.warning}>Verify the bank result before retrying a payout.</p> : <div className="mb-4 flex items-center gap-3 rounded-2xl border border-[#e1e5ec] bg-[#f7f8fa] px-4 py-3"><DashboardLottieScene name="compliance-review" size={44}/><p className="m-0 text-sm text-[#586270]">{fa ? "نتیجه پرداخت بانکی در حال بررسی است." : "We’re checking the bank settlement."}</p></div>)}
       {(request.priority_fee_status === "refund_pending" || request.funding_status === "refund_pending") && (admin ? <p className={styles.warning}>Refund approval required.</p> : <div className="mb-4 flex items-center gap-3 rounded-2xl border border-[#e1e5ec] bg-[#f7f8fa] px-4 py-3"><DashboardLottieScene name="waiting" size={44}/><p className="m-0 text-sm text-[#586270]">{fa ? "بازپرداخت در حال پیگیری است." : "Your refund is being arranged."}</p></div>)}
       {admin ? <>
@@ -408,14 +411,13 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
           {journey?.customerActionRequired && <section className={workspace.adminAlert}><strong>Awaiting customer</strong><p dir="auto">{journey.customerActionMessage}</p></section>}
         </div>}
         <section className={workspace.summaryCard} aria-label="Transfer summary">
-          <div className={workspace.summaryFlow}>
-            <div><span>Customer pays</span><strong><bdi>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</bdi></strong></div>
-            <ArrowRight size={18} aria-hidden="true" className={workspace.summaryArrow} />
-            <div><span>Recipient gets</span><strong><bdi>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</bdi></strong></div>
-          </div>
+          <RequestPricingEditor request={request} disabled={busy} onBusyChange={value => { pending.current = value; setBusy(value); }} onSaved={updated => {
+            setDetail(current => current && updated.version >= current.request.version ? { ...current, request: updated } : current);
+            setNotice("Amounts revised. Customer acceptance is required before payment approval.");
+            setAction(""); setConfirmed(false); void refresh();
+          }} onRefresh={() => refresh()} />
           <ul className={workspace.summaryMeta}>
             <li data-tone={request.funding_status === "confirmed" ? "good" : request.funding_status === "partial" ? "warn" : undefined}>{request.funding_status === "confirmed" ? <><Check size={14} aria-hidden="true" />Funds received</> : request.funding_status === "partial" ? <><Clock3 size={14} aria-hidden="true" /><bdi>{requestMoney(request.funding_received, request.quote.funding_currency, locale)}</bdi>&nbsp;of&nbsp;<bdi>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</bdi>&nbsp;received</> : <><Clock3 size={14} aria-hidden="true" />{request.funding_status === "unpaid" ? "Awaiting payment" : requestLabel(request.funding_status, locale)}</>}</li>
-            <li>Rate <bdi>{requestMoney(request.quote.applied_rate, "IRT", locale)}</bdi></li>
             {request.handling_due_at && <li>Due <time dir="ltr" dateTime={request.handling_due_at}>{requestDate(request.handling_due_at, locale)}</time>&nbsp;(Sydney)</li>}
             {request.service_tier === "priority" && <li>Express fee <bdi>{requestMoney(request.quote.priority_fee_amount, request.quote.funding_currency, locale)}</bdi>&nbsp;· {requestLabel(request.priority_fee_status, locale)}</li>}
           </ul>
@@ -457,7 +459,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
           <details className={`${styles.card} ${workspace.disclosure}`}><summary>Accepted quote<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}><dl className={styles.facts}>
             <div className={styles.fact}><dt>Transfer fee</dt><dd><bdi>{requestMoney(request.quote.base_fee_aud, "AUD", locale)}</bdi></dd></div>
             {Number(request.quote.discount_amount) > 0 && <div className={styles.fact}><dt>Promo discount{request.quote.promo_code ? ` (${request.quote.promo_code})` : ""}</dt><dd><bdi>{requestMoney(request.quote.discount_amount, "AUD", locale)}</bdi></dd></div>}
-            {Number(request.quote.loyalty_discount) > 0 && <div className={styles.fact}><dt>Loyalty discount</dt><dd><bdi>{requestMoney(request.quote.loyalty_discount, "AUD", locale)}</bdi></dd></div>}
+            {Number(request.quote.loyalty_discount) > 0 && <div className={styles.fact}><dt>Loyalty discount</dt><dd><bdi>{requestMoney(request.quote.loyalty_discount, "IRT", locale)}</bdi></dd></div>}
             <div className={styles.fact}><dt>Source of funds</dt><dd dir="auto">{request.quote.source_of_funds}</dd></div>
             <div className={styles.fact}><dt>Purpose</dt><dd dir="auto">{request.quote.reason_for_transfer}</dd></div>
           </dl></div></details>

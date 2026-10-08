@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import { resolveReportPeriod } from "@/lib/reporting/date-range";
 import { buildReportDashboard } from "@/lib/reporting/report-engine";
@@ -171,7 +170,6 @@ export async function refreshEnterpriseReports(): Promise<{ success: true } | { 
     target_type: "reporting",
     new_value: { completed_at: new Date().toISOString() },
   });
-  revalidatePath("/admin/reports");
   return { success: true };
 }
 
@@ -276,6 +274,5 @@ export async function revertAustracReportBatch(batchId: string): Promise<{ succe
     target_id: batchId,
   });
 
-  revalidatePath("/admin/reports/austrac");
   return { success: true };
 }

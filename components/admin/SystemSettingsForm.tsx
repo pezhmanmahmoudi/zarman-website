@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState} from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { 
   Save, CheckCircle, AlertTriangle, TrendingUp, Power, 
   CalendarClock, Settings2, Percent, Banknote, Tag

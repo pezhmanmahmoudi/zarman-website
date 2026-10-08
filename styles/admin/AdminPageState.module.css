@@ -5,6 +5,17 @@
   min-width: 0;
 }
 
+.refreshStatus { display: flex; align-items: center; gap: 0.5rem; color: var(--text-soft, #526079); font-size: 0.875rem; }
+.refreshNotice { display: flex; align-items: flex-start; gap: 0.875rem; margin-bottom: 1rem; padding: 1rem 1.25rem; border: 1px solid #f5d9ac; border-radius: 0.875rem; background: #fff9ef; color: #75420d; }
+.refreshNotice > svg { flex-shrink: 0; margin-top: 0.125rem; }
+.refreshNotice > div { flex: 1; min-width: 0; }
+.refreshNotice strong { font-size: 0.875rem; }
+.refreshNotice p { margin: 0.25rem 0 0; font-size: 0.8125rem; line-height: 1.6; }
+.refreshNotice button { display: inline-flex; align-items: center; gap: 0.5rem; flex-shrink: 0; min-height: 2.75rem; padding: 0.5rem 0.875rem; border: 1px solid #d8b585; border-radius: 0.5rem; background: #fff; color: inherit; font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
+.refreshNotice button:focus-visible { outline: 3px solid var(--accent, #4338ca); outline-offset: 3px; }
+.refreshNotice button:disabled { cursor: wait; opacity: 0.6; }
+@media (max-width: 600px) { .refreshNotice { flex-wrap: wrap; } .refreshNotice button { margin-left: 2.125rem; } }
+
 .loadingLabel {
   display: flex;
   align-items: center;

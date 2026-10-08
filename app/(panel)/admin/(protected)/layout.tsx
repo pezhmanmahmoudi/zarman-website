@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerComponentClient } from "@/lib/supabase-server";
 import { getAdminNavigationCounts } from "@/app/actions/admin.actions";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminFeedbackProvider } from "@/components/admin/ui/AdminFeedbackProvider";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 
 export const metadata: Metadata = {
@@ -56,7 +57,7 @@ export default async function AdminLayout({
         pendingTx={pendingTx}
         pendingFeedback={pendingFeedback}
       />
-      <main id="admin-main" tabIndex={-1} className={shellStyles.mainArea}>{children}</main>
+      <main id="admin-main" tabIndex={-1} className={shellStyles.mainArea}><AdminFeedbackProvider>{children}</AdminFeedbackProvider></main>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { updateTransactionAmount } from "@/app/actions/admin.actions";
 import { AdminFieldEditor } from "@/components/admin/ui/AdminFieldEditor";
 import { parseAdminAmount } from "@/lib/admin-amount-input";
-import { reloadAdminPage } from "@/lib/admin-refresh";
+import { useAdminRefresh } from "@/components/admin/ui/useAdminRefresh";
 
 interface EditableAmountProps {
   transactionId: string | number;
@@ -14,6 +14,7 @@ interface EditableAmountProps {
 }
 
 export function EditableAmount({ transactionId, field, currentValue, placeholder }: EditableAmountProps) {
+  const refreshAdmin = useAdminRefresh();
   const [savedValue, setSavedValue] = useState<{ source: number; value: number } | null>(null);
   const displayValue = savedValue?.source === currentValue ? savedValue.value : currentValue;
   const isAud = field === "amount_aud";
@@ -37,7 +38,7 @@ export function EditableAmount({ transactionId, field, currentValue, placeholder
         const result = await updateTransactionAmount(transactionId, field, parsed);
         if ("error" in result && result.error) throw new Error(result.error);
         setSavedValue({ source: currentValue, value: parsed });
-        reloadAdminPage(600);
+        refreshAdmin();
       }}
     />
   );

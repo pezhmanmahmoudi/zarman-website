@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Download, ExternalLink, Mail, X } from "lucide-react";
+import { Download, ExternalLink, X } from "lucide-react";
 import { AdminRecordDrawer } from "@/components/admin/ui/AdminRecordDrawer";
 import { AdminBadge, AdminDataTable, AdminTableRow, AdminTableCell, AdminTableIdentity, AdminTableDate } from "@/components/admin/ui/AdminDataTable";
 import { TransactionApproveButton } from "@/components/admin/TransactionApproveButton";
-import { SendReceiptButton } from "@/components/admin/SendReceiptButton";
 import { RejectApprovedButton } from "@/components/admin/RejectApprovedButton";
 import { EditableReferenceCode } from "@/components/admin/EditableReferenceCode";
 import { EditableAmount } from "@/components/admin/EditableAmount";
-import { isRequestTerminal, requestDate, requestMoney } from "@/components/requests/request-labels";
+import { isRequestTerminal, requestDate, requestMoney, requestRate } from "@/components/requests/request-labels";
+import { calcExecutionRateFromSettlement } from "@/lib/pricing";
 import { transactionQueueState, transactionRequest, transactionRequestHref } from "@/lib/admin-transaction-workspace";
 import type { BankAccountOption, TransactionRow } from "./TransactionsManager";
 import styles from "@/styles/admin/AdminWorkspace.module.css";
@@ -46,6 +46,7 @@ function recordPresentation(row: TransactionRow) {
     requestHref: request ? transactionRequestHref(request.id) : null,
     fundingCurrency: request?.quote.funding_currency || (row.type === "buy_aud" ? "AUD" : "IRT"),
     recipientCurrency: request?.quote.recipient_currency || (row.type === "buy_aud" ? "IRT" : "AUD"),
+    rate: Number(request?.quote.applied_rate ?? row.applied_rate) || calcExecutionRateFromSettlement(Number(row.amount_aud), Number(row.equivalent_toman), Number(row.ledger_fee_aud ?? 0), row.type === "buy_aud" ? "buy_aud" : "sell_aud"),
     funding: request?.quote.funding_total ?? Number(row.type === "buy_aud" ? row.amount_aud : row.equivalent_toman),
     recipientAmount: request?.quote.recipient_amount ?? Number(row.type === "buy_aud" ? row.equivalent_toman : row.amount_aud),
     tone: state.stage === "closed" ? successful ? "success" as const : row.status === "archived" ? "closed" as const : "rejected" as const : state.stage,
@@ -131,14 +132,14 @@ export function TransactionTable({ rows, isPending, bankAccounts, selectedIds = 
     disabled={!eligibleIds.length} onChange={event => onToggleAll?.(eligibleIds, event.target.checked)} /></label>;
 
   return <>
-    <AdminDataTable label={isPending ? "Active transaction queue" : "Transaction history"} selection={!isPending ? selectAll : undefined} columns={[
+    <AdminDataTable className={styles.transactionsTable} label={isPending ? "Active transaction queue" : "Transaction history"} selection={!isPending ? selectAll : undefined} columns={[
       ...(!isPending ? [{ key: "select", label: "Select transfer", selection: true }] : []),
-      { key: "customer", label: "Customer" }, { key: "pays", label: "Customer pays", align: "end" },
+      { key: "customer", label: "Customer" }, { key: "type", label: "Customer trade" }, { key: "rate", label: "Rate / AUD", align: "end" }, { key: "pays", label: "Customer pays", align: "end" },
       { key: "gets", label: "Recipient gets", align: "end" }, { key: "status", label: "Status" },
       { key: "date", label: <>{isPending ? "Due / created" : "Created"}<span className={styles.timeZone}>Sydney time</span></> },
-      { key: "actions", label: "Actions", actions: true },
+      { key: "actions", label: "Actions" },
     ]}>{rows.map(row => {
-          const { request, state, reference, name, requestHref, fundingCurrency, recipientCurrency, funding, recipientAmount } = recordPresentation(row);
+          const { request, state, reference, name, requestHref, fundingCurrency, recipientCurrency, funding, recipientAmount, rate } = recordPresentation(row);
           const id = String(row.id);
           const selectable = !isPending && rowAction(row) !== null && (!selectionAction || rowAction(row) === selectionAction)
             && (rowAction(row) !== "export" || !selectedExportType || row.type === selectedExportType);
@@ -146,19 +147,19 @@ export function TransactionTable({ rows, isPending, bankAccounts, selectedIds = 
           return <AdminTableRow key={id} data-selected={selectedIds.has(id) || undefined}>
             {!isPending && <AdminTableCell kind="selection"><label className={styles.checkTarget}><input type="checkbox" aria-label={`Select transaction ${reference}`} checked={selectedIds.has(id)} disabled={!selectable} onChange={event => onToggleRow?.(id, event.target.checked)} /></label></AdminTableCell>}
             <AdminTableCell kind="primary"><AdminTableIdentity name={name} href={`/admin/users?userId=${encodeURIComponent(row.user_id)}`} detail={<><bdi>{reference}</bdi>{request?.service_tier === "priority" && <span className={styles.priority}>Priority</span>}</>} /></AdminTableCell>
+            <AdminTableCell label="Customer trade"><strong>{fundingCurrency === "IRT" ? "Buy AUD" : "Sell AUD"}</strong><span className={styles.detail}>{fundingCurrency === "IRT" ? "Toman → AUD" : "AUD → Toman"}</span></AdminTableCell>
+            <AdminTableCell label="Rate / AUD" align="right"><bdi>{rate > 0 ? requestRate(Math.round(rate * 1_000_000) / 1_000_000, "en") : "—"}</bdi></AdminTableCell>
             <AdminTableCell label="Customer pays" align="right"><strong dir="ltr">{requestMoney(funding, fundingCurrency, "en")}</strong></AdminTableCell>
             <AdminTableCell label="Recipient gets" align="right"><span dir="ltr">{requestMoney(recipientAmount, recipientCurrency, "en")}</span></AdminTableCell>
             <AdminTableCell label="Status"><TransferStatus row={row} />{request?.funding_status === "partial" && <span className={styles.detail}>{requestMoney(request.funding_received, fundingCurrency, "en")} received</span>}</AdminTableCell>
             <AdminTableCell label="Sydney time"><AdminTableDate value={due || row.created_at} time prefix={due ? "Due " : ""} /></AdminTableCell>
             <AdminTableCell kind="actions">
-              {isPending && requestHref && <Link className={styles.action} href={requestHref}>{state.next}</Link>}
-              {!request && row.status === "pending" && <TransactionApproveButton transactionId={row.id} transactionAmountToman={Number(row.equivalent_toman)} transactionType={row.type} bankAccounts={bankAccounts} />}
-              {!request && row.status === "approved" && <><SendReceiptButton transactionId={row.id} customerEmail={row.profiles?.email ?? undefined} initiallySent={row.receipt_sent === true} /><RejectApprovedButton transactionId={row.id} /></>}
+              {requestHref && <Link className={`${styles.action} ${styles.transferAction}`} href={requestHref}>{state.next}</Link>}
+              {!request && <button type="button" className={`${styles.action} ${styles.transferAction}`} aria-label={`View details for ${reference}`} aria-haspopup="dialog" onClick={() => setOpenRowId(id)}>{row.status === "pending" ? "Review transaction" : "Details"}</button>}
+              {!request && row.status === "approved" && <RejectApprovedButton transactionId={row.id} />}
               {request && requestHref && <>
-                <Link className={styles.action} href={`${requestHref}?intent=email#request-conversation`} title="Write a customer email"><Mail size={14} aria-hidden="true" />Email</Link>
                 {!isRequestTerminal(request.status) && !["processing", "reconciliation"].includes(request.status) && <Link className={`${styles.action} ${styles.rejectAction}`} href={`${requestHref}?intent=reject`}><X size={14} aria-hidden="true" />Reject</Link>}
               </>}
-              <button type="button" className={styles.detailsToggle} aria-label={`View details for ${reference}`} aria-haspopup="dialog" onClick={() => setOpenRowId(id)}>View</button>
             </AdminTableCell>
           </AdminTableRow>;
         })}</AdminDataTable>

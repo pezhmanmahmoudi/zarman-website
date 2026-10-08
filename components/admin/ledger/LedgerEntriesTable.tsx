@@ -12,7 +12,7 @@ import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { filterBankAccountsByLedgerType, sortBankAccountsByPriority, type BankAccountLike } from "@/lib/bank-account-ordering";
 import { parseAdminAmount } from "@/lib/admin-amount-input";
-import { reloadAdminPage } from "@/lib/admin-refresh";
+import { useAdminRefresh } from "@/components/admin/ui/useAdminRefresh";
 import styles from "@/styles/admin/AdminWorkspace.module.css";
 
 export type LedgerRow = {
@@ -31,6 +31,7 @@ const amount = (value: number | string, currency: string) => `${Number(value).to
 const parseOptional = (value: string) => !value.trim() || /^0+(?:\.0*)?$/.test(value.trim()) ? 0 : parseAdminAmount(value);
 
 export function LedgerEntriesTable({ rows, bankAccounts, titleSlot }: { rows: LedgerRow[]; bankAccounts: BankAccountLike[]; titleSlot?: ReactNode }) {
+  const refreshAdmin = useAdminRefresh();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -93,7 +94,7 @@ export function LedgerEntriesTable({ rows, bankAccounts, titleSlot }: { rows: Le
         sender: draft.sender, recipient: draft.recipient,
       });
       if ("error" in result) setError(result.error);
-      else { setDraft(null); reloadAdminPage(600); }
+      else { setDraft(null); refreshAdmin(); }
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save the entry. Please try again."); }
     finally { submitting.current = false; setSaving(false); }
   };
@@ -102,7 +103,7 @@ export function LedgerEntriesTable({ rows, bankAccounts, titleSlot }: { rows: Le
     onConfirm: async () => {
       const result = await deleteLedgerEntry(row.id);
       if ("error" in result) showToast({ type: "error", message: result.error });
-      else reloadAdminPage(600);
+      else refreshAdmin();
     },
   });
   return <>

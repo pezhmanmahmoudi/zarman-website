@@ -80,7 +80,7 @@ function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_0
   vm.runInNewContext(`(function(require,module,exports,process){${compiled}\n})`)(
     (name) => {
       if (name === "@supabase/supabase-js") return { createClient: () => { serviceClients++; return db; } };
-      if (name === "@/lib/supabase-server") return { createSupabaseServerActionClient: async () => db };
+      if (name === "@/lib/supabase-server") return { createSupabaseServerComponentClient: async () => db };
       // Model one RSC request scope only when explicitly requested. Direct
       // action calls have no React render cache and always recheck access.
       if (name === "react") return { cache: fn => {

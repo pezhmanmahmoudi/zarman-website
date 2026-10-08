@@ -38,7 +38,8 @@ test("one queue preserves manual approval and routes linked transfers through th
   const rows = [row("manual"), row("online", { status: "ready" })];
   const html = markup(h.render(TransactionQueue, { rows, bankAccounts: [] }));
   assert.equal((html.match(/class="AdminWorkspace_recordRow"/g) ?? []).length, 2);
-  assert.match(html, /data-manual="manual"/);
+  assert.match(html, /Review transaction/);
+  assert.doesNotMatch(html, /data-manual="manual"/);
   assert.doesNotMatch(html, /data-manual="online"/);
   assert.match(html, /href="\/admin\/transactions\/requests\/request-online"/);
   assert.match(html, /Reconcile &amp; complete/);
@@ -69,14 +70,17 @@ test("queue search covers snapshot customers, manual customers and transaction c
   }
 });
 
-test("request row email and rejection shortcuts stay visible without offering legacy accounting actions", () => {
+test("request rows show one blue workflow action and rejection without email or duplicate view", () => {
   const h = queueHarness();
   const { TransactionTable } = h.load("components/admin/transactions/TransactionTable.tsx");
   const html = markup(h.render(TransactionTable, { isPending: true, bankAccounts: [], rows: [
     row("review", { status: "under_review" }), row("paying", { status: "processing" }), row("done", { status: "completed" }),
   ] }));
   assert.match(html, /request-review\?intent=reject/);
-  for (const id of ["review", "paying", "done"]) assert.ok(html.includes("request-" + id + "?intent=email#request-conversation"));
+  assert.doesNotMatch(html, /intent=email|View details for ZE-(?:review|paying|done)/);
+  assert.equal((html.match(/AdminWorkspace_transferAction/g) || []).length, 3);
+  assert.match(html, /Customer trade/);
+  assert.match(html, /Rate \/ AUD/);
   assert.doesNotMatch(html, /request-(?:paying|done)\?intent=reject/);
   assert.doesNotMatch(html, /data-manual/);
 });
@@ -122,14 +126,14 @@ test("history keeps exports and legacy edits but does not offer incompatible edi
   const props = { rows: [row("manual", null, { status: "approved" }), row("online", { status: "completed" }, { status: "approved" })], isPending: false, bankAccounts: [] };
   let tree = h.render(TransactionTable, props);
   assert.doesNotMatch(markup(tree), /data-edit-ref/);
-  assert.match(markup(tree), /data-email="manual"/);
+  assert.doesNotMatch(markup(tree), /data-email/);
   assert.match(markup(tree), /data-reject="manual"/);
   assert.match(markup(tree), /<strong><bdi>Taylor Smith<\/bdi><\/strong>/);
   nodes(tree, node => node.props["aria-label"] === "View details for ZE-manual")[0].props.onClick();
   tree = h.render(TransactionTable, props);
   const html = markup(tree);
   assert.match(html, /data-edit-ref="manual"/);
-  assert.match(html, /data-email="manual"/);
+  assert.doesNotMatch(html, /data-email/);
   assert.match(html, /data-reject="manual"/);
   assert.doesNotMatch(html, /data-(?:edit-ref|edit-amount|reject|email)="online"/);
   assert.match(html, /Select transaction ZE-online/);
@@ -138,11 +142,8 @@ test("history keeps exports and legacy edits but does not offer incompatible edi
   detail.props.onClose();
   tree = h.render(TransactionTable, props);
   assert.doesNotMatch(markup(tree), /role="dialog"/);
-  nodes(tree, node => node.props["aria-label"] === "View details for ZE-online")[0].props.onClick();
-  const requestTree = h.render(TransactionTable, props);
-  const requestHtml = markup(nodes(requestTree, node => node.type?.name === "TransactionDetails")[0]);
-  assert.match(requestHtml, /\/api\/requests\/request-online\/receipt/);
-  assert.doesNotMatch(requestHtml, /data-edit-ref|data-edit-amount|data-reject|data-email/);
+  assert.doesNotMatch(markup(tree), /View details for ZE-online/);
+  assert.match(markup(tree), /href="\/admin\/transactions\/requests\/request-online"/);
 });
 
 test("manual review opens the existing approval controls and a refreshed request never gains manual editing", () => {
@@ -204,7 +205,9 @@ test("refresh updates workflow data atomically and retains the last good records
   await nodes(tree, node => node.type === "button" && text(node) === "Refresh")[0].props.onClick();
   tree = h.render(TransactionsManager, props);
   assert.equal(nodes(tree, node => node.type?.name === "TransactionQueue")[0].props.rows[0].request.status, "ready");
-  assert.match(text(nodes(tree, node => node.props.role === "alert")[0]), /last loaded records/);
+  const notice = nodes(tree, node => node.type?.name === "AdminRefreshNotice")[0];
+  assert.equal(notice.props.error, true);
+  assert.match(markup(notice), /last loaded information/);
 });
 
 test("transaction pages request one authorized snapshot with the selected view and history filters", async () => {
@@ -264,6 +267,7 @@ test("new server snapshots replace previously refreshed data and an in-flight re
     statusTabs: [{ key: "all", label: "All", count: 0 }], bankAccounts: [] };
   let tree = h.render(TransactionsManager, props);
   const inFlight = nodes(tree, node => node.type === "button" && text(node) === "Refresh")[0].props.onClick();
+  await Promise.resolve(); // The refresh queue starts its read in the next microtask.
   const committedProps = { ...props, pending: [] };
   tree = h.render(TransactionsManager, committedProps);
   assert.equal(nodes(tree, node => node.type?.name === "TransactionQueue")[0].props.rows.length, 0);

@@ -2,11 +2,13 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useCallback, useState } from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Download, RefreshCw } from "lucide-react";
-import { refreshEnterpriseReports } from "@/app/actions/report.actions";
+import { getEnterpriseReportData, refreshEnterpriseReports } from "@/app/actions/report.actions";
 import type { EnterpriseReportData, ReportDashboard, ReportKpi } from "@/lib/reporting/types";
-import { reloadAdminPage } from "@/lib/admin-refresh";
+import { useAdminSnapshot } from "@/components/admin/ui/useAdminSnapshot";
+import { AdminRefreshNotice } from "@/components/admin/ui/AdminRefreshNotice";
 import styles from "@/styles/admin/Reports.module.css";
 
 const ReportsCharts = dynamic(() => import("./ReportsCharts"), { ssr: false, loading: () => <div className={styles.chartLoading}>Loading charts...</div> });
@@ -56,18 +58,22 @@ function exportCsv(data: EnterpriseReportData) {
   const anchor = document.createElement("a"); anchor.href = url; anchor.download = `zarman-report-${data.dashboard.period.start}-${data.dashboard.period.end}.csv`; anchor.click(); URL.revokeObjectURL(url);
 }
 
-export function ReportsDashboard({ data }: { data: EnterpriseReportData }) {
+export function ReportsDashboard({ data: initialData }: { data: EnterpriseReportData }) {
+  const period = initialData.dashboard.period;
+  const load = useCallback(() => getEnterpriseReportData({ preset: period.preset, start: period.start, end: period.end }), [period]);
+  const { data, refresh: refreshData, refreshing, refreshError } = useAdminSnapshot(initialData, load);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const dashboard = data.dashboard;
   const ledgerHref = `/admin/ledger?start=${dashboard.period.start}&end=${dashboard.period.end}`;
   const refresh = () => startTransition(async () => {
     const result = await refreshEnterpriseReports();
-    if ("error" in result) setMessage(`Error: ${result.error}`); else { setMessage("Reports refreshed."); reloadAdminPage(600); }
+    if ("error" in result) setMessage(`Error: ${result.error}`); else { setMessage("Reports refreshed."); void refreshData(); }
   });
 
   return (
     <div className={styles.reports}>
+      <AdminRefreshNotice error={refreshError} refreshing={refreshing} onRefresh={refreshData} />
       <section className={styles.toolbar} aria-label="Report period controls">
         <div className={styles.presets}>{[["this-month","This Month"],["last-month","Last Month"],["quarter","Quarter"],["year","Year"]].map(([preset,label]) => <Link key={preset} aria-current={dashboard.period.preset === preset ? "page" : undefined} className={dashboard.period.preset === preset ? styles.presetActive : styles.preset} href={`/admin/reports?preset=${preset}`}>{label}</Link>)}</div>
         <form className={styles.customRange} action="/admin/reports" suppressHydrationWarning><input type="hidden" name="preset" value="custom" suppressHydrationWarning/><input aria-label="Start date" type="date" name="start" defaultValue={dashboard.period.start} suppressHydrationWarning/><span>to</span><input aria-label="End date" type="date" name="end" defaultValue={dashboard.period.end} suppressHydrationWarning/><button type="submit">Apply</button></form>

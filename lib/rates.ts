@@ -71,6 +71,7 @@ async function fetchRatesSnapshot(): Promise<RateSnapshot> {
       .select("id, created_at, updated_at, date, buy_aud, sell_aud")
       .gte("date", fromDateISO)
       .order("date", { ascending: false })
+      .order("id", { ascending: false })
       .limit(MAX_HISTORY_ROWS);
 
     if (error) {

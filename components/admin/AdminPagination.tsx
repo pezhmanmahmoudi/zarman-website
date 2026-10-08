@@ -44,8 +44,13 @@ function PageJump({ currentPage, totalPages, disabled, onNavigate }: {
         <input
           id={inputId}
           name="page"
-          type="text"
+          type="number"
+          min={1}
+          max={totalPages || 1}
+          step={1}
           inputMode="numeric"
+          dir="ltr"
+          spellCheck={false}
           autoComplete="off"
           enterKeyHint="go"
           value={value}

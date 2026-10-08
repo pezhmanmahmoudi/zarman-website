@@ -73,8 +73,8 @@ test("closing an underlying dialog preserves the active dialog and scroll locks"
   const stack = loadModule("components/admin/ui/admin-dialog-stack.ts", {
     document: { documentElement: { style: rootStyle }, body: { style: bodyStyle } },
   });
-  const first = {};
-  const second = {};
+  const first = { isConnected: true, open: true };
+  const second = { isConnected: true, open: true };
   let notifications = 0;
   const unsubscribe = stack.subscribeAdminDialogs(() => notifications++);
   const closeFirst = stack.registerAdminDialog(first);
@@ -101,9 +101,9 @@ test("closing the top dialog restores the previous active dialog and clears init
   const stack = loadModule("components/admin/ui/admin-dialog-stack.ts", {
     document: { documentElement: { style }, body: { style } },
   });
-  const first = {};
+  const first = { isConnected: true, open: true };
   const closeFirst = stack.registerAdminDialog(first);
-  const closeSecond = stack.registerAdminDialog({});
+  const closeSecond = stack.registerAdminDialog({ isConnected: true, open: true });
   closeSecond();
   assert.equal(stack.getActiveAdminDialog(), first);
   closeFirst();

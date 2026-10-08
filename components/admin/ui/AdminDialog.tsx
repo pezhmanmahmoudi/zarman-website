@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useSyncExternalStore } from "react";
+import React, { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { getActiveAdminDialog, registerAdminDialog } from "./admin-dialog-stack";
 import styles from "@/styles/admin/AdminDialogSurface.module.css";
@@ -35,9 +35,9 @@ export function AdminDialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const pointerStartedOnBackdrop = useRef(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dialog = dialogRef.current;
-    if (!open || !hydrated || !dialog) return;
+    if (!open || !hydrated || !dialog?.isConnected) return;
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialog.showModal();
     const unregister = registerAdminDialog(dialog);
@@ -82,8 +82,9 @@ export function AdminDialog({
         pointerStartedOnBackdrop.current = false;
       }}
       onKeyDown={event => {
-        if (event.key !== "Tab" || event.defaultPrevented || getActiveAdminDialog() !== dialogRef.current) return;
-        const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(focusableSelector))
+        const dialog = dialogRef.current;
+        if (event.key !== "Tab" || event.defaultPrevented || !dialog || getActiveAdminDialog() !== dialog) return;
+        const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector))
           .filter(element => element.tabIndex >= 0 && !element.matches(":disabled") && !element.closest("[inert]") && element.getClientRects().length > 0);
         const first = focusable[0];
         const last = focusable[focusable.length - 1];

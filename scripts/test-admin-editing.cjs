@@ -153,12 +153,12 @@ test("amount editor rejects invalid values before its action and saves the selec
     "@/app/actions/admin.actions": { updateTransactionAmount: async (...args) => { calls.push(args); return { success: true }; } },
     "@/components/admin/ui/AdminFieldEditor": { AdminFieldEditor: Field },
     "@/lib/admin-amount-input": { parseAdminAmount },
-    "@/lib/admin-refresh": { reloadAdminPage: delay => { reloadDelays.push(delay); } },
+    "@/components/admin/ui/useAdminRefresh": { useAdminRefresh: () => () => { reloadDelays.push("refresh"); } },
   });
   await assert.rejects(mounted.render().props.onSave("506oops"), /positive amount/);
   assert.deepEqual(calls, []);
   await mounted.render().props.onSave("80,000,000");
   assert.deepEqual(calls, [["tx-test", "equivalent_toman", 80000000]]);
-  assert.deepEqual(reloadDelays, [600]);
+  assert.deepEqual(reloadDelays, ["refresh"]);
   assert.equal(mounted.render().props.value, "80000000");
 });

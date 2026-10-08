@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useState, useTransition } from "react";
+import { Fragment, useState } from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { Trash2, PlusCircle, Play, Pause, CheckCircle2, ChevronDown } from "lucide-react";
 import {
   addRecurringExpense,
@@ -73,7 +74,7 @@ function dueBadge(nextDue: string, isActive: boolean) {
 }
 
 export default function RecurringExpenseForm({ recurringExpenses, bankAccounts, defaultOpen = false }: Props) {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition({ refreshAfter: true });
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY });
   const [error, setError] = useState<string | null>(null);

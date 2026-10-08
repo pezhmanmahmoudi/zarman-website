@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useMemo, useState, useTransition } from "react";
+import React, { useMemo, useState} from "react";
+import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { ArrowLeftRight, Plus, Pencil, Trash2, X } from "lucide-react";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import styles from "@/styles/admin/AdminWorkspace.module.css";

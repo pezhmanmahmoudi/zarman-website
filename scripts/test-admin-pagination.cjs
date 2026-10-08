@@ -32,6 +32,13 @@ function compile(file, mocks = {}) {
     }
     if (id === "next/link") return { __esModule: true, default: props => React.createElement("a", props) };
     if (id.startsWith("@/lib/")) return compile(`${resolved}.ts`, mocks);
+    if (id.startsWith("@/") || id.startsWith(".")) {
+      const base = id.startsWith("@/") ? path.join(root, id.slice(2)) : path.resolve(root, path.dirname(file), id);
+      const canonical = "@/" + path.relative(root, base).replaceAll("\\", "/");
+      if (canonical in mocks) return mocks[canonical];
+      const dependency = [base + ".tsx", base + ".ts"].find(candidate => fs.existsSync(candidate));
+      if (dependency) return compile(path.relative(root, dependency), mocks);
+    }
     return require(id);
   };
   vm.runInThisContext(`(function(require,module,exports){${js}\n})`, { filename: file })(localRequire, result, result.exports);
@@ -51,6 +58,20 @@ function pager(mocks = {}) {
 function html(props = {}) {
   return renderToStaticMarkup(React.createElement(pager(), { currentPage: 2, pageSize: 20, totalCount: 266, ...props }));
 }
+
+test("pagination output is deterministic with browser globals present and does not suppress hydration checks", () => {
+  const server = html();
+  const previousDocument = global.document;
+  try {
+    global.document = {};
+    assert.equal(html(), server);
+  } finally {
+    if (previousDocument === undefined) delete global.document;
+    else global.document = previousDocument;
+  }
+  assert.doesNotMatch(server, /data-rtl-listener/);
+  assert.doesNotMatch(fs.readFileSync(path.join(root, "components/admin/AdminPagination.tsx"), "utf8"), /suppressHydrationWarning/);
+});
 function nodes(tree, predicate) {
   if (!tree || typeof tree !== "object") return [];
   if (Array.isArray(tree)) return tree.flatMap(child => nodes(child, predicate));
@@ -141,6 +162,7 @@ test("pagination renders labeled direct-entry and row-size controls, accurate to
   assert.match(output, /Page 2 of 14/);
   assert.match(output, /Go to page<\/label>/);
   assert.match(output, /inputMode="numeric"/);
+  assert.match(output, /type="number" min="1" max="14" step="1" inputMode="numeric" dir="ltr" spellCheck="false"/);
   assert.match(output, /enterKeyHint="go"/);
   assert.match(output, /<button type="submit"[^>]*>Go<\/button>/);
   assert.match(output, /<option value="20" selected="">20<\/option>/);
@@ -216,6 +238,7 @@ for (const [route, actionName] of [["audit", "getAuditLogs"], ["feedback", "getF
     };
     const Page = compile(`app/(panel)/admin/(protected)/${route}/page.tsx`, {
       "@/app/actions/admin.actions": actions,
+      "@/components/admin/ui/AdminRefreshButton": { AdminRefreshButton: () => React.createElement("button", null, "Refresh") },
       "@/components/admin/AdminPagination": { AdminPagination: pager() },
       "@/components/admin/FeedbackModerateButtons": { FeedbackModerateButtons: () => null },
       "@/components/admin/KycActionButtons": { KycActionButtons: () => null },

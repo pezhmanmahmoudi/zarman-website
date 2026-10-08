@@ -86,7 +86,7 @@ function ledgerUi(actions = {}, rows = [row]) {
     "@/components/admin/ui/AdminToast": { AdminToast: () => null },
     "@/components/ui/SelectBox/SelectBox": { SelectBox: () => null },
     "@/components/ui/DatePicker/CustomDatePicker": { __esModule: true, default: () => null },
-    "@/lib/admin-refresh": { reloadAdminPage: delay => calls.reload.push(delay) },
+    "@/components/admin/ui/useAdminRefresh": { useAdminRefresh: () => () => calls.reload.push("refresh") },
   } });
   const { LedgerEntriesTable } = h.load("components/admin/ledger/LedgerEntriesTable.tsx");
   const props = { rows, bankAccounts: [{ id: "irt", currency: "IRT", account_name: "Melli" }, { id: "aud", currency: "AUD", account_name: "Cash" }, { id: "credit", currency: "AUD", account_name: "Customer Credit_AUD" }] };
@@ -125,7 +125,7 @@ test("ledger blocks malformed amounts and invalid dates before calling a server 
   assert.equal(ui.calls.update.length, 0);
 });
 
-test("ledger prevents repeated submissions, retains failed drafts, and reloads only after a successful save", async () => {
+test("ledger prevents repeated submissions, retains failed drafts, and refreshes only after a successful save", async () => {
   let finish;
   let pending = true;
   const ui = ledgerUi({ update: () => pending ? new Promise(resolve => finish = resolve) : { success: true } });

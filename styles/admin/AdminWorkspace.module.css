@@ -169,3 +169,21 @@ a.customer:hover { color: var(--accent); text-decoration: underline; text-underl
 .spinner { animation: admin-spin 1s linear infinite; }
 @keyframes admin-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+/* The transfer action is the single primary entry point in each row. */
+.transferAction.transferAction { background: #2563eb; border-color: #2563eb; color: white; white-space: normal; min-width: 104px; }
+.transferAction.transferAction:hover { background: #1d4ed8; border-color: #1d4ed8; color: white; }
+.table .actionsCell { white-space: normal; }
+.table .dataCell .detail { margin-top: .25rem; white-space: nowrap; }
+.transactionsTable.transactionsTable :is(th,td) { padding-inline: .75rem; text-align: center; vertical-align: middle; }
+.transactionsTable .identityCell { min-width: 160px; }
+.transactionsTable .identityMeta { justify-content: center; }
+.transactionsTable .status { max-width: 190px; white-space: normal; }
+.transactionsTable .rowActions { justify-content: center; flex-wrap: nowrap; width: max-content; min-width: 0; max-width: none; margin-inline: auto; gap: .5rem; }
+.transactionsTable .rowActions > :is(a,button) { flex-shrink: 0; white-space: nowrap; }
+.transactionsTable .rowActions .action { max-width: none; }
+@container admin-data (max-width: 1150px) {
+  .transactionsTable.transactionsTable .identityCell { padding-inline: 2.5rem; }
+  .transactionsTable .rowActions { width: 100%; flex-wrap: wrap; }
+  .transactionsTable .rowActions > .transferAction { flex: 1 1 160px; }
+}

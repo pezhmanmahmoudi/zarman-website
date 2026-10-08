@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import {
   bankFeePostInputError,
@@ -101,9 +100,5 @@ export async function postMonthlyBankFeeReview(payload: BankFeePostInput): Promi
   if (error) return feeError(error);
 
   // The RPC commits the expense, consumed accruals and audit together.
-  revalidatePath("/admin/treasury");
-  revalidatePath("/admin/ledger");
-  revalidatePath("/admin/reports");
-  revalidatePath("/admin/reports/accounts");
   return { success: true, posted: Number(data?.posted_count ?? 0) };
 }
