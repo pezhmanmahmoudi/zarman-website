@@ -5,18 +5,13 @@ import Button from "@/components/ui/Button/Button";
 import { useLocale } from "@/context/LocaleContext";
 import { useT } from "@/hooks/useT";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher/LanguageSwitcher";
-import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useSignOut } from "@/hooks/useSignOut";
+
 
 export default function HeaderAuth({ className = "" }: { className?: string }) {
   const locale = useLocale();
   const t = useT();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push(`/${locale}/login`);
-  };
+  const { signOut, signingOut, signOutError } = useSignOut();
 
   return (
     <header className={`h-header ${className}`} role="banner">
@@ -39,7 +34,8 @@ export default function HeaderAuth({ className = "" }: { className?: string }) {
 
         <div className="h-auth" aria-label={t.auth.logout}>
           <LanguageSwitcher variant="pill" />
-          <Button variant="secondary" size="sm" className="hBtnTight" onClick={handleLogout}>
+          {signOutError && <span role="alert">{locale === "fa" ? "خروج تأیید نشد؛ ارتباط را بررسی و دوباره تلاش کنید." : "Sign out was not confirmed. Check your connection and retry."}</span>}
+          <Button variant="secondary" size="sm" className="hBtnTight" onClick={signOut} disabled={signingOut} aria-busy={signingOut}>
             {t.auth.logout}
           </Button>
         </div>

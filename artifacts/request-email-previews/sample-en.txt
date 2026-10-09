@@ -12,12 +12,12 @@ You sent AUD 1,150.00 to Sample Recipient. You can find the details below:
 
 To: Sample Recipient
 Sent: AUD 1,150.00
-On (Sydney time): 3 Oct 2026, 11:00 am
+On (Sydney time): 9 Oct 2026, 12:00 pm
 Transaction code: SAMPLE-ZE123456
 
 The sample PDF receipt is attached. No transaction has been created.
 
-View dashboard: https://zarman.com.au/en/dashboard
+View dashboard: https://www.zarman.com.au/en/dashboard
 
 If you don't recognise this transfer or have a question, contact the Zarman team through the messages on your request page. Include your transaction code so we can identify your transfer.
 

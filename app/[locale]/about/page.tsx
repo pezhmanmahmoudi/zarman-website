@@ -1,3 +1,4 @@
+import { formatLocalizedNumber } from "@/lib/numbers";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -49,7 +50,7 @@ export default async function AboutPage({
   const ServiceArrow = isEn ? ArrowRight : ArrowLeft;
   const serviceCards = localeServices.map((service, index) => {
     const Icon = SERVICE_ICONS[service.slug] ?? Building2;
-    const number = (index + 1).toLocaleString(isEn ? "en-AU" : "fa-IR", {
+    const number = formatLocalizedNumber(index + 1, isEn ? "en" : "fa", {
       minimumIntegerDigits: 2,
     });
 

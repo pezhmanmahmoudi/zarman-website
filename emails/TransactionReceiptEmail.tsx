@@ -93,15 +93,13 @@ export function renderTransactionReceiptHtml(props: TransactionReceiptProps): st
 
   <!-- ▌HEADER ▐ -->
   <tr>
-    <td bgcolor="#08111f" style="background:#08111f;padding:36px 44px 30px;text-align:center;">
-      <img src="https://zarman.com.au/images/logo-no-text-light.svg" alt="Zarman Exchange"
-           width="52" height="52" style="display:block;margin:0 auto 14px;width:52px;height:52px;border:0;"/>
-      <div style="color:#ffffff;font-family:${F};font-size:20px;font-weight:700;
-                  letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">Zarman Exchange</div>
-      <div style="color:#7c8fa8;font-family:${F};font-size:12px;font-weight:400;
+    <td bgcolor="#ffffff" style="background:#ffffff;padding:40px 44px 30px;text-align:center;">
+      <img src="https://www.zarman.com.au/images/logo-email.png" alt="Zarman Exchange"
+           width="136" height="140" style="display:block;margin:0 auto 28px;width:136px;max-width:100%;height:auto;border:0;"/>
+      <div style="color:#64748b;font-family:${F};font-size:12px;font-weight:400;
                   line-height:1.6;margin-bottom:14px;">+61 497 851 631&nbsp;&nbsp;&middot;&nbsp;&nbsp;@zarmanex</div>
       <a href="https://zarman.com.au"
-         style="display:inline-block;color:#93c5fd;font-family:${F};font-size:12px;
+         style="display:inline-block;color:#312e81;font-family:${F};font-size:12px;
                 font-weight:500;text-decoration:none;border:1px solid #550cdb;
                 border-radius:20px;padding:4px 16px;letter-spacing:0.03em;">zarman.com.au</a>
     </td>

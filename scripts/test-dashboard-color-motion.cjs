@@ -250,11 +250,11 @@ test("logo motion is decorative and respects every pause preference while retain
 test("Persian monetary drafts use proper separators and round-trip without changing quoted values", () => {
   const { dashboardNumber, normaliseAmountDigits, localiseAmountDraft } = dashboardHarness().load("lib/dashboard/numbers.ts");
   assert.equal(dashboardNumber(104650000,"fa"),"۱۰۴٬۶۵۰٬۰۰۰");
-  assert.equal(dashboardNumber(1000.05,"fa",2),"۱٬۰۰۰٫۰۵");
-  assert.equal(localiseAmountDraft("1,000.05","fa"),"۱٬۰۰۰٫۰۵");
+  assert.equal(dashboardNumber(1000.05,"fa",2),"۱٬۰۰۰.۰۵");
+  assert.equal(localiseAmountDraft("1,000.05","fa"),"۱٬۰۰۰.۰۵");
   assert.equal(localiseAmountDraft("۱٬۰۰۰٫۰۵","en"),"1,000.05");
-  assert.equal(localiseAmountDraft("0.","fa"),"۰٫");
-  assert.equal(localiseAmountDraft("0.0","fa"),"۰٫۰");
+  assert.equal(localiseAmountDraft("0.","fa"),"۰.");
+  assert.equal(localiseAmountDraft("0.0","fa"),"۰.۰");
   assert.equal(localiseAmountDraft("","fa"),"");
   assert.equal(localiseAmountDraft("1.2.3","fa"),"1.2.3");
   for (const amount of [0,0.01,1.05,999.99,1000.05,104650000]) for(const locale of ["en","fa"]) {
@@ -262,6 +262,15 @@ test("Persian monetary drafts use proper separators and round-trip without chang
   }
   assert.equal(normaliseAmountDigits("١٬٠٠٠٫٠٥"),"1000.05");
   assert.equal(normaliseAmountDigits("۱۰۴،۶۵۰،۰۰۰"),"104650000");
+  assert.equal(localiseAmountDraft("۱٬۲۱۲٫۲۵","fa"),"۱٬۲۱۲.۲۵");
+  assert.equal(localiseAmountDraft("1,212.50","fa"),"۱٬۲۱۲.۵۰");
+  const { formatLocalizedNumber } = dashboardHarness().load("lib/numbers.ts");
+  const { requestMoney, requestRate } = dashboardHarness().load("components/requests/request-labels.ts");
+  for (const [locale, number] of [["fa", "۱٬۲۱۲.۲۵"], ["en", "1,212.25"]]) {
+    assert.equal(formatLocalizedNumber(1212.25,locale),number);
+    assert.equal(requestMoney(1212.25,"AUD",locale),`${number} AUD`);
+    assert.equal(requestRate(1212.25,locale),`${number} ${locale === "fa" ? "تومان" : "Toman"}`);
+  }
 });
 
 test("Persian number display does not localise English Gregorian audit dates or bank identifiers", () => {

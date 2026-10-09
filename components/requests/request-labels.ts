@@ -1,3 +1,4 @@
+import { formatLocalizedNumber } from "@/lib/numbers";
 export type RequestLocale = "en" | "fa";
 
 const statuses: Record<string, [string, string]> = {
@@ -91,11 +92,11 @@ export function requestError(error: string, locale: RequestLocale): string {
 }
 
 export function requestMoney(amount: number | string | null | undefined, currency: string, locale: RequestLocale) {
-  return `${new Intl.NumberFormat(locale === "fa" ? "fa-IR" : "en-AU", { maximumFractionDigits: currency.toUpperCase() === "AUD" ? 2 : 0 }).format(Number(amount || 0))} ${currency === "IRT" || currency.toLowerCase() === "toman" ? (locale === "fa" ? "تومان" : "Toman") : currency.toUpperCase()}`;
+  return `${formatLocalizedNumber(Number(amount || 0), locale, { maximumFractionDigits: currency.toUpperCase() === "AUD" ? 2 : 0 })} ${currency === "IRT" || currency.toLowerCase() === "toman" ? (locale === "fa" ? "تومان" : "Toman") : currency.toUpperCase()}`;
 }
 
 export function requestRate(rate: number, locale: RequestLocale) {
-  return `${new Intl.NumberFormat(locale === "fa" ? "fa-IR" : "en-AU", { maximumFractionDigits: 6 }).format(rate)} ${locale === "fa" ? "تومان" : "Toman"}`;
+  return `${formatLocalizedNumber(rate, locale, { maximumFractionDigits: 6 })} ${locale === "fa" ? "تومان" : "Toman"}`;
 }
 
 export function requestDate(value: string | null | undefined, _locale?: RequestLocale) {

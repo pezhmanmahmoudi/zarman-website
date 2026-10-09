@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
     "/*": [
       "./public/fonts/**/*.ttf",
       "./public/images/logo-no-text-light.svg",
+      "./public/images/logo-email.png",
     ],
   },
   // Exclude nested leftover folder from compilation

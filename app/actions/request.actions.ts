@@ -18,6 +18,7 @@ import { isInstitutionPaymentLink, paymentInstitution } from "@/lib/payments/ins
 import { decryptPaymentAccountAccess, encryptPaymentAccountAccess, validatePaymentAccountAccess, type PaymentAccountAccess } from "@/lib/payments/account-access";
 import { requestMatchesSearch, requestNeedsAttention, type ActivityFilter, type RequestPage } from "@/lib/dashboard/activity";
 import { cleanSearchTerm, DASHBOARD_PAGE_SIZE, ilikeAny, requestedPage } from "@/lib/dashboard/paging";
+import { isRequestConflict, REQUEST_CONFLICT_MESSAGE } from "@/lib/requests/conflicts";
 
 const REQUEST_DELIVERY_COLUMNS = "id,event_id,request_id,audience,recipient_email,locale,status,attempts,last_error,created_at,first_attempt_at,lease_expires_at,provider_id";
 
@@ -38,14 +39,18 @@ function failure(error: unknown): string {
   const value = error as { code?: string; message?: string } | null;
   if (value?.code === "42P01" || value?.code === "PGRST202" || value?.code === "PGRST205") return "The online request service has not been configured yet. Please contact support.";
   if (value?.code === "42501") return "You do not have permission to perform this request action.";
-  if (value?.code === "40001") return "This request has changed. Refresh the page before continuing.";
   if (value?.code === "23505") return "This reference or operation has already been recorded. Refresh to see the current request.";
   if (["P0001", "22023"].includes(value?.code || "") && value?.message) return value.message;
   return "The request could not be processed. Please refresh and try again.";
 }
 async function result<T>(operation: () => Promise<T>): Promise<ActionResult<T>> {
   try { return { data: await operation() }; }
-  catch (error) { return { error: failure(error) }; }
+  catch (error) {
+    // Check before Error.message handling: PostgrestError is also an Error.
+    // Return a terminal result; never rerun a command with a stale version.
+    if (isRequestConflict(error)) return { error: REQUEST_CONFLICT_MESSAGE, code: "REQUEST_CONFLICT", retryable: false };
+    return { error: failure(error) };
+  }
 }
 /** Runs through Next's after() once the committed change has been returned.
  * The click still triggers delivery immediately, without waiting for a scheduler;
@@ -307,7 +312,7 @@ async function readDetail(id: string, userId?: string): Promise<RequestDetail> {
     db.from("exchange_request_receipts").select("id,request_id,original_name,content_type,size_bytes,sha256,uploaded_by,created_at").eq("request_id", id).order("created_at", { ascending: false }),
     db.from("exchange_request_messages").select("id,request_id,event_id,event_sequence,sender_id,sender_role,body,send_email,created_at").eq("request_id", id).order("event_sequence", { ascending: true }),
     userId ? null : db.from("exchange_request_notification_deliveries").select(REQUEST_DELIVERY_COLUMNS).eq("request_id", id).order("created_at", { ascending: false }).limit(100),
-    userId ? null : db.from("exchange_request_payments").select("id,request_id,payment_reference,amount,currency,account_id,created_at").eq("request_id", id).order("created_at", { ascending: false }),
+    userId ? null : db.from("exchange_request_current_payments").select("id,request_id,payment_reference,amount,currency,account_id,created_at,original_amount,corrected_at,excluded").eq("request_id", id).order("created_at", { ascending: false }),
     userId || !customerTelegramConfig() ? null : db.from("customer_telegram_deliveries").select("id,event_id,event_type,status,attempts,last_error,created_at,sent_at,lease_expires_at").eq("request_id", id).order("created_at", { ascending: false }).limit(100),
   ]);
   if (events.error) throw events.error;
@@ -337,7 +342,7 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
   if (invalid) throw new Error(invalid);
   const db = database();
   let accountingDate: string | undefined;
-  if (["complete", "reconcile_complete", "confirm_funds", "resume_funded_request", "confirm_refund"].includes(input.action)) {
+  if (["complete", "reconcile_complete", "confirm_funds", "correct_funds", "finalize_funds", "resume_funded_request", "confirm_refund"].includes(input.action)) {
     // The server-added date is part of the SQL command fingerprint. Keep the
     // original date on a retry across midnight, while the RPC still validates
     // the actor, version, action and every caller-supplied payload field.
@@ -362,6 +367,9 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
     message: supplied.message?.trim(),
     payment_reference: supplied.payment_reference?.trim() || (admin && input.action === "confirm_funds" ? generatedReference : undefined),
     received_amount: supplied.received_amount, received_currency: supplied.received_currency,
+    ...(admin && ["confirm_funds", "finalize_funds"].includes(input.action) ? { accounting_rate: supplied.accounting_rate, accounting_fee_aud: supplied.accounting_fee_aud } : {}),
+    ...(admin && input.action === "finalize_funds" ? { final_funding_total: supplied.final_funding_total, final_recipient_amount: supplied.final_recipient_amount } : {}),
+    ...(admin && input.action === "correct_funds" ? { payment_corrections: supplied.payment_corrections?.map(({ payment_id, amount }) => ({ payment_id, amount })) } : {}),
     settlement_reference: supplied.settlement_reference?.trim() || (admin && ["complete", "reconcile_complete"].includes(input.action) ? generatedReference : undefined),
     payer_account_id: supplied.payer_account_id,
     receiver_account_id: supplied.receiver_account_id, transfer_method: supplied.transfer_method || "free",
@@ -370,27 +378,33 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
     ...(admin ? { send_email: input.sendEmail } : {}),
     ...(accountingDate ? { date_jalali: accountingDate } : {}),
   }).filter(([, value]) => value !== undefined));
-  const { data, error } = await db.rpc("transition_exchange_request", {
+  const args = {
     p_actor_id: actor.id, p_request_id: input.requestId, p_expected_version: input.expectedVersion,
-    p_command_key: input.commandKey, p_action: input.action, p_payload: payload,
-  });
+    p_command_key: input.commandKey, p_payload: payload,
+  };
+  // A dedicated RPC commits the payment and accounting terms together. If its
+  // migration is missing, fail before recording funds rather than ignoring fees.
+  const { data, error } = admin && input.action === "confirm_funds"
+    ? await db.rpc("confirm_exchange_request_funds", args)
+    : admin && input.action === "finalize_funds" ? await db.rpc("finalize_exchange_request_funds", args)
+    : admin && input.action === "correct_funds" ? await db.rpc("correct_exchange_request_funds", args)
+    : await db.rpc("transition_exchange_request", { ...args, p_action: input.action });
+  if (admin && input.action === "finalize_funds" && ["PGRST202", "42703", "42P01", "42883"].includes(error?.code || "")) {
+    // Missing prerequisites roll back the whole RPC; never suggest retrying a
+    // deposit as a workaround, and never include customer data in diagnostics.
+    console.error("Final amount confirmation schema incomplete", { code: error?.code });
+    throw new Error("No changes were saved. The final payment database update is incomplete. Apply migration 20261009_56_repair_final_amount_confirmation, then try again.");
+  }
+  if (admin && input.action === "correct_funds" && error?.code === "PGRST202") {
+    throw new Error("The deposit correction was not saved. Apply migration 20261009_54_correct_recorded_request_funds before correcting deposits.");
+  }
+  if (admin && input.action === "confirm_funds" && error?.code === "PGRST202") {
+    throw new Error("Funds were not recorded by this attempt. The atomic funding function is missing from the database API. Apply migration 20261009_52_atomic_request_accounting_terms and reload the API schema before confirming funds.");
+  }
   if (error) throw error;
   if (admin) after(() => dispatchCustomerTelegramSafely(input.requestId));
-  if (admin && input.action === "confirm_funds") await saveAccountingTerms(db, data as ExchangeRequest, supplied);
   if (admin && input.sendEmail === true) after(() => sendApprovedEmails(input.requestId));
   return admin ? data as ExchangeRequest : customerRequest(data as ExchangeRequest);
-}
-// Admin-adjusted rate/fee only change the accounting record (ledger + linked
-// transaction). The accepted quote, customer amounts and payout stay unchanged.
-async function saveAccountingTerms(db: ReturnType<typeof database>, request: ExchangeRequest, supplied: NonNullable<RequestMutationInput["payload"]>) {
-  if ((supplied.accounting_rate === undefined && supplied.accounting_fee_aud === undefined) || !request?.quote) return;
-  const quoteRate = Number(request.quote.applied_rate), quoteFee = Number(request.quote.base_fee_aud);
-  const rate = supplied.accounting_rate ?? quoteRate, fee = supplied.accounting_fee_aud ?? quoteFee;
-  if (rate === quoteRate && fee === quoteFee) return;
-  const overrides = { applied_rate: rate, base_fee_aud: fee };
-  const saved = await db.from("exchange_requests").update({ accounting_overrides: overrides }).eq("id", request.id);
-  const linked = saved.error ? saved : await db.from("transactions").update({ applied_rate: rate, ledger_fee_aud: fee }).eq("id", request.transaction_id).eq("status", "pending");
-  if (saved.error || linked.error) throw new Error("Funds were recorded, but the adjusted rate or fee could not be saved. Refresh and contact an administrator.");
 }
 export async function mutateMyRequest(input: RequestMutationInput): Promise<ActionResult<ExchangeRequest>> {
   return result(() => mutate(input, false));

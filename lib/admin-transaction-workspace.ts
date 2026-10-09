@@ -25,7 +25,7 @@ export function transactionQueueState(row: RequestLinkedTransaction): { stage: T
   const journey = getRequestJourney(request);
   if (request.status === "completed") return { stage: "closed", label: "Completed", next: "View transfer" };
   if (journey.closed) return { stage: "closed", label: request.status === "expired" ? "Expired" : request.status === "cancelled" ? "Cancelled" : "Rejected", next: "View transfer" };
-  if (journey.pricingPending) return { stage: "waiting", label: "Awaiting revised amount acceptance", next: "View transfer" };
+  if (journey.pricingPending) return { stage: "review", label: "Final amounts to confirm", next: "Verify incoming payment" };
   if (journey.customerActionRequired) return { stage: "waiting", label: "Waiting for customer", next: "View conversation" };
   if (journey.fundsReceived) return journey.readyForSettlement || ["processing", "reconciliation"].includes(request.status)
     ? { stage: "ready", label: request.status === "reconciliation" ? "Settlement under review" : request.status === "processing" ? "Settlement in progress" : "Funds received", next: "Reconcile & complete" }

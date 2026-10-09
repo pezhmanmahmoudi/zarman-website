@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { acceptMyRequestPricing } from "@/app/actions/request.actions";
 import type { ExchangeRequest, RequestLocale } from "@/lib/requests/types";
+import { isRequestConflict } from "@/lib/requests/conflicts";
 import { RequestQuoteFacts } from "./RequestQuoteFacts";
 import { requestError } from "./request-labels";
 import { DashboardButton } from "@/components/dashboard/dashboard-ui";
@@ -19,8 +20,8 @@ export function RequestPricingAcceptance({ request, locale, onAccepted, onRefres
       const result = await acceptMyRequestPricing({ requestId: request.id, expectedVersion: attempt.current.version, commandKey: attempt.current.key });
       if (result.error) {
         setError(requestError(result.error, locale));
-        if (result.error === "This request has changed. Refresh the page before continuing." || result.error === "REQUEST_CONFLICT") {
-          attempt.current = null; await onRefresh?.();
+        if (isRequestConflict(result)) {
+          attempt.current = null; setAccepted(false); await onRefresh?.();
         }
       }
       else if (result.data) onAccepted(result.data);

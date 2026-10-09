@@ -1,9 +1,12 @@
 "use client";
 
+import { formatLocalizedNumber } from "@/lib/numbers";
+
 import { useRef, useState } from "react";
 import { Mail, MessageSquare, Send } from "lucide-react";
 import { sendAdminRequestMessage, sendMyRequestMessage } from "@/app/actions/request.actions";
 import type { RequestLocale, RequestMessage } from "@/lib/requests/types";
+import { isRequestConflict } from "@/lib/requests/conflicts";
 import { DashboardButton, StatusBadge, dashboardInputClass } from "@/components/dashboard/dashboard-ui";
 import { DashboardLottieScene } from "@/components/dashboard/DashboardLottieScene";
 import { requestDate, requestError } from "./request-labels";
@@ -51,7 +54,7 @@ export function RequestConversation({ requestId, version, messages, admin = fals
       const result = await (admin ? sendAdminRequestMessage : sendMyRequestMessage)({ ...input, commandKey: attempt.current.key, expectedVersion: attempt.current.expectedVersion });
       if (result.error) {
         setError(result.error);
-        if (result.error === "This request has changed. Refresh the page before continuing." || result.error === "REQUEST_CONFLICT") {
+        if (isRequestConflict(result)) {
           attempt.current = null;
           await onUpdated();
         }
@@ -81,7 +84,7 @@ export function RequestConversation({ requestId, version, messages, admin = fals
     })}</ol>}
     <form onSubmit={submit} className={workspace.messageForm}>
       <label className={styles.field}>{admin ? "Reply to customer" : (fa ? "پیام شما" : "Your message")}<textarea className={!admin ? customerInputClass : undefined} value={message} onChange={event => { setMessage(event.target.value); setNotice(""); }} required minLength={1} maxLength={2000} rows={3} dir={fa ? "rtl" : "ltr"} lang={locale} aria-describedby={!admin ? "request-message-count" : undefined} disabled={busy || disabled} placeholder={admin ? "Write a message…" : (fa ? "پیام خود را بنویسید…" : "Write your message…")} /></label>
-      <div className={workspace.messageControls}>{!admin && <span id="request-message-count" className={customer.messageCount} data-number-locale={locale}>{new Intl.NumberFormat(fa ? "fa-IR" : "en-AU", {useGrouping:false}).format(message.length)} / {fa ? "۲۰۰۰" : "2000"}</span>}{admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} disabled={busy || disabled} /><Mail size={16} aria-hidden="true" /><span>{fa ? "ارسال ایمیل به مشتری" : "Send email to customer"}</span></label>}{admin ? <button className={styles.button} type="submit" disabled={busy || disabled || message.trim().length < 1}><Send size={16} aria-hidden="true" />{busy ? (fa ? "در حال ارسال…" : "Sending…") : (fa ? "ارسال پیام" : "Send message")}</button> : <DashboardButton tone="primary" type="submit" disabled={busy || disabled || message.trim().length < 1}>{!busy && <Send size={16} aria-hidden="true" />}{busy ? (fa ? "در حال ارسال…" : "Sending…") : (fa ? "ارسال پیام" : "Send message")}</DashboardButton>}</div>
+      <div className={workspace.messageControls}>{!admin && <span id="request-message-count" className={customer.messageCount} data-number-locale={locale}>{formatLocalizedNumber(message.length, locale, { useGrouping: false })} / {fa ? "۲۰۰۰" : "2000"}</span>}{admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} disabled={busy || disabled} /><Mail size={16} aria-hidden="true" /><span>{fa ? "ارسال ایمیل به مشتری" : "Send email to customer"}</span></label>}{admin ? <button className={styles.button} type="submit" disabled={busy || disabled || message.trim().length < 1}><Send size={16} aria-hidden="true" />{busy ? (fa ? "در حال ارسال…" : "Sending…") : (fa ? "ارسال پیام" : "Send message")}</button> : <DashboardButton tone="primary" type="submit" disabled={busy || disabled || message.trim().length < 1}>{!busy && <Send size={16} aria-hidden="true" />}{busy ? (fa ? "در حال ارسال…" : "Sending…") : (fa ? "ارسال پیام" : "Send message")}</DashboardButton>}</div>
       {error && <p className={styles.error} role="alert">{requestError(error, locale)}</p>}{notice && <p className={workspace.saved} role="status">{notice}</p>}
     </form>
   </section>;

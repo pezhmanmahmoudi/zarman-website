@@ -1,3 +1,4 @@
+import { formatLocalizedNumber } from "@/lib/numbers";
 import type { Metadata } from "next";
 import Link from "next/link";
 import ContentNavigation from "@/components/layout/ContentNavigation";
@@ -117,7 +118,7 @@ export default async function BlogListingPage({
             <div className={styles.collection}>
               <div className={styles.collectionHeader}>
                 <h2>{isEn ? "Latest guides" : "جدیدترین راهنماها"}</h2>
-                <span>{isEn ? `${posts.length} articles` : `${posts.length.toLocaleString("fa-IR")} مقاله`}</span>
+                <span>{isEn ? `${posts.length} articles` : `${formatLocalizedNumber(posts.length, "fa")} مقاله`}</span>
               </div>
               <div className={styles.grid}>
                 {posts.map((post, index) => (
@@ -130,7 +131,7 @@ export default async function BlogListingPage({
                       <div className={styles.cardTopline}>
                         <span className={styles.categoryBadge}>{post.categoryLabel}</span>
                         <span className={styles.cardNumber} aria-hidden="true">
-                          {(index + 1).toLocaleString(isEn ? "en-AU" : "fa-IR", { minimumIntegerDigits: 2 })}
+                          {formatLocalizedNumber(index + 1, isEn ? "en" : "fa", { minimumIntegerDigits: 2 })}
                         </span>
                       </div>
                       <h3 className={styles.cardTitle}>{post.title}</h3>
@@ -148,7 +149,7 @@ export default async function BlogListingPage({
                             <Clock size={14} strokeWidth={2} />
                             {isEn
                               ? `${post.readingTime} min`
-                              : `${post.readingTime.toLocaleString("fa-IR")} دقیقه`}
+                              : `${formatLocalizedNumber(post.readingTime, "fa")} دقیقه`}
                           </span>
                         </div>
                         <span className={styles.readMore} aria-hidden="true">

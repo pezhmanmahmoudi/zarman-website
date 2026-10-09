@@ -2,7 +2,6 @@
 import fontkit from "@pdf-lib/fontkit";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import sharp from "sharp";
 import type { TransactionReceiptProps } from "./TransactionReceiptEmail";
 
 // --- Helpers ------------------------------------------------------------------
@@ -44,14 +43,10 @@ export async function renderTransactionReceiptPdf(
   const semibold  = await doc.embedFont(interSemiBoldBytes, { subset: true });
   const bold      = await doc.embedFont(interBoldBytes, { subset: true });
 
-  // Logo — rasterise the no-text SVG to PNG via sharp so it renders cleanly on the dark background
-  const svgBytes = await readFile(
-    join(process.cwd(), "public", "images", "logo-no-text-light.svg")
+  // Embed the full colour logo and wordmark, matching the customer emails.
+  const logoPngBytes = await readFile(
+    join(process.cwd(), "public", "images", "logo-email.png")
   );
-  const logoPngBytes = await sharp(svgBytes)
-    .resize(256, 256)
-    .png()
-    .toBuffer();
   const logoImg = await doc.embedPng(logoPngBytes);
 
   const M = 50;           // horizontal margin
@@ -60,11 +55,9 @@ export async function renderTransactionReceiptPdf(
 
   // --- Color palette (minimal & premium) ---
   const BG         = hex("#ffffff"); // crisp white
-  const HEADER_BG  = hex("#0f1729"); // deep navy header strip
   const WHITE      = hex("#ffffff");
   const INK        = hex("#0f172a"); // primary text
   const GRAY       = hex("#64748b"); // secondary text
-  const MUTED      = hex("#94a3b8"); // text on dark header
   const INDIGO     = hex("#3848f5"); // brand accent
   const GREEN      = hex("#059669"); // success green
   const RULE       = hex("#cbd5e1"); // crisp light dividers
@@ -128,17 +121,15 @@ export async function renderTransactionReceiptPdf(
   // RENDER
   // ===========================================================================
 
-  // 0. Page background + branded header strip
+  // 0. White page and header, matching the full colour logo.
   fillRect(0, 0, width, height, BG);
-  fillRect(0, 0, width, 175, HEADER_BG); // deep navy header
 
   // 1. Logo (centred)
-  const LOGO = 82;
-  page.drawImage(logoImg, { x: CX - LOGO / 2, y: height - 42 - LOGO, width: LOGO, height: LOGO });
+  const logoSize = logoImg.scaleToFit(110, 114);
+  page.drawImage(logoImg, { x: CX - logoSize.width / 2, y: height - 24 - logoSize.height, ...logoSize });
 
-  // 2. Company name + legal line
-  ctext("ZARMAN EXCHANGE", 138, { font: bold, size: 15, color: WHITE });
-  ctext("ABN: 70892742957  |  ACN: 692742957  |  AUSTRAC: ND100907570", 157, { font: semibold, size: 7.5, color: MUTED });
+  // 2. Legal line below the logo's wordmark.
+  ctext("ABN: 70892742957  |  ACN: 692742957  |  AUSTRAC: ND100907570", 157, { font: semibold, size: 7.5, color: GRAY });
 
   // 3. Separator — full-width brand accent line between header and body
   hline(175, 0, width, INDIGO, 1.5);

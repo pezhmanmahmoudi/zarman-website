@@ -1,20 +1,15 @@
+import { formatLocalizedNumber } from "@/lib/numbers";
 import React from "react";
 import { BarChart3, CheckCircle2, ArrowLeftRight, Crown, Gift, Coins } from "lucide-react";
 import styles from "@/styles/dashboard/DashboardStats.module.css";
 import { useT } from "@/hooks/useT";
 import { useLocale } from "@/context/LocaleContext";
 
-function toFaDigits(input: string) {
-  return String(input).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
-}
-
 function formatNumberByLocale(value: number, locale: string, maxFractionDigits = 2) {
-  const en = Number(value || 0).toLocaleString("en-US", {
+  return formatLocalizedNumber(Number(value || 0), locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: maxFractionDigits,
   });
-  if (locale === "fa") return toFaDigits(en).replace(/,/g, "،");
-  return en;
 }
 
 function formatAudByLocale(value: number, locale: string) {

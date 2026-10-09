@@ -3,8 +3,8 @@ import type { CustomerTelegramDelivery } from "@/lib/notifications/customer-tele
 export type RequestLocale = "en" | "fa";
 export type ServiceTier = "standard" | "priority";
 export type RequestStatus = "submitted" | "under_review" | "action_required" | "awaiting_funds" | "ready" | "processing" | "reconciliation" | "completed" | "cancelled" | "rejected" | "expired";
-export type RequestCommand = "review" | "request_info" | "respond" | "await_funds" | "confirm_funds" | "resume_funded_request" | "start_processing" | "record_uncertain_payout" | "complete" | "reconcile_complete" | "cancel" | "reject" | "confirm_refund" | "payment_evidence";
-export type ActionResult<T> = { data: T; error?: never } | { error: string; data?: never };
+export type RequestCommand = "review" | "request_info" | "respond" | "await_funds" | "confirm_funds" | "correct_funds" | "finalize_funds" | "resume_funded_request" | "start_processing" | "record_uncertain_payout" | "complete" | "reconcile_complete" | "cancel" | "reject" | "confirm_refund" | "payment_evidence";
+export type ActionResult<T> = { data: T; error?: never } | { error: string; data?: never; code?: "REQUEST_CONFLICT"; retryable?: false };
 export type FundingBankDetails = {
   account_name?: string; bank_name?: string; bsb?: string;
   account_number?: string; iban?: string; card_number?: string;
@@ -104,6 +104,7 @@ export type ExchangeRequest = {
   status: RequestStatus;
   version: number;
   quote: QuoteSnapshot;
+  accounting_overrides?: { applied_rate: number; base_fee_aud: number } | null;
   service_tier: ServiceTier;
   priority_fee_status: "not_applicable" | "unpaid" | "paid" | "refund_pending" | "refunded";
   funding_status: "unpaid" | "partial" | "confirmed" | "refund_pending" | "refunded";
@@ -148,6 +149,7 @@ export type RequestReceipt = {
 export type RequestFundingPayment = {
   id: string; request_id: string; payment_reference: string; amount: number | string;
   currency: "AUD" | "IRT"; account_id: string; created_at: string;
+  original_amount?: number | string; corrected_at?: string | null; excluded?: boolean;
 };
 export type RequestDetail = { request: ExchangeRequest; events: RequestEvent[]; receipts: RequestReceipt[]; messages: RequestMessage[]; deliveries?: RequestDelivery[]; payments?: RequestFundingPayment[]; telegramDeliveries?: CustomerTelegramDelivery[]; telegramUnavailable?: boolean };
 export type RequestMutationInput = {
@@ -168,6 +170,11 @@ export type RequestMutationInput = {
     refund_reference?: string;
     refund_kind?: "priority" | "principal";
     honour_quote?: boolean;
+    /** Administrator-confirmed replacements, not incremental deposits. */
+    final_funding_total?: number;
+    final_recipient_amount?: number;
+    /** Correct existing records; amount zero excludes a mistaken/duplicate entry. */
+    payment_corrections?: Array<{ payment_id: string; amount: number }>;
     /** Admin-only accounting terms recorded with confirm_funds; customer amounts stay unchanged. */
     accounting_rate?: number;
     accounting_fee_aud?: number;

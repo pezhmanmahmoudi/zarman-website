@@ -1,10 +1,10 @@
 "use client";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { DashboardTabLink as Link } from "./DashboardTabLink";
 import Image from "next/image";
 import { SlidersHorizontal, X, ShieldCheck, LogOut } from "lucide-react";
-import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useSignOut } from "@/hooks/useSignOut";
 import { useLocale } from "@/context/LocaleContext";
 import { dashboardCopy, dashboardHref, type DashboardTab } from "@/lib/dashboard/navigation";
 import type { Profile } from "@/app/[locale]/dashboard/dashboard.types";
@@ -18,23 +18,7 @@ export function DashboardHeader({ activeTab, profile, privateAmounts, onTogglePr
 }) {
   const locale = useLocale(), fa = locale === "fa", copy = dashboardCopy[locale], pathname = usePathname(), query = useSearchParams();
   const [preferences, setPreferences] = useState(false);
-  const router = useRouter();
-  const signingOutRef = useRef(false);
-  const [signingOut, setSigningOut] = useState(false);
-  const [signOutError, setSignOutError] = useState(false);
-  async function signOut() {
-    if (signingOutRef.current) return;
-    signingOutRef.current = true;
-    setSigningOut(true); setSignOutError(false);
-    try {
-      const { error } = await supabase.auth.signOut({ scope: "local" });
-      if (error) throw error;
-      router.replace(`/${locale}/login`); router.refresh();
-    } catch {
-      signingOutRef.current = false;
-      setSigningOut(false); setSignOutError(true);
-    }
-  }
+  const { signOut, signingOut, signOutError } = useSignOut();
   const targetLocale = fa ? "en" : "fa";
   const profileName = profile?.first_name?.trim() && profile?.last_name?.trim()
     ? `${profile.first_name} ${profile.last_name}`
@@ -51,7 +35,7 @@ export function DashboardHeader({ activeTab, profile, privateAmounts, onTogglePr
         <Link className={controls.profileLink} href={dashboardHref(locale, "profile")} aria-label={copy.profile} title={copy.profile} aria-current={activeTab === "profile" ? "page" : undefined}>
           <span className={`${controls.control} ${controls.avatar}`}><DashboardInitials name={profileName}/></span>
         </Link>
-        <button type="button" className={`${controls.control} ${controls.settings} ${controls.mobileSignOut}`} onClick={signOut} disabled={signingOut} aria-busy={signingOut} aria-label={copy.signOut} title={copy.signOut}><LogOut size={19} strokeWidth={1.7} aria-hidden="true"/></button>
+        <button type="button" className={`${controls.control} ${controls.settings} ${controls.mobileSignOut}`} onClick={signOut} disabled={signingOut} aria-busy={signingOut} aria-label={signingOut ? (fa ? "در حال خروج…" : "Signing out…") : copy.signOut} title={copy.signOut}><LogOut size={19} strokeWidth={1.7} aria-hidden="true"/></button>
       </div>
       </div>
       {signOutError && <p role="alert" className="mb-0 mt-2 rounded-xl border border-rose-200 bg-white p-3 text-sm text-rose-700 min-[900px]:hidden">{fa ? "خروج ناموفق بود. دوباره تلاش کنید." : "Sign out failed. Please retry."}</p>}

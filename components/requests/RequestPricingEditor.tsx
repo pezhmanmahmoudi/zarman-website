@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { ArrowRight, Pencil } from "lucide-react";
 import { updateAdminRequestPricing } from "@/app/actions/request.actions";
 import type { ExchangeRequest } from "@/lib/requests/types";
+import { isRequestConflict } from "@/lib/requests/conflicts";
 import { isMoney } from "@/lib/requests/validation";
 import { requestMoney } from "./request-labels";
 import { RequestPricingDetails } from "./RequestPricingDetails";
@@ -49,7 +50,7 @@ export function RequestPricingEditor({ request, disabled, onSaved, onBusyChange,
       const result = await updateAdminRequestPricing({ ...payload, commandKey: attempt.current.key });
       if (result.error) {
         setError(result.error);
-        if (result.error === "This request has changed. Refresh the page before continuing." || result.error === "REQUEST_CONFLICT") {
+        if (isRequestConflict(result)) {
           attempt.current = null; stale.current = true;
           await onRefresh?.();
         }
@@ -73,6 +74,6 @@ export function RequestPricingEditor({ request, disabled, onSaved, onBusyChange,
       {error && <p className={`${styles.error} ${styles.wide}`} role="alert">{error}</p>}
       <div className={`${styles.actions} ${styles.wide}`}><button type="submit" className={styles.save} disabled={disabled || saving || !editable}>{saving ? "Saving…" : "Save revised amounts"}</button><button type="button" disabled={saving} onClick={() => setEditing(false)}>Cancel</button></div>
     </form>}
-    {!editable && <span className={styles.caption}>Amounts are locked after payment evidence or cleared funds.</span>}
+    {!editable && request.funding_status !== "confirmed" && ["awaiting_funds", "under_review", "action_required"].includes(request.status) && <span className={styles.caption}>Confirm or change the final amounts in the next step.</span>}
   </>;
 }

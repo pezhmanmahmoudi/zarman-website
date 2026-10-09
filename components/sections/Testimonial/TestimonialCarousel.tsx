@@ -1,5 +1,7 @@
 "use client";
 
+import { formatLocalizedNumber } from "@/lib/numbers";
+
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -85,7 +87,7 @@ export default function TestimonialCarousel({ locale, reviews }: { locale: strin
             <span className={styles.statsText}>
               {isEn
                 ? <><strong>{stats.avg.toLocaleString("en-AU")} out of 5</strong> (based on {stats.total.toLocaleString("en-AU")} reviews)</>
-                : <><strong>{stats.avg.toLocaleString("fa-IR")} از ۵</strong> (بر اساس {stats.total.toLocaleString("fa-IR")} نظر ثبت شده)</>}
+                : <><strong>{formatLocalizedNumber(stats.avg, "fa")} از ۵</strong> (بر اساس {formatLocalizedNumber(stats.total, "fa")} نظر ثبت شده)</>}
             </span>
           </div>
         </div>

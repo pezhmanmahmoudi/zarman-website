@@ -1,6 +1,8 @@
 export type DashboardLottieSceneAsset = {
   src: string;
   loop?: boolean;
+  /** Total plays for a non-looping scene, including the first play. */
+  plays?: number;
   holdOnComplete?: boolean;
   segment?: readonly [number, number];
   /** Zoom for artwork drawn small inside a large canvas, centred on `origin`. */
@@ -26,7 +28,7 @@ export const dashboardLottieScenes = {
   "activity-history": { src: "/animations/dashboard/preview/isometric-data-analysis.json", holdOnComplete: true },
   "bank-card": { src: "/animations/dashboard/preview/card-lottie-animation.json", holdOnComplete: true },
   "dashboard-loading": { src: "/animations/dashboard/preview/hand-loding.json", loop: true, holdOnComplete: true },
-  "loyalty-milestone": { src: "/animations/dashboard/preview/gift-reward-animation.json", holdOnComplete: true },
+  "loyalty-milestone": { src: "/animations/dashboard/preview/gift-reward-animation.json", plays: 3, holdOnComplete: true },
   "compliance-review": { src: "/animations/dashboard/preview/compliance.json", loop: true, holdOnComplete: true },
   "mobile-payment": { src: "/animations/dashboard/preview/mobile-payment.json", holdOnComplete: true },
   "transfer-setup": { src: "/animations/dashboard/preview/3d-mobile-payment.json", holdOnComplete: true },

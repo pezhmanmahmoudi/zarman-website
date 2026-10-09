@@ -3,7 +3,7 @@ import { validNotificationEmail, validatedRequestSiteUrl } from "./notification-
 import type { FundingBankDetails } from "./types";
 export { validNotificationEmail, validatedRequestSiteUrl } from "./notification-config";
 
-export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-customer-en-v8";
+export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-customer-en-v9";
 
 export type RequestEmailSnapshot = {
   id: string;
@@ -93,8 +93,8 @@ function formattedAmount(amount: number | string | undefined, currency: string |
 }
 
 /** Fluid tables and inline styles keep the content readable without web fonts,
- * images, JavaScript, or client-specific layout support. Rounded corners are
- * progressive enhancement; all facts and actions survive their absence. */
+ * JavaScript, or client-specific layout support. The PNG logo is decorative;
+ * all facts and actions remain readable when a mail client blocks images. */
 function emailHtml(input: {
   heading: string; greeting: string; intro: string; rows: SummaryRow[];
   instructions: string[]; action: string; trackingUrl: string; reference: string;
@@ -105,13 +105,13 @@ function emailHtml(input: {
   return `<!doctype html>
 <html lang="en" dir="ltr">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="x-apple-disable-message-reformatting"><title>${escapeHtml(heading)}</title></head>
-<body style="margin:0;padding:0;background-color:#ffffff;color:#202124;font-family:Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%">
+<body style="margin:0;padding:0;background-color:#f8fafc;color:#202124;font-family:Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%">
 <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">${escapeHtml(`${heading} · Transaction code: ${reference}`)}</div>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="width:100%;border-collapse:collapse"><tr><td align="center" style="padding:40px 20px">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#f8fafc" style="width:100%;border-collapse:collapse"><tr><td align="center" style="padding:20px 12px">
 <!--[if mso]><table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0"><tr><td><![endif]-->
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" dir="ltr" style="width:100%;max-width:600px;table-layout:fixed;border-collapse:collapse"><tr><td align="left" style="text-align:left;direction:ltr">
-<p style="margin:0 0 36px;font-size:25px;line-height:1.25;font-weight:700;letter-spacing:1px;color:#145f59"><span dir="ltr">ZARMAN</span><br><span dir="ltr" style="font-size:10px;letter-spacing:3px">EXCHANGE</span></p>
-<h1 style="margin:0 0 30px;font-size:30px;line-height:1.35;font-weight:700;letter-spacing:-0.3px">${escapeHtml(heading)}</h1>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" dir="ltr" bgcolor="#ffffff" style="width:100%;max-width:600px;table-layout:fixed;border:1px solid #dce4ef;border-radius:16px;border-collapse:separate;background-color:#ffffff"><tr><td align="left" style="padding:40px 24px 28px;text-align:left;direction:ltr">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td align="center" style="padding:0 0 44px"><img src="https://www.zarman.com.au/images/logo-email.png" alt="Zarman Exchange" width="136" height="140" style="display:block;width:136px;max-width:100%;height:auto;margin:0 auto;border:0;color:#312e81;font-size:16px"></td></tr></table>
+<h1 style="margin:0 0 30px;font-size:26px;line-height:1.35;font-weight:700;letter-spacing:-0.3px;text-align:center;color:#0f172a">${escapeHtml(heading)}</h1>
 ${paragraph(greeting)}${paragraph(intro)}
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#f4f5f6" style="width:100%;table-layout:fixed;background-color:#f4f5f6;border-radius:18px;border-collapse:separate"><tr><td style="padding:22px 20px 2px;text-align:left;direction:ltr">
 ${rows.map(({ label, value, ltr, prominent }) => `<p style="margin:0 0 20px;font-size:16px;line-height:1.5;word-wrap:break-word${prominent ? ";padding-top:16px;border-top:1px solid #dfe4e3" : ""}"><span style="color:${prominent ? "#145f59;font-weight:700" : "#6b6d71"}">${escapeHtml(label)}</span><br><${prominent ? "strong" : "span"}${ltr ? ' dir="ltr"' : ""} style="${ltr ? "display:inline-block;direction:ltr;unicode-bidi:embed;" : ""}${prominent ? "font-size:24px;font-weight:700;letter-spacing:1px;color:#145f59" : "font-weight:400"}">${escapeHtml(value)}</${prominent ? "strong" : "span"}></p>`).join("\n")}

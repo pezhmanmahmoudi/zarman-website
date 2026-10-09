@@ -180,7 +180,7 @@ test("loyalty shows monetary savings, conditional two-way rates and live tier pr
     assert.match(html,locale==="fa" ? /مجموع صرفه‌جویی شما تا امروز/ : /Total savings to date/);
     assert.doesNotMatch(html,/٪|>[^<]*%<|discount on the exchange-rate spread|تخفیف از فاصله نرخ خرید و فروش/);
     assert.doesNotMatch(render({loyaltyBonus:0}),/data-loyalty-rates|data-loyalty-rate="/);
-    assert.match(render({volume:7500}),/aria-valuenow="50"/);
+    assert.match(render({volume:7500}),/aria-valuenow="17"/);
     const maxed=render({volume:100000});
     assert.match(maxed,/aria-valuenow="100"/);
     assert.doesNotMatch(maxed,/Only .*AUD left|تنها .*تا سطح بعدی/);
@@ -302,7 +302,10 @@ test("transfer matches the identity stepper, clarifies all four controls and sco
     assert.equal(elements(tree,n=>n.props.name==="mobile-payment").length,1);
     assert.equal(elements(tree,n=>n.props.name==="bank-card"||n.props.name==="activity-history").length,0);
     assert.equal(elements(tree,n=>n.props.name==="transfer-setup")[0].props.size,96);
-    assert.ok(html.includes(locale==="fa"?"هر دلار استرالیا":"1 AUD"));
+    assert.ok(html.includes(locale==="fa"?"نرخ تبدیل":"Exchange rate"));
+    assert.ok(html.includes(locale==="fa"?"نرخ وفاداری":"Loyalty rate"));
+    assert.doesNotMatch(html,/هر دلار استرالیا|1 AUD =/);
+    assert.deepEqual(elements(tree,n=>n.type?.name==="RequestExchangeRates")[0].props.rates,{base:100000,loyalty:100000,applied:100000});
     const header=elements(tree,n=>n.type==="header"&&String(n.props.className).includes("DashboardTransferFlow_header"))[0];
     assert.ok(header);
     assert.equal(elements(header,n=>n.props.name==="mobile-payment")[0].props.size,112);
@@ -328,6 +331,10 @@ test("transfer matches the identity stepper, clarifies all four controls and sco
     assert.match(css,/headerAnimation\{width:96px!important;height:96px!important\}/);
     assert.match(css,/@container\(min-width:560px\)/);
     assert.match(css,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+    const savedLoyaltyRate=181000+(txType==="buy_aud"?-1260:1260);
+    h.values[3]={...request.quote,customer_request_type:txType,base_rate:181000,loyalty_rate_discount:1260,applied_rate:savedLoyaltyRate};
+    const savedTree=h.render(DashboardRequestHub,{...props,baseRate:190000,tailoredRate:189000});
+    assert.deepEqual(elements(savedTree,n=>n.type?.name==="RequestExchangeRates")[0].props.rates,{base:181000,loyalty:savedLoyaltyRate,applied:savedLoyaltyRate,original:undefined});
     h.cleanup();
   }
 });
@@ -379,10 +386,10 @@ test("bilingual amount inputs keep Persian formatting separate from the actual s
     const props={isApproved:true,txType:"buy_aud",setTxType(){},amountStr:"1,000.05",setAmountStr(value){props.amountStr=value;},loyaltyBonus:0,tailoredRate:100000,baseRate:100000,profile:{id:"test"}};
     const render=()=>h.render(DashboardRequestHub,props);
     const input=()=>elements(render(),e=>e.props.id==="request-amount-aud")[0];
-    assert.equal(input().props.value,locale==="fa" ? "۱٬۰۰۰٫۰۵" : "1,000.05");
+    assert.equal(input().props.value,locale==="fa" ? "۱٬۰۰۰.۰۵" : "1,000.05");
     assert.equal(input().props.dir,"ltr");assert.equal(input().props["data-number-locale"],locale);
     input().props.onChange({target:{value:"۱٬۲۳۴٫۰۵"}});
-    assert.equal(input().props.value,locale==="fa" ? "۱٬۲۳۴٫۰۵" : "1,234.05");
+    assert.equal(input().props.value,locale==="fa" ? "۱٬۲۳۴.۰۵" : "1,234.05");
     // Review mounts the existing submit component; no network or write is performed.
     h.values[0]=2;
     const submit=elements(render(),e=>e.type===OnlineRequestSubmit)[0];
@@ -586,7 +593,7 @@ test("the transfer hero displays each quoted currency, preserves privacy hooks a
     assert.match(html,locale==="en" ? /Toman/ : /تومان/);assert.match(html,/AUD/);
     const reverse=render({...request,reference_code:"ZE99999",quote:{...quote,funding_total:1234.56,funding_currency:"AUD",recipient_amount:129628800,recipient_currency:"IRT"}});
     assert.match(reverse,/ZE99999/);assert.doesNotMatch(reverse,/ZE36827/);
-    assert.match(reverse,locale==="en" ? /1,234\.56/ : /۱٬۲۳۴٫۵۶/);
+    assert.match(reverse,locale==="en" ? /1,234\.56/ : /۱٬۲۳۴\.۵۶/);
     assert.match(reverse,locale==="en" ? /129,628,800/ : /۱۲۹٬۶۲۸٬۸۰۰/);
     assert.doesNotMatch(reverse,/NaN|undefined/);
   }

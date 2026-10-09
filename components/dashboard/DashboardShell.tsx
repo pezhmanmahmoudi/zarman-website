@@ -5,6 +5,7 @@ import { RefreshCw, BotMessageSquare } from "lucide-react";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import type { DashboardInitialAccount } from "@/lib/dashboard/approved-summary";
 import { useLocale } from "@/context/LocaleContext";
+import { signInPath } from "@/lib/auth/sign-out";
 import { dashboardCopy, dashboardTab } from "@/lib/dashboard/navigation";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
@@ -32,6 +33,12 @@ export function DashboardShell({ children, initialAccount = null }: { children: 
   function toggleSound() {
     setSound(value => { window.localStorage.setItem(SOUND_KEY, value ? "off" : "on"); return !value; });
   }
+  if (data.signedOut) return <div className="grid min-h-dvh place-items-center p-6" dir={locale === "fa" ? "rtl" : "ltr"}>
+    <section className="text-center text-[#453854]" role="status">
+      <p>{locale === "fa" ? "نشست شما پایان یافته است." : "Your session has ended."}</p>
+      <a className="inline-flex min-h-11 items-center rounded-xl bg-[#635bff] px-5 font-semibold text-white" href={signInPath(locale)}>{locale === "fa" ? "رفتن به صفحهٔ ورود" : "Continue to sign in"}</a>
+    </section>
+  </div>;
   if (!data.sessionChecked && !data.error) return <DashboardMotionProvider enabled={motion}><DashboardLoading fullPage /></DashboardMotionProvider>;
   return <DashboardContext.Provider value={{ ...data, motionEnabled: motion }}><DashboardMotionProvider enabled={motion}>
     <div className={styles.dashboardWrapper} data-theme="light" data-motion={motion ? "on" : "off"} data-private-amounts={privateAmounts} data-dashboard-shell dir={locale === "fa" ? "rtl" : "ltr"}>

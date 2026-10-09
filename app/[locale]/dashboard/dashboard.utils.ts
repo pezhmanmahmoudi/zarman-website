@@ -1,3 +1,4 @@
+import { formatLocalizedNumber, normaliseAmountDigits } from "@/lib/numbers";
 export function toFaDigits(input: string) {
   return input.replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
 }
@@ -8,10 +9,7 @@ export function faToEnDigits(input: string) {
 }
 
 export function getRawNumber(value: string) {
-  const normalized = faToEnDigits(value)
-    .replace(/،/g, "")
-    .replace(/,/g, "")
-    .replace(/[^\d.]/g, "");
+  const normalized = normaliseAmountDigits(value);
   const n = Number(normalized);
   return Number.isFinite(n) ? n : 0;
 }
@@ -21,7 +19,7 @@ export function formatNumberFa(num: number, isToman = false) {
   const options: Intl.NumberFormatOptions = isToman
     ? { maximumFractionDigits: 0 }
     : { maximumFractionDigits: 2 };
-  return toFaDigits(Number(num).toLocaleString("en-US", options)).replace(/,/g, "،");
+  return formatLocalizedNumber(Number(num), "fa", options);
 }
 
 export function formatAUD(num: number) {

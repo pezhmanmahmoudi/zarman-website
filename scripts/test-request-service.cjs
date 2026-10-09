@@ -29,6 +29,7 @@ const accountAccess = compile("lib/payments/account-access.ts", { "server-only":
 const journey = compile("lib/requests/journey.ts");
 const activity = compile("lib/dashboard/activity.ts", { "@/lib/requests/journey": journey });
 const paging = compile("lib/dashboard/paging.ts");
+const conflicts = compile("lib/requests/conflicts.ts");
 test("payment account encryption authenticates owner and quote, preserves password, and fails closed", () => {
   const credentials = { username: "synthetic@example.invalid", password: "  synthetic-secret!  " };
   const encrypted = accountAccess.encryptPaymentAccountAccess(credentials, "owner", "quote");
@@ -136,7 +137,7 @@ function harness(overrides = {}) {
             const row = (state.commands || []).find(command => Object.entries(query.filters).every(([key, value]) => command[key] === value));
             return { data: row ? { accounting_date_jalali: row.accounting_date_jalali } : null, error: null };
           }
-          case "exchange_request_payments": {
+          case "exchange_request_current_payments": {
             if (state.paymentReadError) return { data: null, error: state.paymentReadError };
             const rows = (state.payments || []).filter(payment => Object.entries(query.filters).every(([key, value]) => payment[key] === value));
             if (query.order) rows.sort((a, b) => (query.order.ascending ? 1 : -1) * String(a[query.order.column]).localeCompare(String(b[query.order.column])));
@@ -175,6 +176,7 @@ function harness(overrides = {}) {
     "@/lib/notifications/customer-telegram": { customerTelegramConfig: () => ({ enabled: false }), dispatchCustomerTelegramSafely: async () => {} },
     "@/lib/requests/validation": validation, "@/lib/requests/receipt-upload": upload, "@/lib/pricing": pricing,
     "@/lib/requests/notification-config": notificationConfig,
+    "@/lib/requests/conflicts": conflicts,
     "@/lib/requests/notifications": {
       notificationRuntimeSettings: () => ({ apiKey: "test-key", from: "Zarman <sender@example.invalid>", siteUrl: "https://example.invalid" }),
       createNotificationDatabase: () => ({ notification: true }),
@@ -316,9 +318,9 @@ test("admin detail reads actual bank deposits in their recorded currency with on
   assert.equal(response.data.payments[0].account_id, ACCOUNT);
   assert.equal(response.data.payments[1].amount, 100);
   assert.equal(Object.hasOwn(response.data.payments[0], "actor_id"), false);
-  const reads = state.calls.filter(call => call.table === "exchange_request_payments");
+  const reads = state.calls.filter(call => call.table === "exchange_request_current_payments");
   assert.equal(reads.length, 1);
-  assert.equal(reads[0].columns, "id,request_id,payment_reference,amount,currency,account_id,created_at");
+  assert.equal(reads[0].columns, "id,request_id,payment_reference,amount,currency,account_id,created_at,original_amount,corrected_at,excluded");
   assert.deepEqual(reads[0].filters, { request_id: REQUEST });
   assert.deepEqual(reads[0].order, { column: "created_at", ascending: false });
   assert.equal(state.calls.some(call => call.rpc || call.operation === "insert"), false);
@@ -330,13 +332,13 @@ test("customers cannot query or receive private funding payments, including thro
   assert.equal(ownerDetail.error, undefined);
   assert.equal(Object.hasOwn(ownerDetail.data, "payments"), false);
   assert.equal(Object.hasOwn(ownerDetail.data, "deliveries"), false);
-  assert.equal(state.calls.some(call => call.table === "exchange_request_payments"), false);
+  assert.equal(state.calls.some(call => call.table === "exchange_request_current_payments"), false);
   assert.ok((await actions.getAdminRequest(REQUEST)).error);
   state.requestOwner = OTHER;
   assert.ok((await actions.getMyRequest(REQUEST)).error);
   state.user = null;
   assert.ok((await actions.getMyRequest(REQUEST)).error);
-  assert.equal(state.calls.some(call => call.table === "exchange_request_payments"), false);
+  assert.equal(state.calls.some(call => call.table === "exchange_request_current_payments"), false);
 });
 
 test("admin payment read failures do not masquerade as an empty deposit history", async () => {
@@ -344,7 +346,7 @@ test("admin payment read failures do not masquerade as an empty deposit history"
   const response = await actions.getAdminRequest(REQUEST);
   assert.ok(response.error);
   assert.equal(response.data, undefined);
-  assert.equal(state.calls.filter(call => call.table === "exchange_request_payments").length, 1);
+  assert.equal(state.calls.filter(call => call.table === "exchange_request_current_payments").length, 1);
   assert.equal(state.calls.some(call => call.rpc || call.operation === "insert"), false);
 });
 
@@ -355,7 +357,7 @@ test("admin detail starts independent delivery and deposit reads while event his
   const response = actions.getAdminRequest(REQUEST);
   try {
     await new Promise(setImmediate);
-    for (const table of ["exchange_request_events", "exchange_request_receipts", "exchange_request_messages", "exchange_request_notification_deliveries", "exchange_request_payments"]) {
+    for (const table of ["exchange_request_events", "exchange_request_receipts", "exchange_request_messages", "exchange_request_notification_deliveries", "exchange_request_current_payments"]) {
       assert.ok(state.calls.some(call => call.table === table), `${table} should not wait for event history`);
     }
     assert.equal(state.calls[0].table, "exchange_requests", "authorize the request before related reads");
@@ -520,6 +522,55 @@ test("status and message commits return while deferred email delivery remains un
   }
 });
 
+test("conflicts terminate one RPC attempt and return a non-retryable reload result", async () => {
+  const errors = [
+    { code: "40001", message: "serialization failure" },
+    { code: "PT409", message: "version mismatch" },
+    { code: "P0001", message: "REQUEST_CONFLICT: Reload request" },
+    { message: "REQUEST_CONFLICT: Reload request" },
+    new Error("REQUEST_CONFLICT: Reload request"),
+    Object.assign(new Error("version mismatch"), { code: "40001" }),
+  ];
+  for (const error of errors) for (const thrown of [false, true]) for (const admin of [false, true]) {
+    const { actions, state } = harness({ admin, rpc: () => {
+      if (thrown) throw error;
+      return { data: null, error };
+    } });
+    const result = await (admin ? actions.mutateAdminRequest : actions.mutateMyRequest)({
+      requestId: REQUEST, commandKey: COMMAND, expectedVersion: 4,
+      action: admin ? "await_funds" : "cancel", ...(admin ? { sendEmail: true } : {}),
+      payload: { message: "Cancel this transfer" },
+    });
+    assert.equal(result.error, conflicts.REQUEST_CONFLICT_MESSAGE);
+    assert.equal(result.code, "REQUEST_CONFLICT");
+    assert.equal(result.retryable, false);
+    assert.equal(state.calls.filter(call => call.rpc).length, 1);
+    assert.equal(state.after, undefined, "conflicts must not enqueue notification work");
+  }
+  for (const error of [null, {}, "Connection lost", { code: "23505" }, new Error("Connection lost")]) {
+    assert.equal(conflicts.isRequestConflict(error), false);
+  }
+});
+
+test("the installed Supabase client sends a single HTTP request on a conflict", async () => {
+  const { createClient } = require("@supabase/supabase-js");
+  for (const code of ["40001", "PT409"]) {
+    let sends = 0;
+    const db = createClient("https://fixture.invalid", "test-only", {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: async () => {
+        sends++;
+        return new Response(JSON.stringify({ code, message: "REQUEST_CONFLICT: Reload request" }), {
+          status: code === "PT409" ? 409 : 500, headers: { "Content-Type": "application/json" },
+        });
+      } },
+    });
+    const result = await db.rpc("transition_exchange_request", { p_expected_version: 1 });
+    assert.equal(result.error.code, code);
+    assert.equal(sends, 1);
+  }
+});
+
 test("opening the admin queue runs the deadline sweep without a scheduler, and a sweep failure never hides the list", async () => {
   const { actions, state } = harness({ admin: true });
   assert.equal((await actions.listAdminRequests()).error, undefined);
@@ -599,7 +650,7 @@ test("final reconciliation is admin-only and sends one validated command with a 
   assert.ok((await actions.mutateMyRequest({ ...input, sendEmail: undefined })).error);
 });
 
-test("admin confirm_funds generates a deterministic reference and only stores changed accounting terms", async () => {
+test("admin confirm_funds sends zero and nonzero accounting terms in one atomic command", async () => {
   const quote = { applied_rate: 50000, base_fee_aud: 10 };
   const { actions, state } = harness({ admin: true, rpcRequest: { transaction_id: ACCOUNT, quote } });
   const base = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 2, action: "confirm_funds", sendEmail: false,
@@ -607,14 +658,28 @@ test("admin confirm_funds generates a deterministic reference and only stores ch
   assert.equal((await actions.mutateAdminRequest(base)).error, undefined);
   const payload = state.calls.filter(call => call.rpc).at(-1).args.p_payload;
   assert.equal(payload.payment_reference, `AUTO-${COMMAND.slice(0, 13).toUpperCase()}`);
-  assert.equal(Object.hasOwn(payload, "accounting_rate"), false);
+  assert.equal(state.calls.filter(call => call.rpc).at(-1).rpc, "confirm_exchange_request_funds");
+  assert.equal(payload.accounting_rate, 50000);
+  assert.equal(payload.accounting_fee_aud, 10);
   assert.equal(state.calls.some(call => call.operation === "update"), false);
   assert.equal((await actions.mutateAdminRequest({ ...base, payload: { ...base.payload, accounting_rate: 51000, accounting_fee_aud: 0 } })).error, undefined);
-  const updates = state.calls.filter(call => call.operation === "update");
-  assert.deepEqual(updates.map(call => call.table), ["exchange_requests", "transactions"]);
-  assert.deepEqual(JSON.parse(JSON.stringify(updates[0].value)), { accounting_overrides: { applied_rate: 51000, base_fee_aud: 0 } });
-  assert.deepEqual(JSON.parse(JSON.stringify(updates[1].value)), { applied_rate: 51000, ledger_fee_aud: 0 });
+  const changed = state.calls.filter(call => call.rpc).at(-1);
+  assert.equal(changed.rpc, "confirm_exchange_request_funds");
+  assert.equal(changed.args.p_payload.accounting_rate, 51000);
+  assert.equal(changed.args.p_payload.accounting_fee_aud, 0);
+  assert.equal(state.calls.some(call => call.operation === "update"), false);
   assert.ok((await actions.mutateAdminRequest({ ...base, payload: { ...base.payload, accounting_rate: -1 } })).error);
+});
+
+test("a missing atomic funding migration cannot fall back to recording funds without the fee", async () => {
+  const { actions, state } = harness({ admin: true, rpc: () => ({ data: null, error: { code: "PGRST202" } }) });
+  const result = await actions.mutateAdminRequest({ requestId: REQUEST, commandKey: COMMAND, expectedVersion: 2,
+    action: "confirm_funds", sendEmail: true, payload: { received_amount: 1000, received_currency: "AUD", receiver_account_id: ACCOUNT, accounting_fee_aud: 0 } });
+  assert.match(result.error, /Funds were not recorded by this attempt/);
+  assert.match(result.error, /20261009_52_atomic_request_accounting_terms/);
+  assert.deepEqual(state.calls.filter(call => call.rpc).map(call => call.rpc), ["confirm_exchange_request_funds"]);
+  assert.equal(state.calls.some(call => call.operation === "update"), false);
+  assert.equal(state.emailSends, undefined);
 });
 
 const financialActions = {
@@ -630,7 +695,7 @@ for (const [action, payload] of Object.entries(financialActions)) {
     const { actions, state } = harness({ admin: true, now: "2026-09-15T23:59:59Z", commands: [] });
     let commits = 0;
     state.rpc = (name, args) => {
-      assert.equal(name, "transition_exchange_request");
+      assert.equal(name, action === "confirm_funds" ? "confirm_exchange_request_funds" : "transition_exchange_request");
       const prior = state.commands.find(command => command.request_id === args.p_request_id && command.command_key === args.p_command_key);
       if (prior) {
         if (prior.fingerprint !== JSON.stringify(args)) return { data: null, error: { code: "P0001", message: "COMMAND_PAYLOAD_CONFLICT" } };
@@ -789,4 +854,45 @@ test("pricing acceptance uses the authenticated owner, masks bank details and re
   assert.equal(response.data.payment_details, null); assert.equal(response.data.payment_instructions, null);
   assert.ok((await h.actions.acceptMyRequestPricing({ ...payload, expectedVersion: 0 })).error);
   assert.equal(h.state.calls.length, 1);
+});
+
+test("deposit correction: the action sends existing payment changes to one dedicated RPC", async () => {
+  const { actions, state } = harness({ admin: true });
+  const input = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 2, action: "correct_funds", sendEmail: false,
+    payload: { message: "Duplicate entry replaces the first record", payment_corrections: [{ payment_id: ACCOUNT, amount: 0, forged: true }] } };
+  assert.equal((await actions.mutateAdminRequest(input)).error, undefined);
+  const calls = state.calls.filter(call => call.rpc);
+  assert.equal(calls.length, 1); assert.equal(calls[0].rpc, "correct_exchange_request_funds");
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0].args.p_payload.payment_corrections)), [{ payment_id: ACCOUNT, amount: 0 }]);
+  assert.equal(calls[0].args.p_payload.payment_reference, undefined);
+  assert.equal(calls[0].args.p_payload.received_amount, undefined);
+  assert.equal(state.calls.some(call => ["insert", "update", "delete"].includes(call.operation)), false);
+  assert.ok((await actions.mutateMyRequest({ ...input, sendEmail: undefined })).error);
+  assert.ok((await actions.mutateAdminRequest({ ...input, payload: { ...input.payload, payment_corrections: [{ payment_id: ACCOUNT, amount: -1 }] } })).error);
+  assert.ok((await actions.mutateAdminRequest({ ...input, payload: { ...input.payload, payment_corrections: [{ payment_id: ACCOUNT, amount: 0 }, { payment_id: ACCOUNT, amount: 1 }] } })).error);
+});
+
+test("final amounts: admin replacement uses one RPC and never submits another deposit", async () => {
+  const { actions, state } = harness({ admin: true });
+  const input = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 2, action: "finalize_funds", sendEmail: false,
+    payload: { final_funding_total: 637000000, final_recipient_amount: 3500, receiver_account_id: ACCOUNT, accounting_fee_aud: 0, accounting_rate: 181740 } };
+  assert.equal((await actions.mutateAdminRequest(input)).error, undefined);
+  const calls = state.calls.filter(call => call.rpc);
+  assert.equal(calls.length, 1); assert.equal(calls[0].rpc, "finalize_exchange_request_funds");
+  assert.equal(calls[0].args.p_payload.final_funding_total, 637000000);
+  assert.equal(calls[0].args.p_payload.final_recipient_amount, 3500);
+  assert.equal(calls[0].args.p_payload.accounting_fee_aud, 0);
+  assert.equal(calls[0].args.p_payload.received_amount, undefined);
+  assert.equal(calls[0].args.p_payload.payment_reference, undefined);
+  assert.ok((await actions.mutateMyRequest({ ...input, sendEmail: undefined })).error);
+  assert.ok((await actions.mutateAdminRequest({ ...input, payload: { ...input.payload, final_funding_total: -1 } })).error);
+});
+
+
+test("final amounts: an incomplete schema returns a repair instruction without retrying or adding deposits", async () => {
+  const { actions, state } = harness({ admin: true, rpc: async () => ({ data: null, error: { code: "42703", message: 'record r has no field original_quote' } }) });
+  const result = await actions.mutateAdminRequest({ requestId: REQUEST, commandKey: COMMAND, expectedVersion: 2, action: "finalize_funds", sendEmail: false,
+    payload: { final_funding_total: 769668900, final_recipient_amount: 4235, receiver_account_id: ACCOUNT, accounting_fee_aud: 0, accounting_rate: 181740 } });
+  assert.match(result.error, /No changes were saved/); assert.match(result.error, /20261009_56/);
+  assert.equal(state.calls.filter(call => call.rpc).length, 1); assert.equal(state.inserts.length, 0);
 });

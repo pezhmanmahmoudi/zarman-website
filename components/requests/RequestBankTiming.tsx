@@ -1,3 +1,4 @@
+import { formatLocalizedNumber } from "@/lib/numbers";
 import type { ExchangeRequest, RequestLocale } from "@/lib/requests/types";
 import { DEFAULT_REQUEST_SETTINGS } from "@/lib/requests/validation";
 import { ChevronDown } from "lucide-react";
@@ -40,7 +41,7 @@ export function RequestBankTiming({ request, locale, fundingCurrency, iranBankin
               <li>
                 <strong>{fa ? "مبدأ (استرالیا): " : "Origin (Australia): "}</strong>
                 {fa 
-                  ? <>انتقال وجه از حساب استرالیایی معمولاً سریع است؛ اما واریزهای اول یا بررسی‌های امنیتی بانک ممکن است {clearanceHours ? `${new Intl.NumberFormat("fa-IR").format(clearanceHours)} ساعت یا بیشتر` : "مدت بیشتری"} زمان ببرند.</> 
+                  ? <>انتقال وجه از حساب استرالیایی معمولاً سریع است؛ اما واریزهای اول یا بررسی‌های امنیتی بانک ممکن است {clearanceHours ? `${formatLocalizedNumber(clearanceHours, "fa")} ساعت یا بیشتر` : "مدت بیشتری"} زمان ببرند.</> 
                   : <>Australian transfers can be fast, but first-time payments or bank security checks may take {clearanceHours ? `${clearanceHours} hours or more` : "longer"} to clear.</>}
               </li>
               <li>
@@ -73,7 +74,7 @@ export function RequestBankTiming({ request, locale, fundingCurrency, iranBankin
               <li>
                 <strong>{fa ? "مقصد (استرالیا): " : "Destination (Australia): "}</strong>
                 {fa 
-                  ? <>واریز وجه به حساب استرالیایی گیرنده معمولاً سریع است؛ اما در برخی موارد و بررسی‌های امنیتی ممکن است {clearanceHours ? `${new Intl.NumberFormat("fa-IR").format(clearanceHours)} ساعت یا بیشتر` : "مدت بیشتری"} زمان ببرد.</> 
+                  ? <>واریز وجه به حساب استرالیایی گیرنده معمولاً سریع است؛ اما در برخی موارد و بررسی‌های امنیتی ممکن است {clearanceHours ? `${formatLocalizedNumber(clearanceHours, "fa")} ساعت یا بیشتر` : "مدت بیشتری"} زمان ببرد.</> 
                   : <>Australian transfers to the recipient are usually fast, but security checks may take {clearanceHours ? `${clearanceHours} hours or more` : "longer"} to clear.</>}
               </li>
             </ul>

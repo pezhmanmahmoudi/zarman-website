@@ -2,25 +2,18 @@
 import { DashboardTabLink as Link } from "./DashboardTabLink";
 import Image from "next/image";
 import { House, Send, History, UserRound, UsersRound, MessageCircle, LogOut } from "lucide-react";
-import { useId, useState } from "react";
+import { useId } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { useSignOut } from "@/hooks/useSignOut";
 import { useLocale } from "@/context/LocaleContext";
 import { dashboardCopy, dashboardHref, type DashboardTab } from "@/lib/dashboard/navigation";
 import { cn } from "@/lib/utils";
 
 export function DashboardSidebar({ activeTab, motionEnabled = true }: { activeTab: DashboardTab; motionEnabled?: boolean }) {
-  const locale = useLocale(), copy = dashboardCopy[locale], router = useRouter();
-  const [busy, setBusy] = useState(false), [error, setError] = useState(false);
+  const locale = useLocale(), copy = dashboardCopy[locale];
+  const { signOut, signingOut: busy, signOutError: error } = useSignOut();
   const id = useId(), reduced = useReducedMotion(), animate = motionEnabled && reduced === false;
   const items = [{ tab: "overview", Icon: House }, { tab: "transfer", Icon: Send }, { tab: "history", Icon: History }, { tab: "recipients", Icon: UsersRound }, { tab: "profile", Icon: UserRound }, { tab: "feedback", Icon: MessageCircle }] as const;
-  async function signOut() {
-    if (busy) return;
-    setBusy(true); setError(false);
-    try { const { error } = await supabase.auth.signOut({ scope: "local" }); if (error) throw error; router.replace(`/${locale}/login`); router.refresh(); }
-    catch { setError(true); setBusy(false); }
-  }
   function activeSurface(mobile = false) {
     return <motion.span aria-hidden="true" layoutId={animate ? `${id}-${mobile ? "mobile" : "desktop"}` : undefined} className={cn("absolute inset-0 -z-10 rounded-2xl", mobile ? "bg-[#eeedff]" : "bg-[#eeedff]")} transition={{ type: "spring", stiffness: 420, damping: 38, duration: animate ? .3 : 0 }}/>;
   }
@@ -35,7 +28,7 @@ export function DashboardSidebar({ activeTab, motionEnabled = true }: { activeTa
         </Link>)}
       </nav>
       <div className="mt-auto grid gap-1 border-t border-[#eef0f3] pt-5">
-        <button className="flex min-h-12 items-center gap-3 rounded-2xl px-4 text-start text-sm text-[#626a76] transition-colors hover:bg-[#f7f8fa] disabled:opacity-50" onClick={() => void signOut()} disabled={busy}><LogOut size={18} aria-hidden="true"/>{copy.signOut}</button>
+        <button className="flex min-h-12 items-center gap-3 rounded-2xl px-4 text-start text-sm text-[#626a76] transition-colors hover:bg-[#f7f8fa] disabled:opacity-50" onClick={() => void signOut()} disabled={busy} aria-busy={busy}><LogOut size={18} aria-hidden="true"/>{busy ? (locale === "fa" ? "در حال خروج…" : "Signing out…") : copy.signOut}</button>
         {error && <p role="alert" className="px-4 text-xs text-rose-700">{locale === "fa" ? "خروج ناموفق بود. دوباره تلاش کنید." : "Sign out failed. Please retry."}</p>}
       </div>
     </aside>

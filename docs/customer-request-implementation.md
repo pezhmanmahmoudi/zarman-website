@@ -57,6 +57,44 @@ No production migrations, bank operations, real emails or live scheduler were ru
 
 ## Verification
 
+### Administrator final amounts (2026-10-09)
+
+The current second step uses the original **Verify incoming payment** layout and **Confirm funds received** button, with independent received/recipient amount fields and visible accounting rate/fee inputs. The upper amount summary is read only. Apply `20261009_56_repair_final_amount_confirmation.APPLY_MANUALLY.sql` after 52–54 before deploying this application; it installs the finalizer and its required columns even when optional migration 51 was omitted. Installing it does not edit existing request amounts or confirm any payment.
+
+The reported unchanged-payment failure came from migration 55 being present without the `original_quote` and `pricing_pending_acceptance` columns. PostgreSQL accepted the procedure definition but raised `42703` at execution. Migration 56 repairs this dependency and allows legacy pending-price requests to be finalized directly by the administrator. The deployment checker now verifies both columns as well as the RPC and payment views.
+
+The administrator enters the final customer payment and recipient amount independently, chooses the credited account and confirms once. Either amount may increase or decrease. For example, 639,090,000 IRT can become 637,000,000 IRT while the recipient amount stays unchanged. No comparison against the old funding total, correction-reason field, finance-team stage or second customer approval is required for this finalization.
+
+`finalize_exchange_request_funds` replaces the request amounts, pending transaction and effective received total in one transaction, then releases the request directly to settlement. Existing deposits are revised into one final total rather than added again; original rows, original quote and audit remain available. The summary, destination amount, accounting ledger and final invoice use the saved final amounts. The effective quote rate is calculated from the final amounts and original quote fees; separately editable accounting rate/fee remain explicit accounting terms. Currency precision, authorization, version/retry checks and protections for settled/refunded/posted amounts remain enforced.
+
+Focused `final amounts:` cases in the pricing DB, action and interface scripts cover the missing-column reproduction and repair, unchanged 769,668,900 IRT / 4,235 AUD confirmation, zero/nonzero fee and rate-only changes, increases/decreases in both directions, Persian input, independent amount fields, replacement of existing deposits, a single confirmation, rollback and final invoice/ledger amounts. No live deposit, email or payout is used by these checks.
+
+### Correct recorded deposits (2026-10-09)
+
+This is the earlier correction RPC retained for historical compatibility. The current admin form uses migration 56 and final-amount replacement instead.
+
+Apply `20261009_54_correct_recorded_request_funds.APPLY_MANUALLY.sql` after the existing workflow and migrations 51–53, before deploying this application. It adds a service-only correction RPC and payment read views. Installing it does not change any historical deposit or automatically choose which entry is a duplicate.
+
+The admin **Correct recorded deposits** form edits an existing amount or excludes a duplicate from the total. One confirmation saves the corrections and releases an exactly funded request directly for settlement; there is no additional funding confirmation. For the reported case, keep the 726,960,000 IRT entry and exclude the mistaken 726,965,000 IRT entry after the administrator verifies the bank record. Never record another deposit to repair either entry.
+
+Original payment rows remain intact. Append-only revisions, the internal event and audit store the reason and actor. All workflow payment sums, currency/account checks, settlement and refunds read the effective amounts. Corrections use the workflow locks, expected version and command key; retries cannot add another deposit or collect another fee. Execution, refund and posted fee records prevent changing already-accounted payments. Existing identity/settlement safeguards remain in place.
+
+The unpaid-only payment approval command is hidden once a deposit exists. Overpayments instead open the correction form. Partial corrections retain only the outstanding balance; exactly funded corrections immediately show destination settlement. The form accepts Persian, Arabic and English digits and preserves whole-Toman precision.
+
+### Atomic funding accounting terms (2026-10-09)
+
+Apply `20261009_52_atomic_request_accounting_terms.APPLY_MANUALLY.sql` after the existing request workflow migrations, **before deploying the application change**. It includes the idempotent `_43_request_accounting_overrides` schema setup in case that manual migration was missed, and adds the service-only `confirm_exchange_request_funds` RPC. If the new RPC is absent, the application fails before recording funds; it does not fall back to the former two-step write.
+
+The previous action recorded the payment, then saved accounting terms in separate direct updates. A missing `_43` column or a retained `guard_exchange_request_transaction` guard makes those updates fail after funds have committed (`_35` removes that guard in newer deployments). The new RPC commits the payment, accounting overrides, linked transaction, audit and retry result together under the existing workflow locks and any retained guards. Zero is a valid fee. The accepted quote and customer/recipient amounts remain unchanged; settlement uses the saved accounting rate/fee. Partial deposits retain saved terms unless explicitly edited.
+
+This migration makes no historical data changes. For a request that already displayed “Funds were recorded, but the adjusted rate or fee could not be saved”, refresh and inspect its recorded payments and accounting terms before any further action. The old path may have saved the request override before the transaction update failed. Do not confirm the same deposit again to repair accounting; reconcile the affected record separately.
+
+If that exact message still appears, the running server action is the old two-step implementation: the updated application no longer contains that error. Apply migration `_52` to the database used by the deployment, then publish/restart the updated application and refresh the admin page. Updating the repository alone does not update either the hosted database or the deployed application.
+
+Run `node scripts/check-request-accounting-deployment.mjs` with the target deployment's environment to check whether the database API exposes the atomic funding function and accounting override column. This check is read-only and prints no credentials or customer records. Missing API objects now produce an explicit administrator error naming migration `_52`; the action never falls back to the old write path. The diagnostic only checks API readiness, not the deployed application version or a real payment.
+
+`scripts/test-request-pricing-db.mjs` covers fee changes 0→10 and 10→0 in both currencies, settlement, exact retries and conflicts, rollback of a simulated accounting failure, input validation, grants and partial deposits. Action/UI tests cover sending an explicit zero, displaying saved terms and refusing a fallback when the migration is missing.
+
 `npm run test:requests` uses ephemeral PostgreSQL (PGlite), actual migrations and isolated frontend/server/email doubles. It covers pricing in both directions, permissions, idempotency, delayed funds and banking calendars, evidence storage rules, settlement/refund atomicity, accounting and reports, customer/admin controls, mail ordering/retries/webhooks, and deterministic Persian-capable PDF receipts. It does not connect to live Supabase or send email.
 
 Also run `npm run test:converter`, `npm run test:bank-fees`, TypeScript checking and the production build for the surrounding converter/accounting integration. Real bank clearance, provider delivery and deployed scheduler configuration require the staging checks above.

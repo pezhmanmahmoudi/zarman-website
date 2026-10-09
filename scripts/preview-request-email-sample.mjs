@@ -14,15 +14,15 @@ const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind
 vm.runInThisContext(`(function(require,module,exports){${js}\n})`, { filename: "lib/requests/receipt.ts" })(require, compiled, compiled.exports);
 
 const code = "SAMPLE-ZE123456";
-const receipt = { ...completion, reference_code: code, completed_at: "2026-10-03T01:00:00Z",
+const receipt = { ...completion, reference_code: code, completed_at: "2026-10-09T01:00:00Z",
   sender_name: "Pezhman (sample)", recipient_name: "Sample Recipient" };
 const pdf = await PDFDocument.load(await compiled.exports.renderRequestReceiptPdf(receipt));
 const font = await pdf.embedFont(StandardFonts.HelveticaBold);
 pdf.setTitle(`SAMPLE ONLY - Zarman receipt ${code}`);
 pdf.setSubject("Design sample only. No funds have been transferred.");
 for (const page of pdf.getPages()) {
-  page.drawRectangle({ x: 35, y: 692, width: page.getWidth() - 70, height: 22, color: rgb(1, .95, .88) });
-  page.drawText("SAMPLE ONLY - NOT PROOF OF TRANSFER", { x: 43, y: 700, size: 10, font, color: rgb(.55, .22, .03) });
+  page.drawRectangle({ x: 42, y: 630, width: page.getWidth() - 84, height: 22, color: rgb(1, .95, .88) });
+  page.drawText("SAMPLE ONLY - NOT PROOF OF TRANSFER", { x: 50, y: 638, size: 10, font, color: rgb(.55, .22, .03) });
   page.drawRectangle({ x: 36, y: 53, width: page.getWidth() - 72, height: 19, color: rgb(1, 1, 1) });
   page.drawText("Illustrative data only. No payment or settlement has taken place.", { x: 42, y: 60, size: 9, font, color: rgb(.55, .22, .03) });
 }

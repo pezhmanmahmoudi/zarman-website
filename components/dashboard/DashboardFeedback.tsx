@@ -1,5 +1,7 @@
 "use client";
 
+import { formatLocalizedNumber } from "@/lib/numbers";
+
 import React, { useId, useState } from "react";
 import { Star, MessageCircleHeart, ShieldCheck, Lightbulb } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -67,7 +69,7 @@ export function DashboardFeedback({ profileId, motionEnabled = true }: { profile
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <div className="-ms-2 flex items-center" role="group" aria-label={text("Rating out of five", "امتیاز از پنج")} onPointerLeave={() => setHoverRating(null)}>{[1,2,3,4,5].map(value => {
                   const on = value <= shownRating;
-                  return <button key={value} type="button" aria-label={text(`Rate ${value} out of 5`, `امتیاز ${value.toLocaleString("fa-IR")} از ۵`)} aria-pressed={rating === value} onClick={() => setRating(value)} onPointerEnter={event => { if (event.pointerType === "mouse") setHoverRating(value); }} className="group/star grid size-12 place-items-center rounded-full bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-[#635bff]/40 sm:size-14">
+                  return <button key={value} type="button" aria-label={text(`Rate ${value} out of 5`, `امتیاز ${formatLocalizedNumber(value, "fa")} از ۵`)} aria-pressed={rating === value} onClick={() => setRating(value)} onPointerEnter={event => { if (event.pointerType === "mouse") setHoverRating(value); }} className="group/star grid size-12 place-items-center rounded-full bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-[#635bff]/40 sm:size-14">
                     <Star aria-hidden="true" strokeWidth={1.3} fill={on ? `url(#${starGradientId})` : "#f1f2f6"} className={cn("size-9 transition-[transform,color,filter] duration-300 ease-[cubic-bezier(.34,1.56,.64,1)] sm:size-10", on ? "text-[#f29a12] drop-shadow-[0_6px_10px_#ff9f1a40]" : "text-[#d4d8e1]", motionEnabled && "motion-safe:group-hover/star:-rotate-12 motion-safe:group-hover/star:scale-[1.18] motion-safe:group-active/star:scale-95")}/>
                   </button>;
                 })}</div>

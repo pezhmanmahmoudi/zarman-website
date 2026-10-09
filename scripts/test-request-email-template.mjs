@@ -96,13 +96,14 @@ test("payment approval retains bank values and Commonwealth warning only for Aus
   }
 });
 
-test("email layout has mobile sizing, inline presentation tables, preheader and no external assets", () => {
+test("email layout has mobile sizing, inline presentation tables, preheader and a PNG brand logo", () => {
   const { html, text } = templates.renderRequestNotification(delivery(), settings);
   assert.match(html, /name="viewport"/);
   assert.match(html, /role="presentation"/);
   assert.match(html, /max-width:600px/);
   assert.match(html, /mso-hide:all/);
   assert.match(html, /background-color:#f4f5f6/);
-  assert.doesNotMatch(html, /<script|<link|<img|display:flex|display:grid|@font-face/i);
+  assert.match(html, /<img src="https:\/\/www\.zarman\.com\.au\/images\/logo-email\.png" alt="Zarman Exchange" width="136" height="140"/);
+  assert.doesNotMatch(html, /<script|<link|\.svg|display:flex|display:grid|@font-face/i);
   assert.doesNotMatch(text, /<table|<p style|&amp;/);
 });

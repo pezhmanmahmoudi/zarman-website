@@ -17,6 +17,10 @@ export function isMoney(value: unknown, maximum = Number.MAX_SAFE_INTEGER / 100)
   return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= maximum
     && Math.abs(value * 100 - Math.round(value * 100)) < 0.000001;
 }
+export function isExchangeRate(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 100_000_000
+    && Number(value.toFixed(6)) === value;
+}
 export function publicRequestSettings(settings: RequestSettings): PublicRequestSettings {
   // Enumerate public fields so adding a private setting cannot expose it by accident.
   return {
@@ -99,24 +103,32 @@ export function settingsInputError(input: RequestSettings): string | null {
 export function mutationInputError(input: RequestMutationInput, admin: boolean): string | null {
   if (!input || !isUuid(input.requestId) || !isUuid(input.commandKey) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) return "Invalid request. Refresh the page and try again.";
   const allowed = admin
-    ? ["review", "request_info", "await_funds", "confirm_funds", "resume_funded_request", "start_processing", "record_uncertain_payout", "complete", "reconcile_complete", "cancel", "reject", "confirm_refund"]
+    ? ["review", "request_info", "await_funds", "confirm_funds", "correct_funds", "finalize_funds", "resume_funded_request", "start_processing", "record_uncertain_payout", "complete", "reconcile_complete", "cancel", "reject", "confirm_refund"]
     : ["respond", "cancel", "payment_evidence"];
   if (!allowed.includes(input.action)) return "This action is not available.";
   if (admin && typeof input.sendEmail !== "boolean") return "Choose whether to send an email update.";
   if (!admin && input.sendEmail !== undefined) return "Email settings are managed by the team.";
   const payload = input.payload || {};
   if (typeof payload !== "object" || Array.isArray(payload)) return "Invalid action details.";
-  if (["request_info", "respond", "record_uncertain_payout", "reject"].includes(input.action) && !boundedText(payload.message, 2000)) return "Enter the reason or requested information.";
+  if (["request_info", "respond", "record_uncertain_payout", "reject", "correct_funds"].includes(input.action) && !boundedText(payload.message, 2000)) return "Enter the reason or requested information.";
   if (payload.message !== undefined && !boundedText(payload.message, 2000, false)) return "Your message must be at most 2,000 characters.";
   if (input.action === "payment_evidence" && !boundedText(payload.payment_reference, 200)) return "Enter the payment reference.";
   // Admin references are optional; the server records a generated reference when omitted.
   if (["confirm_funds", "complete", "reconcile_complete"].includes(input.action)
       && [payload.payment_reference, payload.settlement_reference].some(value => value !== undefined && !boundedText(value, 200, false))) return "References must be plain text, up to 200 characters.";
-  if (payload.accounting_rate !== undefined && (input.action !== "confirm_funds" || !isMoney(payload.accounting_rate, 100_000_000))) return "Enter a valid exchange rate.";
-  if (payload.accounting_fee_aud !== undefined && (input.action !== "confirm_funds" || !(payload.accounting_fee_aud === 0 || isMoney(payload.accounting_fee_aud, 100_000)))) return "Enter a valid fee in AUD.";
+  if (payload.accounting_rate !== undefined && (input.action === "finalize_funds" ? !isExchangeRate(payload.accounting_rate) : input.action !== "confirm_funds" || !isMoney(payload.accounting_rate, 100_000_000))) return "Enter a valid exchange rate.";
+  if (payload.accounting_fee_aud !== undefined && (!["confirm_funds", "finalize_funds"].includes(input.action) || !(payload.accounting_fee_aud === 0 || isMoney(payload.accounting_fee_aud, 100_000)))) return "Enter a valid fee in AUD.";
   if (input.action === "confirm_funds" && (!isMoney(payload.received_amount) || !["AUD", "IRT"].includes(payload.received_currency || "")
       || (payload.received_currency === "IRT" && !Number.isInteger(payload.received_amount)))) return "Enter the reconciled amount and currency (whole Toman).";
   if (input.action === "confirm_funds" && !isUuid(payload.receiver_account_id)) return "Choose the account where the cleared funds were received.";
+  if (input.action === "finalize_funds" && (!isMoney(payload.final_funding_total) || !isMoney(payload.final_recipient_amount)
+    || !isUuid(payload.receiver_account_id))) return "Enter the final amounts and select the receiving account.";
+  if (input.action === "correct_funds") {
+    const corrections = payload.payment_corrections;
+    if (!Array.isArray(corrections) || corrections.length < 1 || corrections.length > 100
+      || corrections.some(item => !item || !isUuid(item.payment_id) || !(item.amount === 0 || isMoney(item.amount)))
+      || new Set(corrections.map(item => item.payment_id)).size !== corrections.length) return "Select each recorded deposit once and enter a valid corrected amount.";
+  }
   if (["complete", "reconcile_complete"].includes(input.action) && (!isUuid(payload.payer_account_id)
       || !isUuid(payload.receiver_account_id) || payload.payer_account_id === payload.receiver_account_id)) return "Choose distinct payout and collection accounts.";
   if (payload.transfer_method && !["free", "pol", "paya", "satna"].includes(payload.transfer_method)) return "Choose a valid bank transfer method.";

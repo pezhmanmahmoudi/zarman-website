@@ -1,5 +1,7 @@
 "use client";
 
+import { formatLocalizedNumber } from "@/lib/numbers";
+
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Clock3, RefreshCw } from "lucide-react";
@@ -21,10 +23,10 @@ type Props = { input: Omit<QuoteInput, "serviceTier">; paymentAccount?: PaymentA
 
 export function OnlineRequestSubmit({ input, paymentAccount, disabled, validationMessage, onBusyChange, onSubmitted, onQuoteChange }: Props) {
   const fa = input.locale === "fa";
-  const numbers = new Intl.NumberFormat(fa ? "fa-IR" : "en-AU", { maximumFractionDigits: 2 });
   const duration = (minutes: number) => {
     const hours = minutes / 60;
-    return fa ? `${numbers.format(hours)} ساعت` : `${numbers.format(hours)} ${hours === 1 ? "hour" : "hours"}`;
+    const number = formatLocalizedNumber(hours, input.locale, { maximumFractionDigits: 2 });
+    return fa ? `${number} ساعت` : `${number} ${hours === 1 ? "hour" : "hours"}`;
   };
   const todayInSydney = () => {
     const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Australia/Sydney", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());

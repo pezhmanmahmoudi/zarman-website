@@ -17,10 +17,12 @@ export type DashboardLottieScenePlayerProps = {
 export function DashboardLottieScenePlayer({ name, playing, replayKey = 0, onReady, onComplete, onError }: DashboardLottieScenePlayerProps) {
   const player = useRef<LottieHandle>(null);
   const lastReplay = useRef(replayKey);
+  const completedPlays = useRef(0);
   const asset: DashboardLottieSceneAsset = dashboardLottieScenes[name];
 
   useEffect(() => {
     if (playing && lastReplay.current !== replayKey) {
+      completedPlays.current = 0;
       player.current?.seek(0);
       player.current?.play();
       lastReplay.current = replayKey;
@@ -35,7 +37,13 @@ export function DashboardLottieScenePlayer({ name, playing, replayKey = 0, onRea
     style={asset.zoom ? { transform: `scale(${asset.zoom.scale})`, transformOrigin: asset.zoom.origin } : undefined}
     subscriptions={{
       ready: () => { onReady(); if (playing) player.current?.play(); },
-      complete: onComplete,
+      complete: () => {
+        completedPlays.current += 1;
+        if (completedPlays.current < (asset.plays ?? 1)) {
+          player.current?.seek(0);
+          if (playing) player.current?.play();
+        } else onComplete();
+      },
       error: onError,
     }} />;
 }

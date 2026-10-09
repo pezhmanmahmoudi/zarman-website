@@ -1,52 +1,41 @@
 "use client";
 
+import { formatLocalizedNumber, normaliseAmountDigits, localiseAmountDraft } from "@/lib/numbers";
+
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import styles from "./ConverterFa.module.css";
 import Button from "@/components/ui/Button/Button";
-import { ArrowLeft, ArrowDownCircle, Info, UserCircle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, Info, UserCircle, AlertTriangle } from "lucide-react";
 import { useRates } from "@/context/RateContext";
 import { useFinanceConfig } from "@/context/FinanceConfigContext";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
-import { calcAppliedFee } from "@/lib/pricing";
+import { calculateQuoteMoney } from "@/lib/requests/quote-money";
 
 
 type Currency = "AUD" | "IRT";
+type InputSide = "send" | "receive";
 
-function toFaDigits(input: string) {
-  return input.replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
-}
-
-function faToEnDigits(input: string) {
-  const fa = "۰۱۲۳۴۵۶۷۸۹";
-  const ar = "٠١٢٣٤٥٦٧٨٩";
-  return input.replace(/[۰-۹٠-٩]/g, (d) => String(fa.includes(d) ? fa.indexOf(d) : ar.indexOf(d)));
-}
-
-function normalizeAmount(value: string): string | null {
-  const normalized = faToEnDigits(value)
-    .replace(/[،,٬\s]/g, "")
-    .replace(/٫/g, ".");
+function normalizeAmount(value: string, currency: Currency): string | null {
+  const normalized = normaliseAmountDigits(value);
   // Reject ambiguous or malformed amounts instead of silently multiplying them.
-  return /^\d*(?:\.\d{0,2})?$/.test(normalized) ? normalized : null;
+  const pattern = currency === "AUD" ? /^\d*(?:\.\d{0,2})?$/ : /^\d*$/;
+  return pattern.test(normalized) ? normalized : null;
 }
 
 function getRawNumber(value: string) {
-  const normalized = normalizeAmount(value);
-  const n = normalized === null ? 0 : Number(normalized);
+  const n = Number(normaliseAmountDigits(value));
   return Number.isFinite(n) ? n : 0;
 }
 
 function formatNumberFa(num: number, isToman: boolean = false) {
   const options = isToman ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
-  const en = Number(num || 0).toLocaleString("en-US", options);
-  return toFaDigits(en).replace(/,/g, "،");
+  return formatLocalizedNumber(Number(num || 0), "fa", options);
 }
 
 function formatNumberByLocale(num: number, isEn: boolean, isToman: boolean = false) {
   const options = isToman ? { maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
-  const en = Number(num || 0).toLocaleString("en-US", options);
-  return isEn ? en : toFaDigits(en).replace(/,/g, "،");
+  return formatLocalizedNumber(Number(num || 0), isEn ? "en" : "fa", options);
 }
 
 export default function ConverterFa() {
@@ -58,49 +47,65 @@ export default function ConverterFa() {
     { value: "IRT", label: isEn ? "Iranian Toman" : "تومان ایران" },
   ];
 
-  const [amountText, setAmountText] = useState<string>(isEn ? "3,000" : "۳،۰۰۰");
+  const [amountText, setAmountText] = useState<string>(() => formatNumberByLocale(3000, isEn));
   const [from, setFrom] = useState<Currency>("AUD");
+  const [inputSide, setInputSide] = useState<InputSide>("send");
   const { currentRates, isLoading } = useRates();
   const financeConfig = useFinanceConfig();
 
-  // 🛡️ اگر نرخ وجود نداشت، مقدار 0 در نظر گرفته می‌شود تا جلوی ارور null گرفته شود
   const rawRate = from === "AUD" ? currentRates.buyAUD : currentRates.sellAUD;
-  const safeRate = rawRate || 0; 
+  const safeRate = rawRate && Number.isFinite(rawRate) && rawRate > 0 ? rawRate : 0;
   const to: Currency = from === "AUD" ? "IRT" : "AUD";
-
   const amountNum = getRawNumber(amountText);
-
-  // Use the configured fee in both directions and recalculate when it changes.
-  const rawAud = safeRate > 0 ? (from === "AUD" ? amountNum : amountNum / safeRate) : 0;
-  const feeInAud = calcAppliedFee(rawAud, financeConfig);
-  const isFeeApplied = feeInAud > 0;
-  const netAud = Math.max(0, rawAud - feeInAud);
-  const finalValue = from === "AUD" ? netAud * safeRate : netAud;
-  const resultText = amountNum > 0 && safeRate > 0
-    ? formatNumberByLocale(finalValue, isEn, to === "IRT")
-    : "";
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const normalized = normalizeAmount(e.target.value);
-    if (normalized === null) return;
-    if (normalized === "") {
-      setAmountText("");
-      return;
+  let estimate: ReturnType<typeof calculateQuoteMoney> | null = null;
+  let calculationError = "";
+  if (amountNum > 0 && safeRate > 0) {
+    try {
+      estimate = calculateQuoteMoney({
+        amount: amountNum,
+        currency: inputSide === "send" ? from : to,
+        rate: safeRate,
+        txType: from === "AUD" ? "sell_aud" : "buy_aud",
+        config: financeConfig,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      calculationError = message.includes("transfer-fee threshold")
+        ? (isEn ? "This amount cannot be converted with the current fee rules. Increase it or enter AUD in the other field." : "این مبلغ با شرایط کارمزد فعلی قابل تبدیل نیست؛ مبلغ بیشتری وارد کنید یا مبلغ دلاری را در فیلد دیگر وارد کنید.")
+        : message.includes("cover the service fees") || message.includes("rounding limit")
+          ? (isEn ? "Enter a larger amount to cover the fee and currency rounding." : "مبلغ بیشتری وارد کنید تا کارمزد و حداقل مبلغ قابل تبدیل پوشش داده شود.")
+          : (isEn ? "This amount cannot be calculated. Review the amount or try again when rates are available." : "محاسبهٔ این مبلغ ممکن نیست؛ مبلغ را بررسی کنید یا پس از دریافت نرخ دوباره تلاش کنید.");
     }
-    const [whole, fraction] = normalized.split(".");
-    const wholeNumber = Number(whole || "0");
-    if (!Number.isSafeInteger(wholeNumber)) return;
-    const groupedWhole = wholeNumber.toLocaleString("en-AU", { maximumFractionDigits: 0 });
+  }
+  const feeInAud = estimate?.baseFeeAud ?? 0;
+  const isFeeApplied = feeInAud > 0;
+  const unavailableText = safeRate === 0 || calculationError ? "—" : "";
+  const draftText = localiseAmountDraft(amountText, isEn ? "en" : "fa");
+  const sendText = inputSide === "send" ? draftText : estimate ? formatNumberByLocale(estimate.fundingTotal, isEn, from === "IRT") : unavailableText;
+  const receiveText = inputSide === "receive" ? draftText : estimate ? formatNumberByLocale(estimate.recipientAmount, isEn, to === "IRT") : unavailableText;
+  const amountDescription = `converter-amount-hint${calculationError ? " converter-amount-error" : ""}`;
+
+  const handleInputChange = (value: string, side: InputSide) => {
+    const normalized = normalizeAmount(value, side === "send" ? from : to);
+    if (normalized === null) return;
+    if (Number(normalized || "0") > Number.MAX_SAFE_INTEGER / 100) return;
     // Preserve a trailing separator and zeros so users can type amounts like 10.50.
-    const formatted = groupedWhole + (fraction === undefined ? "" : `.${fraction}`);
-    setAmountText(isEn ? formatted : toFaDigits(formatted).replace(/,/g, "،").replace(/\./g, "٫"));
+    setInputSide(side);
+    setAmountText(localiseAmountDraft(normalized, isEn ? "en" : "fa"));
+  };
+
+  const handleCurrencyChange = (value: string) => {
+    const currency = value as Currency;
+    const sendAmount = inputSide === "send" ? amountNum : estimate?.fundingTotal ?? 0;
+    setFrom(currency);
+    setInputSide("send");
+    setAmountText(sendAmount > 0 ? formatNumberByLocale(sendAmount, isEn, currency === "IRT") : "");
   };
 
   const continueOnline = () => {
-    const amountAud = from === "AUD" ? amountNum : finalValue;
-    if (safeRate <= 0 || amountAud <= 0) return;
+    if (!estimate) return;
     const query = new URLSearchParams({
-      requestAmountAud: (Math.round(amountAud * 100) / 100).toFixed(2),
+      requestAmountAud: estimate.rawAmountAud.toFixed(2),
       requestDirection: from === "AUD" ? "sell_aud" : "buy_aud",
     });
     window.location.assign(`/${isEn ? "en" : "fa"}/dashboard?${query}`);
@@ -135,18 +140,22 @@ export default function ConverterFa() {
             <input
               id="converter-send-amount"
               type="text"
-              value={amountText}
-              onChange={handleInputChange}
+              value={sendText}
+              onChange={event => handleInputChange(event.target.value, "send")}
               dir="ltr"
+              lang={isEn ? "en" : "fa"}
+              data-number-locale={isEn ? "en" : "fa"}
+              aria-describedby={amountDescription}
+              aria-invalid={inputSide === "send" && !!calculationError || undefined}
               className={styles.faInput}
               placeholder={isEn ? "0" : "۰"}
-              inputMode="decimal"
+              inputMode={from === "AUD" ? "decimal" : "numeric"}
             />
             <div className={styles.divider}></div>
             <div className={styles.selectWrapper}>
               <SelectBox
                 value={from}
-                onChange={(val) => setFrom(val as Currency)}
+                onChange={handleCurrencyChange}
                 labeledOptions={CURRENCY_OPTIONS}
                 dir={isEn ? "ltr" : "rtl"}
                 variant="ghost"
@@ -158,7 +167,7 @@ export default function ConverterFa() {
 
         <div className={styles.exchangeIconWrapper}>
           <div className={styles.exchangeLine}></div>
-          <ArrowDownCircle className={styles.exchangeIcon} size={24} strokeWidth={1.5} />
+          <ArrowUpDown className={styles.exchangeIcon} size={24} strokeWidth={1.5} aria-hidden="true" />
           <div className={styles.exchangeLine}></div>
         </div>
 
@@ -174,15 +183,20 @@ export default function ConverterFa() {
               </span>
             )}
           </div>
-          <div className={`${styles.fieldGroup} ${styles.locked}`}>
+          <div className={styles.fieldGroup}>
             <input
               id="converter-receive-amount"
               type="text"
-              value={safeRate === 0 ? "—" : resultText}
-              readOnly
+              value={receiveText}
+              onChange={event => handleInputChange(event.target.value, "receive")}
               dir="ltr"
+              lang={isEn ? "en" : "fa"}
+              data-number-locale={isEn ? "en" : "fa"}
+              aria-describedby={amountDescription}
+              aria-invalid={inputSide === "receive" && !!calculationError || undefined}
               className={styles.faInput}
               placeholder={isEn ? "0" : "۰"}
+              inputMode={to === "AUD" ? "decimal" : "numeric"}
             />
             <div className={styles.divider}></div>
             <div className={styles.selectWrapper}>
@@ -198,6 +212,8 @@ export default function ConverterFa() {
             </div>
           </div>
         </div>
+        <p id="converter-amount-hint" className={styles.amountHint}>{isEn ? "Enter either amount; the other is calculated automatically." : "مبلغ ارسالی یا دریافتی را وارد کنید؛ مبلغ دیگر خودکار محاسبه می‌شود."}</p>
+        {calculationError && <p id="converter-amount-error" className={styles.calculationError} role="status">{calculationError}</p>}
       </div>
 
       <div className={styles.notesContainer}>
@@ -220,7 +236,7 @@ export default function ConverterFa() {
       </div>
 
       <div className={styles.cta}>
-        <Button variant="primary" fullWidth rightIcon={<ArrowLeft />} onClick={continueOnline} disabled={safeRate <= 0 || amountNum <= 0 || finalValue <= 0}>
+        <Button variant="primary" fullWidth rightIcon={<ArrowLeft />} onClick={continueOnline} disabled={!estimate}>
           {isEn ? "Send Request via WhatsApp" : "ارسال درخواست در واتس‌اپ"}
         </Button>
       </div>

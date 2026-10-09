@@ -91,14 +91,48 @@ test("customer acceptance is explicit and repeated clicks retain the version and
   await button(render()).props.onClick(); assert.equal(accepted.length, 0); fail = false;
   await button(render()).props.onClick(); assert.deepEqual(calls[1], calls[0]); assert.equal(accepted.length, 1);
 });
-test("pricing acceptance remains required after a general reply clears the message", () => {
+test("final amounts: legacy pricing is queued for admin confirmation without a customer action", () => {
   const { getRequestJourney, requestStageLabel } = h.load("lib/requests/journey.ts");
   const { transactionQueueState } = h.load("lib/admin-transaction-workspace.ts");
   const revised = { ...request, pricing_pending_acceptance: true, customer_action_required: null };
   const journey = getRequestJourney(revised);
   assert.equal(journey.approved, false); assert.equal(journey.canPay, false); assert.equal(journey.canUpload, false);
-  assert.equal(journey.customerActionRequired, true); assert.equal(requestStageLabel(revised, "en"), "Accept revised amounts");
-  assert.equal(transactionQueueState({ request: revised, status: "pending" }).stage, "waiting");
+  assert.equal(journey.customerActionRequired, false); assert.equal(requestStageLabel(revised, "en"), "Admin review in progress");
+  assert.equal(transactionQueueState({ request: revised, status: "pending" }).stage, "review");
+});
+
+test("pricing conflicts refresh without resubmitting and require renewed customer acceptance", async () => {
+  for (const conflict of [{ error: "REQUEST_CONFLICT: Reload request" }, { error: "Version mismatch", code: "40001" }, { error: "Version mismatch", code: "PT409" }]) {
+    const calls = []; let refreshes = 0;
+    const h = dashboardHarness({ mocks: { "@/app/actions/request.actions": { acceptMyRequestPricing: async input => { calls.push(input); return conflict; } } } });
+    const { RequestPricingAcceptance } = h.load("components/requests/RequestPricingAcceptance.tsx");
+    const props = { request, locale: "en", onAccepted: () => assert.fail("conflict is not a commit"), onRefresh: async () => {
+      refreshes++; props.request = { ...request, version: request.version + 1 };
+    } };
+    const render = () => h.render(RequestPricingAcceptance, props);
+    nodes(render(), n => n.type === "input")[0].props.onChange({ target: { checked: true } });
+    await button(render()).props.onClick();
+    assert.equal(calls.length, 1); assert.equal(refreshes, 1);
+    assert.equal(nodes(render(), n => n.type === "input")[0].props.checked, false);
+    await button(render()).props.onClick(); assert.equal(calls.length, 1);
+    nodes(render(), n => n.type === "input")[0].props.onChange({ target: { checked: true } });
+    await button(render()).props.onClick();
+    assert.equal(calls[1].expectedVersion, request.version + 1);
+    assert.notEqual(calls[1].commandKey, calls[0].commandKey);
+  }
+});
+
+test("pricing editor recognizes raw conflicts, keeps the draft and waits for another explicit save", async () => {
+  const calls = []; let refreshes = 0;
+  const e = editorHarness(async input => { calls.push(input); return { error: "REQUEST_CONFLICT: Reload request" }; });
+  e.props.onRefresh = async () => { refreshes++; e.props.request = { ...request, version: request.version + 1 }; };
+  e.open(); e.field("input", 0, "870000000"); e.field("input", 1, "4777.59"); e.field("textarea", 0, "Requested correction");
+  await e.submit();
+  assert.equal(calls.length, 1); assert.equal(refreshes, 1);
+  assert.equal(nodes(e.render(), n => n.type === "input")[1].props.value, "4777.59");
+  await e.submit();
+  assert.equal(calls[1].expectedVersion, request.version + 1);
+  assert.notEqual(calls[1].commandKey, calls[0].commandKey);
 });
 test("a final quote ignores cached preview drift, but invalidates on changed customer intent", async () => {
   const windowBefore = global.window; global.window = { setInterval: () => 1, clearInterval() {} };

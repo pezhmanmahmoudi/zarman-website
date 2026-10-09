@@ -80,20 +80,24 @@ export async function renderRequestReceiptPdf(receipt: RequestCompletionReceiptS
   doc.setProducer("Zarman Exchange");
   doc.setCreationDate(new Date(receipt.completed_at));
   doc.setModificationDate(new Date(receipt.completed_at));
-  const [regularBytes, boldBytes] = await Promise.all([
+  const [regularBytes, boldBytes, logoBytes] = await Promise.all([
     readFile(join(process.cwd(), "public/fonts/IRANSansX-Regular.ttf")),
     readFile(join(process.cwd(), "public/fonts/IRANSansX-Bold.ttf")),
+    readFile(join(process.cwd(), "public/images/logo-email.png")),
   ]);
   const regular = await doc.embedFont(regularBytes, { subset: true });
   const bold = await doc.embedFont(boldBytes, { subset: true });
+  const logo = await doc.embedPng(logoBytes);
   const ink = rgb(0.06, 0.09, 0.16), muted = rgb(0.35, 0.40, 0.46), accent = rgb(0.07, 0.37, 0.35);
   let page = doc.addPage(PageSizes.A4);
   const width = page.getWidth();
-  let y = 682;
+  let y = 589;
   const drawHeader = () => {
-    page.drawRectangle({ x: 0, y: 716, width, height: 126, color: ink });
-    page.drawText("ZARMAN EXCHANGE", { x: 42, y: 790, font: bold, size: 23, color: rgb(1, 1, 1) });
-    page.drawText("Completed transfer receipt", { x: 42, y: 752, font: regular, size: 17, color: rgb(0.8, 0.91, 0.9) });
+    const logoSize = logo.scaleToFit(110, 114);
+    page.drawImage(logo, { x: (width - logoSize.width) / 2, y: page.getHeight() - 34 - logoSize.height, ...logoSize });
+    const title = "Completed transfer receipt";
+    page.drawText(title, { x: (width - bold.widthOfTextAtSize(title, 19)) / 2, y: 663, font: bold, size: 19, color: ink });
+    page.drawLine({ start: { x: 42, y: 620 }, end: { x: width - 42, y: 620 }, color: rgb(0.86, 0.89, 0.94), thickness: 0.7 });
   };
   const wrap = (text: string, font: PDFFont, size: number, maxWidth: number) => {
     const lines: string[] = [];
@@ -108,9 +112,10 @@ export async function renderRequestReceiptPdf(receipt: RequestCompletionReceiptS
   drawHeader();
   for (const [label, value] of rows) {
     const lines = wrap(value, regular, 11, width - 262);
-    const rowHeight = Math.max(32, lines.length * 16 + 14);
-    if (y - rowHeight < 94) { page = doc.addPage(PageSizes.A4); drawHeader(); y = 682; }
-    page.drawText(label, { x: 42, y, font: bold, size: 10, color: muted });
+    const labelLines = wrap(label, bold, 10, 164);
+    const rowHeight = Math.max(32, Math.max(lines.length, labelLines.length) * 16 + 14);
+    if (y - rowHeight < 94) { page = doc.addPage(PageSizes.A4); drawHeader(); y = 589; }
+    labelLines.forEach((line, index) => page.drawText(line, { x: 42, y: y - index * 16, font: bold, size: 10, color: muted }));
     lines.forEach((line, index) => page.drawText(line, { x: 224, y: y - index * 16, font: regular, size: 11, color: ink }));
     y -= rowHeight;
     page.drawLine({ start: { x: 42, y: y + 12 }, end: { x: width - 42, y: y + 12 }, color: rgb(0.86, 0.89, 0.90), thickness: 0.5 });

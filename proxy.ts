@@ -50,6 +50,10 @@ export async function proxy(request: NextRequest) {
   // Auth-protected routes — validate session via Supabase.
   // ------------------------------------------------------------------
   const { supabase, getResponse, applyPendingCookies } = createSupabaseProxyClient(request)
+  const privateResponse = (response: NextResponse) => {
+    response.headers.set('Cache-Control', 'private, no-store, max-age=0')
+    return response
+  }
 
   // getClaims() refreshes an expired session and verifies the JWT signature
   // locally against the cached JWKS (ES256), avoiding an Auth round trip per request.
@@ -67,21 +71,21 @@ export async function proxy(request: NextRequest) {
     if (isAdminLoginPage) {
       // Redirect already-authenticated admins away from the login page.
       if (isAdmin) {
-        return applyPendingCookies(
+        return privateResponse(applyPendingCookies(
           NextResponse.redirect(new URL('/admin/dashboard', request.url))
-        )
+        ))
       }
-      return getResponse()
+      return privateResponse(getResponse())
     }
 
     // All other /admin/* routes require admin role.
     if (!isAdmin) {
-      return applyPendingCookies(
+      return privateResponse(applyPendingCookies(
         NextResponse.redirect(new URL('/admin/login', request.url))
-      )
+      ))
     }
 
-    return getResponse()
+    return privateResponse(getResponse())
   }
 
   // ------------------------------------------------------------------
@@ -92,12 +96,12 @@ export async function proxy(request: NextRequest) {
   if (!claims) {
     const loginUrl = new URL(`/${locale}/login`, request.url)
     loginUrl.searchParams.set('next', pathname + request.nextUrl.search)
-    return applyPendingCookies(
+    return privateResponse(applyPendingCookies(
       NextResponse.redirect(loginUrl)
-    )
+    ))
   }
 
-  return getResponse()
+  return privateResponse(getResponse())
 }
 
 export const config = {

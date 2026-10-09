@@ -26,8 +26,8 @@
 .currency[lang="en"]{font-family:var(--font-en-stack)!important}
 .currency[lang="fa"]{font-family:var(--font-fa-stack)!important}
 .summaryHeading{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.rateRow{display:grid;gap:8px}
-.rateValue{margin:0;color:#302346;font-size:13px;font-weight:500;line-height:1.9;text-align:start}
+.rateRow{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 12px}
+.rateValue{margin:0;color:#302346;font-size:13px;font-weight:500;line-height:1.9;text-align:end}
 @container(min-width:560px){.header{padding:24px 28px}.headerScene{width:112px;height:112px}.headerAnimation{width:112px!important;height:112px!important}.routeButton{font-size:14px}.amountGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* Override the generic mobile 16px input rule only for editable transfer amounts.
    Size against the amount row, reserving space for AUD / Toman at either locale. */

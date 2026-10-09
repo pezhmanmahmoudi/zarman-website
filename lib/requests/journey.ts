@@ -13,9 +13,10 @@ export function getRequestJourney(request: ExchangeRequest) {
   const stageKey: RequestJourneyStage = (["approval", "payment", "receipt_review", "funds_received", "completed"] as const)[stage];
   const refundable = ["refund_pending", "refunded"].includes(request.funding_status) || ["refund_pending", "refunded"].includes(request.priority_fee_status);
   const unpaid = ["unpaid", "partial"].includes(request.funding_status);
-  const customerActionMessage = !closed && request.status !== "completed" && !["refund_pending", "refunded"].includes(request.funding_status)
+  const customerActionMessage = !pricingPending && !closed && request.status !== "completed" && !["refund_pending", "refunded"].includes(request.funding_status)
     ? request.customer_action_required?.trim() || null : null;
-  const customerActionRequired = pricingPending || Boolean(customerActionMessage);
+  // Legacy revised quotes are finalized by the administrator in the payment form.
+  const customerActionRequired = Boolean(customerActionMessage);
   return {
     approved, receiptSubmitted, fundsReceived, closed, stage, stageKey,
     customerActionRequired, customerActionMessage, pricingPending,
@@ -35,7 +36,7 @@ export function requestStageLabel(request: ExchangeRequest, locale: RequestLocal
   if (request.funding_status === "refund_pending") return ["Refund in progress", "بازپرداخت در حال انجام"][index];
   if (request.funding_status === "refunded") return ["Funds returned", "وجه بازپرداخت شد"][index];
   const journey = getRequestJourney(request);
-  if (journey.pricingPending) return ["Accept revised amounts", "تأیید مبالغ اصلاح‌شده"][index];
+  if (journey.pricingPending) return ["Admin review in progress", "در حال بررسی توسط مدیر"][index];
   if (journey.customerActionRequired) return ["Reply needed", "نیاز به پاسخ شما"][index];
   if (request.priority_fee_status === "refund_pending") return ["Express processing fee refund in progress", "بازپرداخت هزینه پردازش اکسپرس در حال انجام"][index];
   if (["under_review", "action_required"].includes(request.status) && journey.fundsReceived) return ["Funds received · under admin review", "وجه دریافت شد · در حال بررسی توسط مدیر"][index];
@@ -80,6 +81,8 @@ export function requestActivityLabel(eventType: string, locale: RequestLocale): 
     ready: ["Funds received and verified", "وصول وجه بررسی و تأیید شد"],
     confirm_funds: ["Funds received and verified", "وصول وجه بررسی و تأیید شد"],
     funds_recorded: ["Incoming payment recorded", "واریز ورودی ثبت شد"],
+    funds_corrected: ["Admin corrected the recorded deposits", "مدیر واریزهای ثبت‌شده را اصلاح کرد"],
+    funds_finalized: ["Admin confirmed the final transfer amounts", "مدیر مبالغ نهایی تراکنش را تأیید کرد"],
     resume_funded_request: ["Checks cleared · funds released for settlement", "بررسی‌ها تکمیل و وجه آماده تسویه شد"],
     start_processing: ["Destination settlement started", "تسویه در مقصد آغاز شد"],
     complete: ["Destination settlement confirmed · transfer completed", "تسویه مقصد تأیید و انتقال تکمیل شد"],

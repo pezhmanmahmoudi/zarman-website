@@ -1,5 +1,7 @@
 "use client";
 
+import { formatLocalizedNumber } from "@/lib/numbers";
+
 import React, { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import {
@@ -73,10 +75,7 @@ function formatDateForXAxis(date: string, timeframe: Timeframe) {
 }
 
 function formatPrice(num: number, isEn: boolean) {
-  const enFormatted = Number(num).toLocaleString("en-US");
-  if (isEn) return enFormatted;
-  const faDigits = "۰۱۲۳۴۵۶۷۸۹";
-  return enFormatted.replace(/\d/g, (d) => faDigits[Number(d)]).replace(/,/g, "،");
+  return formatLocalizedNumber(Number(num), isEn ? "en" : "fa");
 }
 
 // 🚀 جادوی ریاضی برای حل مشکل نمودار هفتگی

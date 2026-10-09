@@ -1,5 +1,7 @@
 "use client";
 
+import { formatLocalizedNumber } from "@/lib/numbers";
+
 import { useRef } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
@@ -210,7 +212,7 @@ export default function Hero() {
                         <>
                           {isEn
                             ? currentRates.sellAUD!.toLocaleString("en-AU")
-                            : currentRates.sellAUD!.toLocaleString("fa-IR")}
+                            : formatLocalizedNumber(currentRates.sellAUD!, "fa")}
                           <span className={styles.currency}>{isEn ? "Toman" : "تومان"}</span>
                         </>
                       ) : (
@@ -230,7 +232,7 @@ export default function Hero() {
                         <>
                           {isEn
                             ? currentRates.buyAUD!.toLocaleString("en-AU")
-                            : currentRates.buyAUD!.toLocaleString("fa-IR")}
+                            : formatLocalizedNumber(currentRates.buyAUD!, "fa")}
                           <span className={styles.currency}>{isEn ? "Toman" : "تومان"}</span>
                         </>
                       ) : (

@@ -99,6 +99,8 @@
 
 .labelRow {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
   justify-content: space-between;
   align-items: center;
 }
@@ -130,6 +132,7 @@
 
 .fieldGroup {
   display: flex;
+  min-width: 0;
   align-items: center;
   background-color: rgba(255, 255, 255, 0.03); 
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -145,6 +148,8 @@
 
 .faInput {
   flex: 1;
+  min-width: 0;
+  min-height: 44px;
   background: transparent;
   border: none;
   color: #ffffff; 
@@ -163,7 +168,20 @@
   font-size: 16px !important; 
 }
 
+.card .faInput[data-number-locale="en"] { font-family: var(--font-en-stack) !important; }
+.card .faInput[data-number-locale="fa"] { font-family: "IRANSansX", "Peyda", sans-serif !important; }
+
+.amountHint,
+.calculationError {
+  margin: 6px 0 0;
+  font-size: var(--text-caption);
+  line-height: 1.8;
+}
+.amountHint { color: rgba(255, 255, 255, 0.7); }
+.calculationError { color: #fbbf24; }
+
 .divider {
+  flex-shrink: 0;
   width: 1px;
   height: 20px;
   background-color: rgba(255, 255, 255, 0.1);
@@ -173,15 +191,12 @@
 .selectWrapper {
   position: relative;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
 }
 
 .currencySelectBox {
   min-width: 140px; 
-}
-
-.locked .currencySelectBox { 
-  cursor: default; 
 }
 
 .exchangeIconWrapper {

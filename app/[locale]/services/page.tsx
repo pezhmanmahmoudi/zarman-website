@@ -1,3 +1,4 @@
+import { formatLocalizedNumber } from "@/lib/numbers";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -173,7 +174,7 @@ export default async function ServicesPage({
                       {SERVICE_ICONS[service.slug]}
                     </span>
                     <span className={styles.cardNumber}>
-                      {(index + 1).toLocaleString(isEn ? "en-AU" : "fa-IR", { minimumIntegerDigits: 2 })}
+                      {formatLocalizedNumber(index + 1, isEn ? "en" : "fa", { minimumIntegerDigits: 2 })}
                     </span>
                   </div>
                   <h2 className={styles.cardTitle}>{service.title}</h2>

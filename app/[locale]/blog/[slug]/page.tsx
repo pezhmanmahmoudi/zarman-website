@@ -1,3 +1,4 @@
+import { formatLocalizedNumber } from "@/lib/numbers";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -115,7 +116,7 @@ export default async function BlogArticlePage({
       { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }
     )
     : null;
-  const formattedReadingTime = post.readingTime.toLocaleString(isEn ? "en-AU" : "fa-IR");
+  const formattedReadingTime = formatLocalizedNumber(post.readingTime, isEn ? "en" : "fa");
 
   return (
     <>

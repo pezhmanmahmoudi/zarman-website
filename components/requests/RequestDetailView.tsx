@@ -5,11 +5,12 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Download, ExternalLink, Mail, RefreshCw, Trash2 } from "lucide-react";
 import { deleteAdminRequest, getAdminRequest, getMyRequest, getRequestBankAccounts, mutateAdminRequest, mutateMyRequest, retryAdminRequestEmail } from "@/app/actions/request.actions";
 import type { ExchangeRequest, RequestCommand, RequestDetail, RequestMutationInput } from "@/lib/requests/types";
+import { isRequestConflict, REQUEST_CONFLICT_MESSAGE } from "@/lib/requests/conflicts";
 import { requestDate, requestLabel, requestMoney, requestError, isRequestTerminal, type RequestLocale } from "./request-labels";
 import { canRetryRequestEmail, getRequestJourney, requestActivityLabel, requestEmailStatus, requestMilestones, requestStageLabel } from "@/lib/requests/journey";
-import { isMoney } from "@/lib/requests/validation";
-import { RequestPricingEditor } from "./RequestPricingEditor";
-import { RequestPricingAcceptance } from "./RequestPricingAcceptance";
+import { isExchangeRate, isMoney } from "@/lib/requests/validation";
+import { localiseAmountDraft, normaliseAmountDigits } from "@/lib/numbers";
+import { RequestPricingSummary } from "./RequestPricingSummary";
 import { RequestTransactionSummary } from "./RequestTransactionSummary";
 import { RequestPaymentAccount } from "./RequestPaymentAccount";
 import { AdminCopyButton, AdminCopyRow } from "./AdminCopyField";
@@ -32,21 +33,26 @@ import customer from "@/styles/requests/RequestCustomerDetail.module.css";
 const commandLabels: Record<RequestCommand, [string, string]> = {
   review: ["Start review", "شروع بررسی"], request_info: ["Request information", "درخواست اطلاعات"], respond: ["Send response", "ارسال پاسخ"],
   await_funds: ["Approve request", "تأیید درخواست"], confirm_funds: ["Confirm funds received", "تأیید دریافت وجه"],
+  correct_funds: ["Save correction & continue", "ثبت اصلاح و ادامه"],
+  finalize_funds: ["Confirm funds received", "تأیید دریافت وجه"],
   resume_funded_request: ["Approve funded request", "تأیید درخواست تأمین‌شده"],
   start_processing: ["Approve & start processing", "تأیید و شروع پردازش"], record_uncertain_payout: ["Reconcile payout", "بررسی نتیجه پرداخت"],
   complete: ["Reconcile & complete", "تطبیق و تکمیل حواله"], reconcile_complete: ["Reconcile & complete", "تطبیق و تکمیل حواله"], cancel: ["Cancel request", "لغو درخواست"], reject: ["Reject request", "رد درخواست"],
   confirm_refund: ["Approve returned refund", "تأیید بازپرداخت"], payment_evidence: ["Add payment reference", "ثبت شماره پیگیری واریز"],
 };
 
-function allowedCommands(request: ExchangeRequest, admin: boolean): RequestCommand[] {
+function allowedCommands(request: ExchangeRequest, admin: boolean, hasPayments = false): RequestCommand[] {
   const commands: RequestCommand[] = [];
   const hasPrincipalRefund = ["refund_pending", "refunded"].includes(request.funding_status);
   const hasRefund = hasPrincipalRefund || ["refund_pending", "refunded"].includes(request.priority_fee_status);
   if (admin) {
     if (["submitted", "under_review", "awaiting_funds", "action_required", "ready"].includes(request.status)) commands.push("request_info");
-    if (!request.pricing_pending_acceptance && !hasRefund && request.funding_status !== "confirmed" && ["submitted", "under_review", "action_required"].includes(request.status)) commands.push("await_funds");
-    if (request.payment_approved_at && !hasRefund && request.funding_status !== "confirmed" && ["submitted", "under_review", "awaiting_funds", "action_required", "expired"].includes(request.status)) commands.push("confirm_funds");
-    if (!hasPrincipalRefund && request.funding_status === "confirmed" && ["under_review", "action_required"].includes(request.status)) commands.push("resume_funded_request");
+    if (!request.pricing_pending_acceptance && !hasRefund && !hasPayments && request.funding_status === "unpaid" && Number(request.funding_received) === 0 && ["submitted", "under_review", "action_required"].includes(request.status)) commands.push("await_funds");
+    if ((request.payment_approved_at || request.pricing_pending_acceptance) && !hasRefund
+      && ["unpaid", "partial", "confirmed"].includes(request.funding_status)
+      && ["unpaid", "not_applicable"].includes(request.priority_fee_status)
+      && ["submitted", "under_review", "awaiting_funds", "action_required", "ready", "expired"].includes(request.status)) commands.push("finalize_funds");
+    if (!commands.includes("finalize_funds") && !hasPrincipalRefund && request.funding_status === "confirmed" && ["under_review", "action_required"].includes(request.status)) commands.push("resume_funded_request");
     if (getRequestJourney(request).readyForSettlement) commands.push("reconcile_complete");
     if (request.status === "processing") commands.push("record_uncertain_payout");
     if (["processing", "reconciliation"].includes(request.status)) commands.push("complete");
@@ -60,6 +66,7 @@ function allowedCommands(request: ExchangeRequest, admin: boolean): RequestComma
 
 function recommendedCommand(request: ExchangeRequest, commands: RequestCommand[]): RequestCommand | undefined {
   if (commands.includes("confirm_refund")) return "confirm_refund";
+  if (commands.includes("finalize_funds") && request.status !== "ready") return "finalize_funds";
   if (getRequestJourney(request).customerActionRequired) return undefined;
   const order: RequestCommand[] = ["resume_funded_request", "reconcile_complete", "complete", ...(request.payment_approved_at && request.evidence_submitted_at ? ["confirm_funds" as const] : []), "await_funds"];
   return order.find(command => commands.includes(command));
@@ -96,12 +103,14 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
   const [separateDeposit, setSeparateDeposit] = useState(false);
   const [savedDeposit, setSavedDeposit] = useState<{ requestId: string; amount: number; currency: "AUD" | "IRT"; version: number } | null>(null);
   const [retryingEmail, setRetryingEmail] = useState<string | null>(null);
+  const [finalRecipient, setFinalRecipient] = useState<string | null>(null);
   const emailRetryPending = useRef(false);
   const pending = useRef(false);
   const attempt = useRef<{ signature: string; key: string; expectedVersion: number } | null>(null);
   const intentFocused = useRef(false);
   const lastRefresh = useRef(0), refreshPending = useRef(false);
   const refreshQueued = useRef(false);
+  const conflictedVersion = useRef<{ requestId: string; version: number } | null>(null);
 
   // A row shortcut only opens the existing form. Allowed commands, confirmation,
   // version checks and the user's explicit submit still govern every mutation.
@@ -190,6 +199,13 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!detail || !currentAction || pending.current) return;
+    // A failed/queued refresh must not unlock the rejected version, even if an
+    // old submit callback fires again before React renders the new state.
+    if (conflictedVersion.current?.requestId === id && detail.request.version <= conflictedVersion.current.version) {
+      setError(REQUEST_CONFLICT_MESSAGE);
+      setValidation({ field: "submission", message: requestError(REQUEST_CONFLICT_MESSAGE, locale) });
+      return;
+    }
     const invalid = (field: string, explanation: string) => {
       setValidation({ field, message: explanation });
       event.currentTarget?.querySelector<HTMLElement>(`#request-${field}`)?.focus();
@@ -199,6 +215,13 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
       if (showAccountingTerms && !(accountingFeeValue.trim() !== "" && (Number(accountingFeeValue) === 0 || isMoney(Number(accountingFeeValue), 100_000)))) return invalid("accounting-fee", "Enter the fee in AUD (0 or more, up to two decimal places).");
       if (showAccountingTerms && !isMoney(Number(accountingRateValue), 100_000_000)) return invalid("accounting-rate", "Enter the exchange rate in Toman per AUD.");
       if (!fundingAccount) return invalid("funding-account", fa ? "حسابی که وجه در آن تسویه شده را انتخاب کنید." : `Select the ${currencyLabel(fundingCurrency)} account that received the cleared deposit.`);
+    }
+    if (currentAction === "finalize_funds") {
+      if (!isMoney(Number(finalFundingValue)) || (expectedCurrency === "IRT" && !Number.isInteger(Number(finalFundingValue)))) return invalid("final-funding", fa ? "مبلغ نهایی پرداخت مشتری را وارد کنید؛ تومان بدون اعشار است." : "Enter the final customer payment; Toman must be a whole number.");
+      if (!isMoney(Number(finalRecipientValue)) || (detail.request.quote.recipient_currency === "IRT" && !Number.isInteger(Number(finalRecipientValue)))) return invalid("final-recipient", fa ? "مبلغ نهایی دریافتی گیرنده را وارد کنید؛ تومان بدون اعشار است." : "Enter the final recipient amount; Toman must be a whole number.");
+      if (!fundingAccountValue) return invalid("funding-account", fa ? "حساب دریافت‌کننده را انتخاب کنید." : "Select the account that received the customer payment.");
+      if (!accountingFeeValue.trim() || !(Number(accountingFeeValue) === 0 || isMoney(Number(accountingFeeValue), 100_000))) return invalid("accounting-fee", "Enter a valid fee in AUD (0 or more).");
+      if (!isExchangeRate(Number(accountingRateValue))) return invalid("accounting-rate", "Enter a valid exchange rate.");
     }
     if (currentAction === "resume_funded_request" && !honourQuote) return invalid("honour-quote", fa ? "پس از بررسی، نرخ پذیرفته‌شده را تأیید کنید." : "Confirm the accepted quote after completing the checks.");
     if (["complete", "reconcile_complete"].includes(currentAction)) {
@@ -219,6 +242,11 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
     const submittedAmount = Number(receivedAmountValue);
     if (submittedAction === "confirm_funds") { payload.received_amount = submittedAmount; payload.received_currency = fundingCurrency; payload.receiver_account_id = fundingAccount; }
     if (submittedAction === "confirm_funds" && showAccountingTerms) { payload.accounting_fee_aud = Number(accountingFeeValue); payload.accounting_rate = Number(accountingRateValue); }
+    if (submittedAction === "finalize_funds") {
+      payload.final_funding_total = Number(finalFundingValue); payload.final_recipient_amount = Number(finalRecipientValue);
+      payload.receiver_account_id = fundingAccountValue;
+      payload.accounting_fee_aud = Number(accountingFeeValue); payload.accounting_rate = Number(accountingRateValue);
+    }
     if (submittedAction === "resume_funded_request") payload.honour_quote = honourQuote;
     if (["complete", "reconcile_complete"].includes(submittedAction)) { payload.payer_account_id = payerAccount; payload.receiver_account_id = receiverAccount; payload.transfer_method = transferMethod; }
     if (submittedAction === "confirm_refund") { payload.refund_kind = activeRefundKind; payload.refund_reference = refundReference.trim(); payload.payer_account_id = refundAccount; }
@@ -229,28 +257,39 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
     try {
       const result = await (admin ? mutateAdminRequest : mutateMyRequest)({ ...input, commandKey: attempt.current.key, expectedVersion: attempt.current.expectedVersion });
       if (result.error) {
-        if (result.error === "This request has changed. Refresh the page before continuing." || result.error === "REQUEST_CONFLICT") {
+        if (isRequestConflict(result)) {
+          conflictedVersion.current = { requestId: id, version: attempt.current.expectedVersion };
           attempt.current = null;
           setConfirmed(false);
           await refresh();
         }
-        setError(result.error);
-        setValidation({ field: "submission", message: requestError(result.error, locale) });
+        const explanation = isRequestConflict(result) ? REQUEST_CONFLICT_MESSAGE : result.error;
+        setError(explanation);
+        setValidation({ field: "submission", message: requestError(explanation, locale) });
+        return;
       }
       else if (result.data) {
         const updated = result.data;
-        setDetail(current => current && current.request.id === updated.id && current.request.version <= updated.version ? { ...current, request: updated } : current);
+        setDetail(current => current && current.request.id === updated.id && current.request.version <= updated.version ? {
+          ...current, request: updated,
+          ...(submittedAction === "finalize_funds" ? { payments: [] } : {}),
+        } : current);
         attempt.current = null; setAction(""); setMessage(""); setConfirmed(false); setHonourQuote(false);
         setReceivedAmount(null); setAccountingFee(null); setAccountingRate(null); setPayerAccount(""); setReceiverAccount(""); setFundingAccount(""); setRefundAccount(""); setRefundReference("");
         setDifferentCurrency(false); setSeparateDeposit(false); setReceivedCurrency("");
+        setFinalRecipient(null);
         if (submittedAction === "confirm_funds") {
           setSavedDeposit({ requestId: updated.id, amount: submittedAmount, currency: fundingCurrency, version: updated.version });
           const outstanding = Math.max(0, Number(updated.quote.funding_total) - Number(updated.funding_received));
           setNotice(fundingCurrency !== updated.quote.funding_currency
-            ? `Deposit recorded in ${currencyLabel(fundingCurrency)}. This request expects ${currencyLabel(updated.quote.funding_currency)}; finance review is required.`
+            ? `Deposit recorded in ${currencyLabel(fundingCurrency)}. This request expects ${currencyLabel(updated.quote.funding_currency)}; confirm the final amounts to continue.`
             : getRequestJourney(updated).readyForSettlement ? "Funds received. Ready for destination reconciliation."
+            : Number(updated.funding_received) > Number(updated.quote.funding_total) ? "The recorded total exceeds the expected payment. Correct the recorded deposits if an entry is duplicated."
             : updated.funding_status === "partial" ? `Partial payment recorded. ${requestMoney(outstanding, updated.quote.funding_currency, locale)} still to collect.`
             : "Deposit recorded. The request remains on hold for review.");
+        } else if (submittedAction === "finalize_funds") {
+          setSavedDeposit({ requestId: updated.id, amount: Number(payload.final_funding_total), currency: updated.quote.funding_currency, version: updated.version });
+          setNotice(fa ? "مبالغ نهایی جایگزین شد. درخواست آمادهٔ تسویه است." : "Final amounts saved. Ready for destination settlement.");
         } else setNotice(fa ? "تغییرات ثبت شد." : "Update saved.");
         if (admin && sendEmail) setNotice(saved => `${saved} ${fa ? "ارسال ایمیل در پس‌زمینه ادامه دارد؛ برای دیدن آخرین وضعیت در سابقه ایمیل، روی «به‌روزرسانی» بزنید." : "Email delivery continues in the background. Click Refresh to update its status in Activity & email history."}`);
         // The committed response already supplies the new version and next step.
@@ -270,8 +309,8 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
   const request = detail?.request;
   const visibleSavedDeposit = savedDeposit?.requestId === request?.id ? savedDeposit : null;
   const payments = admin ? detail?.payments || [] : [];
-  const hasMismatchedDeposit = payments.some(payment => payment.currency !== request?.quote.funding_currency) || !!(visibleSavedDeposit && visibleSavedDeposit.currency !== request?.quote.funding_currency);
-  const commands = request ? allowedCommands(request, admin).filter(command => !(hasMismatchedDeposit && ["await_funds", "resume_funded_request"].includes(command))) : [];
+  const hasMismatchedDeposit = payments.some(payment => !payment.excluded && payment.currency !== request?.quote.funding_currency) || !!(visibleSavedDeposit && visibleSavedDeposit.currency !== request?.quote.funding_currency);
+  const commands = request ? allowedCommands(request, admin, payments.length > 0).filter(command => !(hasMismatchedDeposit && ["await_funds", "resume_funded_request"].includes(command))) : [];
   const recommended = admin && request ? recommendedCommand(request, commands) : undefined;
   const selectedAction = commands.includes(action as RequestCommand) ? action : recommended || "";
   const currentAction = selectedAction === "confirm_funds" && hasMismatchedDeposit && !separateDeposit ? "" : selectedAction;
@@ -283,8 +322,12 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
   const outstandingFunding = request ? Math.max(0, Number(request.quote.funding_total) - Number(request.funding_received)) : 0;
   const receivedAmountValue = receivedAmount ?? (fundingCurrency === expectedCurrency && outstandingFunding > 0 ? (expectedCurrency === "AUD" ? outstandingFunding.toFixed(2) : String(Math.round(outstandingFunding))) : "");
   const showAccountingTerms = admin && fundingCurrency === expectedCurrency;
-  const accountingFeeValue = accountingFee ?? String(Number(request?.quote.base_fee_aud ?? 0));
-  const accountingRateValue = accountingRate ?? String(Number(request?.quote.applied_rate ?? 0));
+  const accountingFeeValue = accountingFee ?? String(Number(request?.accounting_overrides?.base_fee_aud ?? request?.quote.base_fee_aud ?? 0));
+  const accountingRateValue = accountingRate ?? String(Number(request?.accounting_overrides?.applied_rate ?? request?.quote.applied_rate ?? 0));
+  const activePayments = payments.filter(payment => !payment.excluded);
+  const finalFundingValue = receivedAmount ?? String(Number(activePayments.length === 1 && activePayments[0].currency === expectedCurrency ? activePayments[0].amount : request?.quote.funding_total ?? 0));
+  const finalRecipientValue = finalRecipient ?? String(Number(request?.quote.recipient_amount ?? 0));
+  const fundingAccountValue = fundingAccount || payments.find(payment => !payment.excluded && payment.currency === expectedCurrency)?.account_id || "";
   const activeRefundKind = refundKind === "priority" && request?.priority_fee_status !== "refund_pending" ? "principal" : refundKind;
   const journey = request ? getRequestJourney(request) : null;
   const milestones = request ? requestMilestones(request, detail?.events || []) : [];
@@ -307,6 +350,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
   const chooseAction = (command: RequestCommand) => {
     if (!request) return;
     setAction(command); setConfirmed(false); setHonourQuote(false); setNotice(""); setMessage(""); setSendEmail(false);
+    setFinalRecipient(null);
     setValidation(null); setDifferentCurrency(false); setSeparateDeposit(command === "confirm_funds" && hasMismatchedDeposit);
     setReceivedAmount(command === "confirm_funds" && hasMismatchedDeposit ? "" : null); setAccountingFee(null); setAccountingRate(null);
     if (command === "confirm_funds" && hasMismatchedDeposit) setFundingAccount("");
@@ -338,12 +382,30 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
   };
 
   const milestoneHistory = <section className={styles.card}><h2>{fa ? "مراحل انجام حواله" : "Transfer milestones"}</h2><ol className={workspace.milestoneList}>{milestones.filter(milestone => milestone.done).map(milestone => <li key={milestone.key}><Check size={15} /><div><strong>{milestone.label[fa ? 1 : 0]}</strong>{milestone.at && <time dir="ltr" dateTime={milestone.at}>{requestDate(milestone.at, locale)}</time>}</div></li>)}</ol><span className={workspace.timezone}>{fa ? "زمان‌ها به وقت سیدنی" : "Sydney time"}</span></section>;
-  const actionTitle = currentAction === "await_funds" ? (request?.payment_approved_at ? "Resume customer payment" : "Request approval") : currentAction === "confirm_funds" ? "Verify incoming payment" : ["complete", "reconcile_complete"].includes(currentAction) ? "Reconcile destination payment" : currentAction === "confirm_refund" ? "Refund confirmation" : currentAction ? actionLabel(currentAction) : "";
+  const actionTitle = currentAction === "finalize_funds" ? (fa ? "بررسی پرداخت دریافتی" : "Verify incoming payment") : currentAction === "await_funds" ? (request?.payment_approved_at ? "Resume customer payment" : "Request approval") : currentAction === "confirm_funds" ? "Verify incoming payment" : ["complete", "reconcile_complete"].includes(currentAction) ? "Reconcile destination payment" : currentAction === "confirm_refund" ? "Refund confirmation" : currentAction ? actionLabel(currentAction) : "";
   const actionPanel = request && commands.length > 0 && <div id="request-action-panel">
     {currentAction && <form onSubmit={submit} className={workspace.actionForm} noValidate>
       <fieldset disabled={busy} className={workspace.fieldset}>
         <div className={workspace.actionHeading}>{admin && <span className={workspace.kicker}>Next step</span>}<h2>{actionTitle}</h2></div>
         {currentAction === "await_funds" && <div className={workspace.approvalSummary}><span>{request.quote.sender_snapshot.name}</span><strong>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}<ArrowRight size={16} />{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</strong></div>}
+        {currentAction === "finalize_funds" && <>
+          <div className={workspace.paymentDirection}><div><span>Incoming from customer</span><strong><bdi>{requestMoney(request.quote.funding_total, expectedCurrency, locale)}</bdi></strong></div><div><span>Outgoing to recipient</span><bdi>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</bdi></div></div>
+          {(detail?.receipts.length || 0) > 0 && <div className={workspace.evidenceReview}><RequestReceiptUpload request={request} receipts={detail?.receipts || []} admin locale={locale} onUploaded={refresh} /></div>}
+          <div className={styles.fields}>
+            <label className={styles.field}>{fa ? "مبلغ دریافتی" : "Received amount"} ({currencyLabel(expectedCurrency)}) *<input id="request-final-funding" type="text" inputMode={expectedCurrency === "IRT" ? "numeric" : "decimal"} dir="ltr" required value={localiseAmountDraft(finalFundingValue, locale)} onChange={event => { setReceivedAmount(normaliseAmountDigits(event.target.value)); setConfirmed(false); }} {...fieldValidation("final-funding")} /><span className={workspace.fieldHint}>{fa ? "مبلغ ثبت‌شده از قبل پر شده است. در صورت نیاز آن را اصلاح کنید." : "Prefilled with the expected amount. Edit it if the bank shows a different figure."}</span></label>
+            <div className={workspace.lockedCurrency}><span>{fa ? "ارز دریافتی" : "Incoming currency"}</span><strong>{currencyLabel(expectedCurrency)}</strong></div>
+          </div>
+          <div className={styles.fields}>
+            <label className={styles.field}>{fa ? "مبلغ پرداختی به گیرنده" : "Recipient amount"} ({currencyLabel(request.quote.recipient_currency)}) *<input id="request-final-recipient" type="text" inputMode={request.quote.recipient_currency === "IRT" ? "numeric" : "decimal"} dir="ltr" required value={localiseAmountDraft(finalRecipientValue, locale)} onChange={event => { setFinalRecipient(normaliseAmountDigits(event.target.value)); setConfirmed(false); }} {...fieldValidation("final-recipient")} /></label>
+            <div className={workspace.lockedCurrency}><span>{fa ? "ارز پرداختی" : "Outgoing currency"}</span><strong>{currencyLabel(request.quote.recipient_currency)}</strong></div>
+          </div>
+          <div className={styles.fields}>
+            <label className={styles.field}>{fa ? "کارمزد" : "Transfer fee"} (AUD)<input id="request-accounting-fee" type="text" inputMode="decimal" dir="ltr" value={localiseAmountDraft(accountingFeeValue, locale)} onChange={event => { setAccountingFee(normaliseAmountDigits(event.target.value)); setConfirmed(false); }} {...fieldValidation("accounting-fee")} /></label>
+            <label className={styles.field}>{fa ? "نرخ تبدیل (تومان)" : "Exchange rate (Toman)"}<input id="request-accounting-rate" type="text" inputMode="decimal" dir="ltr" value={localiseAmountDraft(accountingRateValue, locale)} onChange={event => { setAccountingRate(normaliseAmountDigits(event.target.value)); setConfirmed(false); }} {...fieldValidation("accounting-rate")} /></label>
+          </div>
+          <p className={workspace.fieldHint}>{fa ? "مبالغ واردشده جایگزین اعداد قبلی می‌شوند. نرخ و کارمزد برای ثبت حسابداری استفاده می‌شوند و مبلغ دریافتی یا پرداختی را خودکار تغییر نمی‌دهند." : "Your amounts replace the previous values. Rate and fee update the accounting record without automatically changing either amount."}</p>
+          {accountSelect("funding-account", (fa ? "حساب دریافت‌کننده" : "Account credited") + " (" + currencyLabel(expectedCurrency) + ")", fundingAccountValue, value => { setFundingAccount(value); setConfirmed(false); }, expectedCurrency)}
+        </>}
         {referenceRequired && <div className={workspace.paymentDirection}><div><span>Incoming from customer</span><strong><bdi>{requestMoney(request.quote.funding_total, expectedCurrency, locale)}</bdi></strong></div><div><span>Outgoing to recipient</span><bdi>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</bdi></div></div>}
         {admin && currentAction === "confirm_funds" && (detail?.receipts.length || 0) > 0 && <div className={workspace.evidenceReview}><RequestReceiptUpload request={request} receipts={detail?.receipts || []} admin locale={locale} onUploaded={refresh} /></div>}
         {currentAction === "confirm_funds" && <>
@@ -352,9 +414,9 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
             <label className={styles.field}>Transfer fee (AUD) *<input id="request-accounting-fee" type="number" inputMode="decimal" min="0" step=".01" value={accountingFeeValue} onChange={event => setAccountingFee(event.target.value)} dir="ltr" {...fieldValidation("accounting-fee")} /></label>
             <label className={styles.field}>Exchange rate (Toman per AUD) *<input id="request-accounting-rate" type="number" inputMode="decimal" min="0.01" step="any" value={accountingRateValue} onChange={event => setAccountingRate(event.target.value)} dir="ltr" {...fieldValidation("accounting-rate")} /></label>
           </div>}
-          {showAccountingTerms && <p className={workspace.fieldHint}>Fee and rate are prefilled from the accepted quote. Changes affect the accounting record only; the customer and recipient amounts stay the same.</p>}
+          {showAccountingTerms && <p className={workspace.fieldHint}>Fee and rate use the saved accounting terms, or the accepted quote if unchanged. Changes affect the accounting record only; the customer and recipient amounts stay the same.</p>}
           {accountSelect("funding-account", `Account credited (${currencyLabel(fundingCurrency)})`, fundingAccount, setFundingAccount, fundingCurrency)}
-          <details className={workspace.depositException}><summary>Deposit arrived in another currency</summary><label className={styles.checkbox}><input type="checkbox" checked={differentCurrency} onChange={event => { setDifferentCurrency(event.target.checked); setReceivedCurrency(expectedCurrency === "AUD" ? "IRT" : "AUD"); setReceivedAmount(null); setFundingAccount(""); setConfirmed(false); setValidation(null); }} /><span>Record an actual {currencyLabel(expectedCurrency === "AUD" ? "IRT" : "AUD")} deposit for finance review</span></label>{differentCurrency && <p className={workspace.actionNote}>This records the deposit in its actual currency. It does not confirm the expected {currencyLabel(expectedCurrency)} payment.</p>}</details>
+          <details className={workspace.depositException}><summary>Deposit arrived in another currency</summary><label className={styles.checkbox}><input type="checkbox" checked={differentCurrency} onChange={event => { setDifferentCurrency(event.target.checked); setReceivedCurrency(expectedCurrency === "AUD" ? "IRT" : "AUD"); setReceivedAmount(null); setFundingAccount(""); setConfirmed(false); setValidation(null); }} /><span>Record an actual {currencyLabel(expectedCurrency === "AUD" ? "IRT" : "AUD")} deposit for administrator review</span></label>{differentCurrency && <p className={workspace.actionNote}>This records the deposit in its actual currency. It does not confirm the expected {currencyLabel(expectedCurrency)} payment.</p>}</details>
         </>}
         {currentAction === "resume_funded_request" && <label className={styles.checkbox}><input id="request-honour-quote" type="checkbox" required checked={honourQuote} onChange={event => setHonourQuote(event.target.checked)} {...fieldValidation("honour-quote")} /><span>Checks complete. Honour the accepted quote and release the confirmed funds for processing. *</span></label>}
         {["complete", "reconcile_complete"].includes(currentAction) && <>
@@ -368,7 +430,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
         </>}
         {messageRequired && <label className={styles.field}>{currentAction === "record_uncertain_payout" ? "Internal reconciliation note" : admin ? "Message to customer" : (fa ? "دلیل" : "Reason")} *<textarea id="request-action-message" value={message} onChange={event => setMessage(event.target.value)} required minLength={3} maxLength={2000} rows={2} dir="auto" {...fieldValidation("action-message")} /></label>}
         {admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} /><Mail size={16} aria-hidden="true" /><span>{fa ? "ارسال ایمیل به مشتری" : "Send email to customer"}</span></label>}
-        <label className={`${styles.checkbox} ${workspace.confirmChoice}`}><input id="request-confirmation" type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required {...fieldValidation("confirmation")} /><span>{currentAction === "cancel" ? (fa ? "لغو را تأیید می‌کنم؛ بازپرداخت جداگانه پیگیری می‌شود." : "Confirm cancellation; any refund is tracked separately.") : currentAction === "confirm_funds" ? `I verified cleared funds in the bank account: the entered amount and ${currencyLabel(fundingCurrency)} currency.` : ["complete", "reconcile_complete"].includes(currentAction) ? "I verified the destination account, amount and successful settlement." : currentAction === "confirm_refund" ? "I verified the returned funds in the original currency." : (fa ? "اطلاعات را بررسی و تأیید می‌کنم." : "I checked and approve the request details.")} *</span></label>
+        <label className={`${styles.checkbox} ${workspace.confirmChoice}`}><input id="request-confirmation" type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required {...fieldValidation("confirmation")} /><span>{currentAction === "finalize_funds" ? (fa ? "پرداخت مشتری و مبالغ نهایی را بررسی و تأیید می‌کنم." : "I verified the customer payment and approve these final amounts.") : currentAction === "cancel" ? (fa ? "لغو را تأیید می‌کنم؛ بازپرداخت جداگانه پیگیری می‌شود." : "Confirm cancellation; any refund is tracked separately.") : currentAction === "confirm_funds" ? `I verified cleared funds in the bank account: the entered amount and ${currencyLabel(fundingCurrency)} currency.` : ["complete", "reconcile_complete"].includes(currentAction) ? "I verified the destination account, amount and successful settlement." : currentAction === "confirm_refund" ? "I verified the returned funds in the original currency." : (fa ? "اطلاعات را بررسی و تأیید می‌کنم." : "I checked and approve the request details.")} *</span></label>
         {validation && <p id="request-form-feedback" className={workspace.formFeedback} role="alert" tabIndex={-1}>{validation.message}</p>}
         <div className={styles.actions}><button className={["cancel", "reject"].includes(currentAction) ? styles.danger : styles.button} type="submit" disabled={busy}>{busy ? (fa ? "در حال ثبت…" : "Saving…") : referenceRequired && fundingCurrency !== expectedCurrency ? "Record deposit for review" : actionLabel(currentAction)}</button>{(currentAction !== recommended || separateDeposit) && <button type="button" className={workspace.textButton} onClick={() => { setAction(""); setSeparateDeposit(false); setConfirmed(false); setValidation(null); }}>{fa ? "انصراف" : "Back"}</button>}</div>
       </fieldset>
@@ -401,21 +463,16 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
     {loading && <p className={styles.loading} role="status">{fa ? "در حال بارگذاری…" : "Loading…"}</p>}
     {refreshing && !loading && <p className={styles.loading} role="status">{fa ? "در حال به‌روزرسانی…" : "Refreshing the latest status…"}</p>}
     {request && detail && <>
-      {!admin && journey?.pricingPending && <RequestPricingAcceptance key={request.version} request={request} locale={locale} onRefresh={() => refresh()} onAccepted={updated => { setDetail(current => current && updated.version >= current.request.version ? { ...current, request: updated } : current); void refresh(); }}/>}
       {!admin && <RequestAdminMessageBanner messages={messages} fallbackMessage={journey?.pricingPending ? null : journey?.customerActionMessage} replyRequired={journey?.customerActionRequired && !journey.pricingPending} locale={locale} />}
       {request.status === "reconciliation" && (admin ? <p className={styles.warning}>Verify the bank result before retrying a payout.</p> : <div className="mb-4 flex items-center gap-3 rounded-2xl border border-[#e1e5ec] bg-[#f7f8fa] px-4 py-3"><DashboardLottieScene name="compliance-review" size={44}/><p className="m-0 text-sm text-[#586270]">{fa ? "نتیجه پرداخت بانکی در حال بررسی است." : "We’re checking the bank settlement."}</p></div>)}
       {(request.priority_fee_status === "refund_pending" || request.funding_status === "refund_pending") && (admin ? <p className={styles.warning}>Refund approval required.</p> : <div className="mb-4 flex items-center gap-3 rounded-2xl border border-[#e1e5ec] bg-[#f7f8fa] px-4 py-3"><DashboardLottieScene name="waiting" size={44}/><p className="m-0 text-sm text-[#586270]">{fa ? "بازپرداخت در حال پیگیری است." : "Your refund is being arranged."}</p></div>)}
       {admin ? <>
         {((request.action_required && request.action_required !== journey?.customerActionMessage) || journey?.customerActionRequired) && <div className={workspace.adminAlerts}>
-          {request.action_required && request.action_required !== journey?.customerActionMessage && <section className={workspace.adminAlert}><strong>Admin review</strong><p dir="auto">{request.action_required}</p></section>}
-          {journey?.customerActionRequired && <section className={workspace.adminAlert}><strong>Awaiting customer</strong><p dir="auto">{journey.customerActionMessage}</p></section>}
+          {request.action_required && currentAction !== "finalize_funds" && request.action_required !== journey?.customerActionMessage && <section className={workspace.adminAlert}><strong>Admin review</strong><p dir="auto">{request.action_required}</p></section>}
+          {journey?.customerActionRequired && currentAction !== "finalize_funds" && <section className={workspace.adminAlert}><strong>Awaiting customer</strong><p dir="auto">{journey.customerActionMessage}</p></section>}
         </div>}
         <section className={workspace.summaryCard} aria-label="Transfer summary">
-          <RequestPricingEditor request={request} disabled={busy} onBusyChange={value => { pending.current = value; setBusy(value); }} onSaved={updated => {
-            setDetail(current => current && updated.version >= current.request.version ? { ...current, request: updated } : current);
-            setNotice("Amounts revised. Customer acceptance is required before payment approval.");
-            setAction(""); setConfirmed(false); void refresh();
-          }} onRefresh={() => refresh()} />
+          <RequestPricingSummary request={request} />
           <ul className={workspace.summaryMeta}>
             <li data-tone={request.funding_status === "confirmed" ? "good" : request.funding_status === "partial" ? "warn" : undefined}>{request.funding_status === "confirmed" ? <><Check size={14} aria-hidden="true" />Funds received</> : request.funding_status === "partial" ? <><Clock3 size={14} aria-hidden="true" /><bdi>{requestMoney(request.funding_received, request.quote.funding_currency, locale)}</bdi>&nbsp;of&nbsp;<bdi>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</bdi>&nbsp;received</> : <><Clock3 size={14} aria-hidden="true" />{request.funding_status === "unpaid" ? "Awaiting payment" : requestLabel(request.funding_status, locale)}</>}</li>
             {request.handling_due_at && <li>Due <time dir="ltr" dateTime={request.handling_due_at}>{requestDate(request.handling_due_at, locale)}</time>&nbsp;(Sydney)</li>}
@@ -424,18 +481,19 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
         </section>
         <div className={workspace.adminLayout}>
         <div className={workspace.column}>
-          {(payments.length > 1 || hasMismatchedDeposit || visibleSavedDeposit || payments.some(payment => !payment.payment_reference.startsWith("AUTO-"))) && <section className={`${styles.card} ${workspace.recordedDeposits}`}><h2>Recorded deposits</h2>
-            {hasMismatchedDeposit && <p className={workspace.depositWarning}>Finance review required. Expected incoming currency: <strong>{currencyLabel(expectedCurrency)}</strong>.</p>}
+          {(payments.length > 0 || hasMismatchedDeposit || visibleSavedDeposit) && <section className={`${styles.card} ${workspace.recordedDeposits}`}><h2>Recorded deposits</h2>
+            {hasMismatchedDeposit && <p className={workspace.depositWarning}>Confirm the final amounts in the expected currency: <strong>{currencyLabel(expectedCurrency)}</strong>.</p>}
             <ol className={workspace.depositList}>{payments.map(payment => <li key={payment.id}>
-              <div className={workspace.depositHeading}><strong><bdi>{requestMoney(payment.amount, payment.currency, locale)}</bdi></strong>{payment.currency !== expectedCurrency && <span className={workspace.depositMismatch}>Currency mismatch</span>}</div>
+              <div className={workspace.depositHeading}><strong><bdi>{requestMoney(payment.excluded ? payment.original_amount ?? payment.amount : payment.amount, payment.currency, locale)}</bdi></strong>{payment.excluded ? <span className={workspace.depositMismatch}>Excluded · corrected record</span> : payment.currency !== expectedCurrency ? <span className={workspace.depositMismatch}>Currency mismatch</span> : payment.corrected_at ? <span className={workspace.fieldHint}>Corrected</span> : null}</div>
               {!payment.payment_reference.startsWith("AUTO-") && <span className={workspace.depositReference}>Bank reference: <bdi>{payment.payment_reference}</bdi></span>}
               <time dir="ltr" dateTime={payment.created_at}>{requestDate(payment.created_at, locale)}</time>
             </li>)}{visibleSavedDeposit && !payments.some(payment => payment.currency === visibleSavedDeposit.currency && Number(payment.amount) === visibleSavedDeposit.amount) && <li><div className={workspace.depositHeading}><strong><bdi>{requestMoney(visibleSavedDeposit.amount, visibleSavedDeposit.currency, locale)}</bdi></strong><span className={workspace.depositMismatch}>{visibleSavedDeposit.currency !== expectedCurrency ? "Currency mismatch" : "Saved"}</span></div><span className={workspace.fieldHint}>Saved. Refresh to load the bank record details.</span></li>}</ol>
             {hasMismatchedDeposit && commands.includes("confirm_funds") && currentAction !== "confirm_funds" && <button type="button" className={workspace.textButton} disabled={busy} onClick={() => chooseAction("confirm_funds")}>Record a separate cleared deposit</button>}
+            {commands.includes("finalize_funds") && currentAction !== "finalize_funds" && <button type="button" className={workspace.textButton} disabled={busy} onClick={() => chooseAction("finalize_funds")}>{fa ? "ویرایش مبالغ نهایی" : "Edit final amounts"}</button>}
           </section>}
           {actionPanel && <section className={`${styles.card} ${workspace.approvalCard}`}>{!currentAction && <div className={workspace.waitingAdmin}><Clock3 size={24} /><h2>{isRequestTerminal(request.status) ? requestStageLabel(request, locale) : journey?.customerActionRequired ? "Waiting for customer response" : hasMismatchedDeposit ? "Review recorded deposit" : journey?.fundsReceived || request.action_required ? "Admin review required" : "Waiting for customer receipt"}</h2></div>}{actionPanel}</section>}
           {request.status === "completed" && <section className={`${styles.card} ${workspace.receiptReady}`}><div><Check size={20} /><h2>Transfer completed</h2></div><a className={styles.button} href={`/api/requests/${request.id}/receipt`} target="_blank" rel="noopener noreferrer"><Download size={17} />Final receipt</a></section>}
-          {currentAction !== "confirm_funds" && detail.receipts.length > 0 && <RequestReceiptUpload request={request} receipts={detail.receipts} admin locale={locale} onUploaded={refresh} />}
+          {!["confirm_funds", "finalize_funds"].includes(currentAction) && detail.receipts.length > 0 && <RequestReceiptUpload request={request} receipts={detail.receipts} admin locale={locale} onUploaded={refresh} />}
           <RequestConversation requestId={id} version={request.version} messages={messages} admin locale={locale} disabled={busy} onUpdated={refresh} onSendingChange={sending => { pending.current = sending; setBusy(sending); }} />
         </div>
         <div className={`${workspace.column} ${workspace.sideColumn}`}>

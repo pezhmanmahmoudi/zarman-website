@@ -101,6 +101,7 @@ test("request feed waits five minutes for automatic refresh, allows manual refre
 test("dashboard account reads are user-scoped, fail visibly, and cannot restore private data after sign out", async () => {
   const previous = { window:global.window, document:global.document }; global.window = events(); global.document = events();
   let onAuth, resolveProfile, resolveTransactions; const scopes = [], redirects = [], rpcs = [];
+  global.window.location.replace = path => redirects.push(path);
   const query = table => ({select(){return this;},eq(column,value){scopes.push([table,column,value]);return this;},order(){return this;},range(){return this;},abortSignal(){return this;},single(){return this;},then(fn,reject) {return new Promise(resolve => {if(table === "profiles") resolveProfile = resolve; else resolveTransactions = resolve;}).then(fn,reject);} });
   const supabase = { auth:{ getUser:async () => ({data:{user:{id:"customer-id"}}}), onAuthStateChange:fn => {onAuth = fn; return {data:{subscription:{unsubscribe(){}}}};} }, from:query, rpc:name => {rpcs.push(name); return query("rpc");} };
   const harness = dashboardHarness({mocks:{"@/lib/supabase":{supabase},"next/navigation":{useRouter:()=>({replace:path=>redirects.push(path)})}}});
@@ -111,7 +112,8 @@ test("dashboard account reads are user-scoped, fail visibly, and cannot restore 
     assert.equal(harness.render(useDashboardData).error,true);
     const refresh = harness.render(useDashboardData).refresh(); await tick(); onAuth("SIGNED_OUT");
     resolveProfile({data:{id:"customer-id"},error:null}); resolveTransactions({data:{volume:"500.00",approved_count:1},error:null}); await refresh;
-    const state = harness.render(useDashboardData); assert.equal(state.profile,null); assert.equal(state.approvedVolume,0); assert.equal(state.approvedCount,0); assert.equal(state.sessionChecked,false);
+    const state = harness.render(useDashboardData); assert.equal(state.profile,null); assert.equal(state.approvedVolume,0); assert.equal(state.approvedCount,0); assert.equal(state.sessionChecked,false); assert.equal(state.signedOut,true); assert.equal(state.loading,false);
+    await state.refresh();
     assert.deepEqual(scopes,[["profiles","id","customer-id"],["profiles","id","customer-id"]]);
     assert.deepEqual(rpcs,["my_approved_transaction_summary","my_approved_transaction_summary"]);
     assert.deepEqual(redirects,["/en/login"]);
@@ -205,4 +207,27 @@ test("transfer direction and rate changes invalidate recipients and pending prom
     back();back();
     elements(render(),node=>node.props.id==="request-amount-aud")[0].props.onChange({target:{value:"\u0661\u0662\u0663\u066b\u0664\u0665"}}); assert.equal(props.amountStr,"123.45");
   } finally {global.requestAnimationFrame = previousRAF;}
+});
+
+
+test("logout across tabs and browser history clears private data before navigation", () => {
+  const previous = { window: global.window, document: global.document };
+  try {
+    for (const event of ["storage", "pageshow"]) {
+      global.window = events(); global.document = events();
+      const destinations = [];
+      global.window.location.replace = path => destinations.push(path);
+      global.window.location.reload = () => destinations.push("reload");
+      const supabase = { auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }), getUser() { throw Error("Unexpected private read"); } } };
+      const h = dashboardHarness({ mocks: { "@/lib/supabase": { supabase } } });
+      const { useDashboardData } = h.load("hooks/useDashboardData.ts");
+      const initial = { profile: { id: "synthetic-id", first_name: "Private" }, approved: { volume: 500, count: 1 } };
+      h.render(useDashboardData, initial); h.effects();
+      global.window.listeners.get(event)(event === "storage" ? { key: "zarman:sign-out", newValue: "notification" } : { persisted: true });
+      const state = h.render(useDashboardData, initial);
+      assert.equal(state.profile, null); assert.equal(state.approvedVolume, 0); assert.equal(state.signedOut, true);
+      assert.deepEqual(destinations, [event === "storage" ? "/en/login" : "reload"]);
+      h.cleanup(); assert.equal(global.window.listeners.size, 0);
+    }
+  } finally { global.window = previous.window; global.document = previous.document; }
 });
