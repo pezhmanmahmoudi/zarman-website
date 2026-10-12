@@ -1,0 +1,142 @@
+{
+  "capturedAt": "2026-10-12T02:07:34.618Z",
+  "transactions": [
+    {
+      "id": "e72ad367-b055-46d8-b62d-d6a5f01b99fb",
+      "reference_code": "ZE43751",
+      "amount_aud": 55,
+      "equivalent_toman": 10497500,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-26T04:10:06.868488+00:00",
+      "approved_at": "2026-09-27T11:22:04.781+00:00",
+      "profiles": {
+        "last_name": "Khodadadzadeh",
+        "first_name": "Fatemeh"
+      },
+      "payment_host": "applicant.myintealth.app"
+    },
+    {
+      "id": "63736529-4f25-4419-8af3-7046a450ea5d",
+      "reference_code": "ZE92705",
+      "amount_aud": 160,
+      "equivalent_toman": 27370000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-26T10:39:23.445529+00:00",
+      "approved_at": "2026-09-27T05:25:53.381+00:00",
+      "profiles": {
+        "last_name": "Soltanpoor",
+        "first_name": "Pardis"
+      },
+      "payment_host": "applicant.myintealth.app"
+    },
+    {
+      "id": "b00a9276-c512-4a84-b5ae-f0ed6385f806",
+      "reference_code": "ZE16535",
+      "amount_aud": 154.3,
+      "equivalent_toman": 26453000,
+      "ledger_fee_aud": 0,
+      "status": "rejected",
+      "created_at": "2026-09-27T07:23:49.688003+00:00",
+      "approved_at": null,
+      "profiles": {
+        "last_name": "Khodadadzadeh",
+        "first_name": "Fatemeh"
+      },
+      "payment_host": "applicant.myintealth.app"
+    },
+    {
+      "id": "a3e3b7cd-134f-4eec-a655-bf6cc78b1613",
+      "reference_code": "ZE32449",
+      "amount_aud": 325,
+      "equivalent_toman": 53935000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-27T10:59:30.919271+00:00",
+      "approved_at": "2026-10-02T08:35:18.11+00:00",
+      "profiles": {
+        "last_name": "Khodadadzadeh",
+        "first_name": "Fatemeh"
+      },
+      "payment_host": "applicant.myintealth.app"
+    },
+    {
+      "id": "cc6c74c4-14ce-4a8c-83c2-6b5c8fe8e23e",
+      "reference_code": "ZE12365",
+      "amount_aud": 160,
+      "equivalent_toman": 26453000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-27T12:00:00+00:00",
+      "approved_at": "2026-09-28T00:09:55.796+00:00",
+      "profiles": {
+        "last_name": "Khodadadzadeh",
+        "first_name": "Fatemeh"
+      },
+      "payment_host": "applicant.myintealth.app"
+    }
+  ],
+  "ledger": [
+    {
+      "id": "bafbdabb-7008-41ba-86b6-e8f3fecb6ecf",
+      "transaction_id": "e72ad367-b055-46d8-b62d-d6a5f01b99fb",
+      "date_gregorian": "2026-09-26",
+      "entry_type": "trade",
+      "amount_aud": 55,
+      "amount_toman": 10497500,
+      "fee_aud": 10,
+      "sender": "Fatemeh Khodadadzadeh",
+      "recipient": "Payment Link",
+      "notes": null
+    },
+    {
+      "id": "1496cf86-904b-4ff7-a441-7ee3f17bf4c2",
+      "transaction_id": "63736529-4f25-4419-8af3-7046a450ea5d",
+      "date_gregorian": "2026-09-26",
+      "entry_type": "trade",
+      "amount_aud": 160,
+      "amount_toman": 27370000,
+      "fee_aud": 10,
+      "sender": "Pardis Soltanpoor",
+      "recipient": "Payment Link",
+      "notes": null
+    },
+    {
+      "id": "21404d9e-a701-4b93-b036-80e9925dd3da",
+      "transaction_id": "a3e3b7cd-134f-4eec-a655-bf6cc78b1613",
+      "date_gregorian": "2026-09-27",
+      "entry_type": "trade",
+      "amount_aud": 325,
+      "amount_toman": 53935000,
+      "fee_aud": 10,
+      "sender": "Fatemeh Khodadadzadeh",
+      "recipient": "Payment Link",
+      "notes": null
+    },
+    {
+      "id": "491a8d7f-381c-4927-b278-effb7bfc1915",
+      "transaction_id": "cc6c74c4-14ce-4a8c-83c2-6b5c8fe8e23e",
+      "date_gregorian": "2026-09-27",
+      "entry_type": "trade",
+      "amount_aud": 160,
+      "amount_toman": 26453000,
+      "fee_aud": 10,
+      "sender": "Fatemeh Khodadadzadeh",
+      "recipient": "Payment Link",
+      "notes": "[BLU-RECON-20261005:link-fatemeh] اصلاح نقدی جداگانه 1feb1bc3-0575-4931-b600-bc95ca547d4f؛ اصلاح وجه وصولی بلو: واریز جهانداری در 1405/07/05، transaction!D45، برابر 26,435,000 تومان است؛ دفتر 26,453,000 ثبت کرده بود. برگشت 18,000 از موجودی؛ قرارداد مشتری تغییر نکرده است."
+    },
+    {
+      "id": "67b35c15-3111-4aea-93d5-8f3e6058754b",
+      "transaction_id": null,
+      "date_gregorian": "2026-10-06",
+      "entry_type": "trade",
+      "amount_aud": 52.02,
+      "amount_toman": 12155000,
+      "fee_aud": 10,
+      "sender": "Pardis soltanpoor",
+      "recipient": "Myintealth",
+      "notes": null
+    }
+  ]
+}

@@ -71,7 +71,8 @@ before(async () => {
     "supabase/migrations/20261009_53_non_retryable_request_conflicts.APPLY_MANUALLY.sql",
     "supabase/migrations/20261009_54_correct_recorded_request_funds.APPLY_MANUALLY.sql",
     "supabase/migrations/20261009_55_admin_final_transfer_amounts.APPLY_MANUALLY.sql",
-    "supabase/migrations/20261009_56_repair_final_amount_confirmation.APPLY_MANUALLY.sql"]) await db.exec(read(file));
+    "supabase/migrations/20261009_56_repair_final_amount_confirmation.APPLY_MANUALLY.sql",
+    "supabase/migrations/20261012_57_reopen_rejected_requests.APPLY_MANUALLY.sql"]) await db.exec(read(file));
   await db.query("INSERT INTO auth.users(id,email,raw_app_meta_data) VALUES($1,'customer@example.invalid','{}'),($2,'other@example.invalid','{}'),($3,'admin@example.invalid','{\"role\":\"admin\"}')", [CUSTOMER, OTHER, ADMIN]);
   await db.exec("INSERT INTO profiles(id,email,kyc_status) SELECT id,email,'approved' FROM auth.users");
   await db.query("INSERT INTO recipients(id,user_id,direction,account_name,bank_name,bsb,account_number) VALUES($1,$2,'aud','Synthetic Recipient','Synthetic Bank','000001','00123456')", [RECIPIENT, CUSTOMER]);
@@ -84,6 +85,123 @@ before(async () => {
 after(async () => { await db?.close(); });
 beforeEach(async () => { await db.exec("BEGIN"); });
 afterEach(async () => { await db.exec("ROLLBACK"); });
+
+const rejectRequest = r => rpc("SELECT transition_exchange_request($1,$2,$3,$4,'reject',$5) AS result",
+  [ADMIN, r.id, r.version, randomUUID(), { send_email: false, message: "Rejected by mistake" }]);
+const reopen = (r, { actor = ADMIN, key = randomUUID(), email = false, message = "Correcting an accidental rejection" } = {}) => rpc(
+  "SELECT reopen_exchange_request($1,$2,$3,$4,$5) AS result", [actor, r.id, r.version, key, { send_email: email, message }]);
+
+test("reopen: restores the linked pending transaction and preserves evidence, quote and rejection history", async () => {
+  const original = await submit();
+  await db.query("INSERT INTO exchange_request_receipts(id,request_id,storage_path,original_name,content_type,size_bytes,sha256,uploaded_by) VALUES($1,$2,$3,'test.png','image/png',100,$4,$5)",
+    [randomUUID(), original.id, `${original.id}/test.png`, "a".repeat(64), CUSTOMER]);
+  const r = await rejectRequest(original);
+  const history = (await db.query("SELECT * FROM exchange_request_events WHERE request_id=$1 ORDER BY sequence", [r.id])).rows;
+  const receipts = (await db.query("SELECT * FROM exchange_request_receipts WHERE request_id=$1", [r.id])).rows;
+  const txBefore = await one("SELECT * FROM transactions WHERE id=$1", [r.transaction_id]);
+  const opened = await reopen(r);
+  assert.equal(opened.status, "under_review"); assert.equal(opened.version, r.version + 1);
+  assert.equal(opened.owner_id, ADMIN); assert.equal(opened.payment_approved_at, null);
+  assert.equal(opened.funding_due_at, null); assert.equal(opened.clearance_due_at, null);
+  assert.equal(opened.customer_action_required, null);
+  assert.equal(opened.transaction_id, r.transaction_id); assert.equal(opened.reference_code, r.reference_code);
+  assert.deepEqual(opened.quote, r.quote);
+  const txAfter = await one("SELECT * FROM transactions WHERE id=$1", [r.transaction_id]);
+  assert.equal(txAfter.status, "pending"); assert.equal(txAfter.approved_at, null);
+  for (const field of ["amount_aud", "equivalent_toman", "applied_rate", "ledger_fee_aud", "reference_code"]) assert.equal(txAfter[field], txBefore[field]);
+  assert.deepEqual((await db.query("SELECT * FROM exchange_request_receipts WHERE request_id=$1", [r.id])).rows, receipts);
+  assert.deepEqual((await db.query("SELECT * FROM exchange_request_events WHERE request_id=$1 ORDER BY sequence LIMIT $2", [r.id, history.length])).rows, history);
+  const event = await one("SELECT * FROM exchange_request_events WHERE request_id=$1 AND event_type='reopened'", [r.id]);
+  assert.equal(event.customer_visible, true); assert.equal(event.public_message, null);
+  assert.equal(event.internal_message, "Correcting an accidental rejection"); assert.equal(event.send_email, false);
+  const delivery = await one("SELECT * FROM exchange_request_notification_deliveries WHERE event_id=$1 AND audience='customer'", [event.id]);
+  assert.equal(delivery.status, "skipped"); assert.doesNotMatch(JSON.stringify(delivery.payload_snapshot), /accidental rejection/);
+  const audit = await one("SELECT * FROM audit_logs WHERE action='REQUEST_REOPENED' AND target_id=$1", [r.id]);
+  assert.equal(audit.actor_id, ADMIN); assert.equal(audit.old_value.status, "rejected");
+  assert.equal(audit.new_value.status, "under_review"); assert.equal(audit.new_value.reason, event.internal_message);
+  assert.equal((await one("SELECT count(*) AS n FROM ledger WHERE transaction_id=$1", [r.transaction_id])).n, 0);
+  // The normal approval, funds verification and settlement path works again.
+  const approved = await approve(opened);
+  const ready = await confirm(approved, fundingPayload(approved));
+  assert.equal(ready.status, "ready");
+  const completed = await rpc("SELECT transition_exchange_request($1,$2,$3,$4,'reconcile_complete',$5) AS result",
+    [ADMIN, ready.id, ready.version, randomUUID(), { send_email: false, date_jalali: "1405/07/20", payer_account_id: AUD,
+      receiver_account_id: IRT, settlement_reference: randomUUID(), transfer_method: "free" }]);
+  assert.equal(completed.status, "completed");
+  assert.equal((await one("SELECT status FROM transactions WHERE id=$1", [r.transaction_id])).status, "approved");
+});
+
+test("reopen: renews an old payment window while retaining immutable approval and receipt timestamps", async () => {
+  const approved = await approve(await submit());
+  await db.query("UPDATE exchange_requests SET evidence_submitted_at=now()-interval '3 days',funding_due_at=now()-interval '3 days',clearance_due_at=now()-interval '2 days' WHERE id=$1", [approved.id]);
+  const r = await rejectRequest(approved);
+  const opened = await reopen(r);
+  assert.equal(opened.payment_approved_at, r.payment_approved_at);
+  assert.equal(opened.evidence_submitted_at, r.evidence_submitted_at);
+  assert.ok(Date.parse(opened.funding_due_at) > Date.parse(r.funding_due_at));
+  assert.ok(Date.parse(opened.clearance_due_at) > Date.parse(opened.funding_due_at));
+  assert.equal((await finalizeFunds(opened, opened.quote.funding_total, opened.quote.recipient_amount,
+    { fee: opened.quote.base_fee_aud, rate: opened.quote.applied_rate })).status, "ready");
+});
+
+test("reopen: retries commit once, stale versions conflict and changed command payloads cannot replay", async () => {
+  const r = await rejectRequest(await submit()), key = randomUUID();
+  const opened = await reopen(r, { key, email: true });
+  assert.deepEqual(await reopen(r, { key, email: true }), opened);
+  assert.equal((await one("SELECT count(*) AS n FROM exchange_request_events WHERE request_id=$1 AND event_type='reopened'", [r.id])).n, 1);
+  assert.equal((await one("SELECT count(*) AS n FROM exchange_request_notification_deliveries WHERE request_id=$1 AND event_type='reopened' AND audience='customer' AND status='pending'", [r.id])).n, 1);
+  await rejected(() => reopen(r), error => error.code === "PT409");
+  await rejected(() => reopen(r, { key, email: false }), /IDEMPOTENCY_CONFLICT/);
+  await rejected(() => reopen(opened), /Only rejected/);
+});
+
+test("reopen: enforces admin access, required input and service-only RPC permissions", async () => {
+  const r = await rejectRequest(await submit());
+  for (const actor of [CUSTOMER, OTHER, null]) await rejected(() => reopen(r, { actor }), /Administrator required/);
+  for (const message of ["", "  ", "ab", "x".repeat(2001)]) await rejected(() => reopen(r, { message }), /reopening reason/);
+  await rejected(() => reopen(r, { email: null }), /choose whether/);
+  for (const role of ["anon", "authenticated"]) assert.equal((await one("SELECT has_function_privilege($1,'reopen_exchange_request(uuid,uuid,integer,uuid,jsonb)','EXECUTE') AS ok", [role])).ok, false);
+  assert.equal((await one("SELECT has_function_privilege('service_role','reopen_exchange_request(uuid,uuid,integer,uuid,jsonb)','EXECUTE') AS ok")).ok, true);
+  assert.equal((await one("SELECT status FROM exchange_requests WHERE id=$1", [r.id])).status, "rejected");
+});
+
+test("reopen: refuses every other workflow state without changing either record", async () => {
+  for (const status of ["submitted", "under_review", "action_required", "awaiting_funds", "ready", "processing", "reconciliation", "completed", "cancelled", "expired"]) {
+    const r = await rejectRequest(await submit());
+    await db.query("UPDATE exchange_requests SET status=$2 WHERE id=$1", [r.id, status]);
+    await rejected(() => reopen(r), /Only rejected/);
+    assert.equal((await one("SELECT status FROM exchange_requests WHERE id=$1", [r.id])).status, status);
+    assert.equal((await one("SELECT status FROM transactions WHERE id=$1", [r.transaction_id])).status, "rejected");
+  }
+});
+
+test("reopen: refuses received funds, any refund, payout intent and inconsistent linked accounting", async () => {
+  const mutations = [
+    r => db.query("UPDATE exchange_requests SET funding_received=1 WHERE id=$1", [r.id]),
+    r => db.query("UPDATE exchange_requests SET funding_status='refunded' WHERE id=$1", [r.id]),
+    r => db.query("UPDATE exchange_requests SET priority_fee_status='refund_pending' WHERE id=$1", [r.id]),
+    r => db.query("INSERT INTO exchange_request_payments(request_id,payment_reference,amount,currency,account_id,actor_id) VALUES($1,$2,1,'IRT',$3,$4)", [r.id, randomUUID(), IRT, ADMIN]),
+    r => db.query("INSERT INTO exchange_request_refunds(request_id,kind,amount,currency,reason) VALUES($1,'principal',1,'IRT','Synthetic refund')", [r.id]),
+    r => db.query("INSERT INTO exchange_request_executions(request_id,claimed_by) VALUES($1,$2)", [r.id, ADMIN]),
+    async r => { await db.exec("SELECT set_config('app.exchange_request_write','on',true)"); await db.query("UPDATE transactions SET status='approved' WHERE id=$1", [r.transaction_id]); },
+  ];
+  for (const mutate of mutations) {
+    const r = await rejectRequest(await submit()); await mutate(r);
+    const before = await one("SELECT to_jsonb(r) AS r FROM exchange_requests r WHERE id=$1", [r.id]);
+    await rejected(() => reopen(r), /reconciliation before reopening/);
+    assert.deepEqual(await one("SELECT to_jsonb(r) AS r FROM exchange_requests r WHERE id=$1", [r.id]), before);
+    assert.equal((await one("SELECT count(*) AS n FROM exchange_request_events WHERE request_id=$1 AND event_type='reopened'", [r.id])).n, 0);
+  }
+});
+
+test("reopen: priority requests recheck capacity before reclaiming an approved payment window", async () => {
+  const r = await rejectRequest(await approve(await submit({ priority: 25 })));
+  await db.exec("UPDATE exchange_request_settings SET settings=jsonb_set(settings,'{priority_capacity}','0')");
+  await rejected(() => reopen(r), /PRIORITY_CAPACITY/);
+  assert.equal((await one("SELECT status FROM transactions WHERE id=$1", [r.transaction_id])).status, "rejected");
+  await db.exec("UPDATE exchange_request_settings SET settings=jsonb_set(settings,'{priority_capacity}','10')");
+  assert.equal((await reopen(r)).status, "under_review");
+});
 
 test("business conflicts return PT409 without changing the request or recording a command", async () => {
   const original = await submit();

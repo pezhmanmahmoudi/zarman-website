@@ -30,6 +30,31 @@ const journey = compile("lib/requests/journey.ts");
 const activity = compile("lib/dashboard/activity.ts", { "@/lib/requests/journey": journey });
 const paging = compile("lib/dashboard/paging.ts");
 const conflicts = compile("lib/requests/conflicts.ts");
+
+test("reopen: admin server action uses the atomic RPC, rejects customers and requires a reason", async () => {
+  const input = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 2, action: "reopen", sendEmail: false,
+    payload: { message: "  Rejected by mistake  ", status: "approved", funding_received: 1000 } };
+  const { actions, state } = harness({ admin: true });
+  assert.equal((await actions.mutateAdminRequest(input)).error, undefined);
+  const calls = state.calls.filter(call => call.rpc);
+  assert.equal(calls.length, 1); assert.equal(calls[0].rpc, "reopen_exchange_request");
+  assert.equal(calls[0].args.p_payload.message, "Rejected by mistake");
+  assert.equal(calls[0].args.p_payload.send_email, false);
+  assert.equal(calls[0].args.p_payload.status, undefined); assert.equal(calls[0].args.p_payload.funding_received, undefined);
+  assert.equal(state.calls.some(call => call.operation === "update"), false);
+  assert.ok((await actions.mutateMyRequest({ ...input, sendEmail: undefined })).error);
+  assert.ok((await actions.mutateAdminRequest({ ...input, payload: {} })).error);
+  assert.equal(state.calls.filter(call => call.rpc).length, 1);
+});
+
+test("reopen: a missing migration fails without a direct status-update fallback", async () => {
+  const { actions, state } = harness({ admin: true, rpc: () => ({ data: null, error: { code: "PGRST202" } }) });
+  const result = await actions.mutateAdminRequest({ requestId: REQUEST, commandKey: COMMAND, expectedVersion: 2,
+    action: "reopen", sendEmail: false, payload: { message: "Rejected by mistake" } });
+  assert.match(result.error, /not reopened.*database update/);
+  assert.deepEqual(state.calls.filter(call => call.rpc).map(call => call.rpc), ["reopen_exchange_request"]);
+  assert.equal(state.calls.some(call => call.operation === "update"), false);
+});
 test("payment account encryption authenticates owner and quote, preserves password, and fails closed", () => {
   const credentials = { username: "synthetic@example.invalid", password: "  synthetic-secret!  " };
   const encrypted = accountAccess.encryptPaymentAccountAccess(credentials, "owner", "quote");

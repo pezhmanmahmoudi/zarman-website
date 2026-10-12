@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Star } from "lucide-react";
+import { MessageSquare, Star } from "lucide-react";
+import cardStyles from "@/styles/admin/AdminCards.module.css";
 import styles from "@/styles/admin/AdminWorkspace.module.css";
 import { AdminDataTable, AdminTableRow, AdminTableCell, AdminTableDate } from "@/components/admin/ui/AdminDataTable";
 import tableStyles from "@/styles/admin/AdminTable.module.css";
@@ -33,7 +34,12 @@ interface UserFeedbackHistoryProps {
 
 export function UserFeedbackHistory({ testimonials }: UserFeedbackHistoryProps) {
   return <section className={styles.panel} aria-label="Customer feedback">
-    <div className={styles.toolbar}><h2 className={styles.panelTitle}>Customer feedback</h2></div>
+    <div className={styles.toolbar}>
+      <h2 className={cardStyles.panelTitle}>
+        <MessageSquare size={18} color="var(--text-dim)" style={{ flexShrink: 0 }} aria-hidden="true" />
+        <span>Customer feedback</span>
+      </h2>
+    </div>
     <AdminDataTable label="Customer feedback" columns={[
       { key: "message", label: "Message" }, { key: "rating", label: "Rating" }, { key: "status", label: "Status" },
       { key: "date", label: "Submitted" }, { key: "actions", label: "Actions", actions: true },

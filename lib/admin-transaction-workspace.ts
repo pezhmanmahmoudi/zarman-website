@@ -37,6 +37,46 @@ export function transactionQueueState(row: RequestLinkedTransaction): { stage: T
   return { stage: "waiting", label: "Awaiting customer payment", next: "View transfer" };
 }
 
+export const TRANSACTION_WORKFLOW_STEPS = [
+  { number: 1, label: "Review" },
+  { number: 2, label: "Payment" },
+  { number: 3, label: "Settlement" },
+] as const;
+
+export type TransactionActionPresentation = {
+  step: 1 | 2 | 3 | null;
+  label: string;
+  tone: "active" | "waiting" | "refund" | "closed";
+};
+
+/** Display the admin checkpoint, independently of queue filters and bank state. */
+export function transactionActionPresentation(row: RequestLinkedTransaction): TransactionActionPresentation {
+  const request = transactionRequest(row);
+  if (!request) return row.status === "pending"
+    ? { step: 1, label: "Review transfer", tone: "active" }
+    : { step: null, label: "View details", tone: "closed" };
+
+  const state = transactionQueueState(row);
+  if (state.stage === "refund") return { step: null, label: "Review refund", tone: "refund" };
+  if (state.stage === "closed") return { step: null, label: "View details", tone: "closed" };
+
+  const journey = getRequestJourney(request);
+  // A funded hold still belongs to payment verification, even in the Review filter.
+  if (journey.pricingPending) return { step: 2, label: "Verify payment", tone: "active" };
+  if (journey.customerActionRequired) return {
+    step: journey.fundsReceived && request.ready_at ? 3 : journey.approved ? 2 : 1,
+    label: "View conversation", tone: "waiting",
+  };
+  if (journey.fundsReceived) return state.stage === "ready"
+    ? { step: 3, label: "Review settlement", tone: "active" }
+    : { step: 2, label: "Review funds", tone: "active" };
+  if (!journey.approved) return { step: 1, label: "Review request", tone: "active" };
+  if (request.action_required) return { step: 2, label: "Review payment", tone: "active" };
+  if (journey.receiptSubmitted) return { step: 2, label: "Verify payment", tone: "active" };
+  if (["submitted", "under_review"].includes(request.status)) return { step: 2, label: "Resume payment", tone: "active" };
+  return { step: 2, label: "View payment", tone: "waiting" };
+}
+
 export function matchesTransactionSearch(row: {
   id: string; reference_code?: string | null;
   profiles?: { first_name?: string | null; last_name?: string | null; email?: string | null; customer_code?: string | null } | null;

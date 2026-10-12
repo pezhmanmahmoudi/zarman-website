@@ -61,6 +61,7 @@ const statuses: Record<string, string> = {
 };
 
 const eventLabels: Record<string, string> = {
+  reopened: "Request reopened for review",
   await_funds: "Payment approved",
   admin_message: "Message from Zarman",
   customer_message: "Customer reply",

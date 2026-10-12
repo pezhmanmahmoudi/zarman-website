@@ -1428,6 +1428,9 @@ export async function createAssistedTransactionForUser(payload: any) {
 export async function createAssistedRecipientForUser(payload: any) {
   const admin = await requireAdmin();
   if (!payload.userId) return { error: "Missing user ID." };
+  if (payload.bank_city != null && typeof payload.bank_city !== "string") return { error: "Enter a valid bank branch city." };
+  const bankCity = payload.bank_city?.trim() || null;
+  if (bankCity && bankCity.length > 120) return { error: "Bank branch city must be 120 characters or fewer." };
 
   const db = makeServiceRoleClient();
   const insertPayload = {
@@ -1437,6 +1440,7 @@ export async function createAssistedRecipientForUser(payload: any) {
     full_name: payload.full_name?.trim() || null,
     account_name: payload.account_name?.trim() || null,
     bank_name: payload.bank_name?.trim() || null,
+    bank_city: bankCity,
     bsb: payload.bsb?.trim() || null,
     account_number: payload.account_number?.trim() || null,
     residential_address: payload.residential_address?.trim() || null,
@@ -1482,6 +1486,9 @@ export async function updateAssistedRecipientForUser(payload: any) {
   const admin = await requireAdmin();
   const recipientId = payload.id || payload.recipientId;
   if (!recipientId) return { error: "Missing recipient ID." };
+  if (payload.bank_city != null && typeof payload.bank_city !== "string") return { error: "Enter a valid bank branch city." };
+  const bankCity = payload.bank_city?.trim() || null;
+  if (bankCity && bankCity.length > 120) return { error: "Bank branch city must be 120 characters or fewer." };
 
   const db = makeServiceRoleClient();
   const { data: before } = await db.from("recipients").select("*").eq("id", recipientId).maybeSingle();
@@ -1492,6 +1499,7 @@ export async function updateAssistedRecipientForUser(payload: any) {
   if (payload.full_name !== undefined) patch.full_name = payload.full_name?.trim() || null;
   if (payload.account_name !== undefined) patch.account_name = payload.account_name?.trim() || null;
   if (payload.bank_name !== undefined) patch.bank_name = payload.bank_name?.trim() || null;
+  if (payload.bank_city !== undefined) patch.bank_city = bankCity;
   if (payload.bsb !== undefined) patch.bsb = payload.bsb?.trim() || null;
   if (payload.account_number !== undefined) patch.account_number = payload.account_number?.trim() || null;
   if (payload.residential_address !== undefined) patch.residential_address = payload.residential_address?.trim() || null;

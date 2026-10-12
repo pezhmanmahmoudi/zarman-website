@@ -255,9 +255,9 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
   return (
     <div className={styles.panel}>
       <div className={styles.toolbar}>
-        <h2 className={styles.panelTitle}>
-          <ArrowLeftRight size={18} color="var(--text-dim)" />
-          Transactions Timeline
+        <h2 className={cardStyles.panelTitle}>
+          <ArrowLeftRight size={18} color="var(--text-dim)" style={{ flexShrink: 0 }} aria-hidden="true" />
+          <span>Transactions Timeline</span>
         </h2>
         <div className={styles.headerActions}>
           <span

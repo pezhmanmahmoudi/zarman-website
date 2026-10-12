@@ -289,3 +289,63 @@
   opacity: 0.65;
   cursor: not-allowed;
 }
+
+.checksSection {
+  display: contents;
+}
+
+/* Customer profile only: checks and the internal note share the available width. */
+.root.customerLayout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  align-items: start;
+  gap: 1.25rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.customerLayout .checksSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.customerLayout .summaryGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+}
+
+.customerLayout .btnRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 0.75rem;
+}
+
+.customerLayout .checkGroup,
+.customerLayout .methodSelect {
+  min-width: 0;
+}
+
+.customerLayout .methodSelect {
+  width: 100%;
+}
+
+.customerLayout .altDocsBlock,
+.customerLayout .note,
+.customerLayout .errorMsg {
+  max-width: none;
+}
+
+.customerLayout .reviewBlock {
+  min-width: 0;
+  max-width: none;
+  margin-top: 0;
+  padding: 1rem;
+  gap: 0.75rem;
+  background: #fff;
+}
+
+.customerLayout .summaryLine,
+.customerLayout .note {
+  overflow-wrap: anywhere;
+}

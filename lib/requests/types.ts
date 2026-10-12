@@ -3,7 +3,7 @@ import type { CustomerTelegramDelivery } from "@/lib/notifications/customer-tele
 export type RequestLocale = "en" | "fa";
 export type ServiceTier = "standard" | "priority";
 export type RequestStatus = "submitted" | "under_review" | "action_required" | "awaiting_funds" | "ready" | "processing" | "reconciliation" | "completed" | "cancelled" | "rejected" | "expired";
-export type RequestCommand = "review" | "request_info" | "respond" | "await_funds" | "confirm_funds" | "correct_funds" | "finalize_funds" | "resume_funded_request" | "start_processing" | "record_uncertain_payout" | "complete" | "reconcile_complete" | "cancel" | "reject" | "confirm_refund" | "payment_evidence";
+export type RequestCommand = "review" | "reopen" | "request_info" | "respond" | "await_funds" | "confirm_funds" | "correct_funds" | "finalize_funds" | "resume_funded_request" | "start_processing" | "record_uncertain_payout" | "complete" | "reconcile_complete" | "cancel" | "reject" | "confirm_refund" | "payment_evidence";
 export type ActionResult<T> = { data: T; error?: never } | { error: string; data?: never; code?: "REQUEST_CONFLICT"; retryable?: false };
 export type FundingBankDetails = {
   account_name?: string; bank_name?: string; bsb?: string;

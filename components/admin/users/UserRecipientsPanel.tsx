@@ -17,6 +17,7 @@ interface Recipient {
   bank_type?: string | null;
   // AUD fields
   bank_name?: string | null;
+  bank_city?: string | null;
   bsb?: string | null;
   account_number?: string | null;
   account_name?: string | null;
@@ -159,6 +160,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
     direction: "aud",
     label: "",
     bank_name: "",
+    bank_city: "",
     bsb: "",
     account_number: "",
     account_name: "",
@@ -184,6 +186,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
   const [editForm, setEditForm] = useState({
     direction: "aud",
     bank_name: "",
+    bank_city: "",
     bsb: "",
     account_number: "",
     account_name: "",
@@ -243,6 +246,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
       direction: "aud",
       label: "",
       bank_name: "",
+      bank_city: "",
       bsb: "",
       account_number: "",
       account_name: "",
@@ -280,6 +284,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
         direction: form.direction as "aud" | "irt",
         label: autoLabel,
         bank_name: form.bank_name || undefined,
+        bank_city: form.bank_city,
         bsb: form.bsb || undefined,
         account_number: form.account_number || undefined,
         account_name: form.account_name || undefined,
@@ -331,6 +336,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
     setEditForm({
       direction: recipient.direction === "irt" ? "irt" : "aud",
       bank_name: recipient.bank_name || "",
+      bank_city: recipient.bank_city || "",
       bsb: recipient.bsb || "",
       account_number: recipient.account_number || "",
       account_name: recipient.account_name || "",
@@ -374,6 +380,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
         direction: editForm.direction as "aud" | "irt",
         label: editAutoLabel,
         bank_name: editForm.bank_name || undefined,
+        bank_city: editForm.bank_city,
         bsb: editForm.bsb || undefined,
         account_number: editForm.account_number || undefined,
         account_name: editForm.account_name || undefined,
@@ -463,6 +470,10 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Bank Name</label>
                 <input className={formStyles.input} value={form.bank_name} onChange={(e) => setField("bank_name", e.target.value)} />
+              </div>
+              <div className={formStyles.fieldGroup}>
+                <label className={formStyles.label} htmlFor="recipient-bank-city">Bank Branch City</label>
+                <input id="recipient-bank-city" className={formStyles.input} value={form.bank_city} maxLength={120} placeholder={isAud ? "e.g. Sydney" : "e.g. Tehran"} onChange={(e) => setField("bank_city", e.target.value)} />
               </div>
 
               {isAud ? (
@@ -650,6 +661,10 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                       <label className={formStyles.label}>Bank Name</label>
                       <input className={formStyles.input} value={editForm.bank_name} onChange={(e) => setEditField("bank_name", e.target.value)} />
                     </div>
+                    <div className={formStyles.fieldGroup}>
+                      <label className={formStyles.label} htmlFor={`recipient-bank-city-${r.id}`}>Bank Branch City</label>
+                      <input id={`recipient-bank-city-${r.id}`} className={formStyles.input} value={editForm.bank_city} maxLength={120} placeholder={isEditAud ? "e.g. Sydney" : "e.g. Tehran"} onChange={(e) => setEditField("bank_city", e.target.value)} />
+                    </div>
 
                     {isEditAud ? (
                       <>
@@ -738,6 +753,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                         <>
                           <Field label="Account Holder Name" value={r.account_name} />
                           <Field label="Bank Name"           value={r.bank_name} />
+                          <Field label="Bank Branch City"    value={r.bank_city} />
                           <Field label="BSB"                 value={r.bsb} mono />
                           <Field label="Account Number"      value={r.account_number} mono />
                           <Field label="Phone"               value={r.recipient_phone} />
@@ -752,6 +768,7 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                         <>
                           <Field label="Full Name"           value={r.full_name} />
                           <Field label="Bank"                value={bankLabel} />
+                          <Field label="Bank Branch City"    value={r.bank_city} />
                           <Field label="Card Number"         value={r.card_number} mono />
                           <Field label="Account Number"      value={r.irt_account_number} mono />
                           <Field label="Shaba (IBAN)"        value={r.shaba_number || null} mono />

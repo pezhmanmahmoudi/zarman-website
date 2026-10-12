@@ -43,6 +43,7 @@ const statuses: Record<string, [string, string]> = {
   complete: ["Completed", "تکمیل شد"],
   cancel: ["Cancelled", "لغو شد"],
   reject: ["Rejected", "رد شد"],
+  reopened: ["Reopened for review", "بازگشایی برای بررسی"],
   resume_funded_request: ["Request resumed", "درخواست از سر گرفته شد"],
   record_uncertain_payout: ["Settlement review", "بررسی تسویه"],
   refund_returned: ["Refund completed", "بازپرداخت شد"],

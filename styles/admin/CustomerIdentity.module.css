@@ -1,0 +1,22 @@
+.identity { display: grid; gap: 1.25rem; min-width: 0; }
+.heading { margin: 0; color: var(--text-main); font-size: .875rem; font-weight: 600; }
+.details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 2rem; margin: 0; }
+.detail { display: flex; flex-direction: column; justify-content: center; gap: .4rem; min-width: 0; padding: .875rem 0; border-bottom: 1px solid var(--border-soft); }
+.detail dt, .submission dt { margin: 0; color: var(--text-soft); font-size: .6875rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.detail dd { margin: 0; color: var(--text-main); font-size: .9375rem; line-height: 1.5; overflow-wrap: anywhere; }
+.empty { color: var(--text-dim); }
+.submission { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem 1.5rem; margin: 0; padding: 1rem; border: 1px solid var(--border-soft); border-radius: .75rem; background: #f8fafc; }
+.submission > div { min-width: 0; }
+.submission dt span { font-weight: 400; text-transform: none; }
+.submission dd { margin: .45rem 0 0; color: var(--text-main); font-size: .8125rem; line-height: 1.5; overflow-wrap: anywhere; }
+.message { margin: 0; color: var(--text-soft); font-size: .8125rem; }
+.loadError { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem 1rem; color: var(--danger); font-size: .8125rem; }
+.loadError button { min-height: 36px; padding: .4rem .75rem; border: 1px solid var(--border-med); border-radius: .5rem; background: white; color: var(--text-main); font: inherit; cursor: pointer; }
+.loadError button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.review { display: grid; gap: 1rem; margin-top: 1.5rem; padding: 1.25rem; border: 1px solid var(--border-soft); border-radius: .75rem; background: #f8fafc; }
+.reviewHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-soft); }
+@media (max-width: 700px) {
+  .details { grid-template-columns: minmax(0, 1fr); }
+  .submission { grid-template-columns: minmax(0, 1fr); }
+  .review { padding: 1rem; }
+}

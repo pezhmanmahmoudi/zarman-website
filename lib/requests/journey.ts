@@ -95,6 +95,7 @@ export function requestActivityLabel(eventType: string, locale: RequestLocale): 
     record_uncertain_payout: ["Destination settlement needs checking", "تسویه مقصد نیاز به بررسی دارد"],
     cancel: ["Customer cancelled the request", "مشتری درخواست را لغو کرد"],
     reject: ["Admin declined the request", "مدیر درخواست را رد کرد"],
+    reopened: ["Admin reopened the request for review", "مدیر درخواست را برای بررسی بازگشایی کرد"],
     expired: ["Payment window closed", "مهلت پرداخت پایان یافت"],
     refund_pending: ["Refund required", "بازپرداخت لازم است"],
     refund_returned: ["Refund confirmed", "بازپرداخت تأیید شد"],

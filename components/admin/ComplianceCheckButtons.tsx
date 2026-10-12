@@ -15,6 +15,7 @@ interface Props {
   userId: string;
   country: string | null;
   documentType: string | null;
+  layout?: "customer";
   initialDvsStatus?: string | null;
   initialDvsMethod?: string | null;
   initialDvsCheckedAt?: string | null;
@@ -169,6 +170,7 @@ export function ComplianceCheckButtons({
   userId,
   country,
   documentType,
+  layout,
   initialDvsStatus,
   initialDvsMethod,
   initialDvsCheckedAt,
@@ -439,7 +441,8 @@ export function ComplianceCheckButtons({
   const amlManualSelected = amlMethod.startsWith("manual_");
 
   return (
-    <div className={styles.root}>
+    <div className={`${styles.root}${layout === "customer" ? ` ${styles.customerLayout}` : ""}`}>
+      <div className={styles.checksSection}>
       <div className={styles.heading}>
         <ShieldCheck size={13} />
         Compliance Checks
@@ -702,6 +705,7 @@ export function ComplianceCheckButtons({
           address (utility bill, bank statement, etc.) to complete DVS.
         </p>
       )}
+      </div>
 
       <div className={styles.reviewBlock}>
         <div className={styles.reviewHeader}>Customer Flag and Internal Note</div>

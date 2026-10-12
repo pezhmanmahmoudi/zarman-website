@@ -5,16 +5,16 @@ import { useAdminTransition as useTransition } from "@/components/admin/ui/useAd
 import { ShieldCheck, Pencil, Save, X } from "lucide-react";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import formStyles from "@/styles/admin/AdminForms.module.css";
+import identityStyles from "@/styles/admin/CustomerIdentity.module.css";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
 import { KycActionButtons } from "@/components/admin/KycActionButtons";
-import { EditableCustomerCode } from "@/components/admin/EditableCustomerCode";
 import { updateUserIdentityKycProfile } from "@/app/actions/admin.actions";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { ComplianceCheckButtons } from "@/components/admin/ComplianceCheckButtons";
 import { AustralianLocationFields } from "@/components/dashboard/AustralianLocationFields";
 import { CustomerKycEvidence } from "@/components/admin/CustomerKycEvidence";
-import { AU_DRIVER_LICENCE_ISSUER_OPTIONS, formatAustralianDriverLicenceIssuer, normalizeAustralianState } from "@/lib/australian-driver-licence";
+import { AU_DRIVER_LICENCE_ISSUER_OPTIONS, normalizeAustralianState } from "@/lib/australian-driver-licence";
 import type { getUserFinancialProfile } from "@/app/actions/admin.actions";
 
 type Profile = Awaited<ReturnType<typeof getUserFinancialProfile>>["profile"];
@@ -24,20 +24,6 @@ interface UserKycManagerProps {
   onProfileUpdated?: () => void;
   onKycStatusCommitted?: (status: "approved" | "rejected" | "archived") => void;
 }
-
-const ROWS: [string, (p: NonNullable<Profile>) => string | null | undefined][] = [
-  ["Full Name",       (p) => `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || null],
-  ["Email",           (p) => p.email],
-  ["Phone",           (p) => p.mobile_number],
-  ["Date of Birth",   (p) => p.dob],
-  ["Address",         (p) => [p.address, p.city, p.state, (p as Record<string, unknown>).postcode as string | null, p.country].filter(Boolean).join(", ") || null],
-  ["Document Type",   (p) => p.document_type],
-  ["Issuing Authority",  (p) => formatAustralianDriverLicenceIssuer((p as Record<string, unknown>).state_of_issue as string | null) || null],
-  ["Licence Number",  (p) => (p as Record<string, unknown>).license_number  as string | null],
-  ["Card Number",     (p) => (p as Record<string, unknown>).card_number      as string | null],
-  ["Passport Number", (p) => (p as Record<string, unknown>).passport_number  as string | null],
-  ["Expiry Date",     (p) => (p as Record<string, unknown>).expiry_date      as string | null],
-];
 
 export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted }: UserKycManagerProps) {
   const [isPending, startTransition] = useTransition();
@@ -128,7 +114,7 @@ export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted
           </p>
         )}
 
-        {isEditing ? (
+        {isEditing && (
           <>
             <div className={formStyles.fieldRow}>
               <div className={formStyles.fieldGroup}>
@@ -312,41 +298,24 @@ export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted
               </button>
             </div>
           </>
-        ) : (
-        <dl className={cardStyles.kycDetailList}>            {/* Customer Code — editable */}
-            <div className={cardStyles.kycDetailRow}>
-              <dt className={cardStyles.kycDetailRowLabel}>Customer Code</dt>
-              <dd className={cardStyles.kycDetailRowValue}>
-                {profile ? (
-                  <EditableCustomerCode
-                    userId={profile.id}
-                    currentCode={(profile as Record<string, unknown>).customer_code as string | null}
-                  />
-                ) : "—"}
-              </dd>
-            </div>          {ROWS.map(([label, getValue]) => {
-            const value = profile ? getValue(profile) : null;
-            return (
-              <div key={label} className={cardStyles.kycDetailRow}>
-                <dt className={cardStyles.kycDetailRowLabel}>{label}</dt>
-                <dd className={value ? cardStyles.kycDetailRowValue : `${cardStyles.kycDetailRowValue} ${cardStyles.kycDetailRowValueDim}`}>
-                  {value || "—"}
-                </dd>
-              </div>
-            );
-          })}
-        </dl>
         )}
 
-        {profile && <CustomerKycEvidence key={profile.id} userId={profile.id}/>}
-        <div className={cardStyles.kycStatusFooter}>
-          <div className={cardStyles.kycStatusLeft}>
-            Current Status
-            <StatusBadge status={profile?.kyc_status ?? null} />
+        <div hidden={isEditing}>{profile && <CustomerKycEvidence key={profile.id} userId={profile.id} profile={profile} />}</div>
+        <div className={identityStyles.review}>
+          <div className={identityStyles.reviewHeader}>
+            <div className={cardStyles.kycStatusLeft}>
+              Current Status
+              <StatusBadge status={profile?.kyc_status ?? null} />
+            </div>
+            {profile && <KycActionButtons userId={profile.id} currentStatus={profile.kyc_status ?? undefined} onCommitted={status => {
+              setForm(previous => ({ ...previous, kyc_status: status }));
+              onKycStatusCommitted?.(status);
+            }} />}
           </div>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
+          <div>
             {profile && (
               <ComplianceCheckButtons
+                layout="customer"
                 userId={profile.id}
                 country={(profile as Record<string, unknown>).country as string | null}
                 documentType={(profile as Record<string, unknown>).document_type as string | null}
@@ -374,10 +343,6 @@ export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted
                 onSaved={onProfileUpdated}
               />
             )}
-            {profile && <KycActionButtons userId={profile.id} currentStatus={profile.kyc_status ?? undefined} onCommitted={status => {
-              setForm(previous => ({ ...previous, kyc_status: status }));
-              onKycStatusCommitted?.(status);
-            }} />}
           </div>
         </div>
       </div>

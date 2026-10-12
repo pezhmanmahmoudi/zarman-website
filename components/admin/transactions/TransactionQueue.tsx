@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCheck, Search } from "lucide-react";
-import { matchesTransactionSearch, sortTransactionQueue, transactionQueueState } from "@/lib/admin-transaction-workspace";
+import { ArrowRight, CheckCheck, Search } from "lucide-react";
+import { matchesTransactionSearch, sortTransactionQueue, transactionQueueState, TRANSACTION_WORKFLOW_STEPS } from "@/lib/admin-transaction-workspace";
 import { TransactionTable } from "./TransactionTable";
 import type { BankAccountOption, TransactionRow } from "./TransactionsManager";
 import styles from "@/styles/admin/AdminWorkspace.module.css";
@@ -32,6 +32,13 @@ export function TransactionQueue({ rows, bankAccounts }: { rows: TransactionRow[
       <label className={styles.search}><Search size={16} aria-hidden="true" /><span className={styles.srOnly}>Search active transactions</span>
         <input type="search" placeholder="Search customer, reference or recipient" value={search} onChange={event => setSearch(event.target.value)} />
       </label>
+      <div className={styles.transferWorkflow}>
+        <span className={styles.workflowCaption}>Workflow</span>
+        <ol aria-label="Transfer workflow steps">{TRANSACTION_WORKFLOW_STEPS.map(step => <li key={step.number}>
+          <span className={styles.workflowStep} data-step={step.number}><span className={styles.transferStep}>{step.number}</span>{step.label}</span>
+          {step.number < 3 && <ArrowRight size={12} aria-hidden="true" />}
+        </li>)}</ol>
+      </div>
     </div>
     {visible.length > 0 ? <TransactionTable rows={visible} isPending bankAccounts={bankAccounts} /> : <div className={styles.empty} role="status"><CheckCheck size={26} aria-hidden="true" />
       <strong>{rows.length ? "No matching transactions" : "You're all caught up"}</strong>

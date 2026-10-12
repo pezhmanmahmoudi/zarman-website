@@ -81,6 +81,7 @@ type PreparedDelivery = {
   fundingStatus: string; locale: "en" | "fa"; attempts: number; createdAt: string; message: string | null;
 };
 const eventCopy: Record<string, [string, string]> = {
+  reopened: ["Your transfer request has been reopened for review.", "درخواست انتقال شما برای بررسی دوباره بازگشایی شد."],
   admin_message: ["You have a new message from the Zarman team.", "پیام جدیدی از تیم زرمان دارید."],
   review: ["Your transfer is being reviewed.", "درخواست انتقال شما در حال بررسی است."],
   await_funds: ["Your transfer is approved. Payment details are ready in your dashboard.", "درخواست شما تأیید شد. اطلاعات واریز در داشبورد آماده است."],

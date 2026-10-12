@@ -1,0 +1,470 @@
+{
+  "capturedAt": "2026-10-12T01:52:57.574Z",
+  "transactions": [
+    {
+      "id": "81a7a74b-b29e-4103-b101-a3da70feabd6",
+      "user_id": "69810fff-47ff-4ab9-bd83-c9adb6b155a5",
+      "reference_code": "ZE04028",
+      "type": "sell_aud",
+      "amount_aud": 1000,
+      "equivalent_toman": 171000000,
+      "applied_rate": 171000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-30T04:54:49.153952+00:00",
+      "approved_at": "2026-09-30T07:59:28.872+00:00",
+      "reason_for_transfer": "Support Family",
+      "profiles": {
+        "last_name": "Yaghmaei",
+        "first_name": "Hamta"
+      },
+      "recipients": {
+        "label": "My Account in the Destination Country — Westpac",
+        "full_name": null,
+        "account_name": "Hamta Yaghmaei"
+      }
+    },
+    {
+      "id": "df545e71-b894-4f0a-83ca-b3f790d44fd7",
+      "user_id": "128769de-1345-4cdc-8c0a-b343be449efc",
+      "reference_code": "ZE08094",
+      "type": "sell_aud",
+      "amount_aud": 1000,
+      "equivalent_toman": 185000000,
+      "applied_rate": 185000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-10-04T10:07:36.884447+00:00",
+      "approved_at": "2026-10-04T14:19:20.333764+00:00",
+      "reason_for_transfer": "Other",
+      "profiles": {
+        "last_name": "Kheirabadi",
+        "first_name": "Nahid"
+      },
+      "recipients": {
+        "label": "pourya seydabadi — commonwealthbank",
+        "full_name": null,
+        "account_name": "pourya seydabadi"
+      }
+    },
+    {
+      "id": "9af8e1e5-874c-4576-8b7a-e9febbea694a",
+      "user_id": "cdc318ab-a3b1-44f3-94e8-9242ddd1210b",
+      "reference_code": "ZE08781",
+      "type": "buy_aud",
+      "amount_aud": 501,
+      "equivalent_toman": 89178000,
+      "applied_rate": 178000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-10-03T22:26:17.21539+00:00",
+      "approved_at": "2026-10-04T07:20:48.7636+00:00",
+      "reason_for_transfer": "Support Family",
+      "profiles": {
+        "last_name": "Zandi zadeh",
+        "first_name": "Hamideh"
+      },
+      "recipients": {
+        "label": "Nahid Zandi Zadeh Esfahani — Bank Iran",
+        "full_name": "Nahid Zandi Zadeh Esfahani",
+        "account_name": null
+      }
+    },
+    {
+      "id": "cc6c74c4-14ce-4a8c-83c2-6b5c8fe8e23e",
+      "user_id": "4b379b34-e977-48c2-ba01-f1e5bc14e0e1",
+      "reference_code": "ZE12365",
+      "type": "sell_aud",
+      "amount_aud": 160000,
+      "equivalent_toman": 26453000,
+      "applied_rate": 161004.26,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-27T07:20:58.864424+00:00",
+      "approved_at": "2026-09-28T00:09:55.796+00:00",
+      "reason_for_transfer": "Education expenses",
+      "profiles": {
+        "last_name": "Khodadadzadeh",
+        "first_name": "Fatemeh"
+      },
+      "recipients": null
+    },
+    {
+      "id": "840aafc4-6850-44c7-9430-4ea3c605f490",
+      "user_id": "0ec35b4c-992b-428f-84ea-4f0d17b972e8",
+      "reference_code": "ZE16124",
+      "type": "sell_aud",
+      "amount_aud": 587,
+      "equivalent_toman": 95681000,
+      "applied_rate": 163000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-20T10:23:20.908792+00:00",
+      "approved_at": "2026-09-21T00:34:08.296+00:00",
+      "reason_for_transfer": "International Payment",
+      "profiles": {
+        "last_name": "Badali",
+        "first_name": "Ahmadreza"
+      },
+      "recipients": null
+    },
+    {
+      "id": "a3e3b7cd-134f-4eec-a655-bf6cc78b1613",
+      "user_id": "4b379b34-e977-48c2-ba01-f1e5bc14e0e1",
+      "reference_code": "ZE32449",
+      "type": "sell_aud",
+      "amount_aud": 325,
+      "equivalent_toman": 53935000,
+      "applied_rate": 161000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-27T10:59:30.919271+00:00",
+      "approved_at": "2026-10-02T08:35:18.11+00:00",
+      "reason_for_transfer": "Education expenses",
+      "profiles": {
+        "last_name": "Khodadadzadeh",
+        "first_name": "Fatemeh"
+      },
+      "recipients": null
+    },
+    {
+      "id": "e72ad367-b055-46d8-b62d-d6a5f01b99fb",
+      "user_id": "4b379b34-e977-48c2-ba01-f1e5bc14e0e1",
+      "reference_code": "ZE43751",
+      "type": "sell_aud",
+      "amount_aud": 55,
+      "equivalent_toman": 10497500,
+      "applied_rate": 161500,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-26T04:10:06.868488+00:00",
+      "approved_at": "2026-09-27T11:22:04.781+00:00",
+      "reason_for_transfer": "International Payment",
+      "profiles": {
+        "last_name": "Khodadadzadeh",
+        "first_name": "Fatemeh"
+      },
+      "recipients": null
+    },
+    {
+      "id": "5bf52aa0-b8a8-4d3e-b439-f0fb0ab20d25",
+      "user_id": "48c9b1a2-1e46-4da7-8f7e-b60c7881abd0",
+      "reference_code": "ZE46874",
+      "type": "sell_aud",
+      "amount_aud": 756.19,
+      "equivalent_toman": 122502780,
+      "applied_rate": 162000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-24T04:06:21.534748+00:00",
+      "approved_at": "2026-09-24T04:42:03.328+00:00",
+      "reason_for_transfer": "International Payment",
+      "profiles": {
+        "last_name": "Baharfar",
+        "first_name": "Yasser"
+      },
+      "recipients": null
+    },
+    {
+      "id": "ea553c94-73a3-4dfa-b426-e6473c8da7db",
+      "user_id": "0ec35b4c-992b-428f-84ea-4f0d17b972e8",
+      "reference_code": "ZE49151",
+      "type": "sell_aud",
+      "amount_aud": 587,
+      "equivalent_toman": 95094000,
+      "applied_rate": 162000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-20T06:50:33.065684+00:00",
+      "approved_at": "2026-09-20T09:53:00.137+00:00",
+      "reason_for_transfer": "International Payment",
+      "profiles": {
+        "last_name": "Badali",
+        "first_name": "Ahmadreza"
+      },
+      "recipients": null
+    },
+    {
+      "id": "5a451880-f6ee-4ad0-8609-9f5ac9fb808e",
+      "user_id": "7731f9cb-3291-4061-8286-b93ae8468d61",
+      "reference_code": "ZE70018",
+      "type": "buy_aud",
+      "amount_aud": 700,
+      "equivalent_toman": 106400000,
+      "applied_rate": 152000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-24T10:38:55.961621+00:00",
+      "approved_at": "2026-09-25T11:31:50.707+00:00",
+      "reason_for_transfer": "Support Family",
+      "profiles": {
+        "last_name": "Sahebgharani",
+        "first_name": "Arash"
+      },
+      "recipients": {
+        "label": "Sareh Rastegari Eghlidi — Bank Iran",
+        "full_name": "Sareh Rastegari Eghlidi",
+        "account_name": null
+      }
+    },
+    {
+      "id": "b2c45ccd-06ce-4219-b29d-2b69f4d1a9c6",
+      "user_id": "60827dcf-d35f-44a1-b44b-6af4ee59e186",
+      "reference_code": "ZE75405",
+      "type": "buy_aud",
+      "amount_aud": 1254,
+      "equivalent_toman": 200640000,
+      "applied_rate": 160000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-30T10:51:22.342027+00:00",
+      "approved_at": "2026-10-01T07:41:04.018+00:00",
+      "reason_for_transfer": "Education expenses",
+      "profiles": {
+        "last_name": "Talebi Boroujeni",
+        "first_name": "PARHAM"
+      },
+      "recipients": {
+        "label": "حساب شخصی من در کشور مقصد — Refah Bank",
+        "full_name": "Parham Talebi Boroujeni",
+        "account_name": null
+      }
+    },
+    {
+      "id": "63736529-4f25-4419-8af3-7046a450ea5d",
+      "user_id": "31c6e735-5b3e-483b-9282-7e6e9f4d0698",
+      "reference_code": "ZE92705",
+      "type": "sell_aud",
+      "amount_aud": 160,
+      "equivalent_toman": 27370000,
+      "applied_rate": 161000,
+      "ledger_fee_aud": 0,
+      "status": "approved",
+      "created_at": "2026-09-26T10:39:23.445529+00:00",
+      "approved_at": "2026-09-27T05:25:53.381+00:00",
+      "reason_for_transfer": "Education expenses",
+      "profiles": {
+        "last_name": "Soltanpoor",
+        "first_name": "Pardis"
+      },
+      "recipients": null
+    }
+  ],
+  "ledger": [
+    {
+      "id": "3ba8f8a0-639f-4c6e-9914-352f92abad5f",
+      "transaction_id": "ea553c94-73a3-4dfa-b426-e6473c8da7db",
+      "date_gregorian": "2026-09-20",
+      "amount_aud": 587,
+      "amount_toman": 95094000,
+      "exchange_rate": 162000,
+      "fee_aud": 0,
+      "sender": "Ahmadreza Badali",
+      "recipient": "Payment Link",
+      "notes": null,
+      "payer_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9",
+      "receiver_account_id": "8b29e87f-9823-4145-9e41-9df246329dce"
+    },
+    {
+      "id": "24eaeb6d-af03-4a4d-9688-89e661c01f8d",
+      "transaction_id": "840aafc4-6850-44c7-9430-4ea3c605f490",
+      "date_gregorian": "2026-09-20",
+      "amount_aud": 587,
+      "amount_toman": 95681000,
+      "exchange_rate": 163000,
+      "fee_aud": 0,
+      "sender": "Ahmadreza Badali",
+      "recipient": "Payment Link",
+      "notes": null,
+      "payer_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9",
+      "receiver_account_id": "8b29e87f-9823-4145-9e41-9df246329dce"
+    },
+    {
+      "id": "87cfbed3-aaad-4a5f-a19d-7bb15a078823",
+      "transaction_id": "5bf52aa0-b8a8-4d3e-b439-f0fb0ab20d25",
+      "date_gregorian": "2026-09-24",
+      "amount_aud": 756.19,
+      "amount_toman": 122502780,
+      "exchange_rate": 162000,
+      "fee_aud": 0,
+      "sender": "Yasser Baharfar",
+      "recipient": "Payment Link",
+      "notes": null,
+      "payer_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9",
+      "receiver_account_id": "8b29e87f-9823-4145-9e41-9df246329dce"
+    },
+    {
+      "id": "1496cf86-904b-4ff7-a441-7ee3f17bf4c2",
+      "transaction_id": "63736529-4f25-4419-8af3-7046a450ea5d",
+      "date_gregorian": "2026-09-26",
+      "amount_aud": 160,
+      "amount_toman": 27370000,
+      "exchange_rate": 161000,
+      "fee_aud": 10,
+      "sender": "Pardis Soltanpoor",
+      "recipient": "Payment Link",
+      "notes": null,
+      "payer_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9",
+      "receiver_account_id": "8b29e87f-9823-4145-9e41-9df246329dce"
+    },
+    {
+      "id": "bafbdabb-7008-41ba-86b6-e8f3fecb6ecf",
+      "transaction_id": "e72ad367-b055-46d8-b62d-d6a5f01b99fb",
+      "date_gregorian": "2026-09-26",
+      "amount_aud": 55,
+      "amount_toman": 10497500,
+      "exchange_rate": 161500,
+      "fee_aud": 10,
+      "sender": "Fatemeh Khodadadzadeh",
+      "recipient": "Payment Link",
+      "notes": null,
+      "payer_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9",
+      "receiver_account_id": "8b29e87f-9823-4145-9e41-9df246329dce"
+    },
+    {
+      "id": "491a8d7f-381c-4927-b278-effb7bfc1915",
+      "transaction_id": "cc6c74c4-14ce-4a8c-83c2-6b5c8fe8e23e",
+      "date_gregorian": "2026-09-27",
+      "amount_aud": 160,
+      "amount_toman": 26453000,
+      "exchange_rate": 155605.9,
+      "fee_aud": 10,
+      "sender": "Fatemeh Khodadadzadeh",
+      "recipient": "Payment Link",
+      "notes": "[BLU-RECON-20261005:link-fatemeh] اصلاح نقدی جداگانه 1feb1bc3-0575-4931-b600-bc95ca547d4f؛ اصلاح وجه وصولی بلو: واریز جهانداری در 1405/07/05، transaction!D45، برابر 26,435,000 تومان است؛ دفتر 26,453,000 ثبت کرده بود. برگشت 18,000 از موجودی؛ قرارداد مشتری تغییر نکرده است.",
+      "payer_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9",
+      "receiver_account_id": "8b29e87f-9823-4145-9e41-9df246329dce"
+    },
+    {
+      "id": "3dad0403-0fb6-4fff-8e4e-b131c25be476",
+      "transaction_id": "81a7a74b-b29e-4103-b101-a3da70feabd6",
+      "date_gregorian": "2026-09-30",
+      "amount_aud": 1000,
+      "amount_toman": 171000000,
+      "exchange_rate": 171000,
+      "fee_aud": 0,
+      "sender": "Hamta Yaghmaei",
+      "recipient": "Hamta Yaghmaei",
+      "notes": null,
+      "payer_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9",
+      "receiver_account_id": "8b29e87f-9823-4145-9e41-9df246329dce"
+    },
+    {
+      "id": "49dc9da0-3411-41b9-acd7-30226b7cdf3b",
+      "transaction_id": "b2c45ccd-06ce-4219-b29d-2b69f4d1a9c6",
+      "date_gregorian": "2026-09-30",
+      "amount_aud": 1284,
+      "amount_toman": 200640000,
+      "exchange_rate": 160000,
+      "fee_aud": 30,
+      "sender": "PARHAM Talebi Boroujeni",
+      "recipient": "Parham Talebi Boroujeni",
+      "notes": null,
+      "payer_account_id": "8b29e87f-9823-4145-9e41-9df246329dce",
+      "receiver_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9"
+    },
+    {
+      "id": "21404d9e-a701-4b93-b036-80e9925dd3da",
+      "transaction_id": "a3e3b7cd-134f-4eec-a655-bf6cc78b1613",
+      "date_gregorian": "2026-09-27",
+      "amount_aud": 325,
+      "amount_toman": 53935000,
+      "exchange_rate": 161000,
+      "fee_aud": 10,
+      "sender": "Fatemeh Khodadadzadeh",
+      "recipient": "Payment Link",
+      "notes": null,
+      "payer_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9",
+      "receiver_account_id": "8b29e87f-9823-4145-9e41-9df246329dce"
+    },
+    {
+      "id": "92c83d64-2362-49c3-beb7-7530715a6624",
+      "transaction_id": "9af8e1e5-874c-4576-8b7a-e9febbea694a",
+      "date_gregorian": "2026-10-04",
+      "amount_aud": 501,
+      "amount_toman": 89178000,
+      "exchange_rate": 178000,
+      "fee_aud": 0,
+      "sender": "Hamideh Zandi zadeh",
+      "recipient": "Nahid Zandi Zadeh Esfahani",
+      "notes": null,
+      "payer_account_id": "e1dbb339-f40d-466a-9c1f-11f20f846c64",
+      "receiver_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9"
+    },
+    {
+      "id": "1dde5af7-196f-49c9-9e61-9ca992fdafff",
+      "transaction_id": "df545e71-b894-4f0a-83ca-b3f790d44fd7",
+      "date_gregorian": "2026-10-04",
+      "amount_aud": 1000,
+      "amount_toman": 185000000,
+      "exchange_rate": 185000,
+      "fee_aud": 0,
+      "sender": "Nahid Kheirabadi",
+      "recipient": "pourya seydabadi",
+      "notes": null,
+      "payer_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9",
+      "receiver_account_id": "8b29e87f-9823-4145-9e41-9df246329dce"
+    },
+    {
+      "id": "abaa45af-128b-4fcc-b109-67059a614a58",
+      "transaction_id": "5a451880-f6ee-4ad0-8609-9f5ac9fb808e",
+      "date_gregorian": "2026-09-24",
+      "amount_aud": 700,
+      "amount_toman": 106400000,
+      "exchange_rate": 152000,
+      "fee_aud": 0,
+      "sender": "Arash Sahebgharani",
+      "recipient": "Sareh Rastegari Eghlidi",
+      "notes": "[BLU-RECON-20261005:link-arash] اصلاح نقدی جداگانه 42418726-1fc7-42fd-9e6b-7ba91e55ffe3؛ اصلاح تسویه واقعی بلوبانک: برداشت 107,100,000 تومان در 1405/07/03، transaction!C56، در برابر 106,400,000 ثبت قبلی. مبلغ اضافی خروج وجه 700,000؛ قرارداد، نرخ و کارمزد اصلی مشتری بازنویسی نشده‌اند.",
+      "payer_account_id": "8b29e87f-9823-4145-9e41-9df246329dce",
+      "receiver_account_id": "a60ca17c-47ad-41da-a370-88ad222968d9"
+    }
+  ],
+  "related_transactions": [
+    {
+      "id": "77b078c2-5340-4a8d-9782-8032d0a6a447",
+      "reference_code": "ZE23036",
+      "type": "buy_aud",
+      "amount_aud": 600,
+      "status": "approved",
+      "created_at": "2026-09-16T10:12:08.166936+00:00",
+      "approved_at": "2026-09-16T23:19:50.72+00:00"
+    },
+    {
+      "id": "f21b8a77-2f5e-45c1-abe6-c2d0541e1257",
+      "reference_code": "ZE72572",
+      "type": "buy_aud",
+      "amount_aud": 800,
+      "status": "approved",
+      "created_at": "2026-09-16T10:13:24.570578+00:00",
+      "approved_at": "2026-09-16T23:20:11.178+00:00"
+    },
+    {
+      "id": "5a451880-f6ee-4ad0-8609-9f5ac9fb808e",
+      "reference_code": "ZE70018",
+      "type": "buy_aud",
+      "amount_aud": 700,
+      "status": "approved",
+      "created_at": "2026-09-24T10:38:55.961621+00:00",
+      "approved_at": "2026-09-25T11:31:50.707+00:00"
+    },
+    {
+      "id": "08d3106f-3f70-4d9b-974a-915afb159c15",
+      "reference_code": "ZE85185",
+      "type": "buy_aud",
+      "amount_aud": 600,
+      "status": "approved",
+      "created_at": "2026-08-18T10:32:59.623486+00:00",
+      "approved_at": "2026-08-18T12:05:56.516+00:00"
+    },
+    {
+      "id": "5ddf2013-e4b7-4430-86c7-8851712de29e",
+      "reference_code": "ZE05564",
+      "type": "buy_aud",
+      "amount_aud": 600,
+      "status": "approved",
+      "created_at": "2026-08-18T11:04:51.703205+00:00",
+      "approved_at": "2026-08-18T12:06:34.912+00:00"
+    }
+  ]
+}

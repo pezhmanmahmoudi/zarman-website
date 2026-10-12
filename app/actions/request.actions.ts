@@ -388,7 +388,11 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
     ? await db.rpc("confirm_exchange_request_funds", args)
     : admin && input.action === "finalize_funds" ? await db.rpc("finalize_exchange_request_funds", args)
     : admin && input.action === "correct_funds" ? await db.rpc("correct_exchange_request_funds", args)
+    : admin && input.action === "reopen" ? await db.rpc("reopen_exchange_request", args)
     : await db.rpc("transition_exchange_request", { ...args, p_action: input.action });
+  if (admin && input.action === "reopen" && error?.code === "PGRST202") {
+    throw new Error("The request was not reopened. The database update for reopening requests has not been installed yet.");
+  }
   if (admin && input.action === "finalize_funds" && ["PGRST202", "42703", "42P01", "42883"].includes(error?.code || "")) {
     // Missing prerequisites roll back the whole RPC; never suggest retrying a
     // deposit as a workaround, and never include customer data in diagnostics.

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Download, ExternalLink, X } from "lucide-react";
+import { ArrowRight, Download, ExternalLink, FileText, MoreHorizontal, RotateCcw, X } from "lucide-react";
 import { AdminRecordDrawer } from "@/components/admin/ui/AdminRecordDrawer";
 import { AdminBadge, AdminDataTable, AdminTableRow, AdminTableCell, AdminTableIdentity, AdminTableDate } from "@/components/admin/ui/AdminDataTable";
 import { TransactionApproveButton } from "@/components/admin/TransactionApproveButton";
@@ -11,7 +11,7 @@ import { EditableReferenceCode } from "@/components/admin/EditableReferenceCode"
 import { EditableAmount } from "@/components/admin/EditableAmount";
 import { isRequestTerminal, requestDate, requestMoney, requestRate } from "@/components/requests/request-labels";
 import { calcExecutionRateFromSettlement } from "@/lib/pricing";
-import { transactionQueueState, transactionRequest, transactionRequestHref } from "@/lib/admin-transaction-workspace";
+import { transactionActionPresentation, transactionQueueState, transactionRequest, transactionRequestHref, type TransactionActionPresentation } from "@/lib/admin-transaction-workspace";
 import type { BankAccountOption, TransactionRow } from "./TransactionsManager";
 import styles from "@/styles/admin/AdminWorkspace.module.css";
 
@@ -58,6 +58,14 @@ function TransferStatus({ row }: { row: TransactionRow }) {
   return <AdminBadge tone={tone}>{state.label}</AdminBadge>;
 }
 
+function TransferActionContent({ action }: { action: TransactionActionPresentation }) {
+  return <>
+    <span className={styles.transferStep} aria-hidden="true">{action.step ?? (action.tone === "refund" ? <RotateCcw size={13} /> : <FileText size={13} />)}</span>
+    <span className={styles.transferActionLabel}>{action.label}</span>
+    <ArrowRight size={13} className={styles.transferActionArrow} aria-hidden="true" />
+  </>;
+}
+
 function RecipientDetails({ row }: { row: TransactionRow }) {
   const request = transactionRequest(row);
   const recipient = request?.quote.recipient_snapshot ?? row.recipients;
@@ -82,13 +90,18 @@ function RecipientDetails({ row }: { row: TransactionRow }) {
 }
 
 function TransactionDetails({ row, bankAccounts, onClose }: { row: TransactionRow; bankAccounts: BankAccountOption[]; onClose: () => void }) {
-  const { request, name, reference, requestHref, state, funding, fundingCurrency, recipientAmount, recipientCurrency } = recordPresentation(row);
+  const { request, name, reference, requestHref, funding, fundingCurrency, recipientAmount, recipientCurrency } = recordPresentation(row);
+  const action = transactionActionPresentation(row);
   const email = request?.quote.sender_snapshot?.email || row.profiles?.email;
   return <AdminRecordDrawer title={name} subtitle={<bdi>{reference}</bdi>} eyebrow="Transaction details" onClose={onClose}
-    footer={(requestHref || row.status === "pending") && <>
-      {requestHref ? <Link className={`${styles.action} ${styles.primaryAction}`} href={requestHref}>{state.next}</Link>
+    footer={(requestHref || row.status === "pending" || row.status === "approved") && <div className={styles.transferDrawerActions}>
+      {requestHref ? <Link className={`${styles.action} ${styles.transferAction}`} data-step={action.step ?? undefined} data-tone={action.tone}
+        aria-label={`${action.step ? `Step ${action.step}: ` : ""}${action.label}`} href={requestHref}><TransferActionContent action={action} /></Link>
+        : row.status === "approved" ? <RejectApprovedButton transactionId={row.id} />
         : <TransactionApproveButton transactionId={row.id} transactionAmountToman={Number(row.equivalent_toman)} transactionType={row.type} bankAccounts={bankAccounts} />}
-    </>}>
+      {request && requestHref && !isRequestTerminal(request.status) && !["processing", "reconciliation"].includes(request.status)
+        && <Link className={`${styles.action} ${styles.rejectAction}`} href={`${requestHref}?intent=reject`}><X size={14} aria-hidden="true" />Reject request</Link>}
+    </div>}>
       <div className={styles.detailStatus}><TransferStatus row={row} /><time dateTime={row.created_at}>{requestDate(row.created_at, "en")} · Sydney</time></div>
       <section className={styles.detailSection} aria-label="Transfer amounts">
         <dl className={styles.amountSummary}>
@@ -137,9 +150,11 @@ export function TransactionTable({ rows, isPending, bankAccounts, selectedIds = 
       { key: "customer", label: "Customer" }, { key: "type", label: "Customer trade" }, { key: "rate", label: "Rate / AUD", align: "end" }, { key: "pays", label: "Customer pays", align: "end" },
       { key: "gets", label: "Recipient gets", align: "end" }, { key: "status", label: "Status" },
       { key: "date", label: <>{isPending ? "Due / created" : "Created"}<span className={styles.timeZone}>Sydney time</span></> },
-      { key: "actions", label: "Actions" },
+      { key: "actions", label: isPending ? "Next step" : "Actions" },
     ]}>{rows.map(row => {
-          const { request, state, reference, name, requestHref, fundingCurrency, recipientCurrency, funding, recipientAmount, rate } = recordPresentation(row);
+          const { request, reference, name, requestHref, fundingCurrency, recipientCurrency, funding, recipientAmount, rate } = recordPresentation(row);
+          const action = transactionActionPresentation(row);
+          const actionDescription = `${action.step ? `Step ${action.step}: ` : ""}${action.label} · ${reference}`;
           const id = String(row.id);
           const selectable = !isPending && rowAction(row) !== null && (!selectionAction || rowAction(row) === selectionAction)
             && (rowAction(row) !== "export" || !selectedExportType || row.type === selectedExportType);
@@ -154,12 +169,12 @@ export function TransactionTable({ rows, isPending, bankAccounts, selectedIds = 
             <AdminTableCell label="Status"><TransferStatus row={row} />{request?.funding_status === "partial" && <span className={styles.detail}>{requestMoney(request.funding_received, fundingCurrency, "en")} received</span>}</AdminTableCell>
             <AdminTableCell label="Sydney time"><AdminTableDate value={due || row.created_at} time prefix={due ? "Due " : ""} /></AdminTableCell>
             <AdminTableCell kind="actions">
-              {requestHref && <Link className={`${styles.action} ${styles.transferAction}`} href={requestHref}>{state.next}</Link>}
-              {!request && <button type="button" className={`${styles.action} ${styles.transferAction}`} aria-label={`View details for ${reference}`} aria-haspopup="dialog" onClick={() => setOpenRowId(id)}>{row.status === "pending" ? "Review transaction" : "Details"}</button>}
-              {!request && row.status === "approved" && <RejectApprovedButton transactionId={row.id} />}
-              {request && requestHref && <>
-                {!isRequestTerminal(request.status) && !["processing", "reconciliation"].includes(request.status) && <Link className={`${styles.action} ${styles.rejectAction}`} href={`${requestHref}?intent=reject`}><X size={14} aria-hidden="true" />Reject</Link>}
-              </>}
+              {requestHref && <Link className={`${styles.action} ${styles.transferAction}`} data-step={action.step ?? undefined} data-tone={action.tone}
+                aria-label={actionDescription} title={actionDescription} href={requestHref}><TransferActionContent action={action} /></Link>}
+              {!request && <button type="button" className={`${styles.action} ${styles.transferAction}`} data-step={action.step ?? undefined} data-tone={action.tone}
+                aria-label={actionDescription} title={actionDescription} aria-haspopup="dialog" onClick={() => setOpenRowId(id)}><TransferActionContent action={action} /></button>}
+              {request && <button type="button" className={styles.transferMore} aria-label={`Details and more actions for ${reference}`} title="Details & more actions"
+                aria-haspopup="dialog" onClick={() => setOpenRowId(id)}><MoreHorizontal size={17} aria-hidden="true" /></button>}
             </AdminTableCell>
           </AdminTableRow>;
         })}</AdminDataTable>

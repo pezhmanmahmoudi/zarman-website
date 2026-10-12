@@ -107,6 +107,58 @@ const request = {
   },
 };
 const markup = element => renderToStaticMarkup(element);
+
+test("reopen: rejected requests expose a reasoned admin action and immediately return to approval", async () => {
+  for (const paymentApproved of [false, true]) {
+    let detail = { request: { ...request, status: "rejected", payment_approved_at: paymentApproved ? request.payment_approved_at : null },
+      events: [], receipts: [], messages: [] };
+    const calls = [];
+    const h = load("components/requests/RequestDetailView.tsx", { states: { 0: detail, 1: false }, actions: {
+      mutateAdminRequest: async input => {
+        calls.push(input);
+        detail = { ...detail, request: { ...detail.request, status: "under_review", version: detail.request.version + 1 } };
+        return { data: detail.request };
+      },
+      getAdminRequest: async () => ({ data: detail }),
+    } });
+    const props = { id: request.id, admin: true, locale: "en" };
+    let tree = h.rerender("RequestDetailView", props);
+    assert.match(markup(tree), /Reason for reopening \(internal note\)/);
+    assert.equal(textOf(elements(tree, n => n.type === "button" && n.props.type === "submit")[0]), "Reopen request");
+    await elements(tree, n => n.type === "form")[0].props.onSubmit({ preventDefault() {} });
+    assert.equal(calls.length, 0);
+    requiredField(tree, "request-action-message").props.onChange({ target: { value: "Rejected by mistake" } });
+    requiredField(tree, "request-confirmation").props.onChange({ target: { checked: true } });
+    const email = elements(tree, n => n.type === "label" && /Send email to customer/.test(textOf(n)))[0];
+    elements(email, n => n.type === "input")[0].props.onChange({ target: { checked: false } });
+    tree = h.rerender("RequestDetailView", props);
+    await elements(tree, n => n.type === "form")[0].props.onSubmit({ preventDefault() {} });
+    assert.equal(calls.length, 1); assert.equal(calls[0].action, "reopen");
+    assert.equal(calls[0].payload.message, "Rejected by mistake"); assert.equal(calls[0].sendEmail, false);
+    assert.equal(calls[0].expectedVersion, request.version); assert.ok(calls[0].commandKey);
+    tree = h.rerender("RequestDetailView", props);
+    assert.match(markup(tree), paymentApproved ? /Verify incoming payment/ : /Request approval/);
+    assert.equal(elements(tree, n => n.type === "button" && textOf(n) === "Reopen request").length, 0);
+  }
+});
+
+test("reopen: customers and requests with financial activity never receive the action", () => {
+  const rejected = { ...request, status: "rejected" };
+  const cases = [
+    { request: rejected, admin: false },
+    ...["completed", "cancelled", "expired", "processing", "reconciliation"].map(status => ({ request: { ...rejected, status }, admin: true })),
+    ...["partial", "confirmed", "refund_pending", "refunded"].map(funding_status => ({ request: { ...rejected, funding_status }, admin: true })),
+    { request: { ...rejected, funding_received: 1 }, admin: true },
+    { request: { ...rejected, priority_fee_status: "paid" }, admin: true },
+    { request: rejected, admin: true, payments: [{ id: "recorded", amount: 1, currency: "AUD", payment_reference: "TEST-REFERENCE", created_at: request.created_at }] },
+  ];
+  for (const { request: item, admin, payments = [] } of cases) {
+    const h = load("components/requests/RequestDetailView.tsx", { states: { 0: { request: item, events: [], receipts: [], messages: [], payments }, 1: false } });
+    const html = markup(h.rerender("RequestDetailView", { id: request.id, admin, locale: "en" }));
+    assert.doesNotMatch(html, /Reopen request|Reason for reopening/);
+  }
+});
+
 test("final amounts: summary is read only and the original payment layout keeps every field visible", () => {
   const h = load("components/requests/RequestDetailView.tsx", { states: { 0: { request, events: [], receipts: [], messages: [] }, 1: false } });
   const tree = h.rerender("RequestDetailView", { id: request.id, admin: true, locale: "en" });

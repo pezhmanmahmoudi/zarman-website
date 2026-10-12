@@ -31,6 +31,7 @@ import workspace from "@/styles/requests/RequestWorkspace.module.css";
 import customer from "@/styles/requests/RequestCustomerDetail.module.css";
 
 const commandLabels: Record<RequestCommand, [string, string]> = {
+  reopen: ["Reopen request", "بازگشایی درخواست"],
   review: ["Start review", "شروع بررسی"], request_info: ["Request information", "درخواست اطلاعات"], respond: ["Send response", "ارسال پاسخ"],
   await_funds: ["Approve request", "تأیید درخواست"], confirm_funds: ["Confirm funds received", "تأیید دریافت وجه"],
   correct_funds: ["Save correction & continue", "ثبت اصلاح و ادامه"],
@@ -46,6 +47,9 @@ function allowedCommands(request: ExchangeRequest, admin: boolean, hasPayments =
   const hasPrincipalRefund = ["refund_pending", "refunded"].includes(request.funding_status);
   const hasRefund = hasPrincipalRefund || ["refund_pending", "refunded"].includes(request.priority_fee_status);
   if (admin) {
+    if (request.status === "rejected" && !hasPayments && request.funding_status === "unpaid"
+      && Number(request.funding_received) === 0 && !request.funds_confirmed_at && !request.ready_at && !request.handling_started_at
+      && ["unpaid", "not_applicable"].includes(request.priority_fee_status)) commands.push("reopen");
     if (["submitted", "under_review", "awaiting_funds", "action_required", "ready"].includes(request.status)) commands.push("request_info");
     if (!request.pricing_pending_acceptance && !hasRefund && !hasPayments && request.funding_status === "unpaid" && Number(request.funding_received) === 0 && ["submitted", "under_review", "action_required"].includes(request.status)) commands.push("await_funds");
     if ((request.payment_approved_at || request.pricing_pending_acceptance) && !hasRefund
@@ -65,6 +69,7 @@ function allowedCommands(request: ExchangeRequest, admin: boolean, hasPayments =
 }
 
 function recommendedCommand(request: ExchangeRequest, commands: RequestCommand[]): RequestCommand | undefined {
+  if (commands.includes("reopen")) return "reopen";
   if (commands.includes("confirm_refund")) return "confirm_refund";
   if (commands.includes("finalize_funds") && request.status !== "ready") return "finalize_funds";
   if (getRequestJourney(request).customerActionRequired) return undefined;
@@ -290,6 +295,8 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
         } else if (submittedAction === "finalize_funds") {
           setSavedDeposit({ requestId: updated.id, amount: Number(payload.final_funding_total), currency: updated.quote.funding_currency, version: updated.version });
           setNotice(fa ? "مبالغ نهایی جایگزین شد. درخواست آمادهٔ تسویه است." : "Final amounts saved. Ready for destination settlement.");
+        } else if (submittedAction === "reopen") {
+          setNotice(fa ? "درخواست بازگشایی شد و آمادهٔ بررسی و تأیید است." : "Request reopened. Continue with review and approval.");
         } else setNotice(fa ? "تغییرات ثبت شد." : "Update saved.");
         if (admin && sendEmail) setNotice(saved => `${saved} ${fa ? "ارسال ایمیل در پس‌زمینه ادامه دارد؛ برای دیدن آخرین وضعیت در سابقه ایمیل، روی «به‌روزرسانی» بزنید." : "Email delivery continues in the background. Click Refresh to update its status in Activity & email history."}`);
         // The committed response already supplies the new version and next step.
@@ -331,7 +338,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
   const activeRefundKind = refundKind === "priority" && request?.priority_fee_status !== "refund_pending" ? "principal" : refundKind;
   const journey = request ? getRequestJourney(request) : null;
   const milestones = request ? requestMilestones(request, detail?.events || []) : [];
-  const messageRequired = ["request_info", "respond", "cancel", "reject", "record_uncertain_payout"].includes(currentAction);
+  const messageRequired = ["request_info", "respond", "cancel", "reject", "reopen", "record_uncertain_payout"].includes(currentAction);
   const accountsFor = (currency: "AUD" | "IRT") => sortBankAccountsByPriority(accounts
     .filter(account => account.currency.toUpperCase() === currency || (currency === "IRT" && account.currency.toLowerCase() === "toman"))
     .map(account => ({ ...account, currency })));
@@ -387,6 +394,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
     {currentAction && <form onSubmit={submit} className={workspace.actionForm} noValidate>
       <fieldset disabled={busy} className={workspace.fieldset}>
         <div className={workspace.actionHeading}>{admin && <span className={workspace.kicker}>Next step</span>}<h2>{actionTitle}</h2></div>
+        {currentAction === "reopen" && <p className={workspace.actionNote}>{fa ? "درخواست با همان مبالغ، نرخ و رسیدها به مرحلهٔ بررسی برمی‌گردد. سپس می‌توانید تأیید درخواست و بررسی پرداخت را ادامه دهید." : "Return this request to review with its existing amounts, rate and receipts. You can then continue approval and payment verification."}</p>}
         {currentAction === "await_funds" && <div className={workspace.approvalSummary}><span>{request.quote.sender_snapshot.name}</span><strong>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}<ArrowRight size={16} />{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</strong></div>}
         {currentAction === "finalize_funds" && <>
           <div className={workspace.paymentDirection}><div><span>Incoming from customer</span><strong><bdi>{requestMoney(request.quote.funding_total, expectedCurrency, locale)}</bdi></strong></div><div><span>Outgoing to recipient</span><bdi>{requestMoney(request.quote.recipient_amount, request.quote.recipient_currency, locale)}</bdi></div></div>
@@ -428,9 +436,9 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
           <label className={styles.field}>Return reference *<input id="request-refund-reference" required value={refundReference} onChange={event => setRefundReference(event.target.value)} maxLength={200} {...fieldValidation("refund-reference")} /></label>
           {accountSelect("refund-account", "Account debited", refundAccount, setRefundAccount, request.quote.funding_currency)}
         </>}
-        {messageRequired && <label className={styles.field}>{currentAction === "record_uncertain_payout" ? "Internal reconciliation note" : admin ? "Message to customer" : (fa ? "دلیل" : "Reason")} *<textarea id="request-action-message" value={message} onChange={event => setMessage(event.target.value)} required minLength={3} maxLength={2000} rows={2} dir="auto" {...fieldValidation("action-message")} /></label>}
-        {admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} /><Mail size={16} aria-hidden="true" /><span>{fa ? "ارسال ایمیل به مشتری" : "Send email to customer"}</span></label>}
-        <label className={`${styles.checkbox} ${workspace.confirmChoice}`}><input id="request-confirmation" type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required {...fieldValidation("confirmation")} /><span>{currentAction === "finalize_funds" ? (fa ? "پرداخت مشتری و مبالغ نهایی را بررسی و تأیید می‌کنم." : "I verified the customer payment and approve these final amounts.") : currentAction === "cancel" ? (fa ? "لغو را تأیید می‌کنم؛ بازپرداخت جداگانه پیگیری می‌شود." : "Confirm cancellation; any refund is tracked separately.") : currentAction === "confirm_funds" ? `I verified cleared funds in the bank account: the entered amount and ${currencyLabel(fundingCurrency)} currency.` : ["complete", "reconcile_complete"].includes(currentAction) ? "I verified the destination account, amount and successful settlement." : currentAction === "confirm_refund" ? "I verified the returned funds in the original currency." : (fa ? "اطلاعات را بررسی و تأیید می‌کنم." : "I checked and approve the request details.")} *</span></label>
+        {messageRequired && <label className={styles.field}>{currentAction === "reopen" ? (fa ? "دلیل بازگشایی (یادداشت داخلی)" : "Reason for reopening (internal note)") : currentAction === "record_uncertain_payout" ? "Internal reconciliation note" : admin ? "Message to customer" : (fa ? "دلیل" : "Reason")} *<textarea id="request-action-message" value={message} onChange={event => setMessage(event.target.value)} required minLength={3} maxLength={2000} rows={2} dir="auto" {...fieldValidation("action-message")} /></label>}
+        {admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" style={{ margin: 0, alignSelf: "center" }} checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} /><Mail size={16} style={{ alignSelf: "center" }} aria-hidden="true" /><span>{fa ? "ارسال ایمیل به مشتری" : "Send email to customer"}</span></label>}
+        <label className={`${styles.checkbox} ${workspace.confirmChoice}`}><input id="request-confirmation" type="checkbox" style={{ margin: 0, alignSelf: "center" }} checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required {...fieldValidation("confirmation")} /><span>{currentAction === "reopen" ? (fa ? "بازگشایی این درخواست با همان مبالغ و نرخ را برای ادامهٔ بررسی تأیید می‌کنم." : "I confirm reopening this request at its existing amounts and rate for further review.") : currentAction === "finalize_funds" ? (fa ? "پرداخت مشتری و مبالغ نهایی را بررسی و تأیید می‌کنم." : "I verified the customer payment and approve these final amounts.") : currentAction === "cancel" ? (fa ? "لغو را تأیید می‌کنم؛ بازپرداخت جداگانه پیگیری می‌شود." : "Confirm cancellation; any refund is tracked separately.") : currentAction === "confirm_funds" ? `I verified cleared funds in the bank account: the entered amount and ${currencyLabel(fundingCurrency)} currency.` : ["complete", "reconcile_complete"].includes(currentAction) ? "I verified the destination account, amount and successful settlement." : currentAction === "confirm_refund" ? "I verified the returned funds in the original currency." : (fa ? "اطلاعات را بررسی و تأیید می‌کنم." : "I checked and approve the request details.")} *</span></label>
         {validation && <p id="request-form-feedback" className={workspace.formFeedback} role="alert" tabIndex={-1}>{validation.message}</p>}
         <div className={styles.actions}><button className={["cancel", "reject"].includes(currentAction) ? styles.danger : styles.button} type="submit" disabled={busy}>{busy ? (fa ? "در حال ثبت…" : "Saving…") : referenceRequired && fundingCurrency !== expectedCurrency ? "Record deposit for review" : actionLabel(currentAction)}</button>{(currentAction !== recommended || separateDeposit) && <button type="button" className={workspace.textButton} onClick={() => { setAction(""); setSeparateDeposit(false); setConfirmed(false); setValidation(null); }}>{fa ? "انصراف" : "Back"}</button>}</div>
       </fieldset>

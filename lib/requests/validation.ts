@@ -103,14 +103,15 @@ export function settingsInputError(input: RequestSettings): string | null {
 export function mutationInputError(input: RequestMutationInput, admin: boolean): string | null {
   if (!input || !isUuid(input.requestId) || !isUuid(input.commandKey) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) return "Invalid request. Refresh the page and try again.";
   const allowed = admin
-    ? ["review", "request_info", "await_funds", "confirm_funds", "correct_funds", "finalize_funds", "resume_funded_request", "start_processing", "record_uncertain_payout", "complete", "reconcile_complete", "cancel", "reject", "confirm_refund"]
+    ? ["review", "reopen", "request_info", "await_funds", "confirm_funds", "correct_funds", "finalize_funds", "resume_funded_request", "start_processing", "record_uncertain_payout", "complete", "reconcile_complete", "cancel", "reject", "confirm_refund"]
     : ["respond", "cancel", "payment_evidence"];
   if (!allowed.includes(input.action)) return "This action is not available.";
   if (admin && typeof input.sendEmail !== "boolean") return "Choose whether to send an email update.";
   if (!admin && input.sendEmail !== undefined) return "Email settings are managed by the team.";
   const payload = input.payload || {};
   if (typeof payload !== "object" || Array.isArray(payload)) return "Invalid action details.";
-  if (["request_info", "respond", "record_uncertain_payout", "reject", "correct_funds"].includes(input.action) && !boundedText(payload.message, 2000)) return "Enter the reason or requested information.";
+  if (["request_info", "respond", "record_uncertain_payout", "reject", "reopen", "correct_funds"].includes(input.action) && !boundedText(payload.message, 2000)) return "Enter the reason or requested information.";
+  if (input.action === "reopen" && (payload.message?.trim().length ?? 0) < 3) return "Enter a reopening reason of at least 3 characters.";
   if (payload.message !== undefined && !boundedText(payload.message, 2000, false)) return "Your message must be at most 2,000 characters.";
   if (input.action === "payment_evidence" && !boundedText(payload.payment_reference, 200)) return "Enter the payment reference.";
   // Admin references are optional; the server records a generated reference when omitted.
