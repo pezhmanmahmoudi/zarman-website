@@ -256,6 +256,41 @@ test("conflict patch changes only business errors, preserving genuine serializat
   await rejected(() => db.query("SELECT test_request_conflict_scope(false)"), { code: "40001" });
 });
 
+test("submission repair: 400 million Toman institution payment succeeds without migration 51", async () => {
+  const signature = "public.submit_exchange_request(uuid,uuid,uuid)";
+  const installed = (await one("SELECT pg_get_functiondef($1::regprocedure) definition", [signature])).definition;
+  // Reproduce the live installation: later migrations exist but the submission
+  // equation and quote trigger from 51 were never installed.
+  const adjusted = "END)*(q->>'applied_rate')::numeric)+COALESCE((q->>'rounding_adjustment_toman')::numeric,0)";
+  const original = "END)*(q->>'applied_rate')::numeric)";
+  assert.ok(installed.includes(adjusted));
+  // Reproduce Windows SQL-editor line endings in both the installed body and
+  // repair script; the old multiline string matcher rejected this combination.
+  await db.exec(installed.replace(adjusted, original).replace(/\r?\n/g, "\r\n"));
+  await db.exec("DROP TRIGGER validate_locked_request_quote ON exchange_request_quotes; DROP FUNCTION validate_locked_request_quote();");
+  const input = { amount: 400000000, rate: 185370, fee: 0, education: true };
+  await rejected(() => submit(input), /Invalid authoritative quote amounts/);
+  const repair = read("supabase/migrations/20261012_58_repair_quote_submission_rounding.APPLY_MANUALLY.sql")
+    .replace(/^BEGIN;\r?$/m, "").replace(/^COMMIT;\r?$/m, "").replace(/\r?\n/g, "\r\n");
+  await db.exec(repair);
+  const r = await submit(input);
+  assert.equal(r.status, "submitted");
+  assert.equal(r.quote.funding_total, 400000000);
+  assert.equal(r.quote.recipient_amount, 2157.85);
+  assert.equal(r.quote.rounding_adjustment_toman, -655);
+  assert.equal(r.quote.invoice_reference, null);
+  const t = await one("SELECT equivalent_toman FROM transactions WHERE id=$1", [r.transaction_id]);
+  assert.equal(Number(t.equivalent_toman), 400000000);
+  // Reapplying the repair must preserve the installed function and request.
+  const repaired = (await one("SELECT pg_get_functiondef($1::regprocedure) definition", [signature])).definition;
+  await db.exec(repair);
+  assert.equal((await one("SELECT pg_get_functiondef($1::regprocedure) definition", [signature])).definition, repaired);
+  const retry = await rpc("SELECT submit_exchange_request($1,$2,$3) AS result", [CUSTOMER, r.quote_id, r.idempotency_key]);
+  assert.equal(retry.id, r.id);
+  const fabricated = { ...r.quote, rounding_adjustment_toman: 50000 };
+  await rejected(() => db.query("INSERT INTO exchange_request_quotes(user_id,snapshot,expires_at) VALUES($1,$2,now()+interval '1 hour')", [CUSTOMER, fabricated]), /Fixed Toman/);
+});
+
 test("870 million Toman remains fixed at the fresh rate, with only the AUD payout changing", async () => {
   const before = calculateQuoteMoney({ currency: "IRT", amount: 870000000, rate: 182100, txType: "buy_aud", config });
   const r = await submit();
