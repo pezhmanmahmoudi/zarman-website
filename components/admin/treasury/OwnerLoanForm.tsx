@@ -17,6 +17,11 @@ type OwnerLoanRow = {
   amount: number;
   exchange_rate?: number | null;
   account_id?: string | null;
+  funding_type?: "equity" | "loan" | null;
+  cash_effect?: boolean;
+  settlement_currency?: "AUD" | "IRT" | null;
+  settlement_amount?: number | null;
+  linked_ledger_id?: string | null;
   loan_type: "injection" | "repayment";
   repayment_status?: "open" | "partially_repaid" | "repaid";
   notes?: string | null;
@@ -34,6 +39,7 @@ const EMPTY = {
   amount: "",
   exchange_rate: "",
   account_id: "", 
+  funding_type: "equity" as "equity" | "loan",
   loan_type: "injection" as "injection" | "repayment",
   repayment_status: "open" as "open" | "partially_repaid" | "repaid",
   notes: "",
@@ -74,6 +80,7 @@ export default function OwnerLoanForm({ loans, bankAccounts, defaultOpen = false
       amount: row.amount != null ? String(row.amount) : "",
       exchange_rate: row.exchange_rate != null ? String(row.exchange_rate) : "",
       account_id: row.account_id || "",
+      funding_type: row.funding_type === "equity" ? "equity" : "loan",
       loan_type: row.loan_type || "injection",
       repayment_status: row.repayment_status || "open",
       notes: row.notes || "",
@@ -93,9 +100,9 @@ export default function OwnerLoanForm({ loans, bankAccounts, defaultOpen = false
     if (!Number.isFinite(amt) || amt <= 0) { setError("مبلغ نامعتبر است."); return; }
 
     let rate: number | null = null;
-    if (form.currency === "AUD") {
+    if (form.currency === "AUD" || form.funding_type === "equity") {
       rate = Number(form.exchange_rate.replace(/,/g, ""));
-      if (!Number.isFinite(rate) || rate <= 0) { setError("نرخ تبدیل برای ارز AUD نامعتبر است."); return; }
+      if (!Number.isFinite(rate) || rate <= 0) { setError("نرخ تاریخی تومان برای هر دلار باید معتبر و بزرگ‌تر از صفر باشد."); return; }
     }
 
     startTransition(async () => {
@@ -105,9 +112,16 @@ export default function OwnerLoanForm({ loans, bankAccounts, defaultOpen = false
         amount: amt,
         exchange_rate: rate,
         account_id: form.account_id,
+        funding_type: form.funding_type,
         loan_type: form.loan_type,
         repayment_status: form.repayment_status,
         notes: form.notes,
+        ...(editingRow ? {
+          cash_effect: editingRow.cash_effect ?? true,
+          settlement_currency: editingRow.settlement_currency ?? null,
+          settlement_amount: editingRow.settlement_amount ?? null,
+          linked_ledger_id: editingRow.linked_ledger_id ?? null,
+        } : {}),
       };
 
       const res = editingId
@@ -129,33 +143,60 @@ export default function OwnerLoanForm({ loans, bankAccounts, defaultOpen = false
 
   const filteredAccounts = bankAccounts.filter(acc => acc.currency === form.currency);
   const isEditMode = Boolean(editingId);
+  const editingRow = loans.find(row => row.id === editingId);
+  const preserveSettlement = editingRow?.cash_effect === false || editingRow?.settlement_currency != null || editingRow?.settlement_amount != null || editingRow?.linked_ledger_id != null;
+  const financialFieldsDisabled = isPending || preserveSettlement;
+  const isEquity = form.funding_type === "equity";
+  const selectableAccounts = preserveSettlement
+    ? bankAccounts.filter(acc => acc.id === form.account_id)
+    : filteredAccounts;
 
   return (
     <details className={s.formDetails} open={defaultOpen}>
       <summary className={s.formSummary}>
         <ChevronDown size={16} className={s.formSummaryChevron} />
-        <span className={s.formSummaryTitle}>بدهی/تسویه با مالک (Owner Loan Liability)</span>
-        <span className={s.formSummaryHint}>ثبت تزریق مالک و بازپرداخت‌ها برای نمایش دقیق بدهی قابل‌پرداخت به مالک.</span>
+        <span className={s.formSummaryTitle}>آورده و وام مالک</span>
+        <span className={s.formSummaryHint}>ثبت جداگانه سرمایه دائمی، برداشت مالک، وام قابل‌بازپرداخت و تسویه وام.</span>
       </summary>
 
       <div className={s.formWrapper}>
         <div className={s.formHeader}>
           {!showForm && (
             <button className={s.btnAddNew} onClick={() => setShowForm(true)} disabled={isPending}>
-              <PlusCircle size={16} /> ثبت بدهی/تسویه مالک
+              <PlusCircle size={16} /> ثبت تراکنش مالک
             </button>
           )}
         </div>
 
       {showForm && (
         <form className={s.formContainer} onSubmit={handleSubmit}>
+          {preserveSettlement && (
+            <p className={s.formSummaryHint}>این رویداد به پرداخت قبلی یا تسویه با ارز مشخص متصل است؛ در این فرم فقط توضیحات آن قابل ویرایش است.</p>
+          )}
+          <div className={s.formRow}>
+            <div className={s.formGroup}>
+              <label className={s.formLabel}>
+                <Tooltip text="آورده دائمی بخشی از حقوق مالکانه است. وام، تعهد بازپرداخت به مالک ایجاد می‌کند.">نوع تأمین مالی</Tooltip>
+              </label>
+              <SelectBox
+                dir="rtl"
+                value={form.funding_type}
+                onChange={(val) => field("funding_type", val)}
+                labeledOptions={[
+                  { value: "equity", label: "آورده دائمی مالک (سرمایه)" },
+                  { value: "loan", label: "وام مالک (قابل‌بازپرداخت)" },
+                ]}
+                disabled={financialFieldsDisabled}
+              />
+            </div>
+          </div>
           <div className={s.formRow}>
             <div className={s.formGroup}>
               <label className={s.formLabel}>تاریخ</label>
               <CustomDatePicker 
                 value={form.date} 
                 onChange={(newDate) => field("date", newDate)} 
-                disabled={isPending} 
+                disabled={financialFieldsDisabled}
               />
             </div>
             <div className={s.formGroup}>
@@ -168,53 +209,53 @@ export default function OwnerLoanForm({ loans, bankAccounts, defaultOpen = false
                   { value: "IRT", label: "تومان (IRT)" },
                   { value: "AUD", label: "دلار (AUD)" },
                 ]}
-                disabled={isPending}
+                disabled={financialFieldsDisabled}
               />
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>مبلغ</label>
-              <input className={`${s.formInput} ${s.formInputNum}`} type="text" inputMode="numeric" value={form.amount} onChange={e => field("amount", e.target.value)} placeholder="0" disabled={isPending} />
+              <input className={`${s.formInput} ${s.formInputNum}`} type="text" inputMode="numeric" value={form.amount} onChange={e => field("amount", e.target.value)} placeholder="0" disabled={financialFieldsDisabled} />
             </div>
           </div>
 
           <div className={s.formRow}>
             <div className={s.formGroup}>
               <label className={s.formLabel}>
-                <Tooltip text="حسابی که مانده آن تحت تاثیر این رویداد بدهی/تسویه قرار می‌گیرد">حساب درگیر</Tooltip>
+                <Tooltip text="حسابی که مبلغ آورده یا وام به آن وارد می‌شود، یا برداشت و بازپرداخت از آن انجام می‌شود.">حساب درگیر</Tooltip>
               </label>
               <SelectBox
                 dir="rtl"
                 value={form.account_id}
                 onChange={(val) => field("account_id", val)}
                 placeholder="-- انتخاب حساب --"
-                labeledOptions={filteredAccounts.map(acc => ({ value: acc.id, label: `${acc.account_name} (${acc.currency})` }))}
-                disabled={isPending}
+                labeledOptions={selectableAccounts.map(acc => ({ value: acc.id, label: `${acc.account_name} (${acc.currency})` }))}
+                disabled={financialFieldsDisabled}
               />
             </div>
             <div className={s.formGroup}>
               <label className={s.formLabel}>
-                <Tooltip text="تزریق مالک: بدهی کسب‌وکار به مالک را بیشتر می‌کند. بازپرداخت: بدهی به مالک را کمتر می‌کند.">نوع عملیات</Tooltip>
+                <Tooltip text={isEquity ? "آورده، سرمایه مالک را افزایش می‌دهد و برداشت، آن را کاهش می‌دهد. این دو رویداد درآمد یا هزینه نیستند." : "دریافت وام، بدهی به مالک را افزایش می‌دهد و بازپرداخت، آن را کاهش می‌دهد."}>نوع عملیات</Tooltip>
               </label>
               <SelectBox
                 dir="rtl"
                 value={form.loan_type}
                 onChange={(val) => field("loan_type", val)}
                 labeledOptions={[
-                  { value: "injection", label: "تزریق مالک (افزایش بدهی)" },
-                  { value: "repayment", label: "بازپرداخت به مالک (کاهش بدهی)" },
+                  { value: "injection", label: isEquity ? "آورده مالک (افزایش سرمایه)" : "دریافت وام (افزایش بدهی)" },
+                  { value: "repayment", label: isEquity ? "برداشت مالک (کاهش سرمایه)" : "بازپرداخت وام (کاهش بدهی)" },
                 ]}
-                disabled={isPending}
+                disabled={financialFieldsDisabled}
               />
             </div>
           </div>
 
-          {form.currency === "AUD" && (
+          {(form.currency === "AUD" || isEquity) && (
             <div className={s.formRow}>
               <div className={s.formGroup} style={{ flex: "1 1 200px" }}>
                 <label className={s.formLabel}>
-                  <Tooltip text="مبنای ارزش‌گذاری دلاری/ریالی این تراکنش در سیستم حسابداری دوبل">نرخ تبدیل تاریخی (الزامی)</Tooltip>
+                  <Tooltip text="نرخ تومان برای هر دلار در تاریخ ثبت این تراکنش. آورده دائمی با همین ارزش تاریخی ثبت می‌شود.">نرخ تبدیل تاریخی (الزامی)</Tooltip>
                 </label>
-                <input className={`${s.formInput} ${s.formInputNum}`} type="text" inputMode="numeric" value={form.exchange_rate} onChange={e => field("exchange_rate", e.target.value)} placeholder="مثلاً 40000" disabled={isPending} />
+                <input className={`${s.formInput} ${s.formInputNum}`} type="text" inputMode="numeric" value={form.exchange_rate} onChange={e => field("exchange_rate", e.target.value)} placeholder="مثلاً 40000" disabled={financialFieldsDisabled} />
               </div>
             </div>
           )}
@@ -242,7 +283,8 @@ export default function OwnerLoanForm({ loans, bankAccounts, defaultOpen = false
             <thead>
               <tr>
                 <th>تاریخ</th>
-                <th>عملیات</th>
+                <th>نوع تأمین مالی</th>
+                <th>رویداد</th>
                 <th>مبلغ</th>
                 <th>عملیات</th>
               </tr>
@@ -251,9 +293,12 @@ export default function OwnerLoanForm({ loans, bankAccounts, defaultOpen = false
               {loans.map(L => (
                 <tr key={L.id}>
                   <td>{L.date}</td>
+                  <td>{L.funding_type === "equity" ? "سرمایه مالک" : "وام مالک"}</td>
                   <td>
                     <span className={L.loan_type === "injection" ? s.badgeSuccess : s.badgeWarning}>
-                      {L.loan_type === "injection" ? "تزریق مالک" : "بازپرداخت"}
+                      {L.funding_type === "equity"
+                        ? L.loan_type === "injection" ? "آورده مالک" : "برداشت مالک"
+                        : L.loan_type === "injection" ? "دریافت وام" : "بازپرداخت وام"}
                     </span>
                   </td>
                   <td dir="ltr" style={{ textAlign: "right" }}>

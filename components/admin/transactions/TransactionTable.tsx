@@ -9,6 +9,7 @@ import { TransactionApproveButton } from "@/components/admin/TransactionApproveB
 import { RejectApprovedButton } from "@/components/admin/RejectApprovedButton";
 import { EditableReferenceCode } from "@/components/admin/EditableReferenceCode";
 import { EditableAmount } from "@/components/admin/EditableAmount";
+import { CompletedTransactionEditor } from "./CompletedTransactionEditor";
 import { isRequestTerminal, requestDate, requestMoney, requestRate } from "@/components/requests/request-labels";
 import { calcExecutionRateFromSettlement } from "@/lib/pricing";
 import { transactionActionPresentation, transactionQueueState, transactionRequest, transactionRequestHref, type TransactionActionPresentation } from "@/lib/admin-transaction-workspace";
@@ -92,9 +93,11 @@ function RecipientDetails({ row }: { row: TransactionRow }) {
 function TransactionDetails({ row, bankAccounts, onClose }: { row: TransactionRow; bankAccounts: BankAccountOption[]; onClose: () => void }) {
   const { request, name, reference, requestHref, funding, fundingCurrency, recipientAmount, recipientCurrency } = recordPresentation(row);
   const action = transactionActionPresentation(row);
+  const completed = row.status === "approved" && (!request || request.status === "completed");
+  const [correcting, setCorrecting] = useState(false);
   const email = request?.quote.sender_snapshot?.email || row.profiles?.email;
-  return <AdminRecordDrawer title={name} subtitle={<bdi>{reference}</bdi>} eyebrow="Transaction details" onClose={onClose}
-    footer={(requestHref || row.status === "pending" || row.status === "approved") && <div className={styles.transferDrawerActions}>
+  return <AdminRecordDrawer title={name} subtitle={<bdi>{reference}</bdi>} eyebrow="Transaction details" onClose={onClose} busy={correcting}
+    footer={!correcting && (requestHref || row.status === "pending" || row.status === "approved") && <div className={styles.transferDrawerActions}>
       {requestHref ? <Link className={`${styles.action} ${styles.transferAction}`} data-step={action.step ?? undefined} data-tone={action.tone}
         aria-label={`${action.step ? `Step ${action.step}: ` : ""}${action.label}`} href={requestHref}><TransferActionContent action={action} /></Link>
         : row.status === "approved" ? <RejectApprovedButton transactionId={row.id} />
@@ -105,10 +108,11 @@ function TransactionDetails({ row, bankAccounts, onClose }: { row: TransactionRo
       <div className={styles.detailStatus}><TransferStatus row={row} /><time dateTime={row.created_at}>{requestDate(row.created_at, "en")} · Sydney</time></div>
       <section className={styles.detailSection} aria-label="Transfer amounts">
         <dl className={styles.amountSummary}>
-          <div><dt>Customer pays</dt><dd>{request ? requestMoney(funding, fundingCurrency, "en") : <><EditableAmount transactionId={row.id} field={row.type === "buy_aud" ? "amount_aud" : "equivalent_toman"} currentValue={funding} /><span className={styles.currency}>{fundingCurrency === "IRT" ? "Toman" : fundingCurrency}</span></>}</dd></div>
-          <div><dt>Recipient gets</dt><dd>{request ? requestMoney(recipientAmount, recipientCurrency, "en") : <><EditableAmount transactionId={row.id} field={row.type === "buy_aud" ? "equivalent_toman" : "amount_aud"} currentValue={recipientAmount} /><span className={styles.currency}>{recipientCurrency === "IRT" ? "Toman" : recipientCurrency}</span></>}</dd></div>
+          <div><dt>Customer pays</dt><dd>{request || completed ? requestMoney(funding, fundingCurrency, "en") : <><EditableAmount transactionId={row.id} field={row.type === "buy_aud" ? "amount_aud" : "equivalent_toman"} currentValue={funding} /><span className={styles.currency}>{fundingCurrency === "IRT" ? "Toman" : fundingCurrency}</span></>}</dd></div>
+          <div><dt>Recipient gets</dt><dd>{request || completed ? requestMoney(recipientAmount, recipientCurrency, "en") : <><EditableAmount transactionId={row.id} field={row.type === "buy_aud" ? "equivalent_toman" : "amount_aud"} currentValue={recipientAmount} /><span className={styles.currency}>{recipientCurrency === "IRT" ? "Toman" : recipientCurrency}</span></>}</dd></div>
         </dl>
         {request?.funding_status === "partial" && <p className={styles.description}>{requestMoney(request.funding_received, fundingCurrency, "en")} received so far.</p>}
+        {completed && <CompletedTransactionEditor key={row.id} transactionId={row.id} onBusyChange={setCorrecting} />}
       </section>
       <RecipientDetails row={row} />
       <section className={styles.detailSection}>

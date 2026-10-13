@@ -19,14 +19,14 @@ export default function AlertsSection({ alerts = [], accountingWarnings = [] }: 
           <summary className={s.warnBannerSummary}>
             <AlertCircle size={16} className={s.warnBannerIcon} />
             <span className={s.warnBannerTitle}>
-              <Tooltip text="هشدارهایی که نشان‌دهنده ناهماهنگی یا خطای منطقی در سیستم حسابداری دوبل هستند">{FA.warnBannerTitle}</Tooltip>
+              <Tooltip text="ثبت‌ها یا مانده‌هایی که نیاز به بررسی دارند.">{FA.warnBannerTitle}</Tooltip>
             </span>
             <span className={s.warnBannerCount}>{accountingWarnings.length} {FA.warnUnit}</span>
             <span className={s.warnBannerToggle}>{FA.warnBannerHint}</span>
           </summary>
           <div className={s.warnBannerList}>
             {accountingWarnings.map((w: string, i: number) => {
-              const isCritical = w.includes("منفی شد") || w.includes("negative");
+              const isCritical = w.includes("منفی") || w.includes("negative");
               return (
                 <div key={i} className={`${s.warnBannerItem} ${isCritical ? s.warnBannerItemCritical : ""}`}>
                   <span className={s.warnBannerBullet}>{isCritical ? "🔴" : "•"}</span>

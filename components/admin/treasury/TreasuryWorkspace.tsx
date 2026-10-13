@@ -41,7 +41,7 @@ function TreasuryOverview({ data }: { data: TreasuryPageData }) {
     { title: "Manage expenses", description: "Add an expense or update an existing entry.", view: "expenses", icon: ReceiptText },
     { title: "Recurring payments", description: "Check due dates and post scheduled costs.", view: "recurring", icon: Repeat2 },
     { title: "Bank transfer fees", description: "Review and record monthly bank charges.", view: "bank-fees", icon: Wallet },
-    { title: "Owner capital", description: "Record funding and manage repayments.", view: "capital", icon: BriefcaseBusiness },
+    { title: "Owner capital", description: "Review owner equity, withdrawals, and repayable loans.", view: "capital", icon: BriefcaseBusiness },
     { title: "Manage accounts", description: "Maintain bank and virtual account details.", view: "bank-accounts", icon: Settings2 },
   ];
 
@@ -110,9 +110,21 @@ function TreasuryContent({ view, data }: { view: TreasuryView; data: TreasuryPag
       <div>
         <div className={s.capitalSummary}>
           <div className={s.capitalCard}>
-            <span>بدهی به مالک (تومان)</span>
+            <span>خالص آورده مالک (دلار استرالیا)</span>
+            <strong className={accounting.ownerCapitalNetAUD != null && accounting.ownerCapitalNetAUD < 0 ? s.negative : undefined} dir="ltr">
+              {accounting.currentBuyRate > 0 && accounting.ownerCapitalNetAUD != null && Number.isFinite(accounting.ownerCapitalNetAUD) ? `${fmtAUD(accounting.ownerCapitalNetAUD)} AUD` : "—"}
+            </strong>
+            <small>آورده دائمی منهای برداشت‌های ثبت‌شده مالک؛ جدا از وام قابل‌بازپرداخت.</small>
+          </div>
+          <div className={s.capitalCard}>
+            <span>خالص آورده مالک (تومان تاریخی)</span>
+            <strong className={accounting.ownerCapitalHistoricalIRT < 0 ? s.negative : undefined} dir="ltr">{fmtIRT(accounting.ownerCapitalHistoricalIRT)}</strong>
+            <small>ارزش آورده و برداشت‌ها با نرخ زمان ثبت؛ این سرمایه مشمول تسعیر وام نیست.</small>
+          </div>
+          <div className={s.capitalCard}>
+            <span>بدهی وام به مالک (تومان)</span>
             <strong dir="ltr">{fmtIRT(accounting.ownerLoanBalanceIRT)}</strong>
-            <small>عدد مثبت یعنی مبلغی که باید به مالک بازپرداخت شود.</small>
+            <small>مانده وام‌های قابل‌بازپرداخت؛ آورده دائمی در این بدهی قرار ندارد.</small>
           </div>
           <div className={s.capitalCard}>
             <span>ارزش خالص کسب‌وکار (تومان)</span>
@@ -147,7 +159,7 @@ export default function TreasuryWorkspace({ view, data }: { view: TreasuryView; 
       </nav>
       <section className={s.panel} aria-labelledby="treasury-workspace-title">
         <div className={s.panelHeader}>
-          <div><h2 id="treasury-workspace-title">{current.title}</h2><p>{current.description}</p></div>
+          <div><h2 id="treasury-workspace-title">{current.title}</h2>{view !== "profitability" && <p>{current.description}</p>}</div>
           {current.group !== "overview" && alertCount > 0 && <Link href={treasuryViewHref("alerts")} prefetch={false} className={s.actionLink}><CircleAlert size={15} aria-hidden="true" />{alertCount} {alertCount === 1 ? "alert" : "alerts"}</Link>}
         </div>
         {sections.length > 1 && (

@@ -24,7 +24,13 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     catch { return new Response("Receipt not found", { status: 404, headers }); }
   }
   if (request.data.status !== "completed") return new Response("A final receipt is available after settlement is confirmed", { status: 409, headers });
-  const receipt = await db.from("exchange_request_completion_receipts").select("snapshot").eq("request_id", id).single();
+  const revision = await db.from("exchange_request_receipt_revisions").select("snapshot").eq("request_id", id)
+    .order("request_version", { ascending: false }).limit(1).maybeSingle();
+  // Original receipts remain available while migration 59 is being installed.
+  if (revision.error && !["42P01", "PGRST205"].includes(revision.error.code)) {
+    return new Response("Receipt service unavailable", { status: 503, headers });
+  }
+  const receipt = revision.data ? revision : await db.from("exchange_request_completion_receipts").select("snapshot").eq("request_id", id).single();
   if (receipt.error || !receipt.data) return new Response("Receipt not found", { status: 404, headers });
   try {
     const snapshot = receipt.data.snapshot as RequestCompletionReceiptSnapshot;

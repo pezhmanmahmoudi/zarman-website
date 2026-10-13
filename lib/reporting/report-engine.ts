@@ -3,11 +3,11 @@ import type { ReportDashboard, ReportDailyRow, ReportKpi, ReportPeriod } from ".
 const sum = (rows: ReportDailyRow[], key: keyof ReportDailyRow): number =>
   rows.reduce((total, row) => total + (typeof row[key] === "number" ? row[key] : 0), 0);
 
-function weightedAverage(rows: ReportDailyRow[], valueKey: keyof ReportDailyRow): number {
-  const volume = sum(rows, "buy_volume") + sum(rows, "sell_volume");
+function weightedAverage(rows: ReportDailyRow[], valueKey: keyof ReportDailyRow, volumeKey?: "buy_volume" | "sell_volume"): number {
+  const volume = volumeKey ? sum(rows, volumeKey) : sum(rows, "buy_volume") + sum(rows, "sell_volume");
   if (volume <= 0) return 0;
   return rows.reduce((total, row) => {
-    const rowVolume = row.buy_volume + row.sell_volume;
+    const rowVolume = volumeKey ? row[volumeKey] : row.buy_volume + row.sell_volume;
     return total + Number(row[valueKey] || 0) * rowVolume;
   }, 0) / volume;
 }
@@ -43,8 +43,9 @@ export function buildReportDashboard(
   const tradingProfit = sum(current, "trading_profit");
   const feeIncome = sum(current, "fee_income");
   const otherIncome = sum(current, "other_income");
-  const totalIncome = tradingProfit + feeIncome + otherIncome;
-  const netProfit = totalIncome - expenses;
+  const totalIncome = tradingProfit + feeIncome;
+  const operatingProfit = totalIncome - expenses;
+  const netProfit = operatingProfit + otherIncome;
   const transactionCount = sum(current, "transaction_count");
   const totalVolume = sum(current, "buy_volume") + sum(current, "sell_volume");
   const openingInventory = current[0]?.opening_aud_inventory ?? 0;
@@ -91,7 +92,7 @@ export function buildReportDashboard(
       metric("cash-flow", "Cash Flow", cashIn - cashOut, sum(previous, "cash_in") - sum(previous, "cash_out"), "irt"),
       metric("aud-inventory", "AUD Inventory", closingInventory, latest(previous, "aud_inventory"), "aud"),
       metric("irt-liquidity", "IRT Liquidity", latest(current, "irt_liquidity"), latest(previous, "irt_liquidity"), "irt"),
-      metric("wac", "Current WAC", latest(current, "wac"), latest(previous, "wac"), "rate", false),
+      metric("wac", closingInventory > 0 ? "Purchase WAC" : "Last purchase WAC", latest(current, "wac"), latest(previous, "wac"), "rate", false),
       metric("average-rate", "Average Exchange Rate", weightedAverage(current, "average_rate"), weightedAverage(previous, "average_rate"), "rate"),
       metric("transactions", "Transactions", transactionCount, previousCount, "number"),
       metric("average-size", "Average Transaction", transactionCount ? totalVolume / transactionCount : 0, previousCount ? (sum(previous, "buy_volume") + sum(previous, "sell_volume")) / previousCount : 0, "aud"),
@@ -104,12 +105,12 @@ export function buildReportDashboard(
       revenue,
       tradingProfit,
       feeIncome,
-      otherIncome,
+      otherIncome: 0,
       totalIncome,
       expenseBreakdown: mergeBreakdowns(current),
       totalExpenses: expenses,
-      operatingProfit: netProfit,
-      fxGainLoss: 0,
+      operatingProfit,
+      fxGainLoss: otherIncome,
       netProfit,
     },
     cashFlow: {
@@ -145,9 +146,9 @@ export function buildReportDashboard(
       averageFee: transactionCount ? sum(current, "average_fee") / days : 0,
     },
     rates: {
-      averageBuy: weightedAverage(current, "average_buy_rate"),
-      averageSell: weightedAverage(current, "average_sell_rate"),
-      spread: weightedAverage(current, "average_sell_rate") - weightedAverage(current, "average_buy_rate"),
+      averageBuy: weightedAverage(current, "average_buy_rate", "buy_volume"),
+      averageSell: weightedAverage(current, "average_sell_rate", "sell_volume"),
+      spread: weightedAverage(current, "average_sell_rate", "sell_volume") - weightedAverage(current, "average_buy_rate", "buy_volume"),
       highest: Math.max(0, ...current.map((row) => row.highest_rate)),
       lowest: current.filter((row) => row.lowest_rate > 0).reduce((value, row) => Math.min(value, row.lowest_rate), Number.POSITIVE_INFINITY) || 0,
     },

@@ -10,6 +10,7 @@ import { AdminRecordDrawer } from "@/components/admin/ui/AdminRecordDrawer";
 import formStyles from "@/styles/admin/AdminForms.module.css";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
 import { TransactionApproveButton } from "@/components/admin/TransactionApproveButton";
+import { CompletedTransactionEditor } from "@/components/admin/transactions/CompletedTransactionEditor";
 import {
   createAssistedTransactionForUser,
   deleteAssistedTransactionForUser,
@@ -291,6 +292,8 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
       {editingId && editingTx && (
         <div className={cardStyles.panelBodyForm}>
           <div className={cardStyles.formInset}>
+            {editingTx.status === "approved" && <CompletedTransactionEditor transactionId={String(editingTx.id)} disabled={isPending}
+              onSaved={() => { setEditingId(null); onTransactionCreated?.(); }} />}
             <div className={formStyles.fieldRow}>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Reference Code</label>
@@ -318,6 +321,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
                     { value: "sell_aud", label: "Sell AUD" },
                   ]}
                   value={editForm.type}
+                  disabled={editingTx.status === "approved"}
                   onChange={(val) => setEditField("type", val)}
                 />
               </div>
@@ -337,11 +341,11 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>AUD Amount</label>
-                <input type="number" step="0.01" className={formStyles.input} value={editForm.amountAud} onChange={(e) => setEditField("amountAud", e.target.value)} />
+                <input type="number" step="0.01" className={formStyles.input} value={editForm.amountAud} readOnly={editingTx.status === "approved"} onChange={(e) => setEditField("amountAud", e.target.value)} />
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Equivalent Toman</label>
-                <input type="number" step="1" className={formStyles.input} value={editForm.equivalentToman} onChange={(e) => setEditField("equivalentToman", e.target.value)} />
+                <input type="number" step="1" className={formStyles.input} value={editForm.equivalentToman} readOnly={editingTx.status === "approved"} onChange={(e) => setEditField("equivalentToman", e.target.value)} />
               </div>
               <div className={formStyles.fieldGroup}>
                 <label className={formStyles.label}>Source of Funds</label>

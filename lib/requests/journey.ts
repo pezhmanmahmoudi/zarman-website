@@ -74,6 +74,7 @@ export function requestActivityLabel(eventType: string, locale: RequestLocale): 
   const labels: Record<string, [string, string]> = {
     submitted: ["Customer submitted the request", "مشتری درخواست را ثبت کرد"],
     pricing_revised: ["Admin revised the transfer amounts", "مدیر مبالغ انتقال را اصلاح کرد"],
+    amounts_corrected: ["Admin corrected the completed transfer amounts", "مدیر مبالغ تراکنش تکمیل‌شده را اصلاح کرد"],
     pricing_accepted: ["Customer accepted the revised amounts", "مشتری مبالغ اصلاح‌شده را تأیید کرد"],
     await_funds: ["Payment approved · bank details released", "پرداخت تأیید و مشخصات بانکی نمایش داده شد"],
     receipt_uploaded: ["Customer sent a payment receipt", "مشتری رسید واریز را ارسال کرد"],

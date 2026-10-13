@@ -2,6 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/app/actions/admin.actions";
+import { getTreasuryFullData } from "@/app/actions/treasury.actions";
 import { resolveReportPeriod } from "@/lib/reporting/date-range";
 import { buildReportDashboard } from "@/lib/reporting/report-engine";
 import {
@@ -123,17 +124,27 @@ export async function getEnterpriseReportData(input: {
   await requireAdmin();
   const period = resolveReportPeriod(input.preset, input.start, input.end);
   const db = makeServiceRoleClient();
+  let refreshState = await db.from("report_refresh_state")
+    .select("is_stale, stale_since, last_completed_at, last_error").eq("id", true).maybeSingle();
+  if (refreshState.error) throw new Error(refreshState.error.message);
+  if (refreshState.data?.is_stale) {
+    const refreshed = await db.rpc("refresh_enterprise_reports");
+    if (refreshed.error) throw new Error(refreshed.error.message);
+    refreshState = await db.from("report_refresh_state")
+      .select("is_stale, stale_since, last_completed_at, last_error").eq("id", true).maybeSingle();
+  }
   const currentQuery = db.from("reports_daily").select(REPORT_COLUMNS)
     .gte("period_start", period.start).lte("period_start", period.end).order("period_start");
   const previousQuery = db.from("reports_daily").select(REPORT_COLUMNS)
     .gte("period_start", period.previousStart).lte("period_start", period.previousEnd).order("period_start");
 
-  const [currentResult, previousResult, accounts, topCustomers, refreshResult] = await Promise.all([
+  const [currentResult, previousResult, accounts, topCustomers, refreshResult, treasuryData] = await Promise.all([
     currentQuery,
     previousQuery,
     loadAccountSummaries(db, period.start, period.end),
     loadTopCustomers(db, period.start, period.end),
-    db.from("report_refresh_state").select("is_stale, stale_since, last_completed_at, last_error").eq("id", true).maybeSingle(),
+    Promise.resolve(refreshState),
+    getTreasuryFullData(),
   ]);
   if (currentResult.error) throw new Error(currentResult.error.message);
   if (previousResult.error) throw new Error(previousResult.error.message);
@@ -145,7 +156,13 @@ export async function getEnterpriseReportData(input: {
     (previousResult.data ?? []).map((row) => normalizeDailyRow(row as unknown as Record<string, unknown>)),
   );
   const refresh = refreshResult.data;
+  const a = treasuryData.accounting;
   return {
+    businessValues: {
+      currentBuyRate: a.currentBuyRate, netAssetsAUD: a.netAssetsAUD,
+      netProfitAUD: a.netProfitAUD, retainedProfitAUD: a.retainedProfitAUD,
+      incomeBeforeExpensesAUD: a.incomeBeforeExpensesAUD, totalExpensesAUD: a.totalExpensesAUD,
+    },
     dashboard,
     accounts,
     topCustomers,

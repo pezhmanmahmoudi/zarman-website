@@ -11,6 +11,7 @@ import { canRetryRequestEmail, getRequestJourney, requestActivityLabel, requestE
 import { isExchangeRate, isMoney } from "@/lib/requests/validation";
 import { localiseAmountDraft, normaliseAmountDigits } from "@/lib/numbers";
 import { RequestPricingSummary } from "./RequestPricingSummary";
+import { CompletedTransactionEditor } from "@/components/admin/transactions/CompletedTransactionEditor";
 import { RequestTransactionSummary } from "./RequestTransactionSummary";
 import { RequestPaymentAccount } from "./RequestPaymentAccount";
 import { AdminCopyButton, AdminCopyRow } from "./AdminCopyField";
@@ -481,6 +482,8 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
         </div>}
         <section className={workspace.summaryCard} aria-label="Transfer summary">
           <RequestPricingSummary request={request} />
+          {request.status === "completed" && <CompletedTransactionEditor transactionId={request.transaction_id} disabled={busy}
+            onSaved={refresh} onBusyChange={saving => { pending.current = saving; setBusy(saving); }} />}
           <ul className={workspace.summaryMeta}>
             <li data-tone={request.funding_status === "confirmed" ? "good" : request.funding_status === "partial" ? "warn" : undefined}>{request.funding_status === "confirmed" ? <><Check size={14} aria-hidden="true" />Funds received</> : request.funding_status === "partial" ? <><Clock3 size={14} aria-hidden="true" /><bdi>{requestMoney(request.funding_received, request.quote.funding_currency, locale)}</bdi>&nbsp;of&nbsp;<bdi>{requestMoney(request.quote.funding_total, request.quote.funding_currency, locale)}</bdi>&nbsp;received</> : <><Clock3 size={14} aria-hidden="true" />{request.funding_status === "unpaid" ? "Awaiting payment" : requestLabel(request.funding_status, locale)}</>}</li>
             {request.handling_due_at && <li>Due <time dir="ltr" dateTime={request.handling_due_at}>{requestDate(request.handling_due_at, locale)}</time>&nbsp;(Sydney)</li>}

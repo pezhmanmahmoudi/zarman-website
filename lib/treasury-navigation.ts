@@ -8,11 +8,11 @@ export const TREASURY_VIEWS = {
   expenses: { group: "expenses", label: "All expenses", title: "Expenses", description: "Record operating costs and review existing expense entries." },
   recurring: { group: "expenses", label: "Recurring", title: "Recurring expenses", description: "Manage scheduled costs and post payments when they become due." },
   "bank-fees": { group: "expenses", label: "Bank fees", title: "Bank transfer fees", description: "Review monthly transfer fees and record the actual charges." },
-  capital: { group: "capital", label: "Owner capital", title: "Capital & owner loans", description: "Track owner funding, repayments, and the net value of the business." },
+  capital: { group: "capital", label: "Owner capital", title: "Capital & owner loans", description: "Track permanent owner equity, withdrawals, repayable loans, and the net value of the business." },
   strategy: { group: "insights", label: "Strategy", title: "Treasury strategy", description: "Review the health score, recommendations, and pricing guidance." },
   inventory: { group: "insights", label: "Inventory", title: "Market & inventory", description: "Understand AUD holdings, target levels, and inventory forecasts." },
   exposure: { group: "insights", label: "Exposure", title: "Currency exposure", description: "Review your currency allocation against the configured risk thresholds." },
-  profitability: { group: "insights", label: "Profitability", title: "Profitability", description: "Separate operating results, inventory gains, and currency translation." },
+  profitability: { group: "insights", label: "Profitability", title: "Profitability", description: "Review net assets and profit in AUD, with operating results, inventory gains, and currency translation shown separately." },
   settings: { group: "settings", label: "Settings", title: "Treasury settings", description: "Set the targets and thresholds used by treasury monitoring." },
 } as const;
 

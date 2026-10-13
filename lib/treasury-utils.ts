@@ -103,8 +103,17 @@ export const FA = {
   exposureCost:   "مواجهه (بهای تمام‌شده)",
   
   operatingProfit:"سود عملیاتی",
-  unrealizedPL:   "سود/زیان دفتری",
+  unrealizedPL:   "سود/زیان دفتری انبار",
   totalProfit:    "سود خالص کل",
+  netAssetsAUD:   "خالص دارایی صرافی (AUD)",
+  netProfitAUD:   "سود خالص کل دوره (AUD)",
+  incomeBeforeExpensesAUD: "درآمد کل دوره پیش از هزینه‌ها (AUD)",
+  totalExpensesAUD: "هزینه‌های دوره",
+  retainedProfitAUD: "سود باقی‌مانده پس از برداشت مالک",
+  ownerCapital:  "خالص آورده مالک",
+  hintNetAssetsAUD: "دارایی‌ها منهای بدهی‌ها، با نرخ خرید فعلی.",
+  hintNetProfitAUD: "خالص دارایی منهای خالص آورده مالک؛ هزینه‌ها کسر شده‌اند.",
+  hintIncomeBeforeExpensesAUD: "سود کل دوره پیش از هزینه‌ها، با نرخ خرید فعلی.",
 
   loanBalance:    "مانده وام مالک",
 
@@ -124,8 +133,8 @@ export const FA = {
   hintCurrentRate:     "نرخ فعلی خرید دلار توسط کسب‌وکار",
   hintOperatingProfit: "تجاری + کارمزد − هزینه‌ها",
   hintUnrealizedPL:    "تا فروش، فقط روی کاغذ است.",
-  hintTotalProfit:     "عملیاتی + سود/زیان دفتری",
-  hintOwnerLoan:       "مجموع تزریق مالک − بازپرداخت‌ها",
+  hintTotalProfit:     "عملیاتی + سود/زیان انبار + سود/زیان ارز (محقق‌شده و تسعیر بدهی‌ها)",
+  hintOwnerLoan:       "مجموع وام‌های مالک − بازپرداخت وام‌ها",
   hintNetBV:           "= کل دارایی − وام مالک",
 
   hintV7: "میانگین فروش روزانه دلار در ۷ روز گذشته",

@@ -37,7 +37,7 @@ export default function ReconciliationGrid({ accounting: a }: { accounting: Acco
           <div className={s.reconMetaRow}>
             {/* 🌟 تولتیپ در اینجا اضافه شد 🌟 */}
             <span>
-              <Tooltip text="میانگین موزون بهای تمام‌شده خریدهای قبلی (Weighted Average Cost). این عدد پایه محاسبه سود و زیان شماست.">میانگین خرید (WAC)</Tooltip>
+              <Tooltip text={a.audInventory > 0 ? "میانگین قیمت خرید دلارهای موجود، با توجه به مقدار هر خرید." : "آخرین میانگین خرید، پیش از صفر یا منفی‌شدن موجودی."}>{a.audInventory > 0 ? "میانگین خرید (WAC)" : "آخرین میانگین خرید (WAC)"}</Tooltip>
             </span>
             <span className={s.reconMono}>{fmtIRT(a.wac)}</span>
           </div>

@@ -12,6 +12,8 @@ export default function MarketInventory({ treasury: t, strategy }: { treasury: T
   const { trendAnalysis: trend } = strategy;
   const invColor = t.audInventory < 0 ? s.valNegative : t.audInventory < t.settings.min_aud_inventory ? s.valNegative : t.audInventory > t.settings.max_aud_inventory ? s.valAmber : s.valPositive;
   const gapColor = t.inventoryGap >= 0 ? s.valPositive : s.valNegative;
+  const wacLabel = t.audInventory > 0 ? FA.wac : "آخرین میانگین خرید (WAC)";
+  const valuationRate = t.inventoryValuationRate ?? t.wac;
 
   return (
     <section>
@@ -76,9 +78,9 @@ export default function MarketInventory({ treasury: t, strategy }: { treasury: T
             </span>
             <span className={cardStyles.statLabel}>
               {t.wac > 0 && t.currentBuyRate > 0 ? (
-                <Tooltip text={`میانگین موزون بهای تمام‌شده (WAC). این عدد نشان‌دهنده میانگین قیمتِ خریدهای انجام شده برای دلارهای موجود در انبار است. (حاشیه سود فعلی: ${fmtRate(t.currentBuyRate - t.wac)} تومان)`}>{FA.wac}</Tooltip>
+                <Tooltip text={t.audInventory > 0 ? "میانگین قیمت خرید دلارهای موجود، با توجه به مقدار هر خرید." : "آخرین میانگین خرید، پیش از صفر یا منفی‌شدن موجودی."}>{wacLabel}</Tooltip>
               ) : (
-                FA.wac
+                wacLabel
               )}
             </span>
           </div>
@@ -92,7 +94,7 @@ export default function MarketInventory({ treasury: t, strategy }: { treasury: T
             <div className={s.detailCard}>
               <span className={s.detailCardLabel}>{FA.invCostVal}</span>
               <span className={`${s.detailCardValue} ${s.valNeutral}`}>{fmtIRT(t.inventoryCostValueIRT)}</span>
-              <span className={s.detailCardHint}>{fmtAUD(t.audInventory)} × WAC ({fmtRate(t.wac)})</span>
+              <span className={s.detailCardHint}>{fmtAUD(t.audInventory)} × {t.audInventory < 0 ? "نرخ تعهد" : "WAC"} ({fmtRate(valuationRate)})</span>
             </div>
             <div className={s.detailCard}>
               <span className={s.detailCardLabel}>{FA.invMarketVal}</span>

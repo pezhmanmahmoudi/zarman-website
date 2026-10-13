@@ -1582,11 +1582,20 @@ export async function updateTransactionAmount(transactionId: string | number, fi
   if (!Number.isFinite(newValue) || newValue < 0) return { error: "Invalid value." };
 
   const db = makeServiceRoleClient();
-  const { error } = await db
+  const [current, linked] = await Promise.all([
+    db.from("transactions").select("status").eq("id", transactionId).maybeSingle(),
+    db.from("exchange_requests").select("id").eq("transaction_id", transactionId).maybeSingle(),
+  ]);
+  if (current.error || linked.error) return { error: "The transaction could not be loaded. Refresh and try again." };
+  if (!current.data) return { error: "Transaction not found." };
+  if (current.data.status === "approved") return { error: "Use Edit amounts to correct this completed transfer and its linked records together." };
+  if (linked.data) return { error: "Edit this transaction through its request details." };
+  const { data: updated, error } = await db
     .from("transactions")
     .update({ [field]: newValue })
-    .eq("id", transactionId);
+    .eq("id", transactionId).eq("status", current.data.status).select("id").maybeSingle();
   if (error) return { error: error.message };
+  if (!updated) return { error: "This transaction changed. Refresh before editing its amount." };
   return { success: true };
 }
 

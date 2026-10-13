@@ -25,7 +25,7 @@ const rangeOptions = [
 const transactionOptions = [
   { label: "All entry types", value: "all" }, { label: "Buy AUD", value: "buy_aud" },
   { label: "Sell AUD", value: "sell_aud" }, { label: "Internal transfer", value: "transfer" },
-  { label: "Expense", value: "expense" }, { label: "Owner loan", value: "owner_loan" },
+  { label: "Expense", value: "expense" }, { label: "Owner funding", value: "owner_loan" },
   { label: "Adjustment", value: "adjustment" },
 ];
 

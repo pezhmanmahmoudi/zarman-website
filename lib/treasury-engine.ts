@@ -108,9 +108,10 @@ export type TreasurySnapshot = {
   // ── Inventory ───────────────────────────────────────────────────────
   audInventory: number;
   inventoryValueIRT: number;       // = inventoryMarketValueIRT (backward compat)
-  inventoryCostValueIRT: number;   // audInventory × WAC
+  inventoryCostValueIRT: number;   // audInventory × inventoryValuationRate
   inventoryMarketValueIRT: number; // audInventory × currentBuyRate
   wac: number;
+  inventoryValuationRate?: number;
   currentBuyRate: number;
 
   /** audInventory / target_aud_inventory */
@@ -619,8 +620,8 @@ export function calcTreasurySnapshot(
 
   // ── Composite assets ─────────────────────────────────────────────────────
   // Use market value for total assets (what assets are worth right now)
-  const totalAssetValueIRT  = inventoryMarketValueIRT + totalIranLiquidityIRT;
-  const netBusinessValueIRT = totalAssetValueIRT - accounting.ownerLoanBalanceIRT;
+  const totalAssetValueIRT = accounting.totalAssetValueIRT;
+  const netBusinessValueIRT = accounting.netBusinessValueIRT;
 
   // ── Alerts ───────────────────────────────────────────────────────────────
   const alerts = generateAlerts({
@@ -644,6 +645,7 @@ export function calcTreasurySnapshot(
     inventoryCostValueIRT,
     inventoryMarketValueIRT,
     wac,
+    inventoryValuationRate: accounting.inventoryValuationRate ?? wac,
     currentBuyRate,
 
     inventoryRatio,

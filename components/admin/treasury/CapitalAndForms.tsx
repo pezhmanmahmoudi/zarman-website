@@ -1,6 +1,6 @@
 import React from "react";
-import { CreditCard, Briefcase } from "lucide-react";
-import { fmtIRT } from "@/lib/accounting-engine";
+import { CreditCard, Briefcase, Landmark } from "lucide-react";
+import { fmtIRT, type AccountingSnapshot } from "@/lib/accounting-engine";
 import { FA } from "@/lib/treasury-utils";
 import BankAccountManager from "@/components/admin/treasury/BankAccountManager";
 import BankTransferFees from "@/components/admin/treasury/BankTransferFees";
@@ -18,11 +18,11 @@ export default function CapitalAndForms({
   recurringExpenses,
   ownerLoans 
 }: { 
-  accounting: any, 
-  bankAccounts: any[], 
-  expenses: any[], 
-  recurringExpenses: any[],
-  ownerLoans: any[] 
+  accounting: AccountingSnapshot,
+  bankAccounts: React.ComponentProps<typeof BankAccountManager>["bankAccounts"],
+  expenses: React.ComponentProps<typeof ExpenseForm>["expenses"],
+  recurringExpenses: React.ComponentProps<typeof RecurringExpenseForm>["recurringExpenses"],
+  ownerLoans: React.ComponentProps<typeof OwnerLoanForm>["loans"]
 }) {
   return (
     <section>
@@ -35,6 +35,21 @@ export default function CapitalAndForms({
 
       <div className={`${cardStyles.statsGrid} ${s.statsGridBottomMd}`}>
         <div className={cardStyles.statCardCompact}>
+          <div className={`${cardStyles.statIconCompact} ${cardStyles.statIconSuccess}`}>
+            <Landmark size={20} />
+          </div>
+          <div className={cardStyles.statInfo}>
+            <span className={`${cardStyles.statValue} ${a.ownerCapitalHistoricalIRT >= 0 ? s.valPositive : s.valNegative}`}>
+              {fmtIRT(a.ownerCapitalHistoricalIRT)}
+            </span>
+            <span className={cardStyles.statLabel}>
+              <Tooltip text="آورده دائمی مالک منهای برداشت‌های ثبت‌شده، به ارزش تاریخی تومان. این مبلغ بدهی قابل‌بازپرداخت نیست و تسعیر وام ندارد.">
+                {FA.ownerCapital} (تومان تاریخی)
+              </Tooltip>
+            </span>
+          </div>
+        </div>
+        <div className={cardStyles.statCardCompact}>
           <div className={`${cardStyles.statIconCompact} ${cardStyles.statIconWarning}`}>
             <CreditCard size={20} />
           </div>
@@ -43,8 +58,8 @@ export default function CapitalAndForms({
               {fmtIRT(a.ownerLoanBalanceIRT)}
             </span>
             <span className={cardStyles.statLabel}>
-              <Tooltip text="این عدد بدهی قابل پرداخت کسب‌وکار به مالک را نشان می‌دهد. عدد مثبت یعنی هنوز باید به مالک بازپرداخت شود.">
-                بدهی به مالک 
+              <Tooltip text="مانده وام‌های قابل‌بازپرداخت به مالک؛ آورده دائمی مالک در این مبلغ قرار ندارد.">
+                بدهی وام به مالک
               </Tooltip>
             </span>
           </div>

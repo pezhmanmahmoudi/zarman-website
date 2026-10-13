@@ -1,3 +1,5 @@
+import type { BusinessValueSnapshot } from "@/components/admin/treasury/BusinessValueCards";
+
 export type ReportPreset = "this-month" | "last-month" | "quarter" | "year" | "custom";
 
 export type ReportPeriod = {
@@ -153,6 +155,7 @@ export type ReportCustomerSummary = {
 };
 
 export type EnterpriseReportData = {
+  businessValues: BusinessValueSnapshot;
   dashboard: ReportDashboard;
   accounts: ReportAccountSummary[];
   topCustomers: ReportCustomerSummary[];

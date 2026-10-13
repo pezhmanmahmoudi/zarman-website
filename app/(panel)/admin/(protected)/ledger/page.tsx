@@ -30,7 +30,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
     const next = { ...params, page: String(Math.max(1, Math.ceil(records.total / pageSize))) };
     redirect(ledgerViewHref(next, "entries"));
   }
-  const filterKey = JSON.stringify(params);
+  const filterKey = JSON.stringify({ ...params, page: undefined, pageSize: undefined });
 
   return <>
     <header className={shell.topBar}>
@@ -47,9 +47,9 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
           <Link href={ledgerViewHref(params, "entries")} aria-current={!insights ? "page" : undefined}><ListFilter size={16} /> Entries</Link>
           <Link href={ledgerViewHref(params, "insights")} aria-current={insights ? "page" : undefined} prefetch={false}><ChartNoAxesCombined size={16} /> Insights</Link>
         </nav>
-        <LedgerToolbar key={filterKey} currentParams={params} bankAccounts={bankAccounts} exportFilters={filters} />
-        {insights ? <Suspense key={filterKey} fallback={<div className={styles.insightLoading} role="status">Loading ledger insights…</div>}><LedgerInsights filters={filters} /></Suspense> :
-          records && <LedgerEntriesWorkspace key={filterKey} initialRecords={records} initialAccounts={bankAccounts}
+        <LedgerToolbar key={`filters:${filterKey}`} currentParams={params} bankAccounts={bankAccounts} exportFilters={filters} />
+        {insights ? <Suspense key={`insights:${filterKey}`} fallback={<div className={styles.insightLoading} role="status">Loading ledger insights…</div>}><LedgerInsights filters={filters} /></Suspense> :
+          records && <LedgerEntriesWorkspace key={`entries:${filterKey}:${currentPage}:${pageSize}`} initialRecords={records} initialAccounts={bankAccounts}
             currentPage={currentPage} pageSize={pageSize} filters={filters} />
         }
       </div>

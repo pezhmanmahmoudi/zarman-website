@@ -28,6 +28,7 @@ type LedgerBusinessSnapshotProps = {
   audPurchased: number;
   audSold: number;
   closingInventory: number;
+  otherInventoryMovement: number;
 };
 
 const fmtIRT = (value: number) => Math.round(value).toLocaleString("en-AU");
@@ -112,7 +113,7 @@ export default function LedgerBusinessSnapshot(props: LedgerBusinessSnapshotProp
           <div>
             <span className={styles.label}>ارزش خالص کسب‌وکار</span>
             <Value value={props.netBusinessValue} currency="IRT" />
-            <small className={styles.description}>دارایی‌ها پس از کسر مانده وام مالک</small>
+            <small className={styles.description}>دارایی‌ها پس از کسر بدهی‌ها؛ شامل آورده مالک</small>
           </div>
         </article>
       </div>
@@ -135,7 +136,7 @@ export default function LedgerBusinessSnapshot(props: LedgerBusinessSnapshotProp
           <bdi className={styles.value} dir="ltr">{fmtIRT(props.averageSellRate)}</bdi>
         </div>
         <div className={styles.detailItem}>
-          <span><Scale size={15} /> میانگین موزون خرید</span>
+          <span><Scale size={15} /> {props.audInventory > 0 ? "میانگین موزون خرید" : "آخرین میانگین موزون خرید"}</span>
           <bdi className={styles.value} dir="ltr">{fmtIRT(props.wac)} <small>IRT</small></bdi>
         </div>
       </div>
@@ -151,6 +152,8 @@ export default function LedgerBusinessSnapshot(props: LedgerBusinessSnapshotProp
           <div className={styles.flowPositive}><span>خرید دوره</span><strong dir="ltr">{fmtAUD(props.audPurchased)} AUD</strong></div>
           <i aria-hidden="true">−</i>
           <div className={styles.flowNegative}><span>فروش دوره</span><strong dir="ltr">{fmtAUD(props.audSold)} AUD</strong></div>
+          <i aria-hidden="true">+</i>
+          <div><span>سایر گردش‌های موجودی</span><strong dir="ltr">{fmtAUD(props.otherInventoryMovement)} AUD</strong></div>
           <i aria-hidden="true">=</i>
           <div className={styles.flowClosing}><span>موجودی پایان دوره</span><strong dir="ltr">{fmtAUD(props.closingInventory)} AUD</strong></div>
         </div>

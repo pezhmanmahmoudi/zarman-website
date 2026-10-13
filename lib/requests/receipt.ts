@@ -23,6 +23,8 @@ export type RequestCompletionReceiptSnapshot = {
   priority_fee_status: string;
   applied_rate: number | string;
   service_tier: "standard" | "priority";
+  corrected_at?: string;
+  revision?: number;
 };
 
 export function validateRequestReceipt(value: RequestCompletionReceiptSnapshot): void {
@@ -44,6 +46,7 @@ export function validateRequestReceipt(value: RequestCompletionReceiptSnapshot):
     }
   }
   if (Number(value.funding_total) <= 0 || Number(value.recipient_amount) <= 0 || Number(value.applied_rate) <= 0) throw new Error("invalid_completion_receipt");
+  if (value.corrected_at !== undefined && (!Number.isFinite(Date.parse(value.corrected_at)) || !Number.isInteger(value.revision) || Number(value.revision) < 1)) throw new Error("invalid_completion_receipt");
 }
 
 export function receiptAmount(amount: number | string, currency: "AUD" | "IRT"): string {
@@ -55,11 +58,12 @@ export function requestReceiptRows(receipt: RequestCompletionReceiptSnapshot): [
   return [
     ["Reference", receipt.reference_code],
     ["Completed (Sydney time)", new Date(receipt.completed_at).toLocaleString("en-AU", { timeZone: "Australia/Sydney", dateStyle: "medium", timeStyle: "short" })],
+    ...(receipt.corrected_at ? [["Corrected (Sydney time)", new Date(receipt.corrected_at).toLocaleString("en-AU", { timeZone: "Australia/Sydney", dateStyle: "medium", timeStyle: "short" })] as [string, string]] : []),
     ["Sender", receipt.sender_name],
     ["Recipient", receipt.recipient_name],
     ["Total funding received", receiptAmount(receipt.funding_total, receipt.funding_currency)],
     ["Recipient payout", receiptAmount(receipt.recipient_amount, receipt.recipient_currency)],
-    ["Accepted exchange rate", `${Number(receipt.applied_rate).toLocaleString("en-AU")} Toman per AUD`],
+    [receipt.corrected_at ? "Corrected exchange rate" : "Accepted exchange rate", `${Number(receipt.applied_rate).toLocaleString("en-AU")} Toman per AUD`],
     ["Service", receipt.service_tier === "priority" ? "Priority" : "Standard"],
     ["Base fee (AUD equivalent)", receiptAmount(receipt.base_fee_aud, "AUD")],
     ["Express processing fee", receiptAmount(receipt.priority_fee_amount, receipt.funding_currency)],
@@ -79,7 +83,7 @@ export async function renderRequestReceiptPdf(receipt: RequestCompletionReceiptS
   doc.setCreator("Zarman Exchange");
   doc.setProducer("Zarman Exchange");
   doc.setCreationDate(new Date(receipt.completed_at));
-  doc.setModificationDate(new Date(receipt.completed_at));
+  doc.setModificationDate(new Date(receipt.corrected_at ?? receipt.completed_at));
   const [regularBytes, boldBytes, logoBytes] = await Promise.all([
     readFile(join(process.cwd(), "public/fonts/IRANSansX-Regular.ttf")),
     readFile(join(process.cwd(), "public/fonts/IRANSansX-Bold.ttf")),
@@ -95,7 +99,7 @@ export async function renderRequestReceiptPdf(receipt: RequestCompletionReceiptS
   const drawHeader = () => {
     const logoSize = logo.scaleToFit(110, 114);
     page.drawImage(logo, { x: (width - logoSize.width) / 2, y: page.getHeight() - 34 - logoSize.height, ...logoSize });
-    const title = "Completed transfer receipt";
+    const title = receipt.corrected_at ? "Corrected transfer receipt" : "Completed transfer receipt";
     page.drawText(title, { x: (width - bold.widthOfTextAtSize(title, 19)) / 2, y: 663, font: bold, size: 19, color: ink });
     page.drawLine({ start: { x: 42, y: 620 }, end: { x: width - 42, y: 620 }, color: rgb(0.86, 0.89, 0.94), thickness: 0.7 });
   };

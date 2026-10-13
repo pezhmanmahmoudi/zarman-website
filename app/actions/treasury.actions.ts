@@ -21,6 +21,8 @@ import {
 } from "@/lib/strategy-engine";
 import { sortBankAccountsByPriority } from "@/lib/bank-account-ordering";
 import { calcAccountBalancesAsOf } from "@/lib/reconciliation-engine";
+import { readAllFinancialRows } from "@/lib/financial-reads";
+import { ownerFundingInput, validateOwnerFunding, changesLinkedOwnerFunding, changesOwnerFundingSettlement, type OwnerFundingPayload } from "@/lib/owner-funding";
 
 // ── Private helpers ────────────────────────────────────────────────────────
 
@@ -105,29 +107,49 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
   const db = makeServiceRoleClient();
 
   // واکشی همزمان تمام داده‌های مالی زنده
-  const [ledgerRes, expenseRes, loanRes, settingsRes, rateRes, accountsRes, feePostingRes, serviceFeeRes, reconciliationRes] = await Promise.all([
-    db
+  const [ledgerRes, expenseRes, loanRes, settingsRes, rateRes, accountsRes, feePostingRes, serviceFeeRes, reconciliationRes, feeCashRes, feeEarningsRes] = await Promise.all([
+    readAllFinancialRows((from, to) => db
       .from("ledger")
       .select("*")
       .order("date_gregorian", { ascending: true })
-      .order("created_at", { ascending: true }),
+      .order("created_at", { ascending: true }).order("id", { ascending: true }).range(from, to)),
 
-    db.from("expenses").select("*").order("date", { ascending: false }),
-    db.from("owner_loans").select("*").order("date", { ascending: false }),
+    readAllFinancialRows((from, to) => db.from("expenses").select("*").order("date", { ascending: false }).order("id").range(from, to)),
+    readAllFinancialRows((from, to) => db.from("owner_loans").select("*").order("date", { ascending: false }).order("id").range(from, to)),
     db.from("treasury_settings").select("*").eq("id", 1).maybeSingle(),
     db.from("rates_history").select("buy_aud").order("date", { ascending: false }).limit(1).maybeSingle(),
-    db.from("bank_accounts").select("*"),
-    db.from("bank_fee_monthly_postings").select("fee_month, expense_id"),
+    readAllFinancialRows((from, to) => db.from("bank_accounts").select("*").order("id").range(from, to)),
+    readAllFinancialRows((from, to) => db.from("bank_fee_monthly_postings").select("id, fee_month, expense_id").order("id").range(from, to)),
     db.rpc("get_exchange_request_fee_income"),
     db.from("account_reconciliations").select("*").order("created_at", { ascending: false }).limit(300),
+    readAllFinancialRows((from, to) => db.from("exchange_request_fee_entries").select("id, request_id, kind, currency, amount").order("id").range(from, to)),
+    readAllFinancialRows((from, to) => db.from("exchange_request_fee_earnings").select("request_id").order("request_id").range(from, to), "request_id"),
   ]);
 
+  if ([ledgerRes, expenseRes, loanRes, rateRes, accountsRes].some(result => result.error)) {
+    throw new Error("اطلاعات مالی کامل دریافت نشد؛ محاسبه سود با داده ناقص متوقف شد.");
+  }
+  const hasFeeCash = (ledgerRes.data ?? []).some(row => row.request_fee_entry_id);
+  const missingTableCodes = ["42P01", "PGRST205"];
+  const feeSourceErrors = [feeCashRes.error, feeEarningsRes.error].filter(error => error != null);
+  if (feeSourceErrors.some(error => !missingTableCodes.includes(error.code ?? ""))) {
+    throw new Error("اطلاعات کامل تعهد کارمزدها دریافت نشد؛ محاسبه سود با داده ناقص متوقف شد.");
+  }
+  if (hasFeeCash && feeSourceErrors.length > 0) {
+    throw new Error("تعهد کارمزدهای دریافت‌شده قابل محاسبه نیست؛ گزارش دارایی ناقص خواهد بود.");
+  }
+
   // Refuse to report incomplete profit if the deployed request-fee accounting
-  // query fails. A missing RPC is allowed while the workflow is still disabled.
-  if (serviceFeeRes.error) {
-    if (!["42883", "PGRST202"].includes(serviceFeeRes.error.code)) throw new Error("Priority service fee income could not be loaded.");
+  // query fails. Missing sources are allowed only before this workflow is used.
+  if (serviceFeeRes.error && !["42883", "PGRST202"].includes(serviceFeeRes.error.code)) {
+    throw new Error("Priority service fee income could not be loaded.");
+  }
+  if (serviceFeeRes.error || feeSourceErrors.length > 0) {
     const requests = await db.from("exchange_request_settings").select("settings").eq("id", true).maybeSingle();
-    if (requests.data?.settings?.enabled || (requests.error && !["42P01", "PGRST205"].includes(requests.error.code))) throw new Error("Apply the request fee accounting migration before reporting priority service income.");
+    if (hasFeeCash || requests.data?.settings?.enabled ||
+      (requests.error && !missingTableCodes.includes(requests.error.code))) {
+      throw new Error("Apply the request fee accounting migration before reporting priority service income.");
+    }
   }
 
   // هزینه‌های دوره‌ای را جداگانه واکشی می‌کنیم تا در صورت عدم وجود جدول، صفحه خراب نشود
@@ -166,6 +188,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     payer_account_id: r.payer_account_id as string | null,
     receiver_account_id: r.receiver_account_id as string | null,
     created_at: r.created_at as string,
+    request_fee_entry_id: r.request_fee_entry_id as string | null,
   }));
 
   const expenseInputs: ExpenseRowInput[] = (expenseRes.data ?? []).map((r: any) => ({
@@ -175,19 +198,12 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
     status: r.status as "paid" | "pending",
     date: r.date as string,
+    created_at: r.created_at as string,
     category: r.category as string,
     payer_account_id: r.payer_account_id as string | null,
   }));
 
-  const loanInputs: OwnerLoanRowInput[] = (loanRes.data ?? []).map((r: any) => ({
-    id: String(r.id),
-    currency: r.currency as "AUD" | "IRT",
-    amount: Number(r.amount),
-    exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
-    loan_type: r.loan_type as "injection" | "repayment",
-    account_id: (r.account_id ?? r.account) as string | null,
-    date: r.date as string,
-  }));
+  const loanInputs: OwnerLoanRowInput[] = (loanRes.data ?? []).map(ownerFundingInput);
 
   const raw = settingsRes.data;
   const settings: TreasurySettingsRow = {
@@ -207,6 +223,16 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
 
   const currentBuyRate = Number(rateRes.data?.buy_aud ?? 0);
 
+  const earnedRequests = new Set((feeEarningsRes.data ?? []).map(row => row.request_id));
+  const pendingFeesByRequest = new Map<string, number>();
+  for (const entry of feeCashRes.data ?? []) {
+    if (earnedRequests.has(entry.request_id)) continue;
+    const amountIRT = Number(entry.amount) * (entry.currency === "AUD" ? currentBuyRate : 1);
+    pendingFeesByRequest.set(entry.request_id, (pendingFeesByRequest.get(entry.request_id) ?? 0) +
+      (entry.kind === "refunded" ? -amountIRT : amountIRT));
+  }
+  const pendingServiceFeeLiabilityIRT = [...pendingFeesByRequest.values()].reduce((sum, amount) => sum + Math.max(0, amount), 0);
+
   // ۳. محاسبه ترازنامه‌ها و سودها در موتور پیشرفته V2
   const accounting = calcAccountingSnapshot(
     ledgerRows,
@@ -214,7 +240,8 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     loanInputs,
     accountsMeta,
     currentBuyRate,
-    Number(serviceFeeRes.data ?? 0)
+    Number(serviceFeeRes.data ?? 0),
+    pendingServiceFeeLiabilityIRT
   );
 
   // ۴. محاسبه نقدینگی داینامیک کل ایران بر مبنای برآیند کشوها (حذف کامل هاردکد کادوس/پژمان)
@@ -305,30 +332,30 @@ export async function updateTreasurySettings(
 /**
  * ثبت وام جدید یا بازپرداخت به تفکیک کشو
  */
-export async function addOwnerLoan(payload: {
-  date: string;
-  currency: "AUD" | "IRT";
-  amount: number;
-  exchange_rate?: number | null;
-  account_id: string;
-  loan_type: "injection" | "repayment";
-  repayment_status: "open" | "partially_repaid" | "repaid";
-  notes?: string;
-}): Promise<{ success: true } | { error: string }> {
+export async function addOwnerLoan(payload: OwnerFundingPayload): Promise<{ success: true } | { error: string }> {
   const admin = await requireAdmin();
 
-  if (!payload.account_id) return { error: "انتخاب کشوی حساب الزامی است." };
-  if (payload.amount <= 0) return { error: "مبلغ باید بزرگتر از صفر باشد." };
+  const validation = validateOwnerFunding(payload);
+  if (validation) return { error: validation };
 
   const db = makeServiceRoleClient();
+  const { data: account, error: accountError } = await db.from("bank_accounts").select("currency").eq("id", payload.account_id).single();
+  if (accountError || !account || (payload.cash_effect !== false && account.currency !== (payload.settlement_currency ?? payload.currency))) {
+    return { error: "ارز حساب با ارز تسویه همخوانی ندارد." };
+  }
   const { error } = await db.from("owner_loans").insert([
     {
       date: payload.date,
       currency: payload.currency,
       amount: payload.amount,
-      exchange_rate: payload.currency === "AUD" ? payload.exchange_rate : null,
+      exchange_rate: payload.exchange_rate ?? null,
       account_id: payload.account_id,
       loan_type: payload.loan_type,
+      funding_type: payload.funding_type ?? "loan",
+      cash_effect: payload.cash_effect ?? true,
+      settlement_currency: payload.settlement_currency ?? null,
+      settlement_amount: payload.settlement_amount ?? null,
+      linked_ledger_id: payload.linked_ledger_id ?? null,
       repayment_status: payload.repayment_status,
       notes: payload.notes?.trim() || null,
       created_by: admin.id,
@@ -351,33 +378,28 @@ export async function addOwnerLoan(payload: {
 /**
  * ویرایش کامل تراکنش سرمایه مالک
  */
-export async function updateOwnerLoan(payload: {
-  id: string;
-  date: string;
-  currency: "AUD" | "IRT";
-  amount: number;
-  exchange_rate?: number | null;
-  account_id: string;
-  loan_type: "injection" | "repayment";
-  repayment_status: "open" | "partially_repaid" | "repaid";
-  notes?: string;
-}): Promise<{ success: true } | { error: string }> {
+export async function updateOwnerLoan(payload: OwnerFundingPayload & { id: string }): Promise<{ success: true } | { error: string }> {
   const admin = await requireAdmin();
 
   if (!payload.id) return { error: "شناسه الزامی است." };
-  if (!payload.date) return { error: "تاریخ الزامی است." };
-  if (!payload.account_id) return { error: "انتخاب کشوی حساب الزامی است." };
-  if (payload.amount <= 0) return { error: "مبلغ باید بزرگتر از صفر باشد." };
-  if (payload.currency === "AUD" && (!payload.exchange_rate || payload.exchange_rate <= 0)) {
-    return { error: "نرخ تبدیل برای ارز AUD الزامی است." };
-  }
+  const validation = validateOwnerFunding(payload);
+  if (validation) return { error: validation };
 
   const db = makeServiceRoleClient();
-  const { data: before } = await db
+  const { data: before, error: beforeError } = await db
     .from("owner_loans")
-    .select("date, currency, amount, exchange_rate, account_id, loan_type, repayment_status, notes")
+    .select("*")
     .eq("id", payload.id)
     .single();
+
+  if (beforeError || !before) return { error: "ثبت تأمین مالی یافت نشد." };
+  if (changesOwnerFundingSettlement(before, payload)) return { error: "تغییر شیوه تسویه باید با سند اصلاحی جداگانه انجام شود." };
+  if (changesLinkedOwnerFunding(before, payload)) return { error: "این ثبت به گردش قبلی متصل است؛ تغییر مالی باید با سند اصلاحی انجام شود." };
+  const { data: account, error: accountError } = await db.from("bank_accounts").select("currency").eq("id", payload.account_id).single();
+  if (accountError || !account || ((payload.cash_effect ?? before.cash_effect) !== false &&
+    account.currency !== (payload.settlement_currency ?? before.settlement_currency ?? payload.currency))) {
+    return { error: "ارز حساب با ارز تسویه همخوانی ندارد." };
+  }
 
   const { error } = await db
     .from("owner_loans")
@@ -385,9 +407,10 @@ export async function updateOwnerLoan(payload: {
       date: payload.date,
       currency: payload.currency,
       amount: payload.amount,
-      exchange_rate: payload.currency === "AUD" ? payload.exchange_rate : null,
+      exchange_rate: payload.exchange_rate ?? null,
       account_id: payload.account_id,
       loan_type: payload.loan_type,
+      funding_type: payload.funding_type ?? before.funding_type ?? "loan",
       repayment_status: payload.repayment_status,
       notes: payload.notes?.trim() || null,
     })
@@ -860,12 +883,16 @@ export async function closeBankAccount(id: string): Promise<{ success: true } | 
 
   const today = new Date().toISOString().slice(0, 10);
   const [ledgerRes, expenseRes, loanRes, rateRes, accountsRes] = await Promise.all([
-    db.from("ledger").select("*"),
-    db.from("expenses").select("*"),
-    db.from("owner_loans").select("*"),
+    readAllFinancialRows((from, to) => db.from("ledger").select("*").order("id").range(from, to)),
+    readAllFinancialRows((from, to) => db.from("expenses").select("*").order("id").range(from, to)),
+    readAllFinancialRows((from, to) => db.from("owner_loans").select("*").order("id").range(from, to)),
     db.from("rates_history").select("buy_aud").order("date", { ascending: false }).limit(1).maybeSingle(),
-    db.from("bank_accounts").select("id, account_name, currency, account_type"),
+    readAllFinancialRows((from, to) => db.from("bank_accounts").select("id, account_name, currency, account_type").order("id").range(from, to)),
   ]);
+
+  if ([ledgerRes, expenseRes, loanRes, rateRes, accountsRes].some(result => result.error)) {
+    return { error: "اطلاعات مالی کامل دریافت نشد؛ بستن حساب با موجودی ناقص متوقف شد." };
+  }
 
   const accountsMeta: AccountMeta[] = (accountsRes.data ?? []).map((a: any) => ({
     id: String(a.id),
@@ -886,6 +913,7 @@ export async function closeBankAccount(id: string): Promise<{ success: true } | 
     payer_account_id: r.payer_account_id as string | null,
     receiver_account_id: r.receiver_account_id as string | null,
     created_at: r.created_at as string,
+    request_fee_entry_id: r.request_fee_entry_id as string | null,
   }));
 
   const expenseInputs: ExpenseRowInput[] = (expenseRes.data ?? []).map((r: any) => ({
@@ -895,19 +923,12 @@ export async function closeBankAccount(id: string): Promise<{ success: true } | 
     exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
     status: r.status as "paid" | "pending",
     date: r.date as string,
+    created_at: r.created_at as string,
     category: r.category as string,
     payer_account_id: r.payer_account_id as string | null,
   }));
 
-  const loanInputs: OwnerLoanRowInput[] = (loanRes.data ?? []).map((r: any) => ({
-    id: String(r.id),
-    currency: r.currency as "AUD" | "IRT",
-    amount: Number(r.amount),
-    exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
-    loan_type: r.loan_type as "injection" | "repayment",
-    account_id: (r.account_id ?? r.account) as string | null,
-    date: r.date as string,
-  }));
+  const loanInputs: OwnerLoanRowInput[] = (loanRes.data ?? []).map(ownerFundingInput);
 
   const currentBuyRate = Number(rateRes.data?.buy_aud ?? 0);
   const balances = calcAccountBalancesAsOf(ledgerRows, expenseInputs, loanInputs, accountsMeta, today, currentBuyRate);
@@ -970,13 +991,17 @@ export async function getComputedBalancesAsOf(
 
   const db = makeServiceRoleClient();
   const [ledgerRes, expenseRes, loanRes, rateRes, accountsRes] = await Promise.all([
-    db.from("ledger").select("*").lte("date_gregorian", asOfDate)
-      .order("date_gregorian", { ascending: true }).order("created_at", { ascending: true }),
-    db.from("expenses").select("*").lte("date", asOfDate),
-    db.from("owner_loans").select("*").lte("date", asOfDate),
+    readAllFinancialRows((from, to) => db.from("ledger").select("*").lte("date_gregorian", asOfDate)
+      .order("date_gregorian", { ascending: true }).order("created_at", { ascending: true }).order("id").range(from, to)),
+    readAllFinancialRows((from, to) => db.from("expenses").select("*").lte("date", asOfDate).order("id").range(from, to)),
+    readAllFinancialRows((from, to) => db.from("owner_loans").select("*").lte("date", asOfDate).order("id").range(from, to)),
     db.from("rates_history").select("buy_aud").order("date", { ascending: false }).limit(1).maybeSingle(),
-    db.from("bank_accounts").select("id, account_name, currency, account_type"),
+    readAllFinancialRows((from, to) => db.from("bank_accounts").select("id, account_name, currency, account_type").order("id").range(from, to)),
   ]);
+
+  if ([ledgerRes, expenseRes, loanRes, rateRes, accountsRes].some(result => result.error)) {
+    return { error: "اطلاعات مالی کامل دریافت نشد؛ محاسبه موجودی با داده ناقص متوقف شد." };
+  }
 
   const accountsMeta: AccountMeta[] = (accountsRes.data ?? []).map((a: any) => ({
     id: String(a.id),
@@ -997,6 +1022,7 @@ export async function getComputedBalancesAsOf(
     payer_account_id: r.payer_account_id as string | null,
     receiver_account_id: r.receiver_account_id as string | null,
     created_at: r.created_at as string,
+    request_fee_entry_id: r.request_fee_entry_id as string | null,
   }));
 
   const expenseInputs: ExpenseRowInput[] = (expenseRes.data ?? []).map((r: any) => ({
@@ -1006,19 +1032,12 @@ export async function getComputedBalancesAsOf(
     exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
     status: r.status as "paid" | "pending",
     date: r.date as string,
+    created_at: r.created_at as string,
     category: r.category as string,
     payer_account_id: r.payer_account_id as string | null,
   }));
 
-  const loanInputs: OwnerLoanRowInput[] = (loanRes.data ?? []).map((r: any) => ({
-    id: String(r.id),
-    currency: r.currency as "AUD" | "IRT",
-    amount: Number(r.amount),
-    exchange_rate: r.exchange_rate != null ? Number(r.exchange_rate) : null,
-    loan_type: r.loan_type as "injection" | "repayment",
-    account_id: (r.account_id ?? r.account) as string | null,
-    date: r.date as string,
-  }));
+  const loanInputs: OwnerLoanRowInput[] = (loanRes.data ?? []).map(ownerFundingInput);
 
   const currentBuyRate = Number(rateRes.data?.buy_aud ?? 0);
   const balances = calcAccountBalancesAsOf(ledgerRows, expenseInputs, loanInputs, accountsMeta, asOfDate, currentBuyRate);
