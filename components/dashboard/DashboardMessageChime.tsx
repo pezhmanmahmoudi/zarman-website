@@ -8,59 +8,121 @@ import { getMyLatestAdminMessage } from "@/app/actions/request.actions";
 import { supabase } from "@/lib/supabase";
 import type { RequestLocale } from "@/lib/requests/types";
 
-const SEEN_KEY = "zarman:dashboard:last-admin-message";
+export const ADMIN_MESSAGE_SEEN_KEY = "zarman:dashboard:last-admin-message";
+
+let sharedAudioContext: AudioContext | null = null;
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Ctor) return null;
+  if (!sharedAudioContext || sharedAudioContext.state === "closed") {
+    sharedAudioContext = new Ctor();
+  }
+  return sharedAudioContext;
+}
 
 /** Short two-note chime synthesised locally, so no audio file is downloaded. */
-function playChime(context: AudioContext) {
+function synthesizeChime(context: AudioContext) {
   const start = context.currentTime;
-  [[659.25, 0], [880, .14]].forEach(([frequency, offset]) => {
+  [[659.25, 0], [880, 0.14]].forEach(([frequency, offset]) => {
     const oscillator = context.createOscillator(), gain = context.createGain();
     oscillator.type = "sine";
     oscillator.frequency.value = frequency;
     gain.gain.setValueAtTime(0, start + offset);
-    gain.gain.linearRampToValueAtTime(.16, start + offset + .02);
-    gain.gain.exponentialRampToValueAtTime(.0001, start + offset + .45);
+    gain.gain.linearRampToValueAtTime(0.16, start + offset + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + offset + 0.45);
     oscillator.connect(gain).connect(context.destination);
+    oscillator.onended = () => {
+      oscillator.disconnect();
+      gain.disconnect();
+    };
     oscillator.start(start + offset);
-    oscillator.stop(start + offset + .5);
+    oscillator.stop(start + offset + 0.5);
   });
+}
+
+/** Safely resumes the shared Web Audio context (if needed) and plays the two-note notification chime. */
+export async function playDashboardMessageChime(): Promise<boolean> {
+  try {
+    const context = getAudioContext();
+    if (!context) return false;
+    if (context.state === "suspended") {
+      await context.resume();
+    }
+    if (context.state !== "running") return false;
+    synthesizeChime(context);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Chimes and shows a notice when Zarman sends a new message on any of the customer's requests. */
 export function DashboardMessageChime({ locale, sound }: { locale: RequestLocale; sound: boolean }) {
   const fa = locale === "fa", pathname = usePathname();
   const [notice, setNotice] = useState<string | null>(null);
-  const audio = useRef<AudioContext | null>(null), soundRef = useRef(sound), timer = useRef<number>(undefined);
+  const soundRef = useRef(sound), timer = useRef<number>(undefined);
   useEffect(() => { soundRef.current = sound; }, [sound]);
 
-  // Browsers only allow audio after a user gesture, so the context is created on the first one.
+  // Browsers only allow audio after a user gesture; unlock and resume on interaction until running.
   useEffect(() => {
     const unlock = () => {
-      if (!audio.current && typeof AudioContext !== "undefined") audio.current = new AudioContext();
-      void audio.current?.resume();
+      try {
+        const context = getAudioContext();
+        if (!context) return;
+        if (context.state === "suspended") void context.resume();
+        if (context.state === "running") {
+          window.removeEventListener("pointerdown", unlock);
+          window.removeEventListener("keydown", unlock);
+        }
+      } catch {}
     };
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    return () => { window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
+    window.addEventListener("pointerdown", unlock, { passive: true });
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
   }, []);
-  useEffect(() => () => { void audio.current?.close(); }, []);
 
   const check = useCallback(async () => {
     const result = await getMyLatestAdminMessage().catch(() => null);
-    const latest = result?.data;
-    if (!latest) return;
-    const seen = window.localStorage.getItem(SEEN_KEY);
-    window.localStorage.setItem(SEEN_KEY, latest.createdAt);
-    // First visit only records a baseline; older messages are not announced.
+    if (!result || result.error) return;
+    const latest = result.data;
+    let seen: string | null = null;
+    try { seen = window.localStorage.getItem(ADMIN_MESSAGE_SEEN_KEY); } catch {}
+    if (!latest) {
+      // Establish a baseline when the customer has zero prior messages so their very first admin message chimes.
+      if (!seen) {
+        try { window.localStorage.setItem(ADMIN_MESSAGE_SEEN_KEY, new Date(0).toISOString()); } catch {}
+      }
+      return;
+    }
+    try { window.localStorage.setItem(ADMIN_MESSAGE_SEEN_KEY, latest.createdAt); } catch {}
+    // First visit with existing historical messages only records a baseline; older messages are not announced.
     if (!seen || Date.parse(latest.createdAt) <= Date.parse(seen)) return;
     if (!window.location.pathname.endsWith(`/dashboard/requests/${latest.requestId}`)) setNotice(latest.requestId);
-    if (soundRef.current && audio.current?.state === "running") playChime(audio.current);
+    if (soundRef.current) void playDashboardMessageChime();
   }, []);
 
   useEffect(() => {
     // Initial check waits until the dashboard's own data has loaded.
     const initial = window.setTimeout(() => void check(), 1500);
-    if (typeof supabase.channel !== "function") return () => window.clearTimeout(initial);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        window.clearTimeout(timer.current);
+        timer.current = window.setTimeout(() => void check(), 800);
+      }
+    };
+    document.addEventListener?.("visibilitychange", onVisibility);
+    if (typeof supabase.channel !== "function") {
+      return () => {
+        window.clearTimeout(initial);
+        window.clearTimeout(timer.current);
+        document.removeEventListener?.("visibilitychange", onVisibility);
+      };
+    }
     const channel = supabase
       .channel("customer-admin-messages")
       .on("postgres_changes", { event: "*", schema: "public", table: "exchange_request_realtime_signals" }, () => {
@@ -68,7 +130,12 @@ export function DashboardMessageChime({ locale, sound }: { locale: RequestLocale
         timer.current = window.setTimeout(() => void check(), 800);
       })
       .subscribe();
-    return () => { window.clearTimeout(initial); window.clearTimeout(timer.current); if (typeof supabase.removeChannel === "function") void supabase.removeChannel(channel); };
+    return () => {
+      window.clearTimeout(initial);
+      window.clearTimeout(timer.current);
+      document.removeEventListener?.("visibilitychange", onVisibility);
+      if (typeof supabase.removeChannel === "function") void supabase.removeChannel(channel);
+    };
   }, [check]);
 
   const href = notice ? `/${locale}/dashboard/requests/${notice}` : "";
@@ -82,3 +149,4 @@ export function DashboardMessageChime({ locale, sound }: { locale: RequestLocale
     <button type="button" onClick={() => setNotice(null)} aria-label={fa ? "بستن" : "Dismiss"} className="grid size-9 shrink-0 place-items-center rounded-full text-[#6a6279] hover:bg-[#f4f2f8]"><X size={16} aria-hidden="true" /></button>
   </div>;
 }
+

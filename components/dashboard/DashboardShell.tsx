@@ -11,7 +11,7 @@ import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { DashboardMotionProvider } from "./DashboardMotion";
 import { DashboardLoading } from "./DashboardLoading";
-import { DashboardMessageChime } from "./DashboardMessageChime";
+import { DashboardMessageChime, playDashboardMessageChime } from "./DashboardMessageChime";
 export { DashboardLoading } from "./DashboardLoading";
 import styles from "@/styles/dashboard/DashboardShell.module.css";
 
@@ -31,7 +31,12 @@ export function DashboardShell({ children, initialAccount = null }: { children: 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- the saved choice only exists in the browser
   useEffect(() => { setSound(window.localStorage.getItem(SOUND_KEY) !== "off"); }, []);
   function toggleSound() {
-    setSound(value => { window.localStorage.setItem(SOUND_KEY, value ? "off" : "on"); return !value; });
+    setSound(value => {
+      const next = !value;
+      try { window.localStorage.setItem(SOUND_KEY, next ? "on" : "off"); } catch {}
+      if (next) void playDashboardMessageChime?.();
+      return next;
+    });
   }
   if (data.signedOut) return <div className="grid min-h-dvh place-items-center p-6" dir={locale === "fa" ? "rtl" : "ltr"}>
     <section className="text-center text-[#453854]" role="status">

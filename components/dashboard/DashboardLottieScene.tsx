@@ -45,6 +45,7 @@ const fallbacks: Record<DashboardLottieSceneName, LucideIcon> = {
   "recipient-avatar": UserRound,
   "recipient-selection": UserRound,
   "feedback-review": MessageCircleHeart,
+  "google-logo-effect": BadgeCheck,
   "identity-approved": Send,
   "identity-rejected": Fingerprint,
   "identity-fingerprint": Fingerprint,

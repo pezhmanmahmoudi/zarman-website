@@ -37,6 +37,7 @@ export const AuroraText = memo(
           className="animate-aurora relative bg-size-[200%_auto] bg-clip-text text-transparent motion-reduce:animate-none"
           style={gradientStyle}
           aria-hidden="true"
+          suppressHydrationWarning
         >
           {children}
         </span>

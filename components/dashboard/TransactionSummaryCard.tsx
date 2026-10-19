@@ -1,13 +1,13 @@
 "use client";
 
 import { DashboardTabLink as Link } from "./DashboardTabLink";
-import { ArrowLeft, ArrowRight, Ban, Check, ChevronLeft, ChevronRight, Clock3, Download, PenLine, ReceiptText, Star, Undo2, X, type LucideIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight, Ban, Check, ChevronLeft, ChevronRight, Clock3, Download, ReceiptText, Undo2, X, type LucideIcon } from "lucide-react";
 import { DashboardButton, DashboardMagicCard, StatusBadge, dashboardCardLink } from "@/components/dashboard/dashboard-ui";
-import { dashboardHref } from "@/lib/dashboard/navigation";
 import { dashboardPalette, dashboardStageTones, type DashboardTone } from "@/lib/dashboard/palette";
 import { journeyPresentation } from "@/lib/dashboard/journey-presentation";
 import { requestLottieScene } from "@/lib/dashboard/request-lottie-scene";
 import { DashboardLottieScene } from "./DashboardLottieScene";
+import { GoogleReviewPrompt } from "./GoogleReviewPrompt";
 import { requestMoney, requestShortDate } from "@/components/requests/request-labels";
 import type { ExchangeRequest, RequestLocale } from "@/lib/requests/types";
 import { cn } from "@/lib/utils";
@@ -64,13 +64,7 @@ export function TransactionSummaryCard({ request, locale, stageMotion }: { reque
       <span aria-hidden="true" className="hidden size-7 place-items-center rounded-full bg-white @sm:grid" style={{ color: palette.accent }}><Flow size={14} strokeWidth={2} /></span>
       <Amount label={text("Recipient received", "مبلغ دریافتی گیرنده")} amount={quote.recipient_amount} currency={quote.recipient_currency} locale={locale} />
     </div>
-    {completed && <div data-feedback-prompt className="mt-3.5 flex min-h-12 items-center justify-between gap-3 rounded-2xl bg-white/70 py-1.5 pe-1.5 ps-4">
-      <span className="flex min-w-0 items-center gap-2.5">
-        <span aria-hidden="true" className="flex shrink-0 items-center gap-px">{[0, 1, 2, 3, 4].map(index => <Star key={index} size={13} strokeWidth={0} fill="currentColor" className="text-[#f5a623] drop-shadow-[0_1px_2px_#f5a62340]" />)}</span>
-        <span className="truncate text-xs font-medium text-[#4a4560]">{text("How was this transfer?", "از این انتقال راضی بودید؟")}</span>
-      </span>
-      <Link href={dashboardHref(locale, "feedback")} className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-[#e4e0f3] bg-white px-3.5 text-xs font-semibold text-[#4f46c8] no-underline shadow-[0_1px_2px_#1a1a2e0a] outline-none transition-[background-color,border-color,color] duration-150 hover:border-[#cdc6f0] hover:bg-[#f6f5ff] hover:text-[#3730a3] focus-visible:ring-2 focus-visible:ring-[#635bff]/40 motion-reduce:transition-none"><PenLine size={14} aria-hidden="true" />{text("Submit Feedback", "ثبت بازخورد")}</Link>
-    </div>}
+    {completed && <GoogleReviewPrompt locale={locale} />}
     <footer className="mt-auto flex min-h-10 flex-wrap items-center justify-between gap-2 pt-3">
       {receipt && <DashboardButton tone="quiet" className="-ms-3 min-h-10 px-3 text-[#4f46c8] hover:bg-[#f3f2ff] hover:text-[#4338ca]" asChild><a href={receipt} target="_blank" rel="noopener noreferrer"><Download size={16} aria-hidden="true" />{text("Download Receipt", "دریافت رسید")}</a></DashboardButton>}
       {open && <span className="text-xs font-medium" style={{ color: palette.ink }} data-actor={journey.nextActor}>{journey.actorLabel}</span>}

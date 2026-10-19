@@ -158,3 +158,125 @@ test("a due Supabase realtime signal refreshes request data and the latest card 
     assert.equal((html.match(/ZE36827/g) || []).length, 1); assert.equal(calls, 2);
   } finally { hook.cleanup(); Date.now = originalNow; global.window = previous.window; global.document = previous.document; }
 });
+
+test("completed transaction summary cards link to Zarman Google Maps review with Already Reviewed confirmation and undo", () => {
+  const previousWindow = global.window;
+  const storage = new Map();
+  global.window = {
+    localStorage: {
+      getItem: key => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, String(value)),
+      removeItem: key => storage.delete(key),
+    },
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent() { return true; },
+  };
+  try {
+    for (const locale of ["en", "fa"]) {
+      storage.clear();
+      const h = dashboardHarness({ locale });
+      const { TransactionSummaryCard } = h.load("components/dashboard/TransactionSummaryCard.tsx");
+      const { GoogleReviewPrompt, ZARMAN_GOOGLE_REVIEW_URL, GOOGLE_REVIEW_STORAGE_KEY } = h.load("components/dashboard/GoogleReviewPrompt.tsx");
+      const completed = { ...fixture, status: "completed" };
+      const html = markup(React.createElement(TransactionSummaryCard, { request: completed, locale }));
+      assert.match(html, /data-feedback-prompt/);
+      assert.match(html, /data-google-review-link/);
+      assert.match(html, /data-already-reviewed-google/);
+      assert.ok(html.includes(`href="${ZARMAN_GOOGLE_REVIEW_URL}"`));
+      assert.match(html, /target="_blank"/);
+      assert.match(html, /rel="noopener noreferrer"/);
+      assert.doesNotMatch(html, /href="\/(?:en|fa)\/dashboard\?tab=feedback"/);
+      assert.match(html, locale === "fa" ? /ثبت نظر در گوگل مپ/ : /Post a Review on Google/);
+      assert.match(html, locale === "fa" ? /قبلاً نظر داده‌ام/ : /Already reviewed/);
+      assert.match(html, locale === "fa" ? /از این انتقال راضی بودید؟/ : /Happy with this transfer\?/);
+
+      // Refunded or in-progress transfers never show the review prompt.
+      assert.doesNotMatch(markup(React.createElement(TransactionSummaryCard, { request: fixture, locale })), /data-feedback-prompt/);
+      assert.doesNotMatch(markup(React.createElement(TransactionSummaryCard, { request: { ...completed, funding_status: "refunded" }, locale })), /data-feedback-prompt/);
+
+      // Clicking "Already reviewed" transitions to the thank-you confirmation and persists "done" for future visits.
+      let tree = h.render(GoogleReviewPrompt, { locale });
+      assert.equal(tree.props["data-google-review-prompt"], "active");
+      elements(tree, node => node.props["data-already-reviewed-google"])[0].props.onClick();
+      assert.equal(storage.get(GOOGLE_REVIEW_STORAGE_KEY), "done");
+      tree = h.render(GoogleReviewPrompt, { locale });
+      assert.equal(tree.props["data-google-review-prompt"], "thanked");
+
+      // Subsequent visits hide the prompt completely so the customer is not nagged again.
+      const hNextVisit = dashboardHarness({ locale });
+      const { GoogleReviewPrompt: PromptNextVisit } = hNextVisit.load("components/dashboard/GoogleReviewPrompt.tsx");
+      assert.equal(hNextVisit.render(PromptNextVisit, { locale }), null);
+
+      // Clicking "Undo" restores the active prompt and clears storage.
+      elements(tree, node => node.props["data-undo-google-review"])[0].props.onClick();
+      assert.equal(storage.get(GOOGLE_REVIEW_STORAGE_KEY), undefined);
+      tree = h.render(GoogleReviewPrompt, { locale });
+      assert.equal(tree.props["data-google-review-prompt"], "active");
+    }
+  } finally {
+    global.window = previousWindow;
+  }
+});
+
+test("message chime establishes a baseline when no messages exist, announces the first admin message, and resumes suspended audio", async () => {
+  const previous = { window: global.window, document: global.document };
+  const storage = new Map(), timers = [];
+  let oscillators = 0, resumed = 0, latestMessage = null, onSignal = null;
+  class FakeAudioContext {
+    constructor() { this.state = "suspended"; this.currentTime = 0; this.destination = {}; }
+    async resume() { resumed++; this.state = "running"; }
+    createOscillator() {
+      oscillators++;
+      return { type: "sine", frequency: { value: 0 }, connect() { return { connect() {} }; }, start() {}, stop() { if (this.onended) this.onended(); }, disconnect() {} };
+    }
+    createGain() {
+      return { gain: { setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {}, disconnect() {} };
+    }
+  }
+  global.window = {
+    AudioContext: FakeAudioContext,
+    location: { pathname: "/fa/dashboard" },
+    localStorage: { getItem: k => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, String(v)) },
+    setTimeout(fn) { timers.push(fn); return timers.length; },
+    clearTimeout() {},
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  global.document = { visibilityState: "visible", addEventListener() {}, removeEventListener() {} };
+  try {
+    const h = dashboardHarness({
+      locale: "fa",
+      pathname: "/fa/dashboard",
+      mocks: {
+        "@/app/actions/request.actions": { getMyLatestAdminMessage: async () => ({ data: latestMessage }) },
+        "@/lib/supabase": { supabase: { channel: () => ({ on(_e, _f, cb) { onSignal = cb; return this; }, subscribe() { return this; } }), removeChannel: async () => {} } },
+      },
+    });
+    const { DashboardMessageChime, ADMIN_MESSAGE_SEEN_KEY } = h.load("components/dashboard/DashboardMessageChime.tsx");
+    h.render(DashboardMessageChime, { locale: "fa", sound: true });
+    h.effects();
+    // Run initial check when customer has zero messages.
+    await timers.pop()();
+    await tick();
+    assert.equal(storage.get(ADMIN_MESSAGE_SEEN_KEY), "1970-01-01T00:00:00.000Z");
+    assert.equal(oscillators, 0);
+
+    // First admin message ever arrives via realtime signal -> resumes suspended AudioContext, plays 2-note chime, and shows notice.
+    latestMessage = { id: "msg-1", requestId: "req-1", createdAt: "2026-10-19T03:00:00.000Z" };
+    onSignal();
+    await timers.pop()();
+    await tick();
+    await tick();
+    assert.equal(resumed, 1);
+    assert.equal(oscillators, 2);
+    const html = markup(h.render(DashboardMessageChime, { locale: "fa", sound: true }));
+    assert.match(html, /پیام جدید از زرمان/);
+    assert.match(html, /href="\/fa\/dashboard\/requests\/req-1#request-conversation"/);
+  } finally {
+    global.window = previous.window;
+    global.document = previous.document;
+  }
+});
+
+

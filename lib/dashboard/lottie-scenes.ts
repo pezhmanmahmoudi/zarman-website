@@ -41,6 +41,7 @@ export const dashboardLottieScenes = {
   // Keep only the first 84 frames: 3.5 seconds at the original 24 fps.
   "recipient-avatar": { src: "/animations/dashboard/preview/profile-avatar-for-child-bd507410b67b.json", holdOnComplete: true, segment: [0, 84] },
   "feedback-review": { src: "/animations/dashboard/preview/review.json", holdOnComplete: true },
+  "google-logo-effect": { src: "/animations/dashboard/preview/google-logo-effect.json", holdOnComplete: true },
   "identity-fingerprint": { src: "/animations/dashboard/preview/fingerprint-01ac4fd147c2.json", holdOnComplete: true },
   "identity-approved": { src: "/animations/dashboard/preview/send.json", holdOnComplete: true },
   "identity-rejected": { src: "/animations/dashboard/preview/wrong-fingerprint.json", holdOnComplete: true },
