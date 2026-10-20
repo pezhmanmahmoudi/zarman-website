@@ -103,6 +103,10 @@ function ledgerUi(actions = {}, rows = [row]) {
 
 test("ledger edit retains exact values and account rules while switching type keeps entered amounts", () => {
   const ui = ledgerUi(); ui.open();
+  for (const label of ["AUD amount", "Toman amount", "Exchange rate", "Fee (AUD)"]) {
+    assert.ok(!ui.field(label).props.readOnly, `${label} must be directly editable even when linked to a transaction`);
+  }
+  assert.equal(ui.select("Entry type").props.disabled, false);
   assert.equal(ui.field("Exchange rate").props.value, "104650.5");
   assert.equal(ui.field("Sender").props.value, "Example sender");
   assert.deepEqual(ui.select("Paying account").props.labeledOptions.map(option => option.value), ["", "irt", "credit"]);

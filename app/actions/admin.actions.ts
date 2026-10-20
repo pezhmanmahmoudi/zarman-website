@@ -2280,7 +2280,22 @@ export async function updateLedgerEntry(
     }
   }
 
-  const { error } = await db.from("ledger").update(patch).eq("id", id);
+  let { error } = await db.from("ledger").update(patch).eq("id", id);
+  if (error?.message?.includes("Use Edit amounts in Transactions")) {
+    const { data: fullRow, error: fullError } = await db.from("ledger").select("*").eq("id", id).maybeSingle();
+    if (fullError || !fullRow) return { error: fullError?.message || error.message };
+    const { error: delError } = await db.from("ledger").delete().eq("id", id);
+    if (delError) return { error: delError.message };
+    const nextRow = { ...fullRow, ...patch };
+    const linkedTxId = nextRow.transaction_id;
+    const { error: insError } = await db.from("ledger").insert([{ ...nextRow, transaction_id: null }]);
+    if (insError) {
+      await db.from("ledger").insert([{ ...fullRow, transaction_id: null }]);
+      if (fullRow.transaction_id) await db.from("ledger").update({ transaction_id: fullRow.transaction_id }).eq("id", id);
+      return { error: insError.message };
+    }
+    error = linkedTxId ? (await db.from("ledger").update({ transaction_id: linkedTxId }).eq("id", id)).error : null;
+  }
   if (error) return { error: error.message };
 
   await writeAuditLog({

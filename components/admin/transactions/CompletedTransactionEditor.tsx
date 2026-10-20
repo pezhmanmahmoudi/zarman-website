@@ -104,7 +104,7 @@ export function CompletedTransactionEditor({ transactionId, disabled = false, on
       <label className={styles.wide}>Reason for correction
         <textarea value={reason} onChange={event => setReason(event.target.value)} minLength={3} maxLength={1000} disabled={busy || stale} required />
       </label>
-      <p className={`${styles.caption} ${styles.wide}`}>Updates the customer record, ledger, reports and receipt. The rate is recalculated using the recorded service fees.</p>
+      <p className={`${styles.caption} ${styles.wide}`}>Updates the customer record and receipt. The rate is recalculated using the recorded service fees, while ledger entries remain independent.</p>
       {error && <p className={`${styles.error} ${styles.wide}`} role="alert">{error}</p>}
       <div className={`${styles.actions} ${styles.wide}`}>
         {stale ? <button type="button" onClick={open} disabled={busy || disabled}>Reload amounts</button>
