@@ -185,15 +185,16 @@ test("approved customers still expose Reject and Suspend actions so admins can r
     "@/components/admin/ui/AdminConfirmDialog": { AdminConfirmDialog: () => null },
     "@/components/admin/ui/AdminToast": { AdminToast: () => null },
   } });
-  const { KycActionButtons } = h.load("components/admin/KycActionButtons.tsx");
+  const { KycActionButtons, KycSuspendButton } = h.load("components/admin/KycActionButtons.tsx");
   const tree = h.render(KycActionButtons, { userId: "fixture-customer", currentStatus: "approved", onCommitted: next => statuses.push(next) });
   assert.equal(nodes(tree, node => node.props.title === "Approve KYC").length, 0);
   const rejectBtn = nodes(tree, node => node.props.title === "Reject KYC")[0];
-  const suspendBtn = nodes(tree, node => node.props.title === "Suspend Account")[0];
   assert.ok(rejectBtn, "Reject button must be available for approved customers");
-  assert.ok(suspendBtn, "Suspend button must be available for approved customers");
   rejectBtn.props.onClick();
   await confirmation.onConfirm();
+  const suspendTree = h.render(KycSuspendButton, { userId: "fixture-customer", currentStatus: "approved", onCommitted: next => statuses.push(next) });
+  const suspendBtn = nodes(suspendTree, node => node.props.title === "Suspend Account")[0];
+  assert.ok(suspendBtn, "Suspend button must be available for approved customers");
   suspendBtn.props.onClick();
   await confirmation.onConfirm();
   assert.deepEqual(calls, [["reject", "fixture-customer"], "refresh", ["suspend", "fixture-customer", "approved"], "refresh"]);

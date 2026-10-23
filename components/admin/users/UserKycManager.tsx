@@ -320,7 +320,7 @@ export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted
               Current Status
               <StatusBadge status={profile?.kyc_status ?? null} />
             </div>
-            {profile && <KycActionButtons showSuspend={false} userId={profile.id} currentStatus={profile.kyc_status ?? undefined} onCommitted={status => {
+            {profile && <KycActionButtons userId={profile.id} currentStatus={profile.kyc_status ?? undefined} onCommitted={status => {
               setForm(previous => ({ ...previous, kyc_status: status }));
               onKycStatusCommitted?.(status);
             }} />}

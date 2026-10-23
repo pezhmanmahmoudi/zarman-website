@@ -54,8 +54,8 @@ export function KycSuspendButton({ userId, currentStatus, onCommitted }: {
   );
 }
 
-export function KycActionButtons({ userId, currentStatus, onCommitted, showSuspend = true }: {
-  userId: string; currentStatus?: string; onCommitted?: (status: any) => void; showSuspend?: boolean;
+export function KycActionButtons({ userId, currentStatus, onCommitted }: {
+  userId: string; currentStatus?: string; onCommitted?: (status: any) => void;
 }) {
   const { confirm, showToast, dialogProps, toastProps } = useAdminFeedback();
   const refreshAdmin = useAdminRefresh();
@@ -88,24 +88,6 @@ export function KycActionButtons({ userId, currentStatus, onCommitted, showSuspe
     });
   };
 
-  const handleSuspend = () => {
-    confirm({
-      title: "Suspend Account",
-      message: "This will immediately suspend the customer's account, display an official suspension notice, and block all access to their dashboard.",
-      confirmLabel: "Suspend",
-      variant: "danger",
-      onConfirm: async () => {
-        const result = await suspendKyc(userId, currentStatus);
-        if (result.error) showToast({ type: "error", message: result.error });
-        else if (result.success) {
-          showToast({ type: result.warning ? "warning" : "success", message: result.warning ?? "Account suspended.", duration: result.warning ? 10000 : undefined });
-          onCommitted?.("suspended");
-          refreshAdmin();
-        }
-      },
-    });
-  };
-
   const handleArchive = () => {
     confirm({
       title: "Archive KYC",
@@ -134,35 +116,26 @@ export function KycActionButtons({ userId, currentStatus, onCommitted, showSuspe
     <>
       <AdminConfirmDialog {...dialogProps} />
       <AdminToast        {...toastProps}  />
-      <div className={tableStyles.kycActionsRow}>
-        <div className={tableStyles.btnGroup}>
-          {currentStatus !== "approved" && (
-            <button type="button" onClick={handleApprove}
-              className={`${tableStyles.btnAction} ${tableStyles.btnActionCompact} ${tableStyles.btnApprove}`} title="Approve KYC">
-              <Check size={11} />
-              Approve
-            </button>
-          )}
-          {currentStatus !== "rejected" && (
-            <button type="button" onClick={handleReject}
-              className={`${tableStyles.btnAction} ${tableStyles.btnActionCompact} ${tableStyles.btnReject}`} title="Reject KYC">
-              <X size={11} />
-              Reject
-            </button>
-          )}
-          {currentStatus !== "archived" && (
-            <button type="button" onClick={handleArchive}
-              className={`${tableStyles.btnAction} ${tableStyles.btnActionCompact} ${tableStyles.btnArchive}`} title={isDecided ? "Archive" : "Archive — incomplete/abandoned"}>
-              <Archive size={11} />
-              Archive
-            </button>
-          )}
-        </div>
-        {showSuspend && currentStatus !== "suspended" && (
-          <button type="button" onClick={handleSuspend}
-            className={tableStyles.btnSuspend} title="Suspend Account">
-            <Ban size={13} />
-            Suspend Account
+      <div className={tableStyles.btnGroup}>
+        {currentStatus !== "approved" && (
+          <button type="button" onClick={handleApprove}
+            className={`${tableStyles.btnAction} ${tableStyles.btnActionCompact} ${tableStyles.btnApprove}`} title="Approve KYC">
+            <Check size={11} />
+            Approve
+          </button>
+        )}
+        {currentStatus !== "rejected" && (
+          <button type="button" onClick={handleReject}
+            className={`${tableStyles.btnAction} ${tableStyles.btnActionCompact} ${tableStyles.btnReject}`} title="Reject KYC">
+            <X size={11} />
+            Reject
+          </button>
+        )}
+        {currentStatus !== "archived" && (
+          <button type="button" onClick={handleArchive}
+            className={`${tableStyles.btnAction} ${tableStyles.btnActionCompact} ${tableStyles.btnArchive}`} title={isDecided ? "Archive" : "Archive — incomplete/abandoned"}>
+            <Archive size={11} />
+            Archive
           </button>
         )}
       </div>
