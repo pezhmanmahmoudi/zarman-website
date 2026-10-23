@@ -83,34 +83,11 @@
   font-display: swap;
 }
 
-/* ۹. Inter — وزن ۴۰۰ */
-@font-face {
-  font-family: "Inter";
-  src: url("/fonts/Inter-Regular.woff2") format("woff2"),
-       url("/fonts/Inter-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* ۱۰. Inter — وزن ۶۰۰ (SemiBold) */
-@font-face {
-  font-family: "Inter";
-  src: url("/fonts/Inter-SemiBold.ttf") format("truetype");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* ۱۱. Inter — وزن ۷۰۰ (Bold) */
-@font-face {
-  font-family: "Inter";
-  src: url("/fonts/Inter-Bold.woff2") format("woff2"),
-       url("/fonts/Inter-Bold.ttf") format("truetype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
+/* ۹. Inter comes only from next/font in the layouts: one preloaded variable
+   font (latin, 100–900) with a metric-matched fallback. Redeclaring "Inter"
+   here made browsers download the static files too and re-wrap text when
+   they arrived. The static TTFs in /public/fonts are still used by the
+   PDF receipts (emails/TransactionReceiptPdf.ts). */
 
 /* ========== Reset & Base ========== */
 html {

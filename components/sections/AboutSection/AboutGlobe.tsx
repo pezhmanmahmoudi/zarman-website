@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { LANDMASK_BASE64, LANDMASK_COLS, LANDMASK_ROWS } from "./landmask";
 
 const CITIES = [
   { name: "Sydney", lat: -33.8688, lng: 151.2093 },
@@ -23,41 +24,17 @@ function latLngToVec3(lat: number, lng: number, radius: number) {
   );
 }
 
-async function buildLandmaskDots(imageUrl: string, radius: number): Promise<Float32Array> {
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.decoding = "async";
-  img.src = imageUrl;
-
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error("Failed to load landmask image"));
-  });
-
-  const canvas = document.createElement("canvas");
-  const W = 720,
-    H = 360;
-  canvas.width = W;
-  canvas.height = H;
-
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) throw new Error("2D context error");
-
-  ctx.drawImage(img, 0, 0, W, H);
-
-  const imageData = ctx.getImageData(0, 0, W, H);
-  const data = imageData.data;
-
+// One dot per land cell of the precomputed 1° mask (see ./landmask.ts)
+function buildLandmaskDots(radius: number): Float32Array {
+  const bits = Uint8Array.from(atob(LANDMASK_BASE64), (c) => c.charCodeAt(0));
   const positions: number[] = [];
 
-  // Keep the same sampling density (y+=2, x+=2) to preserve appearance
-  for (let y = 0; y < H; y += 2) {
-    for (let x = 0; x < W; x += 2) {
-      const i = (y * W + x) * 4;
-      if (data[i + 3] < 10) continue;
-      if ((data[i] + data[i + 1] + data[i + 2]) / 3 < 30) continue;
+  for (let row = 0; row < LANDMASK_ROWS; row++) {
+    for (let col = 0; col < LANDMASK_COLS; col++) {
+      const bit = row * LANDMASK_COLS + col;
+      if (!(bits[bit >> 3] & (0x80 >> (bit & 7)))) continue;
 
-      const v = latLngToVec3(90 - (y / H) * 180, (x / W) * 360 - 180, radius);
+      const v = latLngToVec3(90 - row, col - 180, radius);
       positions.push(v.x, v.y, v.z);
     }
   }
@@ -71,8 +48,6 @@ export default function AboutGlobe() {
   useEffect(() => {
     const container = wrapRef.current;
     if (!container) return;
-
-    let cancelled = false; // ✅ مهم: جلوگیری از ادامه init بعد از unmount
 
     let renderer: THREE.WebGLRenderer | null = null;
     let scene: THREE.Scene | null = null;
@@ -145,7 +120,7 @@ export default function AboutGlobe() {
       });
     };
 
-    const init = async () => {
+    const init = () => {
       container.innerHTML = "";
 
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -193,11 +168,7 @@ export default function AboutGlobe() {
       sphere.renderOrder = 1;
       scene.add(sphere);
 
-      // ✅ Async part — بعد از await ممکن است کامپوننت unmount شده باشد
-      const dotPositions = await buildLandmaskDots("/Earth/earth-landmask.png", R + 0.8);
-
-      // ✅ Guard: اگر cleanup شده، ادامه نده
-      if (cancelled || !scene || !renderer || !camera) return;
+      const dotPositions = buildLandmaskDots(R + 0.8);
 
       const dotGeom = new THREE.BufferGeometry();
       dotGeom.setAttribute("position", new THREE.BufferAttribute(dotPositions, 3));
@@ -283,8 +254,6 @@ export default function AboutGlobe() {
     init();
 
     return () => {
-      cancelled = true; // ✅ این خط مشکل شما را حل می‌کند
-
       stopLoop();
 
       window.removeEventListener("resize", onResize);
@@ -310,13 +279,10 @@ export default function AboutGlobe() {
 
       if (cityGroup) {
         cityGroup.traverse((obj) => {
-          const mesh = obj as THREE.Mesh;
-          if ((mesh as any).geometry) (mesh as any).geometry.dispose?.();
-          if ((mesh as any).material) {
-            const mat = (mesh as any).material;
-            if (Array.isArray(mat)) mat.forEach((m) => m.dispose?.());
-            else mat.dispose?.();
-          }
+          if (!(obj instanceof THREE.Mesh)) return;
+          obj.geometry.dispose();
+          const materials: THREE.Material[] = Array.isArray(obj.material) ? obj.material : [obj.material];
+          materials.forEach((m) => m.dispose());
         });
         scene?.remove(cityGroup);
         cityGroup = null;

@@ -7,7 +7,8 @@
  *  • `en`   English text shown when locale === "en"
  *  • `icon` Visual icon: "shield" | "zap" | "star" | "percent" | "lock" | "users" | "check"
  *
- * Keep each string under ~90 characters so it renders on one line on desktop.
+ * The card grows to fit the longest message, so nothing is truncated; keeping
+ * each string under ~90 characters keeps it to one line on desktop.
  * Messages are displayed in array order, cycling continuously.
  */
 

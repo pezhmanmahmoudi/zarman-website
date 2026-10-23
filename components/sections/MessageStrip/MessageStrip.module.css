@@ -1,351 +1,357 @@
 /* ============================================================
-   MessageStrip — Zarman Premium
-   Engineered to the standard of Stripe / Linear / Vercel.
-   Every pixel is intentional. Nothing is decorative noise.
+   MessageStrip — rotating announcement card
+   All slides share one grid cell, so the card always sizes to
+   its longest message: nothing is clipped and the layout never
+   jumps between messages, at any width or in either language.
    ============================================================ */
 
-/* ── Wrapper ───────────────────────────────────────────────── */
-.wrapper {
-  width: 100%;
+/* Registered so the ambient glow can fade between message tones. */
+@property --tone {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #818cf8;
+}
+
+.root {
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ink: rgba(226, 232, 240, 0.94);
+  --hairline: rgba(255, 255, 255, 0.08);
+  --focus: rgba(129, 140, 248, 0.85);
+
   display: flex;
   justify-content: center;
-  padding: 14px 24px 26px;
+  width: 100%;
   position: relative;
   z-index: 10;
 }
 
-/* ── Pill container ── */
-.pill {
-  position: relative;
-  width: 100%;
-  max-width: 860px;
-  border-radius: 9999px;
-}
+/* ── Tones ─────────────────────────────────────────────────── */
+.tone_shield  { --tone: #34d399; }
+.tone_check   { --tone: #2dd4bf; }
+.tone_percent { --tone: #fbbf24; }
+.tone_star    { --tone: #c084fc; }
+.tone_lock    { --tone: #818cf8; }
+.tone_zap     { --tone: #38bdf8; }
+.tone_users   { --tone: #f472b6; }
 
-/* ── Strip ─────────────────────────────────────────────────── */
-.strip {
+/* ── Card ──────────────────────────────────────────────────── */
+.card {
   position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 28px;
   width: 100%;
-  border-radius: 9999px;
-
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(0,0,0,0.3) 100%);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  
+  max-width: 960px;
+  padding-block: 12px;
+  padding-inline: 12px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.012) 100%),
+    rgba(11, 14, 24, 0.6);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.055),
-    0 1px 2px rgba(0, 0, 0, 0.25),
-    0 8px 32px -4px rgba(0, 0, 0, 0.52);
-
-  border: 1px solid rgba(255, 255, 255, 0.05);
-
-  overflow: hidden;
-  outline: none;
-  user-select: none;
-  -webkit-user-select: none;
-  cursor: default;
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 24px 48px -24px rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  touch-action: pan-y;
+  transition: --tone 0.9s var(--ease), border-color 0.3s ease;
 }
 
-.strip:focus-visible {
-  outline: 2px solid rgba(96, 165, 250, 0.45);
-  outline-offset: 3px;
-}
-
-/* ── Border beam — Premium Tech Gradient (Optically Smoothed) ──────── */
-.borderBeam {
-  position: absolute;
-  inset: -1.5px;
-  border-radius: inherit;
-  padding: 2px; 
-  pointer-events: none;
-  z-index: 0;
-
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-
-  overflow: hidden; 
-}
-
-.borderBeam::before {
+/* Ambient glow behind the icon, tinted by the active message */
+.card::before {
   content: "";
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 2000px; 
-  height: 2000px;
-  
-  background: conic-gradient(
-    transparent                    0%,
-    transparent                   35%,
-    rgba(236, 72, 153, 0.4)       55%,   
-    rgba(139, 92, 246, 0.8)       80%,   
-    rgba(56, 189, 248, 1)         100%   
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(
+    55% 180% at 0% 50%,
+    color-mix(in srgb, var(--tone) 12%, transparent),
+    transparent 70%
   );
-
-  filter: blur(12px);
-  transform-origin: center center;
-  animation: beamOrbit 5.5s linear infinite;
+  pointer-events: none;
 }
 
-@keyframes beamOrbit {
-  0% { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
+.card[dir="rtl"]::before {
+  background: radial-gradient(
+    55% 180% at 100% 50%,
+    color-mix(in srgb, var(--tone) 12%, transparent),
+    transparent 70%
+  );
 }
 
-/* ── Inner layout ──────────────────────────────────────────── */
-.inner {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  
-  /* فاصله استاندارد بین فلش‌های ناوبری و بخش پیام ایجاد شد */
-  gap: 12px; 
-  
-  /* فضای تنفس از لبه‌های کپسول بیشتر شد */
-  padding: 12px 24px 8px; 
-  min-height: 44px;
+/* Top-edge highlight */
+.card::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  inset-inline: 14%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--tone), transparent);
+  opacity: 0.5;
+  pointer-events: none;
 }
 
-/* ── Navigation buttons ────────────────────────────────────── */
-.navBtn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: transparent;
-  transition: color 0.2s ease, background-color 0.2s ease;
+@media (hover: hover) {
+  .card:hover {
+    border-color: rgba(255, 255, 255, 0.13);
+  }
 }
 
-.strip:hover .navBtn {
-  color: rgba(255, 255, 255, 0.28);
-}
-
-.navBtn:hover {
-  color: rgba(255, 255, 255, 0.78) !important;
-  background-color: rgba(255, 255, 255, 0.07);
-}
-
-.navBtn:focus-visible {
-  outline: 2px solid rgba(96, 165, 250, 0.4);
-  outline-offset: 1px;
-}
-
-/* ── Message track ─────────────────────────────────────────── */
-.track {
-  flex: 1;
+/* ── Slides ────────────────────────────────────────────────── */
+.viewport {
+  display: grid;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  /* یک پدینگ داخلی اضافه شد تا پیام هیچ‌وقت به فلش‌ها نچسبد */
-  padding: 0 12px; 
-  overflow: hidden;
 }
 
-/* ── Message ───────────────────────────────────────────────── */
-.message {
+.slide {
+  grid-area: 1 / 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  
-  /* فاصله دقیق و حساب‌شده بین آیکون و متن */
-  gap: 14px; 
-  animation: messageIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  gap: 14px;
+  min-width: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  filter: blur(4px);
+  transition:
+    opacity 0.4s var(--ease),
+    transform 0.6s var(--ease),
+    filter 0.4s var(--ease),
+    visibility 0s linear 0.6s;
 }
 
-@keyframes messageIn {
-  from { opacity: 0; filter: blur(6px); transform: translateY(8px); }
-  to { opacity: 1; filter: blur(0px); transform: translateY(0); }
+.slide[data-state="active"] {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  filter: none;
+  transition-delay: 0.1s, 0.1s, 0.1s, 0s;
+}
+
+.slide[data-state="leaving"] {
+  transform: translateY(-10px);
 }
 
 /* ── Icon ──────────────────────────────────────────────────── */
-.iconWrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  
-  /* ترفند پرمیوم: اضافه کردن یک پس‌زمینه دایره‌ای شیشه‌ای به آیکون */
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
+.icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  color: var(--tone);
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  
-  opacity: 0.9;
-  transition: all 0.3s ease;
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--tone) 24%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
-
-.strip:hover .iconWrap {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.1);
-  
-}
-
-/* رنگ‌بندی آیکون‌ها */
-.icon_shield  { color: #86efac; }
-.icon_zap     { color: #fde68a; }
-.icon_star    { color: #93c5fd; }
-.icon_percent { color: #fde68a; }
-.icon_lock    { color: #86efac; }
-.icon_users   { color: #c4b5fd; }
-.icon_check   { color: #86efac; }
 
 /* ── Typography ────────────────────────────────────────────── */
 .text {
-  font-family: "Inter", var(--font-primary), sans-serif;
-  font-size: var(--text-body-sm, 1rem);
-  font-weight: var(--font-weight-regular, 400);
-  color: #b3b4b5; 
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); 
-  letter-spacing: 0.01em;
-  line-height: 1.5;
-  
-  /* تراز کردن متن به سمت راست (سمت آیکون) برای جلوگیری از لبه‌های نامنظم در پیام‌های دوخطی */
-  text-align: center; 
-  
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2; 
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  margin: 0;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: -0.006em;
+  text-wrap: pretty;
 }
 
-/* پشتیبانی از حالت LTR برای زبان انگلیسی */
-[dir="ltr"] .text {
-  text-align: left;
+.card[dir="rtl"] .text {
+  line-height: 1.8;
+  letter-spacing: 0;
 }
 
-  [dir="rtl"] .navBtn svg {
-    transform: scaleX(-1);
-  }
-
-/* ── Progress indicators ───────────────────────────────────── */
-.dots {
-  position: relative;
-  z-index: 2;
+/* ── Controls ──────────────────────────────────────────────── */
+.controls {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding-bottom: 9px;
+  gap: 6px;
+}
+
+.dots {
+  display: flex;
+  align-items: center;
 }
 
 .dot {
-  width: 20px;
-  height: 2px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.13);
-  border: none;
-  padding: 0;
+  display: grid;
+  place-items: center;
+  height: 32px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dotTrack {
   position: relative;
+  display: block;
   overflow: hidden;
-  transition: background 0.25s ease;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  transition: width 0.5s var(--ease), background-color 0.25s ease;
 }
 
-.dot:hover {
-  background: rgba(255, 255, 255, 0.26);
+.dot:hover .dotTrack {
+  background: rgba(255, 255, 255, 0.42);
 }
 
-.dot:focus-visible {
-  outline: 2px solid rgba(96, 165, 250, 0.4);
-  outline-offset: 2px;
-}
-
-.dotActive {
+.dot[aria-current="true"] .dotTrack {
+  width: 26px;
   background: rgba(255, 255, 255, 0.16);
 }
 
 .dotFill {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.86);
-  transform-origin: left;
-  transform: scaleX(0);
-  animation: dotFillProgress 5.5s linear forwards;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.92);
+  transform: translateX(-100%);
+  animation: fillLtr var(--duration) linear forwards;
 }
 
-[dir="rtl"] .dotFill {
-  transform-origin: right;
+.card[dir="rtl"] .dotFill {
+  transform: translateX(100%);
+  animation-name: fillRtl;
 }
 
-@keyframes dotFillProgress {
-  to { transform: scaleX(1); }
+.card[data-playing="false"] .dotFill {
+  animation-play-state: paused;
 }
 
-/* ── Mobile ────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .wrapper {
-    padding: 12px 16px 20px; 
+@keyframes fillLtr {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes fillRtl {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.toggle {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-inline-start: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(226, 232, 240, 0.72);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s var(--ease);
+}
+
+.toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.toggle:active {
+  transform: scale(0.92);
+}
+
+/* Optical centring: a triangle's visual mass sits left of its box */
+.playIcon {
+  transform: translateX(1px);
+}
+
+.dot:focus-visible,
+.toggle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ── Small screens: message on top, controls in a footer row ── */
+@media (max-width: 640px) {
+  .card {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 12px;
+    padding: 14px 14px 4px;
+    border-radius: 18px;
   }
 
-  .pill {
-    border-radius: 9999px;
-    max-width: 100%;
+  .card::before {
+    background: radial-gradient(
+      90% 70% at 0% 0%,
+      color-mix(in srgb, var(--tone) 13%, transparent),
+      transparent 70%
+    );
   }
 
-  .strip {
-    border-radius: 9999px; 
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+  .card[dir="rtl"]::before {
+    background: radial-gradient(
+      90% 70% at 100% 0%,
+      color-mix(in srgb, var(--tone) 13%, transparent),
+      transparent 70%
+    );
   }
 
-  .navBtn {
-    color: rgba(255, 255, 255, 0.25); 
+  .slide {
+    gap: 12px;
   }
 
-  [dir="rtl"] .navBtn svg {
-    transform: scaleX(-1);
-  }
-  
-  .navBtn:active {
-    color: rgba(255, 255, 255, 0.95) !important; 
-    background-color: rgba(255, 255, 255, 0.15); 
+  .icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
   }
 
-  .inner {
-    padding: 12px 16px 8px; /* پدینگ موبایل متناسب شد */
-    gap: 8px; /* فاصله فلش‌ها در موبایل */
-    height: 64px; 
+  .controls {
+    justify-content: space-between;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 
-  .track {
-    padding: 0 4px; /* فضای تنفس موبایل */
-  }
-
-  .iconWrap {
-    width: 30px; /* دایره دور آیکون در موبایل کمی کوچک‌تر می‌شود */
-    height: 30px;
-  }
-
-  .text {
-    font-size: 0.710rem; 
-    font-weight: 600;
-    line-height: 1.45;
-  }
-
+  /* Line the first dot up with the icon edge */
   .dots {
-    padding-bottom: 8px;
-    gap: 4px;
+    margin-inline-start: -5px;
   }
 
   .dot {
-    width: 16px;
+    height: 40px;
+    padding: 0 5px;
+  }
+
+  .toggle {
+    width: 36px;
+    height: 36px;
+    margin-inline-end: -4px;
+    background: transparent;
+  }
+}
+
+/* ── Reduced motion: crossfade only ────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .slide,
+  .slide[data-state="leaving"] {
+    transform: none;
+    filter: none;
+    transition: opacity 0.2s linear, visibility 0s linear 0.2s;
+  }
+
+  .slide[data-state="active"] {
+    transition: opacity 0.2s linear;
+  }
+
+  .card,
+  .dotTrack {
+    transition: none;
   }
 }

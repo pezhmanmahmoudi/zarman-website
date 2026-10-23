@@ -1,10 +1,14 @@
 "use client";
 
+import { useId } from "react";
 import type { MouseEvent } from "react";
 import { usePathname } from "next/navigation";
+import { Globe } from "lucide-react";
 import { useLocale } from "@/context/LocaleContext";
 import { getAlternateLanguagePath, getSharedLanguageHash } from "./alternate-language-path";
 import styles from "./LanguageSwitcher.module.css";
+
+type Locale = "en" | "fa";
 
 type Props = {
   /** Visual variant — "pill" for headers, "menu-item" for mobile drawers */
@@ -12,54 +16,82 @@ type Props = {
   onNavigate?: () => void;
 };
 
+// Both languages are always shown in the same order, each named in its own
+// language, so the control reads the same to every visitor on every page.
+const LANGUAGES: ReadonlyArray<{ code: Locale; short: string; name: string }> = [
+  { code: "en", short: "EN", name: "English" },
+  { code: "fa", short: "فا", name: "فارسی" },
+];
+
 export function LanguageSwitcher({ variant = "pill", onNavigate }: Props) {
   const locale = useLocale();
   const pathname = usePathname();
+  const labelId = useId();
+  const isMenu = variant === "menu-item";
+  const groupLabel = locale === "fa" ? "زبان" : "Language";
 
-  const targetLocale = locale === "fa" ? "en" : "fa";
-
-  const targetPath = getAlternateLanguagePath(pathname, targetLocale);
-  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>, target: Locale) => {
     // Read the current fragment at navigation time: client-side anchor changes
     // can use history.pushState without emitting a hashchange event.
-    event.currentTarget.href = targetPath + getSharedLanguageHash(pathname, window.location.hash);
+    event.currentTarget.href =
+      getAlternateLanguagePath(pathname, target) + getSharedLanguageHash(pathname, window.location.hash);
     onNavigate?.();
   };
 
-  const targetCode = locale === "fa" ? "EN" : "FA";
+  const segmented = (
+    <div
+      className={styles.segmented}
+      role="group"
+      dir="ltr"
+      {...(isMenu ? { "aria-labelledby": labelId } : { "aria-label": groupLabel })}
+    >
+      {!isMenu && <Globe className={styles.globe} size={14} strokeWidth={1.75} aria-hidden="true" />}
 
-  if (variant === "menu-item") {
-    return (
-      <a
-        href={targetPath}
-        hrefLang={targetLocale}
-        lang={targetLocale}
-        dir={targetLocale === "fa" ? "rtl" : "ltr"}
-        onClick={handleClick}
-        className={styles.menuItem}
-        aria-label={locale === "fa" ? "Switch to English" : "تغییر به فارسی"}
-      >
-        <span className={styles.menuCode}>{targetLocale === "fa" ? "فارسی" : "English"}</span>
-      </a>
-    );
-  }
+      {LANGUAGES.map((lang) => {
+        const className = `${styles.option} ${lang.code === "fa" ? styles.optionFa : ""}`;
+        const label = isMenu ? (
+          lang.name
+        ) : (
+          <>
+            <span aria-hidden="true">{lang.short}</span>
+            <span className={styles.srOnly}>{lang.name}</span>
+          </>
+        );
+
+        if (lang.code === locale) {
+          return (
+            <span key={lang.code} className={className} lang={lang.code} aria-current="true">
+              {label}
+            </span>
+          );
+        }
+
+        return (
+          <a
+            key={lang.code}
+            href={getAlternateLanguagePath(pathname, lang.code)}
+            hrefLang={lang.code}
+            lang={lang.code}
+            className={className}
+            onClick={(event) => handleClick(event, lang.code)}
+            title={isMenu ? undefined : lang.name}
+          >
+            {label}
+          </a>
+        );
+      })}
+    </div>
+  );
+
+  if (!isMenu) return segmented;
 
   return (
-    <a
-      href={targetPath}
-      hrefLang={targetLocale}
-      lang={targetLocale}
-      dir="ltr"
-      onClick={handleClick}
-      className={styles.pill}
-      aria-label={locale === "fa" ? "Switch to English" : "تغییر به فارسی"}
-      title={locale === "fa" ? "Switch to English" : "تغییر به فارسی"}
-    >
-      <span className={styles.code}>{locale === "fa" ? "FA" : "EN"}</span>
-      <span className={styles.sep} aria-hidden="true">/</span>
-      <span className={styles.label}>
-        {targetCode}
+    <div className={styles.menuRow}>
+      <span className={styles.menuLabel} id={labelId}>
+        <Globe size={18} strokeWidth={1.75} aria-hidden="true" />
+        {groupLabel}
       </span>
-    </a>
+      {segmented}
+    </div>
   );
 }

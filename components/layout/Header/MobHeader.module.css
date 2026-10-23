@@ -342,20 +342,7 @@
   }
 }
 
-.closeButton {
-  float: inline-end;
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--color-border-ghost);
-  border-radius: 50%;
-  background: transparent;
-  color: var(--color-text-primary);
-  font-size: 1.75rem;
-  cursor: pointer;
-}
-
 .burger:focus-visible,
-.closeButton:focus-visible,
 .logoContainer:focus-visible,
 .bigLink:focus-visible {
   outline: 2px solid var(--color-accent-primary);

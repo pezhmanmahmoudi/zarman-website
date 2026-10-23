@@ -15,45 +15,47 @@ export default function FAQSection({ locale }: { locale: string }) {
 
   useEffect(() => {
     const section = sectionRef.current;
-    if (!section || !window.IntersectionObserver) return;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const entranceMotions = new Set<Animation>();
     const disclosures = disclosureMotions.current;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const finishDisclosures = () => disclosures.forEach((motion) => motion.finish());
+    if (!section || !window.IntersectionObserver || reducedMotion.matches) return finishDisclosures;
+
+    // Hide only what is still below the fold, so nothing already on screen ever
+    // blinks out. Initial HTML stays visible even when JavaScript is unavailable.
+    const pending = Array.from(section.querySelectorAll<HTMLElement>("[data-faq-reveal]"))
+      .filter((element) => element.getBoundingClientRect().top > window.innerHeight);
+    pending.forEach((element) => { element.dataset.faqReveal = "pending"; });
+
     const observer = new IntersectionObserver((entries) => {
+      // Stagger within each batch arriving together, never by position in the
+      // whole list, so a card scrolled into view never waits as an empty slot.
+      let order = 0;
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
-        observer.unobserve(entry.target);
-        if (reducedMotion.matches || !(entry.target instanceof HTMLElement) || !entry.target.animate) continue;
-        const itemIndex = entry.target.dataset.faqIndex;
-        const isCard = itemIndex !== undefined;
-        const animation = entry.target.animate([
-          { opacity: 0, transform: `translateY(${isCard ? 20 : 15}px)${isCard ? " scale(0.98)" : ""}`, filter: "blur(8px)" },
-          { opacity: 1, transform: "translateY(0) scale(1)", filter: "blur(0px)" },
-        ], {
-          duration: isCard ? 850 : 800,
-          delay: isCard ? 150 + Number(itemIndex) * 100 : entry.target.tagName === "H2" ? 100 : 0,
-          easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-          fill: "backwards",
-        });
-        entranceMotions.add(animation);
-        animation.onfinish = () => entranceMotions.delete(animation);
+        const element = entry.target as HTMLElement;
+        observer.unobserve(element);
+        // Reached from above (jump link, restored scroll): fade in place, don't rise.
+        if (entry.boundingClientRect.top < 0) element.style.transform = "none";
+        element.style.setProperty("--reveal-delay", `${order++ * 90}ms`);
+        element.dataset.faqReveal = "shown";
       }
-    }, { threshold: 0.2 });
+    }, { rootMargin: "0px 0px -8% 0px" });
+    pending.forEach((element) => observer.observe(element));
 
-    // Initial HTML stays visible even when JavaScript or motion is unavailable.
-    section.querySelectorAll("[data-faq-reveal]").forEach((element) => observer.observe(element));
+    const showAll = () => {
+      observer.disconnect();
+      pending.forEach((element) => { element.dataset.faqReveal = ""; });
+    };
     const stopMotion = () => {
       if (!reducedMotion.matches) return;
-      entranceMotions.forEach((animation) => animation.cancel());
-      entranceMotions.clear();
-      disclosures.forEach((motion) => motion.finish());
+      showAll();
+      finishDisclosures();
     };
     reducedMotion.addEventListener("change", stopMotion);
     return () => {
-      observer.disconnect();
       reducedMotion.removeEventListener("change", stopMotion);
-      entranceMotions.forEach((animation) => animation.cancel());
-      disclosures.forEach((motion) => motion.finish());
+      showAll();
+      finishDisclosures();
     };
   }, []);
 
@@ -112,7 +114,7 @@ export default function FAQSection({ locale }: { locale: string }) {
 
         <div className={styles.faqList}>
           {getFaqItems(locale).map((faq, index) => (
-            <details id={`faq-${faq.id}`} key={faq.id} className={styles.faqItem} open={index === 0} data-faq-reveal data-faq-index={index}>
+            <details id={`faq-${faq.id}`} key={faq.id} className={styles.faqItem} open={index === 0} data-faq-reveal>
               <summary className={styles.questionBtn} onClick={toggleAnswer}>
                 <span className={styles.questionText}>{faq.question}</span>
                 <span className={styles.icon} aria-hidden="true" />

@@ -1,34 +1,12 @@
 "use client";
 
-import React, { useRef } from "react";
+import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import dynamic from "next/dynamic";
-import { motion, useInView, useReducedMotion, Variants } from "framer-motion";
+import { motion, Variants } from "framer-motion";
+// کامپوننت شبکه مرکزی — server-rendered, so the orb is in the first paint
+import NetworkGlobe from "./NetworkGlobe";
 import styles from "./ServiceSection.module.css";
-
-// کامپوننت شبکه مرکزی
-const ServicesNetworkCore = dynamic(() => import("./NetworkGlobe"), {
-  ssr: false,
-  loading: () => (
-    <div
-      className="w-full h-full"
-      style={{ backgroundColor: "#080B12" }}
-    />
-  ),
-});
-
-function ServiceGlobe() {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { margin: "200px" });
-  const reducedMotion = useReducedMotion();
-
-  return (
-    <div ref={ref} style={{ width: "100%", height: "100%" }} aria-hidden="true">
-      {inView && !reducedMotion ? <ServicesNetworkCore /> : null}
-    </div>
-  );
-}
 
 /* ===== Minimal premium SVG icons ===== */
 function GraduationIcon() {
@@ -206,7 +184,7 @@ export default function Services() {
               <div className={styles.pulseInner} />
               <div className={styles.pulseOuter} />
               <div className={styles.netWrap}>
-                <ServiceGlobe />
+                <NetworkGlobe />
               </div>
             </div>
           </div>
@@ -248,7 +226,7 @@ export default function Services() {
                 <div className={styles.mobilePulseInner} />
                 <div className={styles.mobilePulseOuter} />
                 <div className={styles.mobileCore}>
-                  <ServiceGlobe />
+                  <NetworkGlobe />
                 </div>
               </div>
 

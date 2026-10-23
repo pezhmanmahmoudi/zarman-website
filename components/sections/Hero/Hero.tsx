@@ -150,8 +150,8 @@ export default function Hero() {
             )}
             <p className={styles.subtitle}>
               {isEn
-                ? "Check Australian dollar to Iranian toman rates, calculate your transfer and track your remittance request between Australia and Iran, with support in English and Persian."
-                : "نرخ خرید و فروش دلار استرالیا به تومان را ببینید، مبلغ حواله را محاسبه کنید و درخواست انتقال پول بین استرالیا و ایران را با پشتیبانی فارسی ثبت و پیگیری کنید."}
+                ? "Fast and hassle-free transfer of your funds is our priority. With continuous support, easily manage and track your remittances from start to finish."
+                : "انتقال سریع و بی‌دغدغه سرمایه شما اولویت ماست. با پشتیبانی همیشگی، صفر تا صد ثبت و پیگیری حواله‌های خود را به سادگی انجام دهید."}            
             </p>
 
             <div className={styles.actions}>

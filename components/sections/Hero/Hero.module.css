@@ -90,7 +90,7 @@
   grid-column: 1 / -1; /* در دسکتاپ تمام عرض را می‌گیرد */
   order: 3; /* در دسکتاپ پایین‌تر از همه قرار می‌گیرد */
   width: 100%;
-  margin-top: var(--space-8);
+  margin-top: var(--space-2);
 }
 
 .eyebrow {
@@ -590,9 +590,6 @@
   }
   .actions {
     margin-bottom: 0; /* در حالت دسکتاپ --space-6 بود، در موبایل صفرش می‌کنیم */
-  }
-  .stripContainer {
-    margin: 0 0 var(--space-4) 0;
   }
   .hero {
     min-height: auto;

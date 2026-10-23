@@ -1,10 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useInView, useReducedMotion } from "framer-motion";
 import styles from "./About.module.css";
 import Button from "@/components/ui/Button/Button";
 import { WHATSAPP_MESSAGE_TRANSFER_HELP, buildWhatsAppUrl } from "@/lib/constants/contact";
@@ -22,6 +22,23 @@ const AboutGlobe = dynamic(() => import("./AboutGlobe"), {
     </div>
   ),
 });
+
+// three.js and the globe load only as the visitor approaches the section, not
+// with the page; the placeholder keeps the same box so nothing shifts.
+function NearbyAboutGlobe() {
+  const ref = useRef<HTMLDivElement>(null);
+  const near = useInView(ref, { once: true, margin: "800px 0px" });
+
+  return (
+    <div ref={ref} style={{ width: "100%", height: "100%" }}>
+      {near ? (
+        <AboutGlobe />
+      ) : (
+        <div aria-hidden="true" className="w-full h-full" style={{ minHeight: "400px", backgroundColor: "#080B12" }} />
+      )}
+    </div>
+  );
+}
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const VIEWPORT = { once: true, amount: 0.45 } as const;
@@ -121,7 +138,7 @@ export default function About() {
                 transition={{ duration: 1.2, ease: EASE, delay: 0.34 }}
               >
                 <div className={`${styles.globeWrapper} ${isEn ? styles.globeWrapperEn : ""}`}>
-                  <AboutGlobe />
+                  <NearbyAboutGlobe />
                 </div>
               </motion.div>
             </div>

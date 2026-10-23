@@ -1,0 +1,19 @@
+/* NetworkGlobe — server-rendered SVG poster, replaced by a live canvas on its first frame */
+
+.globe {
+  position: absolute;
+  inset: 0;
+}
+
+.poster,
+.canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.globe[data-live="true"] .poster {
+  visibility: hidden;
+}

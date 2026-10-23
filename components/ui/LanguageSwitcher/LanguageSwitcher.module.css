@@ -1,91 +1,119 @@
-/* LanguageSwitcher — pill variant (used in desktop/mobile headers) */
+/* LanguageSwitcher — segmented control showing both languages.
+   English sits left and Persian right on every page, so the control never
+   changes shape between locales; the current language is the filled segment. */
 
-.pill {
-  text-decoration: none;
+.segmented {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
+  gap: 2px;
+  padding: 3px;
   border-radius: 999px;
-  border: 1px solid rgba(99, 102, 241, 0.45);
-  background: linear-gradient(180deg, rgba(16, 23, 38, 0.9) 0%, rgba(10, 15, 28, 0.94) 100%);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.77rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   white-space: nowrap;
   user-select: none;
-  box-shadow: 0 10px 24px rgba(56, 72, 245, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.pill:hover {
-  background: linear-gradient(180deg, rgba(24, 33, 55, 0.94) 0%, rgba(14, 20, 36, 0.98) 100%);
-  border-color: rgba(129, 140, 248, 0.8);
-  color: #fff;
-  transform: translateY(-1px);
+.globe {
+  flex: none;
+  margin-inline: 7px 3px;
+  color: rgba(148, 163, 184, 0.85);
 }
 
-.pill:focus-visible {
-  outline: 2px solid rgba(129, 140, 248, 0.95);
-  outline-offset: 2px;
-}
-
-.code,
-.label,
-.menuCode {
-  font-family: var(--font-en-stack);
-  letter-spacing: 0.08em;
-  line-height: 1;
-}
-
-.code {
-  color: rgba(148, 163, 184, 0.95);
-}
-
-.sep {
-  color: rgba(148, 163, 184, 0.55);
-  font-weight: 600;
-}
-
-.label {
-  color: #ffffff;
-}
-
-/* menu-item variant (used in mobile drawer) */
-
-.menuItem {
-  text-decoration: none;
+.option {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  min-height: 44px;
-  padding: 10px 14px;
-  border: 1px solid rgba(99, 102, 241, 0.35);
-  background: rgba(56, 72, 245, 0.09);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  border-radius: 10px;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-  text-align: center;
+  min-width: 36px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-family: var(--font-en-stack);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: rgba(148, 163, 184, 0.95);
+  text-decoration: none;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-.menuItem:hover {
-  background: rgba(56, 72, 245, 0.17);
-  border-color: rgba(129, 140, 248, 0.75);
+/* Hard-coded: on English pages --font-fa-stack is remapped to the Latin stack.
+   IRANSansX sits high at line-height 1; the top padding re-centres it optically. */
+.optionFa {
+  font-family: "IRANSansX", "Peyda", system-ui, sans-serif;
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+  padding-top: 3px;
+}
+
+a.option:hover {
   color: #fff;
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.menuItem:focus-visible {
+a.option:focus-visible {
   outline: 2px solid rgba(129, 140, 248, 0.95);
   outline-offset: 2px;
 }
 
-.menuCode {
-  font-size: 0.85rem;
-  font-family: var(--font-primary);
+.option[aria-current="true"] {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+  cursor: default;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* menu-item variant (mobile drawer): labelled row, full language names */
+
+.menuRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-inline: var(--space-2);
+}
+
+.menuLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.menuLabel svg {
+  color: var(--color-text-tertiary);
+}
+
+.menuRow .segmented {
+  padding: 4px;
+}
+
+.menuRow .option {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 0.875rem;
+  letter-spacing: 0;
+}
+
+.menuRow .optionFa {
+  font-size: 0.9375rem;
+  padding-top: 3px;
 }

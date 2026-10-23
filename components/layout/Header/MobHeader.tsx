@@ -66,7 +66,11 @@ export default function MobHeader({
     document.body.style.overflow = "hidden";
     const drawer = drawerRef.current;
     const toggleButton = toggleRef.current;
-    const focusable = () => Array.from(drawer?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex="0"]') ?? []);
+    // The burger (shown as an X while open) is the drawer's only close control, so it joins the focus loop.
+    const focusable = () => [
+      ...(toggleButton ? [toggleButton] : []),
+      ...Array.from(drawer?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex="0"]') ?? []),
+    ];
     focusable()[0]?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -200,11 +204,10 @@ export default function MobHeader({
 
       <div ref={overlayRef} className={styles.menuOverlay} onClick={close} aria-hidden="true" />
 
-      <div id="mobile-navigation" ref={drawerRef} className={`${styles.menuDrawer} ${isEn ? styles.menuDrawerLtr : styles.menuDrawerRtl}`} role="dialog" aria-modal={open ? true : undefined} aria-label={t.header.mainNav} aria-hidden={!open} inert={!open} dir={isEn ? "ltr" : "rtl"}>
+      <div id="mobile-navigation" ref={drawerRef} className={`${styles.menuDrawer} ${isEn ? styles.menuDrawerLtr : styles.menuDrawerRtl}`} role="dialog" aria-label={t.header.mainNav} aria-hidden={!open} inert={!open} dir={isEn ? "ltr" : "rtl"}>
         <div className={styles.menuInner}>
           <div className={styles.menuHeader}>
             <span className={styles.menuLabel}>{locale === "fa" ? "فهرست دسترسی" : "Navigation"}</span>
-            <button type="button" className={styles.closeButton} onClick={close} aria-label={t.header.closeMenu}>×</button>
           </div>
 
           <nav className={styles.navLinks} aria-label={t.header.mainNav}>
