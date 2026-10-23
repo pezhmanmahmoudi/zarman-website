@@ -171,3 +171,32 @@ test("customer profile sends its current status and a later identity edit cannot
   assert.equal(saves[0].kyc_status, "archived");
   h.cleanup();
 });
+
+test("approved customers still expose Reject and Suspend actions so admins can request KYC updates or suspend accounts", async () => {
+  const calls = [], statuses = [];
+  let confirmation;
+  const h = dashboardHarness({ mocks: {
+    "@/app/actions/admin.actions": {
+      rejectKyc: async (...args) => { calls.push(["reject", ...args]); return { success: true }; },
+      suspendKyc: async (...args) => { calls.push(["suspend", ...args]); return { success: true }; },
+    },
+    "@/components/admin/ui/useAdminFeedback": { useAdminFeedback: () => ({ confirm: next => { confirmation = next; }, showToast() {}, dialogProps: {}, toastProps: {} }) },
+    "@/components/admin/ui/useAdminRefresh": { useAdminRefresh: () => () => calls.push("refresh") },
+    "@/components/admin/ui/AdminConfirmDialog": { AdminConfirmDialog: () => null },
+    "@/components/admin/ui/AdminToast": { AdminToast: () => null },
+  } });
+  const { KycActionButtons } = h.load("components/admin/KycActionButtons.tsx");
+  const tree = h.render(KycActionButtons, { userId: "fixture-customer", currentStatus: "approved", onCommitted: next => statuses.push(next) });
+  assert.equal(nodes(tree, node => node.props.title === "Approve KYC").length, 0);
+  const rejectBtn = nodes(tree, node => node.props.title === "Reject KYC")[0];
+  const suspendBtn = nodes(tree, node => node.props.title === "Suspend Account")[0];
+  assert.ok(rejectBtn, "Reject button must be available for approved customers");
+  assert.ok(suspendBtn, "Suspend button must be available for approved customers");
+  rejectBtn.props.onClick();
+  await confirmation.onConfirm();
+  suspendBtn.props.onClick();
+  await confirmation.onConfirm();
+  assert.deepEqual(calls, [["reject", "fixture-customer"], "refresh", ["suspend", "fixture-customer", "approved"], "refresh"]);
+  assert.deepEqual(statuses, ["rejected", "suspended"]);
+  h.cleanup();
+});

@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { AMC_PROFILE, OET_PROFILE } from "../payments/institutions";
+import { OET_PROFILE, findPaymentInstitution, paymentInstitutions } from "../payments/institutions";
 
 export const IFTI_DRA_IN_SHEET_NAME = "IFTI-DRA IN";
 
@@ -150,6 +150,11 @@ if (HEADER_ROW.length !== TEMPLATE_COLUMN_COUNT) {
   throw new Error(`IFTI-DRA field header schema must contain exactly ${TEMPLATE_COLUMN_COUNT} columns.`);
 }
 
+type IftiRequestInstitution = {
+  institution_id?: string | null;
+  institution_name?: string | null;
+};
+
 export type IftiSourceRecord = {
   id: string;
   type: "buy_aud" | "sell_aud" | string;
@@ -180,6 +185,7 @@ export type IftiSourceRecord = {
     passport_number?: string | null;
     compliance_dvs_method?: string | null;
   } | null;
+  exchange_requests?: IftiRequestInstitution | IftiRequestInstitution[] | null;
   recipients?: {
     direction?: string | null;
     label?: string | null;
@@ -261,7 +267,10 @@ function splitBeneficiaryAddress(rawAddress: string): {
 
   let city = "";
   let street = "";
-  if (working.includes(",")) {
+  // Without a comma, state or postcode the text is just a street line ("7 Lakewood Ct").
+  if (!working.includes(",") && !state && !postcode) {
+    street = working;
+  } else if (working.includes(",")) {
     const parts = working.split(",").map((p) => p.trim()).filter(Boolean);
     city = parts.length > 0 ? parts[parts.length - 1] : "";
     street = parts.length > 1 ? parts.slice(0, -1).join(", ") : "";
@@ -303,27 +312,36 @@ function createDataRow(record: IftiSourceRecord): Array<string | number> {
   const profile = record.profiles ?? null;
   const recipient = record.recipients ?? null;
   const paymentLink = asString(record.payment_link).toLowerCase();
+  const request = Array.isArray(record.exchange_requests) ? record.exchange_requests[0] : record.exchange_requests;
+  // The institution chosen on the request wins: gateway links (CommBank checkout,
+  // share.google) don't name the merchant being paid.
+  const requestInstitution = recipient ? undefined : findPaymentInstitution(request?.institution_id, request?.institution_name);
   const isInternationalPaymentReceiver = !recipient && !!paymentLink;
-  const looksLikeAmcPayment = isInternationalPaymentReceiver && paymentLink.includes("amc");
-  const looksLikeOetPayment = isInternationalPaymentReceiver && (
-    paymentLink.includes("registration.myoet.com") ||
-    paymentLink.includes("booking.oet-global.com")
-  );
-  const paymentReceiver = looksLikeAmcPayment ? AMC_PROFILE : looksLikeOetPayment ? OET_PROFILE : null;
+  const linkInstitution = isInternationalPaymentReceiver
+    ? paymentInstitutions.find((institution) => institution.linkPattern.test(paymentLink))
+    : undefined;
+  const paymentReceiver = (requestInstitution ?? linkInstitution)?.profile ?? null;
   const orderingName = fullName(profile?.first_name, profile?.last_name);
   const beneficiaryName =
     asString(recipient?.full_name) ||
     asString(recipient?.account_name) ||
     asString(recipient?.label) ||
     paymentReceiver?.legalName ||
+    asString(request?.institution_name) ||
     "";
   const orderingCountry = asString(profile?.country) || "Australia";
   const beneficiaryAddress = asString(recipient?.residential_address) || asString(recipient?.irt_address);
-  const parsedAddress = splitBeneficiaryAddress(beneficiaryAddress);
-  const beneficiaryCity = asString(recipient?.residential_city) || asString(recipient?.irt_city) || parsedAddress.city;
-  const beneficiaryPostcode = asString(recipient?.residential_postcode) || asString(recipient?.irt_postcode) || parsedAddress.postcode;
+  const savedCity = asString(recipient?.residential_city) || asString(recipient?.irt_city);
+  const savedState = asString(recipient?.residential_state) || asString(recipient?.irt_state);
+  const savedPostcode = asString(recipient?.residential_postcode) || asString(recipient?.irt_postcode);
+  // Recipients store the street line and locality separately; only legacy free-text addresses need splitting.
+  const parsedAddress = savedCity || savedState || savedPostcode
+    ? { street: beneficiaryAddress, city: "", state: "", postcode: "" }
+    : splitBeneficiaryAddress(beneficiaryAddress);
+  const beneficiaryCity = savedCity || parsedAddress.city;
+  const beneficiaryPostcode = savedPostcode || parsedAddress.postcode;
   const inferredState = inferAustralianStateFromPostcode(beneficiaryPostcode);
-  const beneficiaryState = asString(recipient?.residential_state) || asString(recipient?.irt_state) || parsedAddress.state || inferredState;
+  const beneficiaryState = savedState || parsedAddress.state || inferredState;
   const beneficiaryCountryValue = asString(recipient?.residential_country) || asString(recipient?.irt_country);
   const beneficiaryCountry = beneficiaryCountryValue || paymentReceiver?.country || "";
 
@@ -397,7 +415,7 @@ function createDataRow(record: IftiSourceRecord): Array<string | number> {
   row[97] = "Yes";
   row[98] = "No";
 
-  row[110] = asString(record.reason_for_transfer) || (looksLikeOetPayment ? "OET test booking fee" : asString(record.source_of_funds));
+  row[110] = asString(record.reason_for_transfer) || (paymentReceiver === OET_PROFILE ? "OET test booking fee" : asString(record.source_of_funds));
   // Person completing this report — always Zarman's compliance officer
   row[111] = "PEZHMAN MAHMOUDI";
   row[112] = "AML/CTF Compliance Officer";

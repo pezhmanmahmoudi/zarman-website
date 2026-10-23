@@ -7,7 +7,7 @@ import cardStyles from "@/styles/admin/AdminCards.module.css";
 import formStyles from "@/styles/admin/AdminForms.module.css";
 import identityStyles from "@/styles/admin/CustomerIdentity.module.css";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
-import { KycActionButtons } from "@/components/admin/KycActionButtons";
+import { KycActionButtons, KycSuspendButton } from "@/components/admin/KycActionButtons";
 import { updateUserIdentityKycProfile } from "@/app/actions/admin.actions";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
@@ -22,7 +22,7 @@ type Profile = Awaited<ReturnType<typeof getUserFinancialProfile>>["profile"];
 interface UserKycManagerProps {
   profile: Profile;
   onProfileUpdated?: () => void;
-  onKycStatusCommitted?: (status: "approved" | "rejected" | "archived") => void;
+  onKycStatusCommitted?: (status: "approved" | "rejected" | "archived" | "suspended") => void;
 }
 
 export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted }: UserKycManagerProps) {
@@ -78,7 +78,7 @@ export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted
         card_number: form.card_number,
         passport_number: form.passport_number,
         expiry_date: form.expiry_date,
-        kyc_status: form.kyc_status as "pending" | "under_review" | "approved" | "rejected" | "archived",
+        kyc_status: form.kyc_status as "pending" | "under_review" | "approved" | "rejected" | "archived" | "suspended",
       });
 
       if ("error" in res && res.error) {
@@ -100,10 +100,22 @@ export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted
           Identity &amp; KYC Management
         </h2>
         {!isEditing && (
-          <button type="button" className={formStyles.btnSecondary} onClick={() => setIsEditing(true)}>
-            <Pencil size={14} />
-            Edit Details
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexWrap: "wrap" }}>
+            {profile && (
+              <KycSuspendButton
+                userId={profile.id}
+                currentStatus={profile.kyc_status ?? undefined}
+                onCommitted={status => {
+                  setForm(previous => ({ ...previous, kyc_status: status }));
+                  onKycStatusCommitted?.(status);
+                }}
+              />
+            )}
+            <button type="button" className={formStyles.btnSecondary} onClick={() => setIsEditing(true)}>
+              <Pencil size={14} />
+              Edit Details
+            </button>
+          </div>
         )}
       </div>
 
@@ -269,6 +281,7 @@ export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted
                     { value: "under_review", label: "Under Review" },
                     { value: "approved", label: "Approved" },
                     { value: "rejected", label: "Rejected" },
+                    { value: "suspended", label: "Suspended" },
                     { value: "archived", label: "Archived" },
                   ]}
                   value={form.kyc_status}
@@ -307,7 +320,7 @@ export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted
               Current Status
               <StatusBadge status={profile?.kyc_status ?? null} />
             </div>
-            {profile && <KycActionButtons userId={profile.id} currentStatus={profile.kyc_status ?? undefined} onCommitted={status => {
+            {profile && <KycActionButtons showSuspend={false} userId={profile.id} currentStatus={profile.kyc_status ?? undefined} onCommitted={status => {
               setForm(previous => ({ ...previous, kyc_status: status }));
               onKycStatusCommitted?.(status);
             }} />}

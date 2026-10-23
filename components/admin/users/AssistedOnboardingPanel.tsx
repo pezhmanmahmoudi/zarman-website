@@ -119,7 +119,7 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
         postcode: form.postcode || undefined,
         country: form.country || undefined,
         customer_code: form.customer_code || undefined,
-        kyc_status: (form.kyc_status as "pending" | "under_review" | "approved" | "rejected" | "archived") || "pending",
+        kyc_status: (form.kyc_status as "pending" | "under_review" | "approved" | "rejected" | "archived" | "suspended") || "pending",
         document_type: (form.doc_type as "driver_license" | "passport" | "none" | "") || undefined,
         license_number: isDriverLicense ? (form.license_number || undefined) : undefined,
         card_number: isDriverLicense ? (form.doc_card_number || undefined) : undefined,
@@ -240,6 +240,7 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                       { value: "under_review", label: "Under Review" },
                       { value: "approved", label: "Approved" },
                       { value: "rejected", label: "Rejected" },
+                      { value: "suspended", label: "Suspended" },
                       { value: "archived", label: "Archived" },
                     ]}
                     value={form.kyc_status}

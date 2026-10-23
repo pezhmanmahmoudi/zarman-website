@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { isSigningOut, redirectToSignIn, SIGN_OUT_STARTED, SIGNED_OUT, SIGN_OUT_STORAGE_KEY } from "@/lib/auth/sign-out";
 import { DASHBOARD_AUTO_REFRESH_MS, dashboardRefreshDue } from "@/lib/dashboard/refresh-policy";
 import { readApprovedSummary, type ApprovedSummary, type DashboardInitialAccount } from "@/lib/dashboard/approved-summary";
+import { normalizeProfileKycStatus } from "@/lib/kyc/status";
 import type { Profile } from "@/app/[locale]/dashboard/dashboard.types";
 
 const noSummary: ApprovedSummary = { volume: 0, count: 0 };
@@ -19,7 +20,7 @@ export function useDashboardData(initial?: DashboardInitialAccount | null) {
   const lastRefresh = useRef(0), skipInitialRefresh = useRef(Boolean(initial));
   const seenIdentityNotices = useRef(new Map<string, string>());
   const [loading, setLoading] = useState(!initial), [sessionChecked, setSessionChecked] = useState(Boolean(initial));
-  const [profile, setProfile] = useState<Profile | null>(initial?.profile ?? null), [approved, setApproved] = useState<ApprovedSummary>(initial?.approved ?? noSummary);
+  const [profile, setProfile] = useState<Profile | null>(() => normalizeProfileKycStatus(initial?.profile ?? null)), [approved, setApproved] = useState<ApprovedSummary>(initial?.approved ?? noSummary);
   const [error, setError] = useState(false);
   const invalidate = useCallback(() => { ++generation.current; abort.current?.abort(); }, []);
   const refresh = useCallback(async () => {
@@ -46,7 +47,7 @@ export function useDashboardData(initial?: DashboardInitialAccount | null) {
       ]);
       if (current !== generation.current) return;
       if (profileRes.error) throw new Error("dashboard_read_failed");
-      const nextProfile = profileRes.data as Profile;
+      const nextProfile = normalizeProfileKycStatus(profileRes.data as Profile);
       // Keep an acknowledgement made during this read from being overwritten by its older snapshot.
       const seenAt = seenIdentityNotices.current.get(user.id);
       setProfile(seenAt ? { ...nextProfile, kyc_approval_notice_seen_at: nextProfile.kyc_approval_notice_seen_at || seenAt } : nextProfile);

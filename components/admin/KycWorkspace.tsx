@@ -22,7 +22,7 @@ export function KycWorkspace({ initialData, currentPage, pageSize, historyView }
   }, [currentPage, pageSize]);
   const { data, refresh, update, refreshing, refreshError } = useAdminSnapshot<KycSnapshot>(initialData, load);
   const { queue, history, total } = data;
-  const commitStatus = (user: IdentityRecord, status: "approved" | "rejected" | "archived") => {
+  const commitStatus = (user: IdentityRecord, status: "approved" | "rejected" | "archived" | "suspended") => {
     update(previous => {
       const wasPending = previous.queue.some(row => row.id === user.id);
       const changed = { ...user, kyc_status: status };

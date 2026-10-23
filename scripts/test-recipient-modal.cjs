@@ -231,3 +231,19 @@ for (const locale of ["en", "fa"]) {
   }));
 }
 
+
+test("Iranian bank list warns in English about sanctioned banks and has no Other option", () => withFrames(() => {
+  for (const locale of ["en", "fa"]) {
+    const f = fixture(locale, { props: { direction: "irt" } });
+    f.change("name", "Sara Ahmadi"); f.submit();
+    const note = f.find(element => element.props.role === "note");
+    assert.equal(textContent(note), "Bank Saderat, Mehr Iran Bank, Ansar Bank and Bank Sepah are under sanctions. Please choose an account at another bank.");
+    assert.equal(note.props.dir, "ltr");
+    assert.deepEqual(elements(note, element => element.type === "strong").map(textContent), ["Bank Saderat", "Mehr Iran Bank", "Ansar Bank", "Bank Sepah"]);
+    const scene = elements(note, element => element.props.name === "warning")[0];
+    assert.ok(scene); assert.equal(scene.props.motionEnabled, false);
+    const banks = f.control("bank_name").props.labeledOptions.map(option => option.value);
+    for (const bank of ["Bank Melli", "Bank Mellat", "Resalat Bank"]) assert.ok(banks.includes(bank), bank);
+    assert.equal(banks.some(bank => /^bank iran$|other|^(bank )?saderat|sepah|ansar|mehr|ghavamin|hekmat/i.test(bank)), false);
+  }
+}));

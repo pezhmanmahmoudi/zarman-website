@@ -31,8 +31,9 @@ const iranCityNames = Array.from(new Set(iranCities.map(city => city.en_name || 
 const formStepColors = [dashboardPalette.violet, dashboardPalette.sky, dashboardPalette.teal];
 const stepLabels = ["Recipient", "Bank details", "Address & contact"];
 const stepTitles = ["Who are you sending to?", "Where should the money arrive?", "Recipient’s address & contact"];
-const iranianBanks = ["Ayandeh Bank", "BlueBank", "Dey Bank", "Eghtesad Novin Bank", "Gardeshgari Bank", "Ghavamin Bank", "Hekmat Bank", "Karafarin Bank", "Keshavarzi Bank", "Maskan Bank", "Parsian Bank", "Pasargad Bank", "Post Bank of Iran", "Refah Bank", "Saman Bank", "Sanat Va Maadan Bank", "Sarmayeh Bank", "Shahr Bank", "Sina Bank", "Tejarat Bank", "Tosee Credit Institution", "Tosee Saderat Bank", "Tosee Taavon Bank", "Bank Iran"];
-const bankOptions = iranianBanks.map(bank => ({ value: bank, label: bank === "Bank Iran" ? "Other — subject to review" : bank }));
+// Sanctioned banks (Saderat, Mehr, Ansar, Sepah) are deliberately absent; Ghavamin and Hekmat were merged into Sepah.
+const iranianBanks = ["Ayandeh Bank", "Bank Mellat", "Bank Melli", "BlueBank", "Dey Bank", "Eghtesad Novin Bank", "Gardeshgari Bank", "Iran Zamin Bank", "Karafarin Bank", "Keshavarzi Bank", "Maskan Bank", "Melal Credit Institution", "Middle East Bank", "Parsian Bank", "Pasargad Bank", "Post Bank of Iran", "Refah Bank", "Resalat Bank", "Saman Bank", "Sanat Va Maadan Bank", "Sarmayeh Bank", "Shahr Bank", "Sina Bank", "Tejarat Bank", "Tosee Credit Institution", "Tosee Saderat Bank", "Tosee Taavon Bank"];
+const bankOptions = iranianBanks.map(bank => ({ value: bank, label: bank }));
 const countryOptions = [{ value: "aud", label: "Australia" }, { value: "irt", label: "Iran" }];
 const fieldNames: Record<string, string> = {
   full_name: "name", account_name: "name", label: "name", direction: "country", shaba_number: "shaba",
@@ -62,7 +63,8 @@ function initialDrafts(recipient?: Recipient | null) {
   if (!recipient) return drafts;
   const saved: [string, string | null | undefined][] = recipient.direction === "aud"
     ? [["bank_name", recipient.bank_name], ["bank_city", recipient.bank_city], ["bsb", recipient.bsb?.replace(/\D/g, "")], ["account_number", recipient.account_number], ["address", recipient.residential_address], ["city", recipient.residential_city], ["state", normalizeAustralianState(recipient.residential_state || "") || recipient.residential_state], ["postcode", recipient.residential_postcode], ["phone", recipient.recipient_phone], ["email", recipient.recipient_email]]
-    : [["bank_name", recipient.bank_name], ["bank_city", recipient.bank_city], ["shaba", recipient.shaba_number?.replace(/^IR/i, "")], ["card_number", recipient.card_number], ["address", recipient.irt_address], ["city", recipient.irt_city], ["state", recipient.irt_state], ["postcode", recipient.irt_postcode], ["phone", recipient.irt_phone]];
+    // Free-text, "Other" and sanctioned bank names must be re-selected from the list.
+    : [["bank_name", iranianBanks.includes(recipient.bank_name ?? "") ? recipient.bank_name : ""], ["bank_city", recipient.bank_city], ["shaba", recipient.shaba_number?.replace(/^IR/i, "")], ["card_number", recipient.card_number], ["address", recipient.irt_address], ["city", recipient.irt_city], ["state", recipient.irt_state], ["postcode", recipient.irt_postcode], ["phone", recipient.irt_phone]];
   for (const [key, value] of saved) if (value) drafts[recipient.direction][key] = value;
   return drafts;
 }
@@ -259,6 +261,10 @@ export function RecipientModal({ direction, mode = "standard", recipient = null,
                   {input("bsb", "BSB", { placeholder: "000-000" })}
                   {input("account_number", "Account number", { placeholder: "5 to 12 digits" })}
                 </> : <>
+                  <div role="note" dir="ltr" lang="en" className="flex items-start gap-3 rounded-2xl border border-[#eddbb3] bg-[#fff8e8] px-4 py-3.5 sm:col-span-2">
+                    <DashboardLottieScene name="warning" size={40} motionEnabled={animate}/>
+                    <p className="m-0 self-center text-sm leading-7 text-[#765018]"><strong className="font-bold">Bank Saderat</strong>, <strong className="font-bold">Mehr Iran Bank</strong>, <strong className="font-bold">Ansar Bank</strong> and <strong className="font-bold">Bank Sepah</strong> are under sanctions. Please choose an account at another bank.</p>
+                  </div>
                   {select("bank_name", "Bank name", <SelectBox value={values.bank_name || ""} onChange={value => set("bank_name", value)} labeledOptions={bankOptions} disabled={saving || discarding} placeholder="Select bank" dir="ltr" className={flow.control}/>)}
                   <div className="min-w-0" data-field="bank_city">
                     <SuggestionField label="Bank branch city" value={values.bank_city || ""} placeholder="Start typing city" disabled={saving || discarding}

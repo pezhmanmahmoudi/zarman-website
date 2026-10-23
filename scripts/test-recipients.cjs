@@ -153,6 +153,15 @@ test("Persian and Arabic banking digits normalize as strings while leading zeros
   assert.ok(normalize({ ...aud, account_number: "1e6" }).fieldErrors.account_number);
 });
 
+test("sanctioned banks are rejected by their Shaba bank code while other banks still save", () => {
+  const { normalizeRecipientInput: normalize } = dashboardHarness().load("lib/dashboard/recipient-input.ts");
+  // Checksum-valid Shabas for Saderat, Sepah, Mehr Iran and Ansar.
+  for (const shaba of ["IR040190000000001234567890", "IR940150000000001234567890", "IR030600000000001234567890", "IR810630000000001234567890"]) {
+    assert.equal(normalize({ ...irt, shaba_number: shaba }).fieldErrors.shaba_number, "This bank is under sanctions. Please use an account at another bank.", shaba);
+  }
+  assert.equal(normalize({ ...irt, shaba_number: "IR490170000000001234567890" }).error, undefined);
+});
+
 test("Iranian bank city remains independent of residential city with its own length constraint", () => {
   const { normalizeRecipientInput: normalize } = dashboardHarness().load("lib/dashboard/recipient-input.ts");
   const result = normalize({ ...irt, bank_city: " Tehran ", irt_city: " Shiraz " });

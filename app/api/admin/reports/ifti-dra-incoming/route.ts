@@ -91,6 +91,10 @@ export async function POST(req: NextRequest) {
         address, city, state, postcode, document_type, license_number, card_number,
         state_of_issue, passport_number, compliance_dvs_method
       ),
+      exchange_requests(
+        institution_id:quote->recipient_snapshot->>institution_id,
+        institution_name:quote->>institution_name
+      ),
       recipients(
         direction, label, full_name, account_name, residential_address, irt_address,
         residential_city, residential_state, residential_postcode, residential_country,

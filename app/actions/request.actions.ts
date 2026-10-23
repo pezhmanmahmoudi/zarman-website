@@ -99,12 +99,13 @@ export async function createRequestQuote(input: QuoteInput): Promise<ActionResul
     const institutionName = institution?.companyName ?? input.institutionName?.trim();
     const db = database();
     const [profileResult, rateResult, volumeResult, recentQuotes] = await Promise.all([
-      db.from("profiles").select("id,first_name,last_name,kyc_status").eq("id", user.id).single(),
+      db.from("profiles").select("id,first_name,last_name,kyc_status,compliance_customer_flag_reason").eq("id", user.id).single(),
       db.from("rates_history").select("id,buy_aud,sell_aud,market_active,discount_step_volume,discount_percent_per_step,max_discount_percent,fee_threshold,applied_fee").order("date", { ascending: false }).order("id", { ascending: false }).limit(1).single(),
       db.from("transactions").select("amount_aud").eq("user_id", user.id).eq("status", "approved"),
       db.from("exchange_request_quotes").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", new Date(Date.now() - 60_000).toISOString()),
     ]);
     for (const response of [profileResult, rateResult, volumeResult, recentQuotes]) if (response.error) throw response.error;
+    if (profileResult.data?.kyc_status === "suspended" || profileResult.data?.compliance_customer_flag_reason === "[ACCOUNT_SUSPENDED]") throw new Error("Your account is suspended and cannot submit requests.");
     if (profileResult.data?.kyc_status !== "approved") throw new Error("Identity verification must be approved before submitting a request.");
     if (!rateResult.data?.market_active) throw new Error("The exchange market is paused. Please try again when service resumes.");
     if ((recentQuotes.count || 0) >= 10) throw new Error("Please wait a minute before requesting another quote.");

@@ -43,8 +43,8 @@ async function performCustomerKycUpload(input: UploadInput) {
   const bytes = new Uint8Array(await input.file.arrayBuffer());
   if (!matchesKycFileSignature(bytes, input.file.type)) throw new UploadValidationError("The file contents do not match its format. Choose a valid JPG, PNG or PDF.");
   const db = service();
-  const { data: profile } = await db.from("profiles").select("kyc_status").eq("id", user.id).single();
-  if (!profile || profile.kyc_status === "approved") throw new UploadValidationError("This account cannot upload identity documents.");
+  const { data: profile } = await db.from("profiles").select("kyc_status, compliance_customer_flag_reason").eq("id", user.id).single();
+  if (!profile || profile.kyc_status === "approved" || profile.kyc_status === "suspended" || profile.compliance_customer_flag_reason === "[ACCOUNT_SUSPENDED]") throw new UploadValidationError("This account cannot upload identity documents.");
   const { count, error: countError } = await db.from("customer_kyc_uploads").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", new Date(Date.now() - 86400000).toISOString());
   if (countError) throw new UploadValidationError("Document uploads are not available yet. Please contact support.");
   if ((count ?? 0) >= 30) throw new UploadValidationError("Upload limit reached. Please contact support or try again tomorrow.");

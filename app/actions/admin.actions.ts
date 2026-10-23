@@ -340,8 +340,28 @@ export async function getAdminStats() {
 // ===========================================================================
 // KYC QUEUE
 // ===========================================================================
+const ACCOUNT_SUSPENDED_FLAG_REASON = "[ACCOUNT_SUSPENDED]";
+
+function isProfileRowSuspended(profile: unknown): boolean {
+  if (!profile || typeof profile !== "object") return false;
+  const row = profile as Record<string, unknown>;
+  return (
+    row.kyc_status === "suspended" ||
+    row.compliance_customer_flag_reason === ACCOUNT_SUSPENDED_FLAG_REASON
+  );
+}
+
+function normalizeProfileRowStatus<T>(profile: T): T {
+  if (!profile || typeof profile !== "object") return profile;
+  const row = profile as Record<string, unknown>;
+  if (isProfileRowSuspended(row) && row.kyc_status !== "suspended") {
+    return { ...profile, kyc_status: "suspended" };
+  }
+  return profile;
+}
+
 // Both lists feed the same identity drawer; keep its fields identical across statuses.
-const KYC_PROFILE_FIELDS = "id, first_name, last_name, email, mobile_number, dob, address, city, state, postcode, country, kyc_status, customer_code, created_at, document_type, license_number, card_number, passport_number, state_of_issue, expiry_date";
+const KYC_PROFILE_FIELDS = "id, first_name, last_name, email, mobile_number, dob, address, city, state, postcode, country, kyc_status, customer_code, created_at, document_type, license_number, card_number, passport_number, state_of_issue, expiry_date, compliance_customer_flagged, compliance_customer_flag_reason";
 
 export async function getKycQueue() {
   const db = await getAuthorizedServerClient();
@@ -353,7 +373,7 @@ export async function getKycQueue() {
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []).map((row) => normalizeProfileRowStatus(row));
 }
 
 export async function getKycHistory(page: number = 1, pageSize: number = 10) {
@@ -378,7 +398,10 @@ export async function getKycHistory(page: number = 1, pageSize: number = 10) {
   ]);
 
   if (countRes.error || dataRes.error) throw new Error((countRes.error ?? dataRes.error)!.message);
-  return { data: dataRes.data ?? [], total: countRes.count ?? 0 };
+  return {
+    data: (dataRes.data ?? []).map((row) => normalizeProfileRowStatus(row)),
+    total: countRes.count ?? 0,
+  };
 }
 
 export async function approveKyc(userId: string) {
@@ -387,8 +410,19 @@ export async function approveKyc(userId: string) {
 
   const db = makeServiceRoleClient();
 
-  const { data: before } = await db.from("profiles").select("kyc_status").eq("id", userId).single();
-  const { error } = await db.from("profiles").update({ kyc_status: "approved", kyc_verified_at: new Date().toISOString() }).eq("id", userId);
+  const { data: before } = await db.from("profiles").select("kyc_status, compliance_customer_flag_reason").eq("id", userId).single();
+  const wasSuspended = isProfileRowSuspended(before as Record<string, unknown> | null);
+  const oldStatus = wasSuspended ? "suspended" : (before?.kyc_status ?? "unknown");
+  const patch: Record<string, unknown> = {
+    kyc_status: "approved",
+    kyc_verified_at: new Date().toISOString(),
+  };
+  if (wasSuspended) {
+    patch.compliance_customer_flagged = false;
+    patch.compliance_customer_flagged_at = null;
+    patch.compliance_customer_flag_reason = null;
+  }
+  const { error } = await db.from("profiles").update(patch).eq("id", userId);
 
   if (error) return { error: error.message };
 
@@ -399,7 +433,7 @@ export async function approveKyc(userId: string) {
       action: "KYC_APPROVED",
       targetType: "profile",
       targetId: userId,
-      oldValue: { kyc_status: before?.kyc_status ?? "unknown" },
+      oldValue: { kyc_status: oldStatus },
       newValue: { kyc_status: "approved" },
     });
   } catch (auditError) {
@@ -413,8 +447,19 @@ export async function rejectKyc(userId: string) {
   if (!userId) return { error: "Missing user ID." };
 
   const db = makeServiceRoleClient();
-  const { data: before } = await db.from("profiles").select("kyc_status").eq("id", userId).single();
-  const { error } = await db.from("profiles").update({ kyc_status: "rejected" }).eq("id", userId);
+  const { data: before } = await db.from("profiles").select("kyc_status, compliance_customer_flag_reason").eq("id", userId).single();
+  const wasSuspended = isProfileRowSuspended(before as Record<string, unknown> | null);
+  const oldStatus = wasSuspended ? "suspended" : (before?.kyc_status ?? "unknown");
+  const patch: Record<string, unknown> = {
+    kyc_status: "rejected",
+    kyc_approval_notice_seen_at: null,
+  };
+  if (wasSuspended) {
+    patch.compliance_customer_flagged = false;
+    patch.compliance_customer_flagged_at = null;
+    patch.compliance_customer_flag_reason = null;
+  }
+  const { error } = await db.from("profiles").update(patch).eq("id", userId);
   if (error) return { error: error.message };
 
   try {
@@ -424,10 +469,68 @@ export async function rejectKyc(userId: string) {
       action: "KYC_REJECTED",
       targetType: "profile",
       targetId: userId,
-      oldValue: { kyc_status: before?.kyc_status ?? "unknown" },
+      oldValue: { kyc_status: oldStatus },
       newValue: { kyc_status: "rejected" },
     });
   } catch (auditError) {}
+  return { success: true };
+}
+
+export async function suspendKyc(userId: string, expectedStatus?: string) {
+  const admin = await requireAdmin();
+  if (typeof userId !== "string" || !userId.trim()) return { error: "Missing user ID." };
+
+  const db = makeServiceRoleClient();
+  const { data: before, error: readError } = await db
+    .from("profiles")
+    .select("id, kyc_status, compliance_customer_flag_reason")
+    .eq("id", userId)
+    .maybeSingle();
+  if (readError) return { error: readError.message };
+  if (!before) return { error: "Customer profile not found. Refresh the information before trying again." };
+
+  const effectiveBeforeStatus = isProfileRowSuspended(before as Record<string, unknown>)
+    ? "suspended"
+    : before.kyc_status;
+  if (effectiveBeforeStatus === "suspended") return { success: true };
+  if (expectedStatus !== undefined && effectiveBeforeStatus !== expectedStatus) {
+    return { error: "The KYC status has changed. Refresh the information before suspending." };
+  }
+
+  const now = new Date().toISOString();
+  const suspendPatch: Record<string, unknown> = {
+    kyc_status: "suspended",
+    compliance_customer_flagged: true,
+    compliance_customer_flagged_at: now,
+    compliance_customer_flag_reason: ACCOUNT_SUSPENDED_FLAG_REASON,
+  };
+  let { error } = await db.from("profiles").update(suspendPatch).eq("id", userId);
+  if (error && (error.code === "23514" || error.message?.includes("profiles_kyc_status_check"))) {
+    const fallback = await db
+      .from("profiles")
+      .update({ ...suspendPatch, kyc_status: "archived" })
+      .eq("id", userId);
+    error = fallback.error;
+  }
+  if (error) return { error: error.message };
+
+  try {
+    await writeAuditLog({
+      actorId: admin.id,
+      actorEmail: admin.email ?? "",
+      action: "KYC_SUSPENDED",
+      targetType: "profile",
+      targetId: userId,
+      oldValue: { kyc_status: effectiveBeforeStatus },
+      newValue: { kyc_status: "suspended" },
+    });
+  } catch (auditError) {
+    console.error("[admin KYC suspend audit]", auditError);
+    return {
+      success: true,
+      warning: "Account was suspended, but its audit entry could not be recorded. Contact support to reconcile the audit log.",
+    };
+  }
   return { success: true };
 }
 
@@ -436,16 +539,26 @@ export async function archiveKyc(userId: string, expectedStatus?: string) {
   if (typeof userId !== "string" || !userId.trim()) return { error: "Missing user ID." };
 
   const db = makeServiceRoleClient();
-  const { data: before, error: readError } = await db.from("profiles").select("id, kyc_status").eq("id", userId).maybeSingle();
+  const { data: before, error: readError } = await db.from("profiles").select("id, kyc_status, compliance_customer_flag_reason").eq("id", userId).maybeSingle();
   if (readError) return { error: readError.message };
   if (!before) return { error: "Customer profile not found. Refresh the information before trying again." };
+  const wasSuspended = isProfileRowSuspended(before as Record<string, unknown>);
+  const effectiveBeforeStatus = wasSuspended ? "suspended" : before.kyc_status;
   // A lost response/repeated click must not create another mutation or audit entry.
-  if (before.kyc_status === "archived") return { success: true };
-  if (expectedStatus !== undefined && before.kyc_status !== expectedStatus) {
+  if (effectiveBeforeStatus === "archived") return { success: true };
+  if (expectedStatus !== undefined && effectiveBeforeStatus !== expectedStatus) {
     return { error: "The KYC status has changed. Refresh the information before archiving." };
   }
 
-  const update = db.from("profiles").update({ kyc_status: "archived" }).eq("id", userId);
+  const archivePatch: Record<string, unknown> = wasSuspended
+    ? {
+        kyc_status: "archived",
+        compliance_customer_flagged: false,
+        compliance_customer_flagged_at: null,
+        compliance_customer_flag_reason: null,
+      }
+    : { kyc_status: "archived" };
+  const update = db.from("profiles").update(archivePatch).eq("id", userId);
   const matchedUpdate = before.kyc_status === null
     ? update.is("kyc_status", null)
     : update.eq("kyc_status", before.kyc_status);
@@ -460,7 +573,7 @@ export async function archiveKyc(userId: string, expectedStatus?: string) {
       action: "KYC_ARCHIVED",
       targetType: "profile",
       targetId: userId,
-      oldValue: { kyc_status: before.kyc_status },
+      oldValue: { kyc_status: effectiveBeforeStatus },
       newValue: { kyc_status: "archived" },
     });
   } catch (auditError) {
@@ -478,7 +591,7 @@ export async function updateUserIdentityKycProfile(payload: any) {
 
   if (!payload.userId) return { error: "Missing user ID." };
 
-  const { data: existingProfile, error: profileError } = await db.from("profiles").select("id, email").eq("id", payload.userId).maybeSingle();
+  const { data: existingProfile, error: profileError } = await db.from("profiles").select("id, email, kyc_status, compliance_customer_flag_reason").eq("id", payload.userId).maybeSingle();
   if (profileError) return { error: profileError.message };
   if (!existingProfile) return { error: "Customer profile not found." };
 
@@ -500,9 +613,36 @@ export async function updateUserIdentityKycProfile(payload: any) {
     passport_number: payload.passport_number?.trim() || null,
     expiry_date: payload.expiry_date?.trim() || null,
   };
-  if (payload.kyc_status) patch.kyc_status = payload.kyc_status;
+  if (payload.kyc_status) {
+    patch.kyc_status = payload.kyc_status;
+    if (payload.kyc_status === "suspended") {
+      patch.compliance_customer_flagged = true;
+      patch.compliance_customer_flagged_at = new Date().toISOString();
+      patch.compliance_customer_flag_reason = ACCOUNT_SUSPENDED_FLAG_REASON;
+    } else {
+      if (payload.kyc_status === "rejected") {
+        patch.kyc_approval_notice_seen_at = null;
+      }
+      if (isProfileRowSuspended(existingProfile as Record<string, unknown>)) {
+        patch.compliance_customer_flagged = false;
+        patch.compliance_customer_flagged_at = null;
+        patch.compliance_customer_flag_reason = null;
+      }
+    }
+  }
 
-  const { error: updateError } = await db.from("profiles").update(patch).eq("id", payload.userId);
+  let { error: updateError } = await db.from("profiles").update(patch).eq("id", payload.userId);
+  if (
+    updateError &&
+    payload.kyc_status === "suspended" &&
+    (updateError.code === "23514" || updateError.message?.includes("profiles_kyc_status_check"))
+  ) {
+    const fallback = await db
+      .from("profiles")
+      .update({ ...patch, kyc_status: "archived" })
+      .eq("id", payload.userId);
+    updateError = fallback.error;
+  }
   if (updateError) return { error: updateError.message };
 
   await writeAuditLog({
@@ -1062,14 +1202,14 @@ export async function searchUsers(query: string) {
 
   const { data, error } = await db
     .from("profiles")
-    .select("id, first_name, last_name, email, mobile_number, customer_code, kyc_status, created_at")
+    .select("id, first_name, last_name, email, mobile_number, customer_code, kyc_status, compliance_customer_flagged, compliance_customer_flag_reason, created_at")
     .or(
       `first_name.ilike.%${sanitized}%,last_name.ilike.%${sanitized}%,email.ilike.%${sanitized}%,mobile_number.ilike.%${sanitized}%,customer_code.ilike.%${sanitized}%`
     )
     .limit(20);
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []).map((row) => normalizeProfileRowStatus(row));
 }
 
 export async function getUserFinancialProfile(userId: string) {
@@ -1090,7 +1230,7 @@ export async function getUserFinancialProfile(userId: string) {
     db.from("testimonials").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
   ]);
 
-  const profile = profileRes.data ?? null;
+  const profile = normalizeProfileRowStatus(profileRes.data ?? null);
   const transactions = transactionsRes.data ?? [];
   const ownedRecipients = recipientsRes.data ?? [];
 
@@ -1177,9 +1317,24 @@ export async function createAssistedCustomerOnboarding(payload: any) {
   };
   if (payload.kyc_status === "approved") {
     patch.kyc_verified_at = new Date().toISOString();
+  } else if (payload.kyc_status === "suspended") {
+    patch.compliance_customer_flagged = true;
+    patch.compliance_customer_flagged_at = new Date().toISOString();
+    patch.compliance_customer_flag_reason = ACCOUNT_SUSPENDED_FLAG_REASON;
   }
 
-  const { error: profileError } = await db.from("profiles").update(patch).eq("id", userId);
+  let { error: profileError } = await db.from("profiles").update(patch).eq("id", userId);
+  if (
+    profileError &&
+    payload.kyc_status === "suspended" &&
+    (profileError.code === "23514" || profileError.message?.includes("profiles_kyc_status_check"))
+  ) {
+    const fallback = await db
+      .from("profiles")
+      .update({ ...patch, kyc_status: "archived" })
+      .eq("id", userId);
+    profileError = fallback.error;
+  }
   if (profileError) return { error: profileError.message };
 
   // ── 3. Create recipient account if provided ────────────────────────────

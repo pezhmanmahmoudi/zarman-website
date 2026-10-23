@@ -12,6 +12,8 @@ import { DashboardHeader } from "./DashboardHeader";
 import { DashboardMotionProvider } from "./DashboardMotion";
 import { DashboardLoading } from "./DashboardLoading";
 import { DashboardMessageChime, playDashboardMessageChime } from "./DashboardMessageChime";
+import { DashboardSuspendedNotice } from "./DashboardSuspendedNotice";
+import { isProfileSuspended } from "@/lib/kyc/status";
 export { DashboardLoading } from "./DashboardLoading";
 import styles from "@/styles/dashboard/DashboardShell.module.css";
 
@@ -45,6 +47,17 @@ export function DashboardShell({ children, initialAccount = null }: { children: 
     </section>
   </div>;
   if (!data.sessionChecked && !data.error) return <DashboardMotionProvider enabled={motion}><DashboardLoading fullPage /></DashboardMotionProvider>;
+  if (isProfileSuspended(data.profile)) {
+    return (
+      <DashboardContext.Provider value={{ ...data, motionEnabled: motion }}>
+        <DashboardMotionProvider enabled={motion}>
+          <div className={styles.dashboardWrapper} data-theme="light" data-motion={motion ? "on" : "off"} data-dashboard-shell dir={locale === "fa" ? "rtl" : "ltr"}>
+            <DashboardSuspendedNotice profile={data.profile} />
+          </div>
+        </DashboardMotionProvider>
+      </DashboardContext.Provider>
+    );
+  }
   return <DashboardContext.Provider value={{ ...data, motionEnabled: motion }}><DashboardMotionProvider enabled={motion}>
     <div className={styles.dashboardWrapper} data-theme="light" data-motion={motion ? "on" : "off"} data-private-amounts={privateAmounts} data-dashboard-shell dir={locale === "fa" ? "rtl" : "ltr"}>
       <a href="#dashboard-content" className={styles.skipLink}>{copy.skip}</a>

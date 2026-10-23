@@ -65,6 +65,10 @@ const irtRequired = [
   "irt_phone",
 ] as const;
 
+// Shaba bank codes (characters 5–7) of sanctioned banks: Saderat (019), Qarz-al-Hasaneh Mehr Iran (060),
+// Sepah (015) and the banks merged into it: Ansar (063), Ghavamin (052), Hekmat (065), Kosar (073), Mehr Eghtesad (079).
+const sanctionedShabaBankCodes = new Set(["015", "019", "052", "060", "063", "065", "073", "079"]);
+
 function isPresent(value: string | null | undefined): value is string {
   return typeof value === "string" && value.length > 0;
 }
@@ -153,6 +157,9 @@ export function normalizeRecipientInput(input: unknown): RecipientInputResult {
     if (typeof data.shaba_number === "string") data.shaba_number = data.shaba_number.toUpperCase();
     validate("shaba_number", /^IR\d{24}$/, "Shaba number must start with IR followed by 24 digits.");
     if (isPresent(data.shaba_number) && !isValidIranianShaba(data.shaba_number)) fail("shaba_number", "Enter a valid Iranian Shaba number.");
+    if (isPresent(data.shaba_number) && sanctionedShabaBankCodes.has(data.shaba_number.slice(4, 7))) {
+      fail("shaba_number", "This bank is under sanctions. Please use an account at another bank.");
+    }
     validate("card_number", /^\d{16}$/, "Card number must contain exactly 16 digits.");
     if ("card_number" in data && !isPresent(data.card_number)) data.card_number = null;
     if (isPresent(data.bank_type) && data.bank_type !== "bank_melli" && data.bank_type !== "other") fail("bank_type", "Invalid bank type.");

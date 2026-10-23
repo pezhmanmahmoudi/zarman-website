@@ -264,11 +264,14 @@ export async function savePersonalData(payload: {
 
   const { data: current, error: fetchError } = await supabaseAdmin
     .from("profiles")
-    .select("kyc_status, first_name, last_name, email, mobile_number")
+    .select("kyc_status, compliance_customer_flag_reason, first_name, last_name, email, mobile_number")
     .eq("id", userId)
     .single();
   if (fetchError) {
     return { error: "Could not verify account status." };
+  }
+  if (current?.kyc_status === "suspended" || current?.compliance_customer_flag_reason === "[ACCOUNT_SUSPENDED]") {
+    return { error: "Your account has been suspended and cannot be modified." };
   }
   if (current?.kyc_status === "approved") {
     return { error: "Your identity has already been approved and cannot be modified." };
@@ -318,6 +321,15 @@ export async function updatePersonalIdentityData(payload: {
 
   if (!payload.first_name?.trim() || !payload.last_name?.trim() || !payload.mobile_number?.trim()) {
     return { error: "First name, last name, and mobile number are required." };
+  }
+
+  const { data: current } = await supabaseAdmin
+    .from("profiles")
+    .select("kyc_status, compliance_customer_flag_reason")
+    .eq("id", userId)
+    .maybeSingle();
+  if (current?.kyc_status === "suspended" || current?.compliance_customer_flag_reason === "[ACCOUNT_SUSPENDED]") {
+    return { error: "Your account has been suspended and cannot be modified." };
   }
 
   const { error: updateError } = await supabaseAdmin

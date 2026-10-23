@@ -26,7 +26,7 @@ export function InstitutionPaymentFields({ institutionId, paymentLink, companyNa
   const text = (en: string, fa: string) => locale === "fa" ? fa : en;
   const institution = paymentInstitution(institutionId);
   return <fieldset className={styles.form} disabled={disabled}>
-    <legend className={styles.heading}>{text("Exam payment details", "اطلاعات پرداخت آزمون")}</legend>
+    <legend className={styles.heading}>{text("Payment details", "اطلاعات پرداخت")}</legend>
     <fieldset className={styles.options} aria-invalid={!!errors.institution} aria-describedby={errors.institution ? "request-payment-institution-error" : undefined}>
       <legend className={styles.label}>{text("Choose a payment recipient", "انتخاب دریافت‌کنندهٔ پرداخت")}</legend>
       <div className={styles.optionGrid}>{[...paymentInstitutions, { id: "other", name: "Other" }].map(item => <label key={item.id} className={styles.option} data-checked={institutionId === item.id}>

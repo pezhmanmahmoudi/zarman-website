@@ -3,7 +3,7 @@
 .form>*:not(.heading){clear:both}
 .options{min-width:0;margin:0 0 22px;padding:0;border:0}
 .label{display:block;margin:0 0 8px;padding:0;font-size:13px;font-weight:500;line-height:1.8;color:#51445f}
-.optionGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.optionGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,120px),1fr));gap:12px}
 .credentials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 @media(max-width:639px){.credentials{grid-template-columns:minmax(0,1fr);gap:0}}
 .option{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:12px;border:1px solid #d7cee7;border-radius:12px;background:#fff;color:#51445f;font-size:14px;font-weight:600;cursor:pointer}

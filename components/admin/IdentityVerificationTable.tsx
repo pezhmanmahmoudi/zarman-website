@@ -18,7 +18,7 @@ const documentLabel = (type?: string | null) => type === "driver_license" ? "Dri
 
 export function IdentityVerificationTable({ users, emptyMessage, onStatusChange }: {
   users: IdentityRecord[]; emptyMessage: string;
-  onStatusChange?: (user: IdentityRecord, status: "approved" | "rejected" | "archived") => void;
+  onStatusChange?: (user: IdentityRecord, status: "approved" | "rejected" | "archived" | "suspended") => void;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = users.find(user => user.id === selectedId);

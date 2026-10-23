@@ -231,3 +231,39 @@ test("logout across tabs and browser history clears private data before navigati
     }
   } finally { global.window = previous.window; global.document = previous.document; }
 });
+
+test("suspended accounts see the formal suspension notice and cannot access any dashboard content or navigation", () => {
+  for (const locale of ["en", "fa"]) {
+    for (const profile of [
+      { id: "cust-1", customer_code: "ZM12345", email: "user@example.test", kyc_status: "suspended" },
+      { id: "cust-2", customer_code: "ZM67890", email: "flag@example.test", kyc_status: "archived", compliance_customer_flag_reason: "[ACCOUNT_SUSPENDED]" },
+    ]) {
+      const harness = dashboardHarness({
+        locale,
+        mocks: {
+          "./DashboardMessageChime": { DashboardMessageChime: () => React.createElement("div", { "data-chime": "mounted" }) },
+          "@/hooks/useDashboardData": {
+            useDashboardData: () => ({
+              profile,
+              approvedVolume: 0,
+              approvedCount: 0,
+              sessionChecked: true,
+              error: false,
+              loading: false,
+              refresh() {},
+            }),
+          },
+        },
+      });
+      const { DashboardShell } = harness.load("components/dashboard/DashboardShell.tsx");
+      const html = renderToStaticMarkup(
+        React.createElement(DashboardShell, null, React.createElement("div", { "data-protected-view": "secret-dashboard-tab" }))
+      );
+      assert.match(html, /data-suspended-notice="true"/);
+      assert.doesNotMatch(html, /secret-dashboard-tab/);
+      assert.doesNotMatch(html, /data-chime="mounted"/);
+      assert.match(html, locale === "fa" ? /حساب کاربری شما به حالت تعلیق درآمده است/ : /Your Account Has Been Suspended/);
+      assert.match(html, /info@zarman\.com\.au/);
+    }
+  }
+});

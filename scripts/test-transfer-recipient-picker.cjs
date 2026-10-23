@@ -141,7 +141,7 @@ test("add-recipient uses the primary button below search; institution form uses 
     const props = { locale, institutionId: "", paymentLink: "", companyName: "", username: "", password: "", onCompanyNameChange() {}, onUsernameChange() {}, onPasswordChange() {}, disabled: false, onInstitutionChange(id) { props.institutionId = id; }, onPaymentLinkChange() {} };
     const render = () => h.render(InstitutionPaymentFields, props);
     try {
-      assert.deepEqual(elements(render(), n => n.type === "input" && n.props.type === "radio").map(n => n.props.value), ["amc", "oet", "other"]);
+      assert.deepEqual(elements(render(), n => n.type === "input" && n.props.type === "radio").map(n => n.props.value), ["amc", "oet", "intealth", "racgp", "ahpra", "adc", "homeaffairs", "img4imgs", "other"]);
       for (const institution of paymentInstitutions) {
         elements(render(), n => n.type === "input" && n.props.value === institution.id)[0].props.onChange();
         assert.ok(renderToStaticMarkup(render()).includes(institution.companyName));

@@ -8,6 +8,7 @@ import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 import { createSupabaseServerComponentClient } from "@/lib/supabase-server";
 import { readApprovedSummary, type DashboardInitialAccount } from "@/lib/dashboard/approved-summary";
+import { isProfileSuspended, normalizeProfileKycStatus } from "@/lib/kyc/status";
 import type { Profile } from "./dashboard.types";
 import styles from "@/styles/dashboard/DashboardShell.module.css";
 
@@ -52,7 +53,11 @@ async function readInitialAccount(): Promise<DashboardInitialAccount | null> {
       readApprovedSummary(supabase, userId),
     ]);
     if (profileRes.error || !profileRes.data) return null;
-    return { profile: profileRes.data as Profile, approved };
+    const profile = normalizeProfileKycStatus(profileRes.data as Profile);
+    if (isProfileSuspended(profile)) {
+      return { profile, approved: { volume: 0, count: 0 } };
+    }
+    return { profile, approved };
   } catch {
     return null;
   }
