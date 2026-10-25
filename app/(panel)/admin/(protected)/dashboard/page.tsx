@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ShieldCheck, ArrowLeftRight, MessageSquare, Users, CheckCircle2, ArrowUpRight, ArrowRight, BookOpen, TrendingUp, ChartNoAxesCombined, Clock3, CalendarDays } from "lucide-react";
-import { getAdminStats, getAuditLogs } from "@/app/actions/admin.actions";
+import { ShieldCheck, ArrowLeftRight, MessageSquare, Users, CheckCircle2, ArrowUpRight, ArrowRight, BookOpen, TrendingUp, ChartNoAxesCombined, Clock3, CalendarDays, Repeat2 } from "lucide-react";
+import { getAdminStats, getAuditLogs, getDueRecurringExpenses } from "@/app/actions/admin.actions";
+import { treasuryViewHref } from "@/lib/treasury-navigation";
 import { AdminRefreshButton } from "@/components/admin/ui/AdminRefreshButton";
 import shell from "@/styles/admin/AdminShell.module.css";
 import table from "@/styles/admin/AdminTable.module.css";
@@ -9,10 +10,12 @@ import styles from "@/styles/admin/AdminDashboard.module.css";
 export const metadata = { title: "Overview | Zarman Admin" };
 
 export default async function AdminDashboardPage() {
-  const [stats, logs] = await Promise.all([getAdminStats(), getAuditLogs(1, 7)]);
-  const pendingCount = stats.pendingKycCount + stats.pendingTxCount + stats.pendingFeedbackCount;
+  const [stats, logs, dueExpenses] = await Promise.all([getAdminStats(), getAuditLogs(1, 7), getDueRecurringExpenses()]);
+  const pendingCount = stats.pendingKycCount + stats.pendingTxCount + stats.pendingFeedbackCount + dueExpenses.length;
   const updatedAt = new Date();
   const number = new Intl.NumberFormat("en-AU");
+  const money = (value: number, currency: string) =>
+    `${value.toLocaleString("en-AU", { minimumFractionDigits: currency === "AUD" ? 2 : 0, maximumFractionDigits: currency === "AUD" ? 2 : 0 })} ${currency}`;
   const queues = [
     { label: "Transactions", value: stats.pendingTxCount, description: "Transfers waiting for your review", href: "/admin/transactions", icon: ArrowLeftRight, tone: styles.indigo, action: "Review transactions" },
     { label: "Identity verification", value: stats.pendingKycCount, description: "Customer identities to verify", href: "/admin/kyc", icon: ShieldCheck, tone: styles.amber, action: "Open verification queue" },
@@ -39,9 +42,24 @@ export default async function AdminDashboardPage() {
 
         <div className={`${styles.attentionBanner} ${pendingCount === 0 ? styles.allClear : ""}`}>
           <span className={styles.attentionIcon}>{pendingCount > 0 ? <Clock3 size={19} /> : <CheckCircle2 size={19} />}</span>
-          <div><strong>{pendingCount > 0 ? `${number.format(pendingCount)} item${pendingCount === 1 ? "" : "s"} need${pendingCount === 1 ? "s" : ""} your attention` : "Your review queues are clear"}</strong><p>{pendingCount > 0 ? "Start with the queues below to review outstanding requests." : "No pending transactions, identity checks or feedback at this time."}</p></div>
+          <div><strong>{pendingCount > 0 ? `${number.format(pendingCount)} item${pendingCount === 1 ? "" : "s"} need${pendingCount === 1 ? "s" : ""} your attention` : "Your review queues are clear"}</strong><p>{pendingCount > 0 ? "Start with the queues below to review outstanding requests." : "No pending transactions, identity checks, feedback or due expenses at this time."}</p></div>
           <span className={styles.snapshot}>Updated {updatedAt.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZone: "Australia/Sydney" })} Sydney</span>
         </div>
+
+        {dueExpenses.length > 0 && <section className={`${styles.panel} ${styles.duePanel}`} aria-labelledby="due-heading">
+          <div className={styles.panelHeader}>
+            <div><h2 id="due-heading">Recurring expenses due</h2><p>{dueExpenses.length} scheduled payment{dueExpenses.length === 1 ? " is" : "s are"} due or overdue</p></div>
+            <Link href={treasuryViewHref("recurring")}>Post payments <ArrowUpRight size={14} /></Link>
+          </div>
+          <ul className={styles.dueList}>{dueExpenses.map(item => <li key={item.id}>
+            <Link href={treasuryViewHref("recurring")} className={styles.dueItem}>
+              <span className={styles.dueIcon}><Repeat2 size={16} /></span>
+              <span className={styles.dueTitle}>{item.title}</span>
+              <span className={styles.dueAmount}>{money(item.amount, item.currency)}</span>
+              <span className={styles.dueBadge}>{item.daysOverdue === 0 ? "Due today" : `${item.daysOverdue} day${item.daysOverdue === 1 ? "" : "s"} overdue`}</span>
+            </Link>
+          </li>)}</ul>
+        </section>}
 
         <section aria-label="Pending review queues" className={styles.queueGrid}>
           {queues.map(({ icon: Icon, ...queue }) => <Link href={queue.href} key={queue.href} className={styles.queueCard}>

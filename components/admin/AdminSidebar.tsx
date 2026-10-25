@@ -19,9 +19,10 @@ type AdminSidebarProps = {
   pendingKyc: number;
   pendingTx: number;
   pendingFeedback: number;
+  dueRecurring?: number;
 };
 
-export function AdminSidebar({ adminEmail, pendingKyc, pendingTx, pendingFeedback }: AdminSidebarProps) {
+export function AdminSidebar({ adminEmail, pendingKyc, pendingTx, pendingFeedback, dueRecurring = 0 }: AdminSidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -45,7 +46,7 @@ export function AdminSidebar({ adminEmail, pendingKyc, pendingTx, pendingFeedbac
     ] },
     { label: "Finance", items: [
       { href: "/admin/ledger", label: "Ledger", icon: BookOpen },
-      { href: "/admin/treasury", label: "Treasury", icon: TrendingUp },
+      { href: "/admin/treasury", label: "Treasury", icon: TrendingUp, badge: dueRecurring },
       { href: "/admin/reports", label: "Reports", icon: ChartNoAxesCombined },
       { href: "/admin/reports/austrac", label: "AUSTRAC reporting", icon: ShieldAlert },
     ] },

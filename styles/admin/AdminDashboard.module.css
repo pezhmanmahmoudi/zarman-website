@@ -39,6 +39,14 @@
 .totalPeriod { font-size: .625rem; color: var(--text-dim); }
 .detailGrid { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(250px, 1fr); gap: 1.25rem; align-items: start; }
 .panel { min-width: 0; background: #fff; border: 1px solid var(--border-soft); border-radius: .875rem; box-shadow: var(--shadow-sm); }
+.duePanel { border-color: #f1d9a8; }
+.dueList { list-style: none; margin: 0; padding: .5rem; }
+.dueItem { display: flex; align-items: center; gap: .75rem; padding: .75rem; border-radius: .625rem; text-decoration: none; color: var(--text-main); font-size: .75rem; transition: background .15s; }
+.dueItem:hover { background: #fff8ea; }
+.dueIcon { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: .5rem; background: #fff5e2; color: #99600e; }
+.dueTitle { min-width: 0; flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dueAmount { font-variant-numeric: tabular-nums; color: var(--text-soft); white-space: nowrap; }
+.dueBadge { flex-shrink: 0; padding: .2rem .55rem; border-radius: 999px; background: #fdecec; color: #b42318; font-size: .625rem; font-weight: 600; white-space: nowrap; }
 .panelHeader { padding: 1.125rem 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; border-bottom: 1px solid var(--border-soft); }
 .panelHeader h2 { margin: 0; font-size: .875rem; font-weight: 650; }
 .panelHeader p { margin: .25rem 0 0; color: var(--text-dim); font-size: .6875rem; }

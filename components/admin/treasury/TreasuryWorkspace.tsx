@@ -29,6 +29,8 @@ function TreasuryOverview({ data }: { data: TreasuryPageData }) {
   const { accounting, treasury, strategy } = data;
   const alertCount = (strategy.alerts?.length ?? 0) + (strategy.accountingWarnings?.length ?? 0);
   const criticalCount = strategy.criticalAlertCount ?? 0;
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(new Date());
+  const dueRecurring = (data.recurringExpenses ?? []).filter(item => item.is_active && item.next_due_date <= today);
   const metrics: { label: string; value: string; hint: string; view: TreasuryView; negative?: boolean }[] = [
     { label: "AUD inventory", value: fmtAUD(treasury.audInventory), hint: "AUD · View inventory", view: "inventory" },
     { label: "Iran liquidity", value: fmtIRT(treasury.totalIranLiquidityIRT), hint: "IRT · View liquidity", view: "accounts", negative: treasury.totalIranLiquidityIRT < 0 },
@@ -66,6 +68,21 @@ function TreasuryOverview({ data }: { data: TreasuryPageData }) {
         </div>
         <Link href={treasuryViewHref("alerts")} className={s.actionLink} prefetch={false}>Review alerts<ArrowRight size={14} aria-hidden="true" /></Link>
       </div>
+      {dueRecurring.length > 0 && (
+        <div className={`${s.attention} ${s.attentionWarning}`}>
+          <div className={s.attentionText}>
+            <Repeat2 size={21} aria-hidden="true" />
+            <div>
+              <strong>{dueRecurring.length} recurring {dueRecurring.length === 1 ? "expense is" : "expenses are"} due</strong>
+              <p>
+                {dueRecurring.slice(0, 3).map(item => `${item.title} (${item.currency === "IRT" ? fmtIRT(item.amount) : fmtAUD(item.amount)} ${item.currency})`).join(" · ")}
+                {dueRecurring.length > 3 ? ` · +${dueRecurring.length - 3} more` : ""}
+              </p>
+            </div>
+          </div>
+          <Link href={treasuryViewHref("recurring")} className={s.actionLink} prefetch={false}>Post payments<ArrowRight size={14} aria-hidden="true" /></Link>
+        </div>
+      )}
       <section aria-labelledby="treasury-tasks-title">
         <h3 id="treasury-tasks-title" className={s.sectionHeading}>Quick access</h3>
         <div className={s.quickGrid}>

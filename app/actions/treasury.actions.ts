@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { createClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/app/actions/admin.actions";
@@ -715,9 +715,13 @@ export async function postRecurringExpense(
   id: string,
   postDate: string,
   exchangeRate?: number | null,
+  amountOverride?: number | null,
 ): Promise<{ success: true } | { error: string }> {
   const admin = await requireAdmin();
   if (!id) return { error: "شناسه الزامی است." };
+  if (amountOverride != null && (!Number.isFinite(amountOverride) || amountOverride <= 0)) {
+    return { error: "مبلغ نامعتبر است." };
+  }
 
   const db = makeServiceRoleClient();
   const { data: template, error: fetchErr } = await db
@@ -743,7 +747,7 @@ export async function postRecurringExpense(
       title:            template.title,
       category:         template.category,
       currency:         template.currency,
-      amount:           template.amount,
+      amount:           amountOverride ?? template.amount,
       exchange_rate:    effectiveRate,
       payer_account_id: template.payer_account_id,
       status:           "paid",
@@ -756,7 +760,11 @@ export async function postRecurringExpense(
 
   // پیشروی سررسید بعدی
   const nextDue = advanceDueDate(postDate, template.frequency);
-  await db.from("recurring_expenses").update({ next_due_date: nextDue }).eq("id", id);
+  // مبلغ جدید به‌عنوان پیش‌فرض دوره‌های بعد در قالب ذخیره می‌شود
+  await db
+    .from("recurring_expenses")
+    .update({ next_due_date: nextDue, amount: amountOverride ?? template.amount })
+    .eq("id", id);
 
   await writeAuditLog({
     actorId: admin.id,
@@ -764,7 +772,8 @@ export async function postRecurringExpense(
     action: "RECURRING_EXPENSE_POSTED",
     targetType: "recurring_expenses",
     targetId: id,
-    newValue: { postDate, nextDue },
+    oldValue: { amount: template.amount },
+    newValue: { postDate, nextDue, amount: amountOverride ?? template.amount },
   }).catch(() => {});
 
   return { success: true };

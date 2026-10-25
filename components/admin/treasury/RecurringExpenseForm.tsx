@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Fragment, useState } from "react";
 import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
@@ -57,6 +57,11 @@ const EMPTY = {
   notes:            "",
 };
 
+/** Strips thousands separators so a typed amount can be parsed */
+function parseNum(v: string) {
+  return Number(v.replace(/,/g, ""));
+}
+
 /** Returns today as YYYY-MM-DD */
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -81,9 +86,10 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts, 
 
   // Track which row has its "post panel" open: map id → { date, exchange_rate }
   const [postPanels, setPostPanels] = useState<
-    Record<string, { date: string; exchange_rate: string }>
+    Record<string, { date: string; exchange_rate: string; amount: string }>
   >({});
   const [postError, setPostError] = useState<Record<string, string>>({});
+
 
   function field(key: keyof typeof EMPTY, value: string) {
     setForm((f) => {
@@ -157,11 +163,16 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts, 
     });
   }
 
-  function openPostPanel(id: string, defaultDate: string) {
+  function openPostPanel(item: any) {
     setPostPanels(prev => ({
       ...prev,
-      [id]: { date: defaultDate <= today() ? today() : defaultDate, exchange_rate: "" },
+      [item.id]: {
+        date: item.next_due_date <= today() ? today() : item.next_due_date,
+        exchange_rate: "",
+        amount: String(item.amount ?? ""),
+      },
     }));
+    const id = item.id;
     setPostError(prev => ({ ...prev, [id]: "" }));
   }
 
@@ -177,6 +188,12 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts, 
     const panel = postPanels[item.id];
     if (!panel?.date) return;
 
+    const postAmount = parseNum(panel.amount);
+    if (!Number.isFinite(postAmount) || postAmount <= 0) {
+      setPostError(prev => ({ ...prev, [item.id]: "مبلغ نامعتبر است." }));
+      return;
+    }
+
     if (item.currency === "AUD") {
       const rateOverride = Number(panel.exchange_rate.replace(/,/g, ""));
       const fallback = Number(item.exchange_rate ?? 0);
@@ -190,7 +207,7 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts, 
     startTransition(async () => {
       const rateStr = panel.exchange_rate.replace(/,/g, "");
       const rate = rateStr ? Number(rateStr) : null;
-      const res = await postRecurringExpense(item.id, panel.date, rate);
+      const res = await postRecurringExpense(item.id, panel.date, rate, postAmount);
       if ("error" in res) {
         setPostError(prev => ({ ...prev, [item.id]: res.error }));
       } else {
@@ -423,7 +440,7 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts, 
                         {item.is_active && !postPanels[item.id] && (
                           <button
                             className={s.btnPost}
-                            onClick={() => openPostPanel(item.id, item.next_due_date)}
+                            onClick={() => openPostPanel(item)}
                             disabled={isPending}
                           >
                             <CheckCircle2 size={13} /> {FA.recurringPostBtn}
@@ -464,6 +481,26 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts, 
                                 setPostPanels(prev => ({
                                   ...prev,
                                   [item.id]: { ...prev[item.id], date: d },
+                                }))
+                              }
+                              disabled={isPending}
+                            />
+                          </div>
+
+                          <div className={s.postPanelGroup}>
+                            <span className={s.postPanelLabel}>
+                              مبلغ این دوره ({item.currency})
+                            </span>
+                            <input
+                              className={`${s.formInput} ${s.formInputNum}`}
+                              style={{ minWidth: 130 }}
+                              type="text"
+                              inputMode="decimal"
+                              value={postPanels[item.id].amount}
+                              onChange={e =>
+                                setPostPanels(prev => ({
+                                  ...prev,
+                                  [item.id]: { ...prev[item.id], amount: e.target.value },
                                 }))
                               }
                               disabled={isPending}

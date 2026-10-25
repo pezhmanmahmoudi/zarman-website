@@ -311,9 +311,47 @@ const getPendingAdminCounts = cache(async () => {
   };
 });
 
+export type DueRecurringExpense = {
+  id: string;
+  title: string;
+  amount: number;
+  currency: "AUD" | "IRT";
+  next_due_date: string;
+  daysOverdue: number;
+};
+
+// Active recurring expenses whose due date is today or earlier (Sydney time).
+// Best-effort: a missing table or read failure just means no reminders.
+export const getDueRecurringExpenses = cache(async (): Promise<DueRecurringExpense[]> => {
+  try {
+    await getAuthorizedServerClient();
+    const db = makeServiceRoleClient();
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(new Date());
+    const { data, error } = await db
+      .from("recurring_expenses")
+      .select("id, title, amount, currency, next_due_date")
+      .eq("is_active", true)
+      .lte("next_due_date", today)
+      .order("next_due_date", { ascending: true });
+    if (error) return [];
+    const todayMs = new Date(today).getTime();
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      amount: Number(row.amount),
+      currency: row.currency,
+      next_due_date: row.next_due_date,
+      daysOverdue: Math.max(0, Math.round((todayMs - new Date(row.next_due_date).getTime()) / 86_400_000)),
+    }));
+  } catch {
+    return [];
+  }
+});
+
 // The navigation only needs pending queues, not the full dashboard totals.
 export async function getAdminNavigationCounts() {
-  return getPendingAdminCounts();
+  const [pending, dueRecurring] = await Promise.all([getPendingAdminCounts(), getDueRecurringExpenses()]);
+  return { ...pending, dueRecurringCount: dueRecurring.length };
 }
 
 export async function getAdminStats() {

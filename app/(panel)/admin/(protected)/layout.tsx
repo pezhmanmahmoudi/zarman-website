@@ -39,11 +39,13 @@ export default async function AdminLayout({
   let pendingKyc = 0;
   let pendingTx = 0;
   let pendingFeedback = 0;
+  let dueRecurring = 0;
   try {
     const stats = await getAdminNavigationCounts();
     pendingKyc = stats.pendingKycCount;
     pendingTx = stats.pendingTxCount;
     pendingFeedback = stats.pendingFeedbackCount;
+    dueRecurring = stats.dueRecurringCount;
   } catch {
     // Stats failure should not block admin access.
   }
@@ -56,6 +58,7 @@ export default async function AdminLayout({
         pendingKyc={pendingKyc}
         pendingTx={pendingTx}
         pendingFeedback={pendingFeedback}
+        dueRecurring={dueRecurring}
       />
       <main id="admin-main" tabIndex={-1} className={shellStyles.mainArea}><AdminFeedbackProvider>{children}</AdminFeedbackProvider></main>
     </div>
