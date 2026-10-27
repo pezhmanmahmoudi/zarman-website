@@ -107,3 +107,19 @@ test("email layout has mobile sizing, inline presentation tables, preheader and 
   assert.doesNotMatch(html, /<script|<link|\.svg|display:flex|display:grid|@font-face/i);
   assert.doesNotMatch(text, /<table|<p style|&amp;/);
 });
+
+test("only the completion receipt email invites a Google Maps review, with a working link and plain-text fallback", () => {
+  const url = "https://g.page/r/CU7Y3jWoeql1EAE/review";
+  const done = templates.renderRequestNotification(delivery(), settings);
+  assert.ok(done.html.includes(`href="${url}"`));
+  assert.match(done.html, /Happy with your transfer\?/);
+  assert.match(done.html, /Leave a Google review/);
+  assert.match(done.text, new RegExp(`Leave a Google review: ${url.replace(/[/.]/g, "\$&")}`));
+  assert.ok(done.html.indexOf("View request") < done.html.indexOf("Happy with your transfer?"), "primary action comes first");
+  for (const [event_type, workflow_status] of [["start_processing", "processing"], ["await_funds", "awaiting_funds"], ["cancel", "cancelled"], ["admin_message", "processing"]]) {
+    const mail = templates.renderRequestNotification(delivery({ event_type, workflow_status, payload_snapshot: {
+      funding_currency: "AUD", funding_total: 1150, payment_details: { account_name: "Zarman Preview", bsb: "000-000", account_number: "00123456" },
+    } }), settings);
+    assert.doesNotMatch(mail.html + mail.text, /g\.page|Google review/);
+  }
+});

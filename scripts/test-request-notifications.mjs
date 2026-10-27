@@ -24,7 +24,8 @@ function compile(file, dependencies = {}) {
 }
 const receipts = compile("lib/requests/receipt.ts");
 const configuration = compile("lib/requests/notification-config.ts");
-const templates = compile("lib/requests/notification-template.ts", { "./receipt": receipts, "./notification-config": configuration });
+const googleReview = compile("lib/google-review.ts");
+const templates = compile("lib/requests/notification-template.ts", { "./receipt": receipts, "./notification-config": configuration, "../google-review": googleReview });
 const notifications = compile("lib/requests/notifications.ts", {
   "./receipt": receipts, "./notification-template": templates, "./notification-config": configuration,
   "@supabase/supabase-js": { createClient() { throw new Error("Live database connections forbidden in tests"); } },

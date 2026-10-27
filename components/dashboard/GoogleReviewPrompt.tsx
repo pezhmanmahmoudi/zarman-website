@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { ArrowUpLeft, ArrowUpRight, Check, RotateCcw, Star } from "lucide-react";
 import type { RequestLocale } from "@/lib/requests/types";
+import { ZARMAN_GOOGLE_REVIEW_URL } from "@/lib/google-review";
 import { cn } from "@/lib/utils";
 
-export const ZARMAN_GOOGLE_REVIEW_URL = "https://g.page/r/CU7Y3jWoeql1EAE/review";
+export { ZARMAN_GOOGLE_REVIEW_URL };
 export const GOOGLE_REVIEW_STORAGE_KEY = "zarman:google-review-done";
 const GOOGLE_REVIEW_SYNC_EVENT = "zarman:google-review-sync";
 

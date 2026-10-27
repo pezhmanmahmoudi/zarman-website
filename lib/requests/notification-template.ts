@@ -1,9 +1,10 @@
 import { receiptAmount, validateRequestReceipt, type RequestCompletionReceiptSnapshot } from "./receipt";
 import { validNotificationEmail, validatedRequestSiteUrl } from "./notification-config";
+import { ZARMAN_GOOGLE_REVIEW_URL } from "../google-review";
 import type { FundingBankDetails } from "./types";
 export { validNotificationEmail, validatedRequestSiteUrl } from "./notification-config";
 
-export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-customer-en-v9";
+export const REQUEST_EMAIL_TEMPLATE_VERSION = "request-customer-en-v10";
 
 export type RequestEmailSnapshot = {
   id: string;
@@ -76,6 +77,11 @@ const eventLabels: Record<string, string> = {
   request_info: "Your reply is needed",
 };
 
+const REVIEW_HEADING = "Happy with your transfer?";
+const REVIEW_BODY = "A quick Google review helps other families and friends find Zarman, and it means the world to our team. It takes less than a minute.";
+const REVIEW_BUTTON = "Leave a Google review";
+const REVIEW_FOOTNOTE = "Already reviewed us? Thank you, you can ignore this.";
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -98,11 +104,22 @@ function formattedAmount(amount: number | string | undefined, currency: string |
  * all facts and actions remain readable when a mail client blocks images. */
 function emailHtml(input: {
   heading: string; greeting: string; intro: string; rows: SummaryRow[];
-  instructions: string[]; action: string; trackingUrl: string; reference: string;
+  instructions: string[]; action: string; trackingUrl: string; reference: string; reviewUrl?: string;
 }): string {
-  const { heading, greeting, intro, rows, instructions, action, trackingUrl, reference } = input;
+  const { heading, greeting, intro, rows, instructions, action, trackingUrl, reference, reviewUrl } = input;
   const paragraph = (value: string) => `<p style="margin:0 0 20px;font-size:16px;line-height:1.7;white-space:pre-wrap;word-wrap:break-word">${escapeHtml(value)}</p>`;
   const support = "If you don't recognise this transfer or have a question, contact the Zarman team through the messages on your request page. Include your transaction code so we can identify your transfer.";
+  // Shown only on the completed-transfer receipt, when the customer has just
+  // had a good experience. Plain text stars and a bulletproof button keep it
+  // intact when images are blocked.
+  const reviewCard = reviewUrl ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#fff8e6" style="width:100%;table-layout:fixed;background-color:#fff8e6;border:1px solid #f3dfa8;border-radius:18px;border-collapse:separate;margin:0 0 30px"><tr><td align="center" style="padding:28px 20px 26px;text-align:center">
+<p aria-hidden="true" style="margin:0 0 10px;font-size:28px;line-height:32px;letter-spacing:5px;color:#f5a623">&#9733;&#9733;&#9733;&#9733;&#9733;</p>
+<p style="margin:0 0 8px;font-size:20px;line-height:1.35;font-weight:700;color:#0f172a">${REVIEW_HEADING}</p>
+<p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:#4b5563">${REVIEW_BODY}</p>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="border-collapse:separate;margin:0 auto"><tr><td align="center" bgcolor="#0f172a" style="border-radius:24px;background-color:#0f172a"><a href="${escapeHtml(reviewUrl)}" style="display:inline-block;border:1px solid #0f172a;border-radius:24px;padding:14px 28px;font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;mso-padding-alt:0"><span style="mso-text-raise:8pt">&#9733;&nbsp; ${REVIEW_BUTTON}</span></a></td></tr></table>
+<p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#6b6d71">${REVIEW_FOOTNOTE}</p>
+</td></tr></table>
+` : "";
   return `<!doctype html>
 <html lang="en" dir="ltr">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="x-apple-disable-message-reformatting"><title>${escapeHtml(heading)}</title></head>
@@ -120,7 +137,7 @@ ${rows.map(({ label, value, ltr, prominent }) => `<p style="margin:0 0 20px;font
 <div style="height:28px;line-height:28px;font-size:1px" aria-hidden="true">&nbsp;</div>
 ${instructions.map(paragraph).join("\n")}${paragraph(action)}
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse:separate;margin:4px 0 30px"><tr><td align="center" bgcolor="#145f59" style="border-radius:24px;background-color:#145f59"><a href="${escapeHtml(trackingUrl)}" style="display:inline-block;border:1px solid #145f59;border-radius:24px;padding:13px 24px;font-size:15px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;mso-padding-alt:0"><!--[if mso]><i style="mso-font-width:150%;mso-text-raise:16pt" hidden>&emsp;</i><![endif]--><span style="mso-text-raise:8pt">View request</span><!--[if mso]><i style="mso-font-width:150%" hidden>&emsp;&#8203;</i><![endif]--></a></td></tr></table>
-${paragraph(support)}
+${reviewCard}${paragraph(support)}
 <p style="margin:28px 0 0;font-size:16px;line-height:1.7">— Team Zarman</p>
 <p style="margin:30px 0 0;padding-top:18px;border-top:1px solid #eceeef;font-size:12px;line-height:1.7;color:#6b6d71">This email is an update about your Zarman request.</p>
 </td></tr></table>
@@ -236,8 +253,11 @@ export function renderRequestNotification(
     from: settings.from,
     to: [snapshot.recipient_email],
     subject,
-    text: ["Zarman Exchange", heading, greeting, intro, rows.map(({ label, value }) => `${label}: ${value}`).join("\n"), ...instructions, action, `View request: ${trackingUrl}`, support, "— Team Zarman"].join("\n\n"),
-    html: emailHtml({ heading, greeting, intro, rows, instructions, action, trackingUrl, reference }),
+    text: ["Zarman Exchange", heading, greeting, intro, rows.map(({ label, value }) => `${label}: ${value}`).join("\n"), ...instructions, action, `View request: ${trackingUrl}`, ...(receipt ? [`${REVIEW_HEADING}
+${REVIEW_BODY}
+${REVIEW_BUTTON}: ${ZARMAN_GOOGLE_REVIEW_URL}
+${REVIEW_FOOTNOTE}`] : []), support, "— Team Zarman"].join("\n\n"),
+    html: emailHtml({ heading, greeting, intro, rows, instructions, action, trackingUrl, reference, reviewUrl: receipt ? ZARMAN_GOOGLE_REVIEW_URL : undefined }),
     tags: [{ name: "request_delivery_id", value: snapshot.id }],
   };
 }

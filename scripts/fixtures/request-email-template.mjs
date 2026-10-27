@@ -19,7 +19,8 @@ function compile(file, dependencies = {}) {
 
 const receipts = compile("lib/requests/receipt.ts");
 const config = compile("lib/requests/notification-config.ts");
-export const templates = compile("lib/requests/notification-template.ts", { "./receipt": receipts, "./notification-config": config });
+const googleReview = compile("lib/google-review.ts");
+export const templates = compile("lib/requests/notification-template.ts", { "./receipt": receipts, "./notification-config": config, "../google-review": googleReview });
 export const settings = { from: "Zarman <preview@example.test>", siteUrl: "https://example.test" };
 export const completion = {
   version: 1,
