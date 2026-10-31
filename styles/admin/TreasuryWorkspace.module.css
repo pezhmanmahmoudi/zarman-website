@@ -1,9 +1,10 @@
 .routeFrame { display: flex; flex: 1 1 0; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
-.criticalAlertBadge { display: inline-flex; align-items: center; gap: .375rem; min-height: 44px; padding: .375rem .875rem; border-radius: 100px; background: #fef2f2; color: #b91c1c; font-size: .8rem; font-weight: 650; text-decoration: none; }
+@media (max-width: 900px) { .routeFrame { flex: 1 0 auto; overflow: visible; } }
+.criticalAlertBadge { display: inline-flex; align-items: center; gap: .375rem; min-height: var(--control-h, 2.25rem); padding: .375rem .875rem; border-radius: 100px; background: #fef2f2; color: #b91c1c; font-size: .8rem; font-weight: 650; text-decoration: none; }
 .criticalAlertBadge:hover { background: #fee2e2; }
 .workspace { display: flex; flex-direction: column; gap: 1.5rem; min-width: 0; width: 100%; }
 .navigation { display: flex; flex-wrap: wrap; gap: .25rem; padding: .3rem; border: 1px solid var(--border-soft, #e2e8f0); border-radius: .75rem; background: #fff; }
-.navLink { display: flex; align-items: center; justify-content: center; gap: .5rem; min-height: 44px; flex: 1 1 auto; padding: .6rem .875rem; border-radius: .5rem; font-size: .8125rem; font-weight: 600; text-decoration: none; color: var(--text-soft, #475569); }
+.navLink { display: flex; align-items: center; justify-content: center; gap: .5rem; min-height: var(--control-h, 2.25rem); flex: 1 1 auto; padding: .6rem .875rem; border-radius: .5rem; font-size: .8125rem; font-weight: 600; text-decoration: none; color: var(--text-soft, #475569); }
 .navLink svg { flex-shrink: 0; }
 .navLink:hover { color: var(--text-main, #172033); background: #f4f6fb; }
 .navLinkActive, .navLinkActive:hover { background: #eef0ff; color: #4338ca; }
@@ -12,7 +13,7 @@
 .panelHeader h2 { margin: 0; color: var(--text-main, #172033); font-size: 1.5rem; font-weight: 650; letter-spacing: -.04em; line-height: 1.3; }
 .panelHeader p { margin: .375rem 0 0; max-width: 65ch; color: var(--text-soft, #475569); font-size: .8125rem; line-height: 1.6; }
 .subnav { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; border-bottom: 1px solid var(--border-soft, #e2e8f0); }
-.sublink { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: .625rem .125rem; border-bottom: 2px solid transparent; color: var(--text-soft, #475569); font-size: .8125rem; font-weight: 550; text-decoration: none; }
+.sublink { display: inline-flex; align-items: center; gap: .5rem; min-height: var(--control-h, 2.25rem); padding: .625rem .125rem; border-bottom: 2px solid transparent; color: var(--text-soft, #475569); font-size: .8125rem; font-weight: 550; text-decoration: none; }
 .sublink:hover { color: var(--accent, #4f46e5); }
 .sublinkActive { color: var(--accent, #4f46e5); border-bottom-color: var(--accent, #4f46e5); font-weight: 650; }
 .count { display: inline-flex; align-items: center; justify-content: center; min-width: 21px; padding: .125rem .35rem; border-radius: .3rem; background: #fef3c7; color: #92400e; font-size: .65rem; font-variant-numeric: tabular-nums; }
@@ -35,7 +36,7 @@
 .attentionWarning .attentionText > svg { color: #b45309; }
 .attentionText strong { display: block; color: var(--text-main, #172033); font-size: .875rem; font-weight: 600; }
 .attentionText p { margin: .2rem 0 0; color: var(--text-soft, #475569); font-size: .75rem; line-height: 1.6; }
-.actionLink { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 44px; padding: .6rem .875rem; border: 1px solid var(--border-med, #cbd5e1); border-radius: .5rem; background: #fff; color: var(--text-main, #172033); text-decoration: none; font-size: .75rem; font-weight: 600; }
+.actionLink { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: var(--control-h, 2.25rem); padding: .6rem .875rem; border: 1px solid var(--border-med, #cbd5e1); border-radius: .5rem; background: #fff; color: var(--text-main, #172033); text-decoration: none; font-size: .75rem; font-weight: 600; }
 .actionLink:hover { border-color: #a5b4fc; color: #4338ca; }
 .sectionHeading { margin: 0 0 .875rem; font-size: .875rem; font-weight: 650; color: var(--text-main, #172033); }
 .quickGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .875rem; }

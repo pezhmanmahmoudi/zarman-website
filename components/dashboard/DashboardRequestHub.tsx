@@ -307,9 +307,7 @@ export function DashboardRequestHub({
         setPromoDiscount(res.discount_amount ?? null);
         setPromoEffectiveRate(res.effective_rate ?? null);
         setAppliedPromoCode(promoInput.trim().toUpperCase());
-        const label = res.discount_type === "percentage"
-          ? `${formatNumberUI(Number(res.discount_value), locale)}${locale === "fa" ? "٪ بهبود نرخ" : "% improved rate"}`
-          : `${formatNumberUI(Number(res.discount_value), locale, true)} ${locale === "fa" ? "تومان بهبود نرخ" : "Toman improved rate"}`;
+        const label = `${formatNumberUI(Number(res.discount_value), locale, true)} ${locale === "fa" ? "تومان بهبود نرخ" : "Toman improved rate"}`;
         setPromoMsg({ type: "success", text: `${locale === "fa" ? "کد تخفیف اعمال شد — " : "Promo code applied — "}${label}` });
       }
     } catch {

@@ -84,7 +84,7 @@
   font-size: .75rem;
   font-weight: 650;
   border-radius: 6px;
-  min-height: 38px;
+  min-height: var(--control-h, 2.25rem);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -115,7 +115,7 @@
   background: #fff;
   min-width: 0;
   max-width: 100%;
-  min-height: 38px;
+  min-height: var(--control-h, 2.25rem);
   font-family: inherit;
 }
 
@@ -127,7 +127,7 @@
   padding: .48rem .7rem;
   font-weight: 700;
   cursor: pointer;
-  min-height: 38px;
+  min-height: var(--control-h, 2.25rem);
   font-family: inherit;
   font-size: .76rem;
 }
@@ -284,7 +284,7 @@
   text-decoration: none;
   font-size: .7rem;
   font-weight: 750;
-  min-height: 32px;
+  min-height: var(--control-h-sm, 2rem);
 }
 
 .chartGrid {
@@ -529,7 +529,7 @@
   cursor: pointer;
   font-family: inherit;
   font-size: .8rem;
-  min-height: 42px;
+  min-height: var(--control-h, 2.25rem);
 }
 
 .staleBanner,.errorBanner {
@@ -596,7 +596,7 @@
   font-size: .75rem;
   font-weight: 750;
   white-space: nowrap;
-  min-height: 38px;
+  min-height: var(--control-h, 2.25rem);
 }
 
 .statementFilters {
@@ -629,7 +629,7 @@
   padding: .55rem;
   max-width: 100%;
   width: 100%;
-  min-height: 42px;
+  min-height: var(--control-h, 2.25rem);
   font-family: inherit;
   font-size: .8rem;
 }
@@ -642,7 +642,7 @@
   padding: .62rem .8rem;
   font-weight: 750;
   cursor: pointer;
-  min-height: 42px;
+  min-height: var(--control-h, 2.25rem);
   font-family: inherit;
   font-size: .8rem;
 }

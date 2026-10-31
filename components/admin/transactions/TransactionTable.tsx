@@ -10,6 +10,7 @@ import { RejectApprovedButton } from "@/components/admin/RejectApprovedButton";
 import { EditableReferenceCode } from "@/components/admin/EditableReferenceCode";
 import { EditableAmount } from "@/components/admin/EditableAmount";
 import { CompletedTransactionEditor } from "./CompletedTransactionEditor";
+import { CompletionEmailAction } from "./CompletionEmailAction";
 import { isRequestTerminal, requestDate, requestMoney, requestRate } from "@/components/requests/request-labels";
 import { calcExecutionRateFromSettlement } from "@/lib/pricing";
 import { transactionActionPresentation, transactionQueueState, transactionRequest, transactionRequestHref, type TransactionActionPresentation } from "@/lib/admin-transaction-workspace";
@@ -120,7 +121,7 @@ function TransactionDetails({ row, bankAccounts, onClose }: { row: TransactionRo
         <dl className={styles.facts}>
           <div><dt>Reference</dt><dd>{request ? <bdi>{reference}</bdi> : <EditableReferenceCode transactionId={row.id} currentCode={row.reference_code ?? null} />}</dd></div>
           <div><dt>Source</dt><dd>{request ? "Customer request" : "Manual transaction"}</dd></div>
-          <div><dt>Company trade</dt><dd>{row.type === "buy_aud" ? "Buy AUD" : "Sell AUD"}</dd></div>
+          <div><dt>Trade</dt><dd>{row.type === "buy_aud" ? "Buy AUD" : "Sell AUD"}</dd></div>
           {row.profiles?.customer_code && <div><dt>Customer code</dt><dd><bdi>{row.profiles.customer_code}</bdi></dd></div>}
           {email && <div data-wide><dt>Email</dt><dd><bdi>{email}</bdi></dd></div>}
         </dl>
@@ -128,7 +129,10 @@ function TransactionDetails({ row, bankAccounts, onClose }: { row: TransactionRo
       </section>
       {request?.status === "completed" && <section className={styles.detailSection}>
         <h3>Receipt</h3>
-        <a className={styles.action} href={`/api/requests/${request.id}/receipt`} target="_blank" rel="noopener noreferrer"><Download size={15} aria-hidden="true" />Download receipt</a>
+        <div className={styles.receiptActions}>
+          <a className={styles.action} href={`/api/requests/${request.id}/receipt`} target="_blank" rel="noopener noreferrer"><Download size={15} aria-hidden="true" />Download receipt</a>
+          <CompletionEmailAction requestId={request.id} />
+        </div>
       </section>}
   </AdminRecordDrawer>;
 }
@@ -151,7 +155,7 @@ export function TransactionTable({ rows, isPending, bankAccounts, selectedIds = 
   return <>
     <AdminDataTable className={styles.transactionsTable} label={isPending ? "Active transaction queue" : "Transaction history"} selection={!isPending ? selectAll : undefined} columns={[
       ...(!isPending ? [{ key: "select", label: "Select transfer", selection: true }] : []),
-      { key: "customer", label: "Customer" }, { key: "type", label: "Customer trade" }, { key: "rate", label: "Rate / AUD", align: "end" }, { key: "pays", label: "Customer pays", align: "end" },
+      { key: "customer", label: "Customer" }, { key: "type", label: "Trade" }, { key: "rate", label: "Rate / AUD", align: "end" }, { key: "pays", label: "Customer pays", align: "end" },
       { key: "gets", label: "Recipient gets", align: "end" }, { key: "status", label: "Status" },
       { key: "date", label: <>{isPending ? "Due / created" : "Created"}<span className={styles.timeZone}>Sydney time</span></> },
       { key: "actions", label: isPending ? "Next step" : "Actions" },
@@ -166,7 +170,7 @@ export function TransactionTable({ rows, isPending, bankAccounts, selectedIds = 
           return <AdminTableRow key={id} data-selected={selectedIds.has(id) || undefined}>
             {!isPending && <AdminTableCell kind="selection"><label className={styles.checkTarget}><input type="checkbox" aria-label={`Select transaction ${reference}`} checked={selectedIds.has(id)} disabled={!selectable} onChange={event => onToggleRow?.(id, event.target.checked)} /></label></AdminTableCell>}
             <AdminTableCell kind="primary"><AdminTableIdentity name={name} href={`/admin/users?userId=${encodeURIComponent(row.user_id)}`} detail={<><bdi>{reference}</bdi>{request?.service_tier === "priority" && <span className={styles.priority}>Priority</span>}</>} /></AdminTableCell>
-            <AdminTableCell label="Customer trade"><strong>{fundingCurrency === "IRT" ? "Buy AUD" : "Sell AUD"}</strong><span className={styles.detail}>{fundingCurrency === "IRT" ? "Toman → AUD" : "AUD → Toman"}</span></AdminTableCell>
+            <AdminTableCell label="Trade"><strong>{row.type === "buy_aud" ? "Buy AUD" : "Sell AUD"}</strong><span className={styles.detail}>{fundingCurrency === "IRT" ? "Toman → AUD" : "AUD → Toman"}</span></AdminTableCell>
             <AdminTableCell label="Rate / AUD" align="right"><bdi>{rate > 0 ? requestRate(Math.round(rate * 1_000_000) / 1_000_000, "en") : "—"}</bdi></AdminTableCell>
             <AdminTableCell label="Customer pays" align="right"><strong dir="ltr">{requestMoney(funding, fundingCurrency, "en")}</strong></AdminTableCell>
             <AdminTableCell label="Recipient gets" align="right"><span dir="ltr">{requestMoney(recipientAmount, recipientCurrency, "en")}</span></AdminTableCell>

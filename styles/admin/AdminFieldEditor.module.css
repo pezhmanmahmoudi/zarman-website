@@ -2,7 +2,7 @@
 .value { color: var(--text-main, #172033); font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .valueGroup[data-variant="reference"] .value { color: var(--accent, #4f46e5); font-family: var(--font-mono, monospace); font-size: 0.78rem; letter-spacing: 0.02em; }
 .valueGroup[data-variant="customer"] .value { color: var(--text-soft, #64748b); font-family: var(--font-mono, monospace); font-size: 0.75rem; }
-.editButton { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; min-height: 44px; padding: 0.4rem 0.6rem; border: 1px solid var(--border-soft, #e3e8ef); border-radius: 0.5rem; background: white; color: var(--text-soft, #53627a); font: inherit; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+.editButton { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; min-height: var(--control-h, 2.25rem); padding: 0.4rem 0.6rem; border: 1px solid var(--border-soft, #e3e8ef); border-radius: 0.5rem; background: white; color: var(--text-soft, #53627a); font: inherit; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
 .editButton:hover { color: var(--accent, #4f46e5); background: var(--bg-soft, #f4f6fb); }
 .editButton:focus-visible { outline: 3px solid var(--accent, #4f46e5); outline-offset: 2px; }
 .dialog { width: min(100%, 480px); }
@@ -34,7 +34,7 @@
 .spinner { animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 640px), (pointer: coarse) {
-  .editButton { min-width: 60px; min-height: 44px; }
+  .editButton { min-width: 60px; min-height: var(--control-h, 2.25rem); }
 }
 @media (max-width: 640px) {
   .header { padding: 1.2rem; }

@@ -135,6 +135,7 @@ export type RequestMessage = {
 };
 export type RequestMessageInput = { requestId: string; expectedVersion: number; commandKey: string; message: string; sendEmail?: boolean };
 export type RequestMessageResult = { message: RequestMessage; request_version: number };
+export type CompletionEmailState = { state: "sent" | "sending" | "not_sent" | "failed"; deliveryId: string | null };
 export type RequestDelivery = {
   id: string; event_id: string; request_id: string;
   // Legacy management rows remain in the immutable audit history only.

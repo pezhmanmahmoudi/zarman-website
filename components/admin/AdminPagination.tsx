@@ -2,6 +2,7 @@
 
 import React, { useId, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from "lucide-react";
 import { ADMIN_PAGE_SIZES, adminPaginationHref, getAdminPaginationState, parseAdminPageJump } from "@/lib/admin-pagination";
 import styles from "./AdminPagination.module.css";
@@ -99,9 +100,9 @@ export function AdminPagination({ currentPage, totalCount, pageSize, allowPageSi
         {allowPageSizeChange && (
           <div className={styles.rowSize}>
             <label htmlFor={rowSizeId}>Rows per page</label>
-            <select id={rowSizeId} value={String(pageSize)} onChange={event => changePageSize(event.target.value)} disabled={isPending}>
-              {ADMIN_PAGE_SIZES.map(size => <option key={size} value={size}>{size}</option>)}
-            </select>
+            <div className={styles.rowSelect}>
+              <SelectBox id={rowSizeId} dir="ltr" options={ADMIN_PAGE_SIZES.map(String)} value={String(pageSize)} onChange={changePageSize} disabled={isPending} />
+            </div>
           </div>
         )}
       </div>

@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Save, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, Save, ShieldAlert, SlidersHorizontal } from "lucide-react";
 import { getRequestSettings, saveRequestSettings } from "@/app/actions/request.actions";
+import { getPendingBankChange, resolveBankChange } from "@/app/actions/bank-change.actions";
+import { AdminDialog } from "@/components/admin/ui/AdminDialog";
+import { changedProtectedKeys, type PendingBankChangeView } from "@/lib/admin-security/bank-protected";
 import type { FundingBankDetails, RequestSettings, SettingsRecord } from "@/lib/requests/types";
 import styles from "@/styles/requests/Requests.module.css";
 import ui from "@/styles/requests/RequestSettings.module.css";
@@ -25,6 +28,13 @@ export function RequestSettingsForm({ defaultExpanded = false }: { defaultExpand
   const [active, setActive] = useState<Section>("service");
   const [language, setLanguage] = useState<"en" | "fa">("en");
   const panel = useRef<HTMLDetailsElement>(null);
+  // Bank details are protected: edits are queued for approval, never applied directly.
+  const [saved, setSaved] = useState<RequestSettings | null>(null);
+  const [pending, setPending] = useState<PendingBankChangeView | null>(null);
+  const [dialog, setDialog] = useState<null | "save" | "apply">(null);
+  const [password, setPassword] = useState("");
+  const [dialogError, setDialogError] = useState("");
+  const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -34,10 +44,12 @@ export function RequestSettingsForm({ defaultExpanded = false }: { defaultExpand
       if (result.error) setError(result.error);
       else if (result.data) {
         setRecord(result.data);
+        setSaved(result.data.settings);
         setHolidays(result.data.settings.holidays.join("\n"));
       }
     }).catch(() => { if (alive) setError("Could not load settings."); })
       .finally(() => { if (alive) setLoading(false); });
+    getPendingBankChange().then(result => { if (alive && result.data !== undefined) setPending(result.data); }).catch(() => undefined);
     const followHash = () => {
       const name = window.location.hash.replace("#request-", "") as Section;
       if (sections.some(([key]) => key === name)) {
@@ -57,25 +69,75 @@ export function RequestSettingsForm({ defaultExpanded = false }: { defaultExpand
     const name = currency === "aud" ? "payment_details_aud" : "payment_details_irt";
     set(name, { ...(record?.settings[name] || {}), [key]: value });
   }
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!record || saving) return;
+  const bankChanged = Boolean(record && saved && changedProtectedKeys(saved, record.settings).length);
+  function closeDialog() { if (saving || resolving) return; setDialog(null); setPassword(""); setDialogError(""); }
+  async function refreshPending() {
+    const result = await getPendingBankChange();
+    if (result.data !== undefined) setPending(result.data);
+  }
+  async function save(stepUpPassword?: string): Promise<boolean> {
+    if (!record || saving) return false;
     setSaving(true); setError(""); setMessage("");
     try {
-      const result = await saveRequestSettings({ expectedVersion: record.version, settings: {
+      const result = await saveRequestSettings({ expectedVersion: record.version, stepUpPassword, settings: {
         ...record.settings,
         holidays: holidays.split(/[\n,;]+/).map(value => value.trim()).filter(Boolean),
       } });
       if (result.error) {
-        setError(result.error);
+        if (stepUpPassword) setDialogError(result.error); else setError(result.error);
         if (/BSB|account|IBAN|bank|Toman/i.test(result.error)) setActive("bank-details");
-      } else if (result.data) {
-        setRecord(result.data);
-        setHolidays(result.data.settings.holidays.join("\n")); setDirty(false); setMessage("Settings saved.");
+        return false;
       }
-    } catch { setError("Could not save. Please retry."); }
+      if (result.data) {
+        // The server returns what is LIVE: queued bank edits revert in the form and appear as a pending change.
+        setRecord(result.data); setSaved(result.data.settings);
+        setHolidays(result.data.settings.holidays.join("\n")); setDirty(false);
+        setMessage(stepUpPassword ? "Settings saved. Bank detail changes were sent for approval; every admin has been alerted." : "Settings saved.");
+        if (stepUpPassword) { await refreshPending(); setActive("bank-details"); }
+      }
+      return true;
+    } catch { setError("Could not save. Please retry."); return false; }
     finally { setSaving(false); }
   }
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!record || saving) return;
+    if (bankChanged) { setDialog("save"); setDialogError(""); return; }
+    await save();
+  }
+  async function confirmDialog(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!password || saving || resolving) return;
+    setDialogError("");
+    if (dialog === "save") {
+      if (await save(password)) { setDialog(null); setPassword(""); }
+      return;
+    }
+    if (!pending) return;
+    setResolving(true);
+    try {
+      const result = await resolveBankChange({ id: pending.id, decision: "apply", password });
+      if (result.error) { setDialogError(result.error); return; }
+      const fresh = await getRequestSettings();
+      if (fresh.data) { setRecord(fresh.data); setSaved(fresh.data.settings); setHolidays(fresh.data.settings.holidays.join("\n")); setDirty(false); }
+      await refreshPending();
+      setMessage("Bank details approved and now live. Every admin has been alerted.");
+      setDialog(null); setPassword("");
+    } catch { setDialogError("Could not apply the change. Please retry."); }
+    finally { setResolving(false); }
+  }
+  async function cancelPending() {
+    if (!pending || resolving) return;
+    if (!window.confirm("Cancel this bank details change? The current details stay live.")) return;
+    setResolving(true); setError("");
+    try {
+      const result = await resolveBankChange({ id: pending.id, decision: "cancel" });
+      if (result.error) setError(result.error); else setMessage("The pending bank details change was cancelled.");
+      await refreshPending();
+    } catch { setError("Could not cancel the change. Please retry."); }
+    finally { setResolving(false); }
+  }
+  const sydney = (iso: string) => new Date(iso).toLocaleString("en-AU", { timeZone: "Australia/Sydney", dateStyle: "medium", timeStyle: "short" });
   const settings = record?.settings;
   function number(key: NumberKey, label: string, min: number, max: number, step = 1) {
     return <label className={styles.field}>{label}<input type="number" min={min} max={max} step={step}
@@ -125,6 +187,18 @@ export function RequestSettingsForm({ defaultExpanded = false }: { defaultExpand
           </div>
         </section>
         <section id="request-bank-details" className={ui.section} hidden={active !== "bank-details"} aria-label="Bank details">
+          {pending && <div className={ui.pending} role="status">
+            <strong><ShieldAlert size={16} aria-hidden="true" /> Bank details change waiting for approval</strong>
+            <p>Requested by {pending.requestedByEmail} on {sydney(pending.requestedAt)} (Sydney). Customers still see the current details.{" "}
+              {pending.canApplyNow ? "You can approve it now." : `You requested this, so you can confirm it after ${sydney(pending.effectiveAfter)}. Another admin can approve it now.`}</p>
+            <dl>{pending.changes.map(change => <div key={change.label}><dt>{change.label}</dt>
+              <dd><span className={ui.before}>{change.before.join(" · ")}</span><span aria-hidden="true"> → </span><span className={ui.after}>{change.after.join(" · ")}</span></dd></div>)}</dl>
+            <div className={ui.pendingActions}>
+              <button type="button" className={styles.button} disabled={!pending.canApplyNow || resolving} onClick={() => { setDialog("apply"); setDialogError(""); }}>Approve &amp; apply</button>
+              <button type="button" className={ui.secondaryButton} disabled={resolving} onClick={cancelPending}>Cancel change</button>
+            </div>
+          </div>}
+          <p className={ui.hint}>Bank details and payment notes are protected: changes ask for your password, wait for another admin&apos;s approval (or 24 hours), and alert every admin by email and Telegram.</p>
           <div className={ui.bankGrid}>
             <div className={ui.bank}><h3>AUD account</h3><div className={styles.fields}>
               {bankField("aud", "account_name", "Account name")}{bankField("aud", "bank_name", "Bank")}
@@ -174,5 +248,21 @@ export function RequestSettingsForm({ defaultExpanded = false }: { defaultExpand
         </section>
       </fieldset>
     </form>}
+    <AdminDialog open={dialog !== null} onClose={closeDialog} aria-label="Confirm your password" dismissible={!saving && !resolving}>
+      <form className={ui.stepUp} onSubmit={confirmDialog}>
+        <h3><ShieldAlert size={18} aria-hidden="true" /> Confirm it&apos;s you</h3>
+        <p>{dialog === "apply"
+          ? "These bank details will be shown to customers immediately."
+          : "Bank detail changes are not applied instantly. They wait for another admin to approve (or for 24 hours), and every admin is alerted by email and Telegram."}</p>
+        <label className={styles.field}>Your password
+          <input type="password" autoComplete="current-password" data-autofocus required maxLength={256} value={password} onChange={event => { setPassword(event.target.value); setDialogError(""); }} />
+        </label>
+        {dialogError && <p className={styles.error} role="alert">{dialogError}</p>}
+        <div className={ui.pendingActions}>
+          <button type="button" className={ui.secondaryButton} onClick={closeDialog} disabled={saving || resolving}>Cancel</button>
+          <button type="submit" className={styles.button} disabled={!password || saving || resolving}>{saving || resolving ? "Working…" : dialog === "apply" ? "Apply changes" : "Submit for approval"}</button>
+        </div>
+      </form>
+    </AdminDialog>
   </details>;
 }

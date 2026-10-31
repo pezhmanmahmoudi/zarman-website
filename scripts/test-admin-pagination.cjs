@@ -165,7 +165,8 @@ test("pagination renders labeled direct-entry and row-size controls, accurate to
   assert.match(output, /type="number" min="1" max="14" step="1" inputMode="numeric" dir="ltr" spellCheck="false"/);
   assert.match(output, /enterKeyHint="go"/);
   assert.match(output, /<button type="submit"[^>]*>Go<\/button>/);
-  assert.match(output, /<option value="20" selected="">20<\/option>/);
+  assert.match(output, /<label for="[^"]+">Rows per page<\/label>/);
+  assert.match(output, /role="combobox"/);
   const Component = pager();
   const both = renderToStaticMarkup(React.createElement(React.Fragment, null,
     React.createElement(Component, { currentPage: 2, pageSize: 20, totalCount: 266, label: "Top pagination" }),

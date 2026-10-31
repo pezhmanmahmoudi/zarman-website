@@ -84,8 +84,11 @@ export type Recipient = {
 export type PromoCode = {
   id: string;
   code: string;
-  discount_type: "percentage" | "fixed";
+  discount_type: "fixed";
   discount_value: number;
+  applies_to?: "both" | "buy_aud" | "sell_aud" | null;
+  per_customer_limit?: number | null;
+  min_amount_aud?: number | null;
   max_uses: number | null;
   used_count: number;
   active: boolean;

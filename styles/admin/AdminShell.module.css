@@ -66,12 +66,29 @@
   .topBar { padding-inline: 1.5rem; }
   .pageContent { padding: 1.5rem; }
 }
+/*
+ * Mobile: the document itself scrolls instead of a nested overflow container.
+ * A fixed 100dvh shell with an inner scroller lets mobile browser toolbars sit
+ * on top of the first/last content and shifts the whole page under the
+ * floating menu button. With document scrolling the browser collapses its own
+ * chrome, the sticky top bar always stays in view and the bottom padding
+ * clears the home indicator.
+ */
 @media (max-width: 900px) {
-  .adminShell { grid-template-columns: minmax(0, 1fr); }
+  .adminShell {
+    grid-template-columns: minmax(0, 1fr);
+    display: block;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  }
   .sidebar { display: none; }
-  .topBar { padding: .875rem 1rem .875rem 4.5rem; min-height: 64px; }
-  .pageContent { padding: 1rem; gap: 1.25rem; }
-  .mobileMenuBtn { display: grid; place-items: center; position: fixed; top: 10px; left: 12px; width: 44px; height: 44px; border: 1px solid var(--border-soft); border-radius: .625rem; background: #fff; color: var(--text-main); z-index: 30; cursor: pointer; }
+  .mainArea { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visible; }
+  .topBar { position: sticky; top: 0; z-index: 20; padding: calc(.5rem + env(safe-area-inset-top)) 1rem .5rem 4.5rem; min-height: calc(64px + env(safe-area-inset-top)); }
+  .pageContent { flex: 1 0 auto; overflow: visible; overscroll-behavior-y: auto; scrollbar-gutter: auto; padding: 1rem; padding-bottom: calc(2rem + env(safe-area-inset-bottom)); gap: 1.25rem; }
+  .mobileMenuBtn { display: grid; place-items: center; position: fixed; top: calc(10px + env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); width: 44px; height: 44px; border: 1px solid var(--border-soft); border-radius: .625rem; background: #fff; color: var(--text-main); z-index: 30; cursor: pointer; }
   .closeSidebarBtn { display: grid; place-items: center; width: 32px; height: 32px; margin-left: auto; border: 1px solid #35445e; border-radius: .5rem; background: transparent; color: #cbd5e1; cursor: pointer; }
   .mobileSidebar .sidebarHeader { padding-top: 1.25rem; }
 }

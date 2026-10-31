@@ -1,4 +1,5 @@
 import type { ExchangeRequest } from "@/lib/requests/types";
+import { toCompanyTradeType } from "@/lib/pricing";
 import { transactionRequestHref } from "@/lib/admin-transaction-workspace";
 
 const escapeHtml = (value: string) => value.replace(/[&<>]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[character]!);
@@ -30,7 +31,7 @@ export function newRequestTelegramMessage(request: ExchangeRequest, siteUrl = pr
     `🆕 <b>New transfer request ${escapeHtml(request.reference_code)}</b>`,
     "",
     `👤 Customer: ${escapeHtml(quote.sender_snapshot?.name || "Unknown")}${quote.sender_snapshot?.email ? ` (${escapeHtml(quote.sender_snapshot.email)})` : ""}`,
-    `💱 ${quote.customer_request_type === "buy_aud" ? "Buy AUD" : "Sell AUD"}${request.service_tier === "priority" ? " · ⚡ Express" : " · Standard"}`,
+    `💱 ${(quote.company_trade_type ?? toCompanyTradeType(quote.customer_request_type)) === "buy_aud" ? "Buy AUD" : "Sell AUD"}${request.service_tier === "priority" ? " · ⚡ Express" : " · Standard"}`,
     `💰 Customer pays: ${amount(quote.funding_total, quote.funding_currency)}`,
     `🎯 Recipient receives: ${amount(quote.recipient_amount, quote.recipient_currency)}`,
     `👥 Recipient: ${escapeHtml(typeof recipientName === "string" ? recipientName : "—")}`,

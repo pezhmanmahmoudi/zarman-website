@@ -1,5 +1,5 @@
 import { Inter } from "next/font/google";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@/app/globals.css";
 import themeStyles from "@/styles/admin/AdminTheme.module.css";
 
@@ -8,6 +8,14 @@ const inter = Inter({
   variable: "--font-en",
   display: "swap",
 });
+
+// viewport-fit=cover exposes env(safe-area-inset-*) so admin chrome can clear
+// notches and the home indicator on mobile.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   robots: {

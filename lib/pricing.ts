@@ -216,13 +216,26 @@ export function calcPrincipalToman(
 // Promo code discount types and calculation
 // ---------------------------------------------------------------------------
 
-export type PromoDiscountType = "percentage" | "fixed";
+/** Promo codes are a flat rate improvement in Toman per AUD. */
+export type PromoDiscountType = "fixed";
+/**
+ * Which trade a code may be used for, from the COMPANY's perspective (same as transactions and the ledger):
+ *   buy_aud  = the company buys AUD (customer sends AUD, receives Toman at the lower buy rate)
+ *   sell_aud = the company sells AUD (customer pays Toman at the higher sell rate, receives AUD)
+ */
+export type PromoAppliesTo = "both" | "buy_aud" | "sell_aud";
 
 export type PromoCodeData = {
   code: string;
   discount_type: PromoDiscountType;
-  /** percentage: 0–100 (e.g. 10 = 10%). fixed: AUD amount. */
+  /** Toman per AUD of rate improvement (e.g. 200 = the customer gets a rate 200 Toman better). */
   discount_value: number;
+  /** Company-perspective trade the code is valid for. Missing (legacy rows) means "both". */
+  applies_to?: PromoAppliesTo | null;
+  /** Max non-cancelled requests one customer may place with the code. null/undefined = unlimited. */
+  per_customer_limit?: number | null;
+  /** Minimum raw AUD amount of the request. null/undefined = no minimum. */
+  min_amount_aud?: number | null;
   max_uses: number | null;
   used_count: number;
   active: boolean;
@@ -237,11 +250,12 @@ export type PromoValidationResult =
  * Validates a promo code and returns the effective exchange rate and discount.
  * Pure function — no DB access. DB lookup is handled in the server action.
  *
- * - percentage: improves the customer's exchange rate in their favour.
+ * The discount is a flat Toman-per-AUD improvement of the rate, in the customer's favour:
  *     sell_aud (customer sells AUD, receives IRT) → rate increases → more IRT.
  *     buy_aud  (customer buys  AUD, pays    IRT) → rate decreases → less IRT paid.
- *     AUD amount is unchanged; discount_amount is the AUD-equivalent of the rate benefit.
- * - fixed: reduces the AUD amount the customer pays/sends. Rate is unchanged.
+ *   The AUD amount is unchanged; discount_amount is the Toman value of the rate benefit.
+ * - applies_to restricts the code to company buy_aud (customer sells AUD) or company sell_aud
+ *   (customer buys AUD) trades (default: both). `direction` is the CUSTOMER's request type.
  */
 export function applyPromoCode(
   baseAmountAud: number,
@@ -258,18 +272,23 @@ export function applyPromoCode(
   if (promo.max_uses !== null && promo.used_count >= promo.max_uses) {
     return { valid: false, error: "این کد تخفیف به حداکثر استفاده خود رسیده است." };
   }
+  const scope = promo.applies_to ?? "both";
+  if (scope !== "both" && scope !== toCompanyTradeType(direction)) {
+    return {
+      valid: false,
+      // Customer-facing wording: company buy_aud means the customer is selling AUD.
+      error: scope === "buy_aud" ? "این کد تخفیف فقط برای فروش دلار استرالیا قابل استفاده است." : "این کد تخفیف فقط برای خرید دلار استرالیا قابل استفاده است.",
+    };
+  }
 
   // Rate bonus in IRT per AUD — applied in the customer's favour:
   //   sell_aud (customer sells AUD → receives IRT): rate increases → more IRT
   //   buy_aud  (customer buys  AUD → pays    IRT): rate decreases → less IRT paid
-  let rateBonus: number;
-  if (promo.discount_type === "percentage") {
-    const pct = Math.min(Math.max(promo.discount_value, 0), 100) / 100;
-    rateBonus = parseFloat((baseRate * pct).toFixed(2));
-  } else {
-    // fixed: discount_value is in IRT/AUD (e.g. 200 = 200 Toman per AUD better rate)
-    rateBonus = promo.discount_value;
+  // Percentage codes no longer exist; a legacy row of any other type is refused rather than guessed at.
+  if ((promo.discount_type as string) !== "fixed") {
+    return { valid: false, error: "این کد تخفیف دیگر پشتیبانی نمی‌شود." };
   }
+  const rateBonus = promo.discount_value;
 
   const effectiveRate = direction === "sell_aud"
     ? parseFloat((baseRate + rateBonus).toFixed(2))
@@ -280,4 +299,38 @@ export function applyPromoCode(
 
   // AUD amount is unchanged — the benefit is entirely in the improved rate
   return { valid: true, discount_amount, final_amount: baseAmountAud, effectiveRate };
+}
+
+/**
+ * Limits that depend on the customer and the request, checked at quote time (the database
+ * re-checks them atomically on submit). Messages are Persian; requestError() translates.
+ */
+export function checkPromoEligibility(
+  promo: PromoCodeData,
+  request: { rawAmountAud: number; customerUses: number },
+): { valid: true } | { valid: false; error: string } {
+  if (promo.min_amount_aud != null && request.rawAmountAud < promo.min_amount_aud) {
+    return { valid: false, error: `این کد تخفیف برای مبالغ از ${promo.min_amount_aud} دلار استرالیا به بالا قابل استفاده است.` };
+  }
+  if (promo.per_customer_limit != null && request.customerUses >= promo.per_customer_limit) {
+    return { valid: false, error: promo.per_customer_limit === 1 ? "شما قبلاً از این کد تخفیف استفاده کرده‌اید." : "سقف استفاده‌ی شما از این کد تخفیف تکمیل شده است." };
+  }
+  return { valid: true };
+}
+
+/** Narrows a promo_codes row (any column set) to the fields pricing needs. */
+export function toPromoCodeData(row: Record<string, unknown>): PromoCodeData {
+  const scope = row.applies_to;
+  return {
+    code: String(row.code),
+    discount_type: row.discount_type as PromoDiscountType, // legacy non-fixed rows are rejected by applyPromoCode
+    discount_value: Number(row.discount_value),
+    applies_to: scope === "buy_aud" || scope === "sell_aud" ? scope : "both",
+    per_customer_limit: row.per_customer_limit == null ? null : Number(row.per_customer_limit),
+    min_amount_aud: row.min_amount_aud == null ? null : Number(row.min_amount_aud),
+    max_uses: row.max_uses == null ? null : Number(row.max_uses),
+    used_count: Number(row.used_count ?? 0),
+    active: Boolean(row.active),
+    expires_at: (row.expires_at as string | null) ?? null,
+  };
 }

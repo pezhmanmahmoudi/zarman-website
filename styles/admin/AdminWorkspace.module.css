@@ -6,19 +6,19 @@
 .header p { margin: .4rem 0 0; color: var(--text-soft); font-size: .875rem; }
 .headerActions { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
 .tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--border-soft); }
-.tabs > :is(a, button) { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 48px; padding: .75rem 1rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--text-soft); text-decoration: none; font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; margin-bottom: -1px; }
+.tabs > :is(a, button) { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.75rem; padding: .75rem 1rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--text-soft); text-decoration: none; font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; margin-bottom: -1px; }
 .tabs > [aria-current="page"], .tabs > [aria-pressed="true"] { color: var(--accent); border-bottom-color: var(--accent); }
 .tabs span { border-radius: .4rem; background: rgba(var(--accent-rgb), .07); padding: .15rem .4rem; font-size: .75rem; font-variant-numeric: tabular-nums; }
 .panel { border: 1px solid var(--border-soft); border-radius: 1rem; background: var(--bg-card, white); box-shadow: 0 2px 5px rgb(23 32 51 / 3%); min-width: 0; }
 .panel[hidden] { display: none; }
-.toolbar { padding: .75rem 1.25rem; display: flex; gap: 1rem; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-soft); }
+.toolbar { padding: .625rem 1rem; display: flex; gap: 1rem; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-soft); }
 .filters { display: flex; flex-wrap: wrap; gap: .25rem; min-width: 0; }
-.filters :is(button, a) { display: inline-flex; align-items: center; gap: .5rem; border: 1px solid transparent; border-radius: .5rem; padding: .5rem .65rem; min-height: 44px; background: transparent; color: var(--text-soft); font: inherit; font-size: .8125rem; font-weight: 500; cursor: pointer; text-decoration: none; }
+.filters :is(button, a) { display: inline-flex; align-items: center; gap: .5rem; border: 1px solid transparent; border-radius: .5rem; padding: .5rem .65rem; min-height: var(--control-h, 2.25rem); background: transparent; color: var(--text-soft); font: inherit; font-size: .8125rem; font-weight: 500; cursor: pointer; text-decoration: none; }
 .filters button[aria-pressed="true"], .filters a[aria-current="page"] { color: var(--accent); border-color: rgba(var(--accent-rgb), .15); background: rgba(var(--accent-rgb), .065); font-weight: 600; }
 .filters span { font-size: .75rem; font-variant-numeric: tabular-nums; }
 .recordCount { flex-shrink: 0; color: var(--text-soft); font-size: .75rem; font-variant-numeric: tabular-nums; }
-.search { display: flex; align-items: center; gap: .5rem; padding: 0 .8rem; min-height: 44px; border-radius: .625rem; border: 1px solid var(--border-med); color: var(--text-soft); background: white; min-width: 0; transition: border-color 150ms, box-shadow 150ms; }
-.search input { background: transparent; border: 0; color: var(--text-main); min-width: 0; width: 100%; font: inherit; font-size: .875rem; outline: none; height: 42px; }
+.search { display: flex; align-items: center; gap: .5rem; padding: 0 var(--control-px); min-height: var(--control-h); border-radius: var(--control-radius); border: 1px solid var(--border-med); color: var(--text-soft); background: white; min-width: 0; transition: border-color 150ms, box-shadow 150ms; }
+.search input { background: transparent; border: 0; color: var(--text-main); min-width: 0; width: 100%; font: inherit; font-size: var(--control-font); outline: none; height: calc(var(--control-h) - 2px); }
 .search input:focus, .search input:focus-visible { outline: none; box-shadow: none; }
 .search > svg { flex-shrink: 0; }
 /* Keep one continuous focus border around the input and its search icon. */
@@ -32,13 +32,19 @@
 .historyControls > .search { flex: 1 1 250px; max-width: 480px; }
 .filterField { display: grid; gap: .4rem; min-width: 0; }
 .fieldLabel { color: var(--text-soft); font-size: .75rem; font-weight: 500; }
-.select { width: 180px; min-width: 0; }
-.select button { min-height: 44px; font-size: .8125rem; border-radius: .625rem; }
+.select { --field-h: var(--control-h); --select-font-size: var(--control-font); width: 180px; min-width: 0; }
+.select button { min-height: var(--control-h); padding-inline: var(--control-px); font-size: var(--control-font); border-radius: var(--control-radius); }
+.action > svg, .detailsToggle > svg { width: var(--control-icon); height: var(--control-icon); }
+/* Touch: keep the visual size on the scale but extend the tappable area to 44px. */
+@media (pointer: coarse) {
+  .action, .detailsToggle, .iconButton { position: relative; }
+  .action::after, .detailsToggle::after, .iconButton::after { content: ""; position: absolute; inset: -4px; }
+}
 .datePanel { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; padding: 1rem 1.25rem; border-top: 1px solid var(--border-soft); background: #f8fafc; }
 .datePanel[hidden] { display: none; }
 .datePanel .filterField { flex: 0 1 180px; }
 .datePicker { width: 100%; }
-.datePicker > button { min-height: 44px; font-size: .8125rem; border-radius: .625rem; }
+.datePicker > button { min-height: var(--control-h); font-size: var(--control-font); border-radius: var(--control-radius); }
 .dateError { flex-basis: 100%; margin: 0; color: #9e3349; font-size: .8125rem; }
 .bulkBar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; padding: .75rem 1.25rem; background: rgba(var(--accent-rgb), .045); border-top: 1px solid var(--border-soft); font-size: .8125rem; }
 .bulkBar > div:first-child { display: grid; gap: .2rem; }
@@ -69,7 +75,7 @@ a.customer:hover { color: var(--accent); text-decoration: underline; text-underl
 .status[data-stage="rejected"] { color: #9e3349; background: #fff0f3; }
 .rowActions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: .4rem; min-width: 205px; }
 .rowActions .action { max-width: 175px; }
-.action, .detailsToggle { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 44px; padding: .5rem .85rem; border: 1px solid var(--border-med); border-radius: .625rem; background: white; color: var(--text-main); font: inherit; font-size: .8125rem; line-height: 1.35; font-weight: 600; text-decoration: none; cursor: pointer; transition: background-color 150ms, border-color 150ms, color 150ms; }
+.action, .detailsToggle { display: inline-flex; align-items: center; justify-content: center; gap: var(--control-gap); min-height: var(--control-h); padding: 0 var(--control-px); border: 1px solid var(--border-med); border-radius: var(--control-radius); background: white; color: var(--text-main); font: inherit; font-size: var(--control-font); line-height: 1.25rem; font-weight: 550; white-space: nowrap; text-decoration: none; cursor: pointer; transition: background-color 150ms, border-color 150ms, color 150ms; }
 .action:hover, .detailsToggle:hover { background: #f6f7fc; border-color: #b8c2d8; color: var(--accent); }
 .action:disabled { opacity: .6; cursor: wait; }
 .action[data-tone="danger"] { color: #a43239; border-color: #efc2cb; background: #fff5f5; }
@@ -96,7 +102,7 @@ a.customer:hover { color: var(--accent); text-decoration: underline; text-underl
 .eyebrow { margin: 0 0 .5rem; font-size: .75rem; color: var(--text-soft); }
 .drawerHeader h2 { margin: 0; color: var(--text-main); font-size: 1.25rem; line-height: 1.4; font-weight: 700; overflow-wrap: anywhere; letter-spacing: -.02em; }
 .drawerReference { display: block; overflow-wrap: anywhere; margin-top: .4rem; font-size: .8125rem; color: var(--text-soft); }
-.iconButton { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border: 1px solid var(--border-soft); border-radius: .625rem; background: white; color: var(--text-soft); cursor: pointer; }
+.iconButton { display: grid; place-items: center; width: var(--control-h); height: var(--control-h); flex-shrink: 0; border: 1px solid var(--border-soft); border-radius: var(--control-radius); background: white; color: var(--text-soft); cursor: pointer; }
 .iconButton:hover { background: #f6f7fc; color: var(--text-main); }
 .drawerBody { padding: 1.25rem 1.5rem; display: grid; gap: 1.5rem; }
 .detailStatus { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
@@ -113,8 +119,14 @@ a.customer:hover { color: var(--accent); text-decoration: underline; text-underl
 .amountSummary > div { min-width: 0; border: 1px solid var(--border-soft); border-radius: .75rem; background: #f8fafc; padding: 1rem; }
 .amountSummary dd { margin: 0; font-size: 1rem; font-weight: 600; color: var(--text-main); overflow-wrap: anywhere; }
 .currency { display: block; margin-top: .2rem; color: var(--text-soft); font-size: .75rem; font-weight: 400; }
-.textLink { display: inline-flex; align-items: center; min-height: 44px; margin-top: .75rem; color: var(--accent); font-size: .8125rem; font-weight: 600; text-underline-offset: 3px; }
+.textLink { display: inline-flex; align-items: center; min-height: var(--control-h, 2.25rem); margin-top: .75rem; color: var(--accent); font-size: .8125rem; font-weight: 600; text-underline-offset: 3px; }
 .detailSection > .action { margin-top: .5rem; }
+.receiptActions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .5rem; }
+.receiptActions > :is(.description, .error) { flex-basis: 100%; }
+.emailSent { display: inline-flex; align-items: center; gap: .4rem; min-height: var(--control-h, 2.25rem); padding: 0 .75rem; border-radius: var(--control-radius, .6rem); background: #eaf7f0; color: #1d6b45; font-size: .8125rem; font-weight: 600; }
+.emailSent[data-pending] { background: #f1f4fa; color: var(--text-soft); }
+.emailSent[data-pending] > svg { animation: emailSpin 1s linear infinite; }
+@keyframes emailSpin { to { transform: rotate(360deg); } }
 .drawerFooter { position: sticky; bottom: 0; margin-top: auto; padding: 1rem 1.5rem max(1rem, env(safe-area-inset-bottom)); border-top: 1px solid var(--border-soft); background: white; }
 .drawerFooter > .action { width: 100%; }
 @container admin-data (max-width: 1150px) {
@@ -138,16 +150,24 @@ a.customer:hover { color: var(--accent); text-decoration: underline; text-underl
 }
 @media (max-width: 640px) {
   .header { align-items: flex-start; }
-  .toolbar { align-items: start; flex-direction: column; gap: .5rem; padding: .65rem .75rem; }
+  .toolbar { flex-wrap: wrap; gap: .5rem; padding: .625rem .75rem; }
   .toolbar > .recordCount { display: none; }
   .tabs > :is(a, button) { flex: 1; padding-inline: .5rem; }
-  .historyControls { padding: .75rem; gap: .5rem; }
-  .searchForm, .historyControls > .search { flex-basis: 100%; max-width: none; }
-  .select { flex: 1; width: auto; min-width: 150px; }
-  .datePanel { padding: .75rem; }
-  .datePanel .filterField { flex: 1 1 125px; }
+  /* Compact filter bar: search on one row, Filters/Export as an even pair. */
+  .historyControls { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; padding: .75rem; gap: .625rem; }
+  .searchForm, .historyControls > .search { flex-basis: auto; max-width: none; width: 100%; }
+  .searchForm .action { padding-inline: .75rem; }
+  .historyControls > .headerActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+  /* 16px text in the search field prevents iOS Safari's focus-zoom; the box itself stays on the control scale. */
+  .historyControls .search input { font-size: 1rem; }
+  .select { flex: 1; width: 100%; min-width: 0; }
+  .datePanel { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; padding: .75rem; gap: .625rem; }
+  .datePanel .filterField { flex: none; gap: .25rem; }
+  /* The custom date range nests a second panel: flatten it into the parent. */
+  .datePanel > .datePanel { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .625rem 0 0; border-top: 1px dashed var(--border-med); background: transparent; }
+  .datePanel > .datePanel > .action, .datePanel > .datePanel > .dateError { grid-column: 1 / -1; }
   .datePanel > .action { width: 100%; }
-  .bulkBar { padding: .75rem; }
+  .bulkBar { padding: .625rem .75rem; gap: .5rem; }
   .drawerHeader, .drawerBody { padding: 1.1rem; }
   .drawerFooter { padding-inline: 1.1rem; }
 }
@@ -212,7 +232,7 @@ a.customer:hover { color: var(--accent); text-decoration: underline; text-underl
 .transferMore:hover { color: #294b80; background: #edf2fa; border-color: #dce4f0; }
 .transferAction:focus-visible, .transferMore:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .transferDrawerActions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
-.transferDrawerActions > .action { min-height: 40px; }
+.transferDrawerActions > .action { min-height: var(--control-h, 2.25rem); }
 .transferDrawerActions > .transferAction { width: auto; min-width: 184px; }
 .transferDrawerActions > .rejectAction { background: transparent; border-color: transparent; font-size: .75rem; }
 .transferDrawerActions > .rejectAction:hover { border-color: #efc2cb; background: #fff3f5; }

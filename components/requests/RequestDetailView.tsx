@@ -1,5 +1,6 @@
 "use client";
 
+import { toCompanyTradeType } from "@/lib/pricing";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Download, ExternalLink, Mail, RefreshCw, Trash2 } from "lucide-react";
@@ -453,7 +454,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
       <Link className={workspace.backLink} href="/admin/transactions"><ArrowLeft size={15} />Transactions</Link>
       <div className={workspace.adminHeaderMain}>
         <div className={workspace.adminHeaderTitle}>
-          <span className={workspace.kicker}>{request ? `${request.quote.customer_request_type === "buy_aud" ? "Buy AUD" : "Sell AUD"} request` : "Request"}</span>
+          <span className={workspace.kicker}>{request ? `${(request.quote.company_trade_type ?? toCompanyTradeType(request.quote.customer_request_type)) === "buy_aud" ? "Buy AUD" : "Sell AUD"} request` : "Request"}</span>
           <div className={workspace.titleRow}><h1><bdi>{request?.reference_code || "Request"}</bdi></h1>{request && <AdminCopyButton value={request.reference_code} label="reference code" />}</div>
           {request && <ul className={workspace.headerMeta}>
             <li><span className={workspace.stageBadge}>{requestStageLabel(request, locale)}</span>{request.service_tier === "priority" && <span className={`${styles.badge} ${styles.priority}`}>Priority</span>}</li>

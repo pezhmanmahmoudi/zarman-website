@@ -67,10 +67,13 @@ export async function proxy(request: NextRequest) {
   if (isAdminPath) {
     const isAdminLoginPage = pathname === '/admin/login'
     const isAdmin = !!claims && claims.app_metadata?.role === 'admin'
+    // When ADMIN_MFA_REQUIRED=true an admin session must have passed the second factor (aal2).
+    const mfaRequired = process.env.ADMIN_MFA_REQUIRED === 'true'
+    const hasSecondFactor = (claims as { aal?: string } | null)?.aal === 'aal2'
 
     if (isAdminLoginPage) {
-      // Redirect already-authenticated admins away from the login page.
-      if (isAdmin) {
+      // Redirect already-authenticated admins away from the login page, unless they still owe the second factor.
+      if (isAdmin && (!mfaRequired || hasSecondFactor)) {
         return privateResponse(applyPendingCookies(
           NextResponse.redirect(new URL('/admin/dashboard', request.url))
         ))
@@ -82,6 +85,17 @@ export async function proxy(request: NextRequest) {
     if (!isAdmin) {
       return privateResponse(applyPendingCookies(
         NextResponse.redirect(new URL('/admin/login', request.url))
+      ))
+    }
+
+    // The two-factor setup page must stay reachable with a password-only session, or nobody could enrol.
+    if (pathname === '/admin/security' || pathname.startsWith('/admin/security/')) {
+      return privateResponse(getResponse())
+    }
+
+    if (mfaRequired && !hasSecondFactor) {
+      return privateResponse(applyPendingCookies(
+        NextResponse.redirect(new URL('/admin/login?mfa=1', request.url))
       ))
     }
 

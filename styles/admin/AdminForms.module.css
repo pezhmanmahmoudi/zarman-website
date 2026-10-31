@@ -173,7 +173,7 @@
   align-items: center;
   gap: var(--space-2);
   transition: all 0.15s ease;
-  min-height: 42px;
+  min-height: var(--control-h, 2.25rem);
 }
 
 .btnPrimary:hover:not(:disabled) {
@@ -204,7 +204,7 @@
   align-items: center;
   gap: var(--space-2);
   transition: all 0.15s ease;
-  min-height: 42px;
+  min-height: var(--control-h, 2.25rem);
 }
 
 .btnSecondary:hover:not(:disabled) {
@@ -226,7 +226,7 @@
   align-items: center;
   gap: var(--space-2);
   transition: all 0.15s ease;
-  min-height: 42px;
+  min-height: var(--control-h, 2.25rem);
 }
 
 .btnDanger:hover:not(:disabled) {
@@ -298,7 +298,7 @@
 }
 
 .btnSecondaryCompact {
-  min-height: 32px;
+  min-height: var(--control-h-sm, 2rem);
   padding: 4px 12px;
   font-size: 0.75rem;
 }
@@ -341,10 +341,10 @@
 
 /* ── Icon-only square button (table row actions) ── */
 .btnIconOnly {
-  width: 32px;
-  height: 32px;
-  min-height: 32px;
-  min-width: 32px;
+  width: var(--control-h-sm, 2rem);
+  height: var(--control-h-sm, 2rem);
+  min-height: var(--control-h-sm, 2rem);
+  min-width: var(--control-h-sm, 2rem);
   padding: 0;
   border-radius: 8px;
   display: inline-flex;
@@ -355,7 +355,7 @@
 /* ── Compact inputs for table-row inline edit mode ── */
 .inputCompact {
   --field-h: 36px;
-  height: 36px;
+  height: var(--control-h, 2.25rem);
   min-width: 120px;
   padding: 0.35rem 0.55rem;
   font-size: 0.8125rem;
@@ -363,7 +363,7 @@
 
 .inputCompactRef {
   --field-h: 36px;
-  height: 36px;
+  height: var(--control-h, 2.25rem);
   min-width: 112px;
   padding: 0.35rem 0.55rem;
   font-size: 0.8125rem;
@@ -371,7 +371,7 @@
 
 .inputCompactMd {
   --field-h: 36px;
-  height: 36px;
+  height: var(--control-h, 2.25rem);
   min-width: 150px;
   padding: 0.35rem 0.55rem;
   font-size: 0.8125rem;
@@ -379,7 +379,7 @@
 
 .selectCompact {
   --field-h: 36px;
-  height: 36px;
+  height: var(--control-h, 2.25rem);
   min-width: 190px;
   padding: 0.35rem 0.55rem;
   font-size: 0.8125rem;
@@ -387,7 +387,7 @@
 
 .selectCompactStatus {
   --field-h: 36px;
-  height: 36px;
+  height: var(--control-h, 2.25rem);
   min-width: 132px;
   padding: 0.35rem 0.55rem;
   font-size: 0.8125rem;

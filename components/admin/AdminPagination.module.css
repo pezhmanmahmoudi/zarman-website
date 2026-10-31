@@ -1,16 +1,26 @@
+/*
+ * Admin pagination footer.
+ * Desktop: [rows per page] ........ [« ‹ Page x of y › »] | [Go to page]
+ * Mobile:  full-width pager, then beneath it [rows-per-page box] ... [Go to page + Go].
+ *          The "Rows per page" text is visually hidden on phones; the box keeps its label for AT.
+ * The record range stays in the DOM for assistive tech but is not shown:
+ * "Page x of y" already tells sighted users where they are.
+ * All controls share the admin control scale (36px, 13px type, 8px radius).
+ */
 .footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 1rem 1.5rem;
+  gap: .75rem 1.5rem;
   min-width: 0;
-  padding: 1rem 1.25rem;
+  padding: .75rem 1rem;
   border-top: 1px solid var(--border-soft, #e3e8ef);
   background: var(--bg-card, #fff);
   border-radius: 0 0 1rem 1rem;
   color: var(--text-soft, #556375);
-  font-size: 0.8125rem;
+  font-size: var(--control-font, .8125rem);
+  line-height: 1.25rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -26,80 +36,111 @@
   min-width: 0;
 }
 
-.summary { gap: 0.875rem 1.5rem; flex-wrap: wrap; }
-.recordCount { color: var(--text-soft, #556375); }
-.rowSize { gap: 0.625rem; }
+.summary { gap: .75rem 1.25rem; flex-wrap: wrap; }
+.recordCount,
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.rowSize { gap: .5rem; }
 .rowSize label,
 .jumpForm label { white-space: nowrap; }
-.navigation { gap: 1.25rem; flex-wrap: wrap; margin-left: auto; }
-.pageControls { gap: 0.625rem; }
-.arrows { gap: 0.375rem; flex-shrink: 0; }
-.currentPage { text-align: center; min-width: 6.5rem; color: var(--text-main, #1a273b); font-weight: 500; }
-.jumpForm { gap: 0.625rem; flex-wrap: wrap; }
-.jumpControls { gap: 0.375rem; }
+.navigation { gap: 1rem; flex-wrap: wrap; margin-inline-start: auto; }
+.pageControls { gap: .5rem; }
+.arrows { gap: .25rem; flex-shrink: 0; }
+.currentPage { min-width: 6rem; text-align: center; color: var(--text-main, #1a273b); font-weight: 500; white-space: nowrap; }
+.jumpForm { gap: .5rem; flex-wrap: wrap; padding-inline-start: 1rem; border-inline-start: 1px solid var(--border-soft, #e3e8ef); }
+.jumpControls { gap: .5rem; }
 
 .iconButton,
 .goButton,
-.pageInput,
-.rowSize select {
+.pageInput {
   box-sizing: border-box;
-  min-height: 44px;
+  height: var(--control-h, 2.25rem);
   border: 1px solid var(--border-med, #d2dae5);
-  border-radius: 0.5rem;
-  background: var(--bg-card, #fff);
+  border-radius: var(--control-radius, .5rem);
+  background-color: var(--bg-card, #fff);
   color: var(--text-main, #1a273b);
   font: inherit;
-  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  font-size: var(--control-font, .8125rem);
+  line-height: 1.25rem;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .iconButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
+  position: relative;
+  width: var(--control-h, 2.25rem);
   padding: 0;
+  color: var(--accent, #635bff);
+  border-color: rgba(99, 91, 255, .35);
+  background-color: rgba(99, 91, 255, .06);
   cursor: pointer;
 }
+.iconButton > svg { width: var(--control-icon, 1rem); height: var(--control-icon, 1rem); }
 
-.rowSize select { min-width: 4.25rem; padding: 0.375rem 0.625rem; cursor: pointer; }
-.pageInput { width: 4.25rem; padding: 0.375rem 0.5rem; text-align: center; }
+/* Rows-per-page uses the shared SelectBox so the menu matches every other admin dropdown. */
+.rowSelect { --field-h: var(--control-h, 2.25rem); --select-font-size: var(--control-font, .8125rem); width: fit-content; }
+/* Keep "20" on one line inside the menu (menu is as wide as the trigger). */
+.rowSelect [role="option"], .rowSelect [role="option"] span { white-space: nowrap; }
+.rowSelect [popover] { min-width: 5rem; }
+.rowSelect button { height: var(--control-h, 2.25rem); min-height: var(--control-h, 2.25rem); padding-inline: .75rem .625rem; border: 1px solid var(--border-med, #d2dae5); border-radius: var(--control-radius, .5rem); background-color: var(--bg-card, #fff); box-shadow: none; font-size: var(--control-font, .8125rem); }
+.rowSelect button:hover:not(:disabled) { border-color: var(--accent, #635bff); }
+.rowSelect button[aria-expanded="true"], .rowSelect button:focus-visible { border-color: var(--accent, #635bff); box-shadow: 0 0 0 3px rgba(99, 91, 255, .2); outline: none; }
+
+/* Number field without OS spinners. */
+.pageInput {
+  width: 3rem;
+  padding: 0 .5rem;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.pageInput::-webkit-outer-spin-button,
+.pageInput::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .pageInput[aria-invalid="true"] { border-color: #dc2626; }
-.goButton { min-width: 3rem; padding: 0.375rem 0.75rem; font-weight: 600; cursor: pointer; }
-.iconButton:hover:not(:disabled),
-.goButton:hover:not(:disabled) { border-color: var(--accent, #635bff); background: var(--bg-hover, #f6f8fb); }
-.iconButton:focus-visible,
-.goButton:focus-visible,
-.pageInput:focus-visible,
-.rowSize select:focus-visible { outline: 3px solid rgba(99, 91, 255, 0.25); outline-offset: 2px; border-color: var(--accent, #635bff); }
-.iconButton:disabled,
+
+.goButton { width: 3rem; padding: 0; font-weight: 550; cursor: pointer; }
+
+.iconButton:hover:not(:disabled) { border-color: var(--accent, #635bff); background-color: rgba(99, 91, 255, .14); }
+
+/* "Go" is the primary action of the form: filled, unlike the outlined controls around it. */
+.goButton { border-color: var(--accent, #635bff); background-color: var(--accent, #635bff); color: #fff; }
+.goButton:hover:not(:disabled) { border-color: var(--accent-hover, #4338ca); background-color: var(--accent-hover, #4338ca); color: #fff; }
+/* One border + soft halo; the global outline is suppressed so the focus state is never doubled. */
+.footer .iconButton:focus-visible,
+.footer .goButton:focus-visible,
+.footer .pageInput:focus-visible { outline: none; border-color: var(--accent, #635bff); box-shadow: 0 0 0 3px rgba(99, 91, 255, .2); }
+.iconButton:disabled { opacity: 1; color: var(--text-dim, #94a3b8); border-color: var(--border-soft, #e3e8ef); background-color: var(--bg-soft, #f1f4f9); cursor: not-allowed; }
 .goButton:disabled,
-.pageInput:disabled,
-.rowSize select:disabled { opacity: 0.45; cursor: not-allowed; }
-.error { flex-basis: 100%; max-width: 16rem; font-size: 0.75rem; color: #b91c1c; }
+.pageInput:disabled { opacity: .45; cursor: not-allowed; }
+.error { flex-basis: 100%; max-width: 16rem; margin: 0; font-size: .75rem; color: #b91c1c; }
 .rangeNotice { flex-basis: 100%; margin: 0; color: var(--text-soft, #556375); }
 
-@media (max-width: 700px) {
-  .footer { align-items: stretch; gap: 0.875rem; padding: 1rem; }
-  .summary { width: 100%; justify-content: space-between; }
-  .navigation { width: 100%; margin-left: 0; gap: 0.875rem; justify-content: space-between; }
-  .pageControls { flex: 1 1 100%; justify-content: space-between; }
-  .jumpForm { flex: 1 1 100%; justify-content: space-between; }
-  .jumpControls { flex: 0 1 12rem; }
-  .pageInput { flex: 1 1 5rem; min-width: 0; }
-  .goButton { min-width: 4rem; }
-  .iconButton { width: 44px; }
-  .iconButton, .goButton, .pageInput, .rowSize select { min-height: 44px; }
-  .pageInput, .rowSize select { font-size: 1rem; }
-  .currentPage { min-width: 0; }
-  .error { max-width: none; }
+/* Touch: visual size stays on the scale, the tappable area grows to 44px. */
+@media (pointer: coarse) {
+  .iconButton::after, .goButton::after { content: ""; position: absolute; inset: -4px; }
+  .goButton { position: relative; }
 }
 
-@media (max-width: 420px) {
-  .boundaryButton { display: none; }
-  .jumpControls { flex-basis: 9rem; }
-  .rowSize { flex: 1 1 100%; justify-content: space-between; }
+/* Laptop/tablet: drop the divider and let the jump form wrap under the pager. */
+@media (max-width: 1100px) {
+  .jumpForm { padding-inline-start: 0; border-inline-start: 0; }
+}
+
+@media (max-width: 700px) {
+  .footer { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "pager pager" "rows jump"; align-items: center; gap: .75rem 0; padding: .75rem; }
+  .navigation { display: contents; }
+  /* The divider lives on the full-width pager row so it spans the whole card. */
+  .pageControls { grid-area: pager; justify-content: space-between; gap: .5rem; padding-bottom: .75rem; border-bottom: 1px solid var(--border-soft, #e3e8ef); }
+  .currentPage { flex: 1 1 auto; min-width: 0; }
+  .summary { grid-area: rows; }
+  .rowSize label,
+  .jumpForm label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  .jumpForm { grid-area: jump; justify-self: end; justify-content: flex-end; flex-wrap: wrap; gap: .5rem; padding: 0; border: 0; }
+  .error { flex-basis: 100%; max-width: none; text-align: end; }
+  .rangeNotice { grid-column: 1 / -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .iconButton, .goButton, .pageInput, .rowSize select { transition: none; }
+  .iconButton, .goButton, .pageInput { transition: none; }
 }

@@ -3,6 +3,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { revalidateTag } from "next/cache";
+import { headers } from "next/headers";
+import { notifyAdminsOfSecurityEvent } from "@/lib/admin-security/alerts";
 import { createSupabaseServerComponentClient } from "@/lib/supabase-server";
 import { getRatesSnapshot } from "@/lib/rates";
 import { calcExecutionRateFromSettlement, toCompanyTradeType } from "@/lib/pricing";
@@ -60,6 +62,11 @@ function throwAdminAuthError(code: AdminAuthErrorCode, message: string): never {
 // Service-role client — bypasses RLS for privileged writes.
 // NEVER expose this client or its key to the browser.
 // ---------------------------------------------------------------------------
+async function requestIp() {
+  const list = await headers();
+  return list.get("x-forwarded-for")?.split(",")[0]?.trim() || list.get("x-real-ip") || null;
+}
+
 function makeServiceRoleClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -202,6 +209,14 @@ export async function requireAdmin(
   const role = data.user.app_metadata?.role;
   if (!isPrivilegedRole(role)) {
     throwAdminAuthError("AUTH_FORBIDDEN", "Forbidden: admin role required.");
+  }
+
+  // Server actions enforce the second factor too, so a stolen password-only session cannot call them directly.
+  if (process.env.ADMIN_MFA_REQUIRED === "true") {
+    const { data: claimsData } = await db.auth.getClaims();
+    if ((claimsData?.claims as { aal?: string } | undefined)?.aal !== "aal2") {
+      throwAdminAuthError("AUTH_FORBIDDEN", "Forbidden: two-factor authentication required.");
+    }
   }
 
   const { error: capabilityError } = await db
@@ -1161,6 +1176,10 @@ export async function updateSystemSettings(payload: any) {
 
   if (Object.keys(patch).length === 0) return { success: true };
 
+  for (const rate of [patch.buy_aud, patch.sell_aud]) {
+    if (rate !== undefined && (!Number.isFinite(rate as number) || (rate as number) <= 0)) return { error: "Rates must be positive numbers." };
+  }
+
   // ثبت تاریخ امروز برای رکورد جدید
   patch.date = new Date().toISOString().slice(0, 10);
 
@@ -1728,6 +1747,20 @@ export async function updateAssistedRecipientForUser(payload: any) {
     newValue: patch,
   }).catch(() => {});
 
+  // Changing WHERE a customer's money is paid out is the classic fraud move: alert every admin when it happens.
+  const payoutFields = ["full_name", "account_name", "bank_name", "bsb", "account_number", "card_number", "shaba_number", "irt_account_number"] as const;
+  const tail = (value: unknown) => { const text = String(value ?? "").trim(); return !text ? "(empty)" : text.length > 6 && /\d/.test(text) ? `••••${text.slice(-4)}` : text; };
+  const changedPayout = payoutFields.filter(field => field in patch && String(patch[field] ?? "") !== String((before as Record<string, unknown> | null)?.[field] ?? ""));
+  if (changedPayout.length) {
+    await notifyAdminsOfSecurityEvent(db, {
+      headline: "Payout recipient details changed by an admin",
+      intro: `${admin.email ?? "An administrator"} edited a saved recipient (${String((before as Record<string, unknown> | null)?.label ?? recipientId)}). Requests already submitted keep the details they were quoted with.`,
+      details: changedPayout.map(field => `${field}: ${tail((before as Record<string, unknown> | null)?.[field])} → ${tail(patch[field])}`),
+      action: "If this was not you or a colleague, review the recipient and the customer's recent requests immediately.",
+      ip: await requestIp(),
+    });
+  }
+
   return { success: true };
 }
 
@@ -1924,34 +1957,96 @@ export async function getPromoCodes() {
   return data ?? [];
 }
 
-export async function createPromoCode(payload: any) {
+type PromoCodeInput = {
+  code?: unknown; discount_type?: unknown; discount_value?: unknown; applies_to?: unknown;
+  max_uses?: unknown; per_customer_limit?: unknown; min_amount_aud?: unknown;
+  expires_at?: unknown; description?: unknown; active?: unknown;
+};
+
+/** Offset-aware end of the chosen day in Melbourne, so a code stays valid through its last day. */
+function endOfDayMelbourne(date: string) {
+  const parts = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne", timeZoneName: "longOffset" })
+    .formatToParts(new Date(`${date}T12:00:00Z`));
+  const offset = parts.find(part => part.type === "timeZoneName")?.value.replace("GMT", "") || "+00:00";
+  return `${date}T23:59:59${offset}`;
+}
+
+export async function createPromoCode(payload: PromoCodeInput) {
   const admin = await requireAdmin();
-  if (!payload.code?.trim()) return { error: "Code is required." };
+  const code = String(payload.code ?? "").trim().toUpperCase();
+  if (!/^[A-Z0-9_-]{3,50}$/.test(code)) return { error: "Code must be 3–50 characters: letters, numbers, - or _." };
+
+  // Promo codes are always a flat Toman-per-AUD rate improvement.
+  const value = Number(payload.discount_value);
+  if (!Number.isInteger(value) || value <= 0) return { error: "The discount must be a whole number of Toman greater than zero." };
+
+  const appliesTo = payload.applies_to === "buy_aud" || payload.applies_to === "sell_aud" ? payload.applies_to : "both";
+
+  const maxUses = payload.max_uses === null || payload.max_uses === undefined || payload.max_uses === "" ? null : Number(payload.max_uses);
+  if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) return { error: "Max uses must be a whole number of at least 1." };
+
+  const perCustomer = payload.per_customer_limit === null || payload.per_customer_limit === undefined || payload.per_customer_limit === "" ? null : Number(payload.per_customer_limit);
+  if (perCustomer !== null && (!Number.isInteger(perCustomer) || perCustomer < 1)) return { error: "Uses per customer must be a whole number of at least 1." };
+  const minAmount = payload.min_amount_aud === null || payload.min_amount_aud === undefined || payload.min_amount_aud === "" ? null : Number(payload.min_amount_aud);
+  if (minAmount !== null && (!Number.isFinite(minAmount) || minAmount <= 0)) return { error: "The minimum amount must be greater than zero." };
+
+  const expiryDate = payload.expires_at ? String(payload.expires_at) : null;
+  if (expiryDate && !/^\d{4}-\d{2}-\d{2}$/.test(expiryDate)) return { error: "Choose a valid expiry date." };
+  const expiresAt = expiryDate ? endOfDayMelbourne(expiryDate) : null;
+  if (expiresAt && new Date(expiresAt) <= new Date()) return { error: "The expiry date must be in the future." };
+
+  const description = String(payload.description ?? "").trim().slice(0, 200) || null;
 
   const db = makeServiceRoleClient();
   const { error } = await db.from("promo_codes").insert([{
-    code: payload.code.trim().toUpperCase(),
-    discount_pct: Number(payload.discount_pct) || 0,
-    max_uses: payload.max_uses ? Number(payload.max_uses) : null,
-    expires_at: payload.expires_at || null,
+    code,
+    discount_type: "fixed",
+    discount_value: value,
+    applies_to: appliesTo,
+    max_uses: maxUses,
+    per_customer_limit: perCustomer,
+    min_amount_aud: minAmount,
+    expires_at: expiresAt,
+    description,
     active: payload.active ?? true,
   }]);
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505") return { error: `The code "${code}" already exists.` };
+    if (/applies_to/.test(error.message)) return { error: "The promo scope column is missing. Apply migration 20261031_65_promo_code_scope first." };
+    if (/per_customer_limit|min_amount_aud/.test(error.message)) return { error: "The promo limit columns are missing. Apply migration 20261031_66_promo_code_limits first." };
+    return { error: error.message };
+  }
+
+  await writeAuditLog({
+    actorId: admin.id,
+    actorEmail: admin.email ?? "",
+    action: "PROMO_CODE_CREATED",
+    targetType: "promo_code",
+    targetId: code,
+  }).catch(() => {});
+  await notifyAdminsOfSecurityEvent(db, {
+    headline: `Promo code ${code} created`,
+    intro: `${admin.email ?? "An administrator"} created a promo code. Customers can use it straight away.`,
+    details: [
+      `Discount: ${value.toLocaleString("en-AU")} Toman per AUD`,
+      `Applies to: ${appliesTo === "both" ? "Buy & Sell" : appliesTo === "buy_aud" ? "Buy AUD (customer sells AUD)" : "Sell AUD (customer buys AUD)"}`,
+      `Total uses: ${maxUses ?? "unlimited"} · per customer: ${perCustomer ?? "unlimited"} · minimum: ${minAmount ? `${minAmount} AUD` : "none"}`,
+      `Valid until: ${expiresAt ?? "no expiry"}`,
+    ],
+    action: "If you do not recognise this code, disable it in Settings → Promo Codes now.",
+    ip: await requestIp(),
+  });
   return { success: true };
 }
 
-export async function updatePromoCode(id: string, payload: any) {
+/** Only operational fields are editable; the discount itself is immutable once customers hold quotes with it. */
+export async function updatePromoCode(id: string, payload: { active?: unknown }) {
   await requireAdmin();
   if (!id) return { error: "Missing ID." };
+  if (payload.active === undefined) return { error: "Nothing to update." };
 
   const db = makeServiceRoleClient();
-  const patch: Record<string, unknown> = {};
-  if (payload.discount_pct !== undefined) patch.discount_pct = Number(payload.discount_pct);
-  if (payload.max_uses !== undefined) patch.max_uses = payload.max_uses ? Number(payload.max_uses) : null;
-  if (payload.expires_at !== undefined) patch.expires_at = payload.expires_at || null;
-  if (payload.active !== undefined) patch.active = Boolean(payload.active);
-
-  const { error } = await db.from("promo_codes").update(patch).eq("id", id);
+  const { error } = await db.from("promo_codes").update({ active: Boolean(payload.active) }).eq("id", id);
   if (error) return { error: error.message };
   return { success: true };
 }

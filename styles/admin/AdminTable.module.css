@@ -135,7 +135,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  min-height: var(--control-h, 2.25rem);
   height: auto;
   padding: 8px 10px;
   font-size: 0.75rem;
@@ -197,7 +197,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 44px;
+  min-height: var(--control-h, 2.25rem);
   padding: 8px 12px;
   border-radius: 0.625rem;
   font-size: 0.75rem;
@@ -251,7 +251,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 40px;
+  min-height: var(--control-h, 2.25rem);
   padding: 8px 14px;
   border-radius: 0.55rem;
   background: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
@@ -319,7 +319,7 @@
   font-size: 0.875rem;
   font-family: var(--font-en-stack);
   padding: 0.625rem 1rem;
-  height: 42px;
+  height: var(--control-h, 2.25rem);
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   box-sizing: border-box;
@@ -601,13 +601,13 @@
 
 .pageSizeSelect {
   width: 64px;
-  min-height: 34px;
+  min-height: var(--control-h, 2.25rem);
 }
 
 .paginationIconBtn,
 .paginationNumber {
-  width: 34px;
-  height: 34px;
+  width: var(--control-h-sm, 2rem);
+  height: var(--control-h-sm, 2rem);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -761,7 +761,7 @@
 
 .historyFilterSelect {
   width: 160px;
-  min-height: 34px;
+  min-height: var(--control-h, 2.25rem);
 }
 
 .historyFilterDivider {
@@ -782,7 +782,7 @@
 
 .historyDatePicker {
   width: 138px;
-  min-height: 34px;
+  min-height: var(--control-h, 2.25rem);
 }
 
 .historyDateRangeSep {
@@ -792,7 +792,7 @@
 }
 
 .historyApplyBtn {
-  height: 34px;
+  height: var(--control-h, 2.25rem);
   padding: 0 12px;
   font-size: 0.6875rem;
   background: var(--accent);
@@ -810,7 +810,7 @@
   align-items: center;
   gap: 4px;
   padding: 0 10px;
-  height: 34px;
+  height: var(--control-h, 2.25rem);
   font-size: 0.6875rem;
   font-weight: 600;
   color: var(--text-soft);
@@ -858,7 +858,7 @@
 }
 
 .filterControl input {
-  height: 36px;
+  height: var(--control-h, 2.25rem);
   padding: 0 0.65rem;
   border: 1px solid var(--border-med);
   border-radius: 0.375rem;
@@ -870,12 +870,12 @@
 
 .filterSelect {
   width: 170px;
-  min-height: 36px;
+  min-height: var(--control-h, 2.25rem);
 }
 
 .filterDatePicker {
   width: 160px;
-  min-height: 36px;
+  min-height: var(--control-h, 2.25rem);
 }
 
 .bulkActionBar {
@@ -981,7 +981,7 @@
     width: 100%;
     justify-content: center;
     align-self: stretch;
-    min-height: 34px;
+    min-height: var(--control-h, 2.25rem);
     border: 1px solid var(--border-soft);
     border-radius: 0.375rem;
     background: var(--bg-card);
@@ -1047,4 +1047,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .table td, .table tbody tr, .btnAction, .btnActionCompact { transition: none; }
+}
+
+/* Controls follow the 36px scale; touch devices keep a 44px tappable area. */
+@media (pointer: coarse) {
+  .btnAction, .btnActionCompact, .btnSuspend { position: relative; }
+  .btnAction::after, .btnActionCompact::after, .btnSuspend::after { content: ""; position: absolute; inset: -4px; }
 }

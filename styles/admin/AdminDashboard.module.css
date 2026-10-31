@@ -1,6 +1,8 @@
 .dashboard { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; max-width: 1600px; margin-inline: auto; }
 .breadcrumb { display: flex; align-items: center; gap: .75rem; font-size: .75rem; color: var(--text-dim); }
-.refreshButton { display: inline-flex; align-items: center; gap: .5rem; min-height: 36px; padding: .45rem .8rem; border: 1px solid var(--border-soft); background: #fff; border-radius: .5rem; color: var(--text-soft); font-size: .75rem; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-sm); }
+.refreshButton { display: inline-flex; align-items: center; gap: var(--control-gap, .375rem); min-height: var(--control-h, 2.25rem); padding: 0 var(--control-px, .75rem); border: 1px solid var(--border-med); background: #fff; border-radius: var(--control-radius, .5rem); color: var(--text-main); font-size: var(--control-font, .8125rem); line-height: 1.25rem; font-weight: 550; white-space: nowrap; cursor: pointer; }
+.refreshButton > svg { width: var(--control-icon, 1rem); height: var(--control-icon, 1rem); }
+.refreshButton:hover { background: #f6f7fc; border-color: #b8c2d8; color: var(--accent); }
 .refreshButton:hover:not(:disabled) { border-color: var(--border-med); background: var(--bg-soft); }
 .refreshButton:disabled { opacity: .6; }
 .spinning { animation: spin 1s linear infinite; }

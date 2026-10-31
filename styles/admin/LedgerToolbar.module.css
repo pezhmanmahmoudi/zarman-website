@@ -1,0 +1,47 @@
+/*
+ * Ledger filter bar.
+ * One continuous card with three tiers: [search · actions] → [filter fields]
+ * → [active-filter chips]. Every control uses the shared control scale.
+ */
+.root { min-width: 0; border: 1px solid var(--border-soft); border-radius: .75rem; background: var(--bg-card, #fff); box-shadow: var(--shadow-card); }
+
+.bar { display: flex; align-items: center; gap: .5rem; padding: .75rem 1rem; }
+.searchForm { flex: 1 1 auto; max-width: 30rem; min-width: 0; }
+.searchForm > div { width: 100%; }
+.clearSearch { display: grid; place-items: center; flex-shrink: 0; width: 1.5rem; height: 1.5rem; margin-inline-end: -.25rem; border: 0; border-radius: 50%; background: transparent; color: var(--text-dim); cursor: pointer; }
+.clearSearch:hover { background: var(--bg-soft); color: var(--text-main); }
+.actions { display: flex; align-items: center; gap: .5rem; margin-inline-start: auto; }
+.count { display: inline-grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding: 0 .35rem; border-radius: 999px; background: var(--accent); color: #fff; font-size: .6875rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+.panel { padding: 1rem; border-top: 1px solid var(--border-soft); background: var(--bg-hover, #f8faff); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr)); gap: .75rem 1rem; align-items: end; }
+.field { --field-h: var(--control-h); --select-font-size: var(--control-font); display: grid; gap: .375rem; min-width: 0; }
+.field > span { color: var(--text-soft); font-size: .75rem; font-weight: 550; line-height: 1rem; }
+.field :is(button, input) { font-size: var(--control-font); border-radius: var(--control-radius); }
+.apply { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: .75rem; flex-wrap: wrap; }
+.error { margin: 0; flex: 1 1 auto; color: #9e3349; font-size: .8125rem; }
+
+.chips { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; padding: .625rem 1rem; border-top: 1px solid var(--border-soft); font-size: .75rem; color: var(--text-soft); }
+.chip { display: inline-flex; align-items: center; gap: .25rem; max-width: 100%; min-height: 1.75rem; padding: 0 .25rem 0 .625rem; border: 1px solid rgba(var(--accent-rgb), .22); border-radius: 999px; background: rgba(var(--accent-rgb), .06); color: var(--accent); font-weight: 550; }
+.chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip button { display: grid; place-items: center; flex-shrink: 0; width: 1.25rem; height: 1.25rem; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.chip button:hover { background: rgba(var(--accent-rgb), .14); }
+.clearAll { margin-inline-start: auto; padding: 0 .25rem; border: 0; background: transparent; color: var(--text-soft); font: inherit; font-weight: 550; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.clearAll:hover { color: var(--accent); }
+.status { display: inline-flex; align-items: center; gap: .375rem; }
+
+@media (max-width: 640px) {
+  .bar { flex-wrap: wrap; padding: .75rem; }
+  .searchForm { flex-basis: 100%; max-width: none; }
+  /* Equal-width pair, same height as the search field above. */
+  .actions { flex: 1 1 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-inline-start: 0; }
+  .actions > button { width: 100%; }
+  .panel { padding: .75rem; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .625rem; }
+  /* Selects span the full row; the two dates sit side by side. */
+  .field[data-wide] { grid-column: 1 / -1; }
+  .apply > button { flex: 1 1 100%; }
+  .chips { padding: .625rem .75rem; }
+  /* 16px text avoids iOS focus-zoom while the box stays on the control scale. */
+  .searchForm input { font-size: 1rem; }
+}

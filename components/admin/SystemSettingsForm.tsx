@@ -10,6 +10,7 @@ import formStyles from "@/styles/admin/AdminForms.module.css";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
 import { updateSystemSettings } from "@/app/actions/admin.actions";
 import { PromoCodeManager } from "@/components/admin/PromoCodeManager";
+import { useAdminRefresh } from "@/components/admin/ui/useAdminRefresh";
 import type { PromoCode } from "@/app/[locale]/dashboard/dashboard.types";
 
 // 🌟 اصلاح Type برای هماهنگی ۱۰۰ درصدی با ستون‌های دیتابیس
@@ -50,6 +51,7 @@ export function SystemSettingsForm({
   const [appliedFee, setAppliedFee] = useState(String(initialSettings.applied_fee ?? 30));
 
   const [isPending, startTransition] = useTransition();
+  const refreshAdmin = useAdminRefresh();
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [saveError, setSaveError] = useState("");
 
@@ -88,7 +90,7 @@ export function SystemSettingsForm({
         discount_percent_per_step: parsedDiscountPercent,
         max_discount_percent: parsedMaxDiscount,
         fee_threshold: parsedFeeThreshold,
-        applied_fee: parsedAppliedFee
+        applied_fee: parsedAppliedFee,
       });
 
       if (result.error) {
@@ -96,6 +98,8 @@ export function SystemSettingsForm({
         setSaveStatus("error");
       } else {
         setSaveStatus("success");
+        // Reload the snapshot so everything that reads the saved rates (e.g. the promo preview) follows.
+        refreshAdmin();
         setTimeout(() => setSaveStatus("idle"), 4000);
       }
     });
@@ -250,10 +254,10 @@ export function SystemSettingsForm({
             Promo Codes
           </h2>
           <p className={cardStyles.sectionDesc}>
-            Create and manage promotional discount codes. Percentage codes improve the customer&apos;s exchange rate; fixed codes reduce the AUD amount.
+            Create and manage promotional codes. Each code improves the customer&apos;s exchange rate by a flat Toman amount per AUD, and can be limited to buying or selling AUD.
           </p>
         </div>
-        <PromoCodeManager initialCodes={initialCodes} />
+        <PromoCodeManager initialCodes={initialCodes} rates={{ buy: initialSettings.buy_aud ?? null, sell: initialSettings.sell_aud ?? null }} />
       </div>
     </div>
   );

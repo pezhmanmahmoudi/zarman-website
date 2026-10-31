@@ -1,7 +1,5 @@
 .workspace { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; width: 100%; max-width: 1800px; margin-inline: auto; }
 .breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; color: var(--text-dim); font-size: .75rem; }
-.paginationTop { border-bottom: 1px solid var(--border-soft); border-radius: .75rem .75rem 0 0; }
-.paginationBottom { border-top: 1px solid var(--border-soft); border-radius: 0 0 .75rem .75rem; }
 .insights { display: flex; flex-direction: column; gap: 1.5rem; min-width: 0; }
 .insightNote { display: flex; align-items: center; gap: .5rem; padding: .875rem 1rem; border: 1px solid var(--border-soft); border-radius: .625rem; background: #fff; color: var(--text-soft); font-size: .75rem; }
 .insightLoading { padding: 3rem 1.5rem; min-height: 260px; display: grid; place-items: center; border: 1px solid var(--border-soft); border-radius: .75rem; background: var(--bg-card); color: var(--text-soft); }

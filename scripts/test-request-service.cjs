@@ -198,6 +198,8 @@ function harness(overrides = {}) {
     "@/lib/supabase-server": { createSupabaseServerActionClient: async () => auth },
     "@/app/actions/admin.actions": { requireAdmin: async () => { if (!state.admin) throw new Error("Administrator required"); return state.user; } },
     "@/lib/requests/quote-money": quoteMoney,
+    "@/lib/admin-security/bank-change": { buildChangeLines: () => [], changedProtectedKeys: () => [], pickProtected: () => ({}),
+      createPendingBankChange: async () => ({}), notifyAdminsOfBankChange: async () => {}, verifyAdminPassword: async () => {} },
     "@/lib/notifications/customer-telegram": { customerTelegramConfig: () => ({ enabled: false }), dispatchCustomerTelegramSafely: async () => {} },
     "@/lib/requests/validation": validation, "@/lib/requests/receipt-upload": upload, "@/lib/pricing": pricing,
     "@/lib/requests/notification-config": notificationConfig,
@@ -920,4 +922,65 @@ test("final amounts: an incomplete schema returns a repair instruction without r
     payload: { final_funding_total: 769668900, final_recipient_amount: 4235, receiver_account_id: ACCOUNT, accounting_fee_aud: 0, accounting_rate: 181740 } });
   assert.match(result.error, /No changes were saved/); assert.match(result.error, /20261009_56/);
   assert.equal(state.calls.filter(call => call.rpc).length, 1); assert.equal(state.inserts.length, 0);
+});
+
+test("completion email: status maps delivery states and sending is admin-only, idempotent and sent once after commit", async () => {
+  const denied = harness();
+  assert.ok((await denied.actions.sendCompletionEmail(REQUEST)).error);
+  assert.ok((await denied.actions.getCompletionEmailStatus(REQUEST)).error);
+  assert.equal(denied.state.calls.length, 0);
+  const invalid = harness({ admin: true });
+  assert.ok((await invalid.actions.sendCompletionEmail("invalid")).error);
+  assert.equal(invalid.state.calls.length, 0);
+
+  for (const [status, expected] of [["skipped", "not_sent"], ["pending", "sending"], ["leased", "sending"], ["provider_accepted", "sent"],
+    ["delivered", "sent"], ["failed", "failed"], ["reconciliation_required", "failed"], ["suppressed", "failed"]]) {
+    const h = harness({ admin: true, deliveries: { id: COMMAND, status } });
+    const response = await h.actions.getCompletionEmailStatus(REQUEST);
+    assert.equal(response.data.state, expected, status);
+    assert.equal(h.state.calls[0].filters.event_type, "complete");
+    assert.equal(h.state.calls[0].filters.audience, "customer");
+    assert.equal(h.state.calls[0].filters.request_id, REQUEST);
+  }
+  assert.equal((await harness({ admin: true, deliveries: null }).actions.getCompletionEmailStatus(REQUEST)).data.state, "not_sent");
+
+  // A skipped delivery is re-armed by the RPC; the worker then runs for that delivery only.
+  const queued = harness({ admin: true, rpc: () => ({ data: { id: COMMAND, status: "pending" }, error: null }) });
+  const response = await queued.actions.sendCompletionEmail(REQUEST);
+  assert.equal(response.data.state, "sending"); assert.equal(response.data.deliveryId, COMMAND);
+  assert.deepEqual(queued.state.calls.map(call => call.rpc), ["send_completion_email"]);
+  assert.equal(queued.state.calls[0].args.p_actor_id, queued.state.user.id);
+  assert.equal(queued.state.calls[0].args.p_request_id, REQUEST);
+  assert.equal(queued.state.after.length, 1);
+  assert.equal(queued.state.emailSends, undefined);
+  await queued.state.after[0]();
+  assert.equal(queued.state.emailSends[0].deliveryId, COMMAND);
+  assert.equal(queued.state.emailSends[0].requestId, REQUEST);
+
+  // Already sent or already queued: no second delivery is started.
+  const sent = harness({ admin: true, rpc: () => ({ data: { id: COMMAND, status: "provider_accepted" }, error: null }) });
+  assert.equal((await sent.actions.sendCompletionEmail(REQUEST)).data.state, "sent");
+  assert.equal(sent.state.after, undefined);
+});
+
+test("completion email: failed deliveries retry the same delivery; reconciliation and a missing migration never send", async () => {
+  const failed = harness({ admin: true, rpc: name => name === "send_completion_email"
+    ? { data: { id: COMMAND, status: "failed" }, error: null } : { data: { id: COMMAND, status: "pending" }, error: null } });
+  const response = await failed.actions.sendCompletionEmail(REQUEST);
+  assert.equal(response.data.state, "sending");
+  assert.deepEqual(failed.state.calls.map(call => call.rpc), ["send_completion_email", "retry_request_notification"]);
+  assert.equal(failed.state.calls[1].args.p_delivery_id, COMMAND);
+  assert.equal(failed.state.after.length, 1);
+
+  const reconcile = harness({ admin: true, rpc: () => ({ data: { id: COMMAND, status: "reconciliation_required" }, error: null }) });
+  assert.match((await reconcile.actions.sendCompletionEmail(REQUEST)).error, /manual review/);
+  assert.equal(reconcile.state.after, undefined);
+
+  const missing = harness({ admin: true, rpc: () => ({ data: null, error: { code: "PGRST202" } }) });
+  assert.match((await missing.actions.sendCompletionEmail(REQUEST)).error, /20261031_68_send_completion_email/);
+  assert.equal(missing.state.after, undefined);
+
+  const rejected = harness({ admin: true, rpc: () => ({ data: null, error: { code: "P0001", message: "Only a completed request has a completion email" } }) });
+  assert.match((await rejected.actions.sendCompletionEmail(REQUEST)).error, /completed request/);
+  assert.equal(rejected.state.after, undefined);
 });

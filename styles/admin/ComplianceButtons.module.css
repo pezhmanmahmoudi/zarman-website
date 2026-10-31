@@ -71,7 +71,7 @@
 
 .methodSelect {
   min-width: 245px;
-  height: 36px;
+  height: var(--control-h, 2.25rem);
   border-radius: 0.45rem;
   border: 1px solid var(--border-soft);
   background: #fff;
@@ -125,7 +125,7 @@
   border: 1px solid transparent;
   transition: background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   white-space: nowrap;
-  min-height: 36px;
+  min-height: var(--control-h, 2.25rem);
 }
 
 .btn:disabled {

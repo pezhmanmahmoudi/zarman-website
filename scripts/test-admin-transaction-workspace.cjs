@@ -20,6 +20,7 @@ const tableMocks = {
   "@/components/admin/EditableReferenceCode": { EditableReferenceCode: ({ transactionId }) => React.createElement("button", { "data-edit-ref": transactionId }, "Edit reference") },
   "@/components/admin/EditableAmount": { EditableAmount: ({ transactionId }) => React.createElement("button", { "data-edit-amount": transactionId }, "Edit amount") },
   "@/components/admin/SendReceiptButton": { SendReceiptButton: () => null },
+  "./CompletionEmailAction": { CompletionEmailAction: () => null },
   "@/components/admin/RejectApprovedButton": { RejectApprovedButton: () => null },
 };
 const queueHarness = () => dashboardHarness({ mocks: tableMocks });
@@ -79,7 +80,7 @@ test("request rows show one blue workflow action and rejection without email or 
   assert.match(html, /request-review\?intent=reject/);
   assert.doesNotMatch(html, /intent=email|View details for ZE-(?:review|paying|done)/);
   assert.equal((html.match(/AdminWorkspace_transferAction/g) || []).length, 3);
-  assert.match(html, /Customer trade/);
+  assert.match(html, />Trade</); assert.doesNotMatch(html, /Customer trade/);
   assert.match(html, /Rate \/ AUD/);
   assert.doesNotMatch(html, /request-(?:paying|done)\?intent=reject/);
   assert.doesNotMatch(html, /data-manual/);

@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, ShieldCheck, ArrowLeftRight, MessageSquare, Settings,
   ClipboardList, Users, LogOut, Menu, X, BookOpen, TrendingUp,
-  ChartNoAxesCombined, ExternalLink, LockKeyhole, ShieldAlert, type LucideIcon,
+  ChartNoAxesCombined, ExternalLink, KeyRound, LockKeyhole, ShieldAlert, type LucideIcon,
 } from "lucide-react";
 import { AdminDialog } from "@/components/admin/ui/AdminDialog";
 import styles from "@/styles/admin/AdminShell.module.css";
@@ -52,6 +52,7 @@ export function AdminSidebar({ adminEmail, pendingKyc, pendingTx, pendingFeedbac
     ] },
     { label: "Administration", items: [
       { href: "/admin/audit", label: "Audit log", icon: ClipboardList },
+      { href: "/admin/security", label: "Two-factor security", icon: KeyRound },
       { href: "/admin/settings", label: "Settings", icon: Settings },
     ] },
   ];

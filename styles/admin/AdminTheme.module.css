@@ -25,6 +25,15 @@
   --color-text-tertiary: var(--text-dim);
   --shadow-sm: 0 1px 2px rgb(20 35 60 / 4%);
   --shadow-card: 0 2px 8px rgb(20 35 60 / 3%);
+  /* Control scale: every button, input and select in a toolbar shares these,
+     so heights, type and corners stay proportional (4px grid). */
+  --control-h: 2.25rem;        /* 36px default */
+  --control-h-sm: 2rem;        /* 32px dense rows */
+  --control-px: .75rem;        /* 12px horizontal padding */
+  --control-gap: .375rem;      /* icon ↔ label */
+  --control-radius: .5rem;     /* 8px */
+  --control-font: .8125rem;    /* 13px, 20px line box */
+  --control-icon: 1rem;        /* 16px */
   --font-en-stack: var(--font-en, 'Inter'), system-ui, -apple-system, sans-serif;
   --font-fa-stack: 'IRANSansX', 'Peyda', system-ui, sans-serif;
   --font-fa-content: var(--font-fa-stack);
@@ -35,6 +44,9 @@
   font-size: .875rem;
   line-height: 1.5;
   color-scheme: light;
+  /* `clip` (unlike the global `hidden`) does not turn <body> into a scroll
+     container, so position: sticky and document scrolling keep working. */
+  overflow-x: clip;
 }
 
 /* Portals inherit the admin theme independently of public-site resets. */
@@ -52,6 +64,8 @@
 .theme :where([dir='rtl'], [lang='fa']) { font-family: var(--font-fa-stack); }
 .theme :where(button):disabled { cursor: not-allowed; }
 .theme :where(svg) { flex-shrink: 0; }
+/* SelectBox places its chevron first for RTL; in LTR admin it belongs at the trailing edge. */
+.theme [data-dir="ltr"] > button[role="combobox"] > svg { order: 2; }
 @media (prefers-reduced-motion: reduce) {
   .theme *, .theme *::before, .theme *::after {
     animation-duration: .01ms !important;

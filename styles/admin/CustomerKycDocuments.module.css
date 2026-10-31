@@ -53,7 +53,7 @@
   justify-content: center;
   gap: .4rem;
   flex: 0 0 auto;
-  min-height: 38px;
+  min-height: var(--control-h, 2.25rem);
   padding: .5rem .75rem;
   border: 1px solid #d4cef6;
   border-radius: .5rem;
@@ -87,6 +87,6 @@
 
   .viewDocument {
     width: 100%;
-    min-height: 44px;
+    min-height: var(--control-h, 2.25rem);
   }
 }

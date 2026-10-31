@@ -62,8 +62,24 @@ export function requestLabel(status: string, locale: RequestLocale) {
 }
 
 /** Server errors are language-neutral; customer-facing feedback follows the page locale. */
+/** Promo validation messages are authored in Persian; give English-locale customers the same information. */
+function englishPromoError(error: string): string {
+  if (error.includes("فقط برای فروش دلار")) return "This promo code is only valid when you send AUD (sell AUD).";
+  if (error.includes("فقط برای خرید دلار")) return "This promo code is only valid when you buy AUD with Toman.";
+  if (error.includes("فعال نیست")) return "This promo code is not active.";
+  if (error.includes("منقضی")) return "This promo code has expired.";
+  if (error.includes("حداکثر استفاده")) return "This promo code has reached its usage limit.";
+  if (error.includes("یافت نشد")) return "Promo code not found.";
+  const minimum = /از ([\d.,]+) دلار/.exec(error);
+  if (minimum) return `This promo code needs an amount of at least ${minimum[1]} AUD.`;
+  if (error.includes("قبلاً از این کد")) return "You have already used this promo code.";
+  if (error.includes("سقف استفاده")) return "You have reached your usage limit for this promo code.";
+  if (error.includes("تلاش‌های زیاد")) return "Too many promo code attempts. Please wait a few minutes.";
+  return error;
+}
+
 export function requestError(error: string, locale: RequestLocale): string {
-  if (locale !== "fa") return error;
+  if (locale !== "fa") return /[\u0600-\u06ff]/.test(error) ? englishPromoError(error) : error;
   if (/[\u0600-\u06ff]/.test(error)) return error;
   const translations: Array<[RegExp, string]> = [
     [/wait for (?:staff )?payment approval|payment.*not.*approved|PAYMENT_APPROVAL/i, "ابتدا منتظر تأیید پرداخت از سوی مدیر بمانید."],

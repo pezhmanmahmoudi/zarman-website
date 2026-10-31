@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { applyPromoCode } from "@/lib/pricing";
+import { applyPromoCode, checkPromoEligibility, toPromoCodeData } from "@/lib/pricing";
 import type { PromoCodeData } from "@/lib/pricing";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import type { Recipient, Transaction } from "@/app/[locale]/dashboard/dashboard.types";
@@ -298,18 +298,41 @@ export async function validatePromoCode(
   if (!code?.trim() || amountAud <= 0 || currentRate <= 0) {
     return { error: "اطلاعات نامعتبر است." };
   }
+  // Codes are only checked for signed-in customers so they cannot be enumerated anonymously.
+  let userId: string;
+  try { userId = await getAuthenticatedUserId(); } catch { return { error: "Sign in to use a promo code." }; }
+  const normalized = code.trim().toUpperCase().slice(0, 50);
   try {
+    // Throttle guessing: after 10 failed attempts in 10 minutes, stop answering until the window passes.
+    const since = new Date(Date.now() - 10 * 60_000).toISOString();
+    const failures = await supabaseAdmin.from("promo_code_attempts").select("id", { count: "exact", head: true })
+      .eq("user_id", userId).eq("success", false).gte("created_at", since);
+    if (!failures.error && (failures.count ?? 0) >= 10) return { error: "تلاش‌های زیاد؛ چند دقیقه صبر کنید و دوباره تلاش کنید." };
+    const record = (success: boolean) => supabaseAdmin.from("promo_code_attempts").insert({ user_id: userId, code: normalized, success }).then(() => undefined, () => undefined);
+
     const { data, error } = await supabaseAdmin
       .from("promo_codes")
-      .select("code, discount_type, discount_value, max_uses, used_count, active, expires_at")
-      .eq("code", code.trim().toUpperCase())
+      .select("*")
+      .eq("code", normalized)
       .single();
 
-    if (error || !data) return { error: "کد تخفیف یافت نشد." };
+    if (error || !data) { await record(false); return { error: "کد تخفیف یافت نشد." }; }
 
-    const result = applyPromoCode(amountAud, currentRate, direction, data as PromoCodeData);
-    if (!result.valid) return { error: result.error };
+    const promo = toPromoCodeData(data);
+    const result = applyPromoCode(amountAud, currentRate, direction, promo);
+    if (!result.valid) { await record(false); return { error: result.error }; }
 
+    let customerUses = 0;
+    if (promo.per_customer_limit != null) {
+      const used = await supabaseAdmin.from("exchange_requests").select("id", { count: "exact", head: true })
+        .eq("user_id", userId).filter("quote->>promo_code", "eq", promo.code).not("status", "in", "(cancelled,rejected,expired)");
+      if (used.error) throw used.error;
+      customerUses = used.count ?? 0;
+    }
+    const eligible = checkPromoEligibility(promo, { rawAmountAud: amountAud, customerUses });
+    if (!eligible.valid) { await record(true); return { error: eligible.error }; }
+
+    await record(true);
     return {
       success: true,
       discount_amount: result.discount_amount,   // IRT benefit (Toman)

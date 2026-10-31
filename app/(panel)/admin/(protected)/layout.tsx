@@ -35,6 +35,11 @@ export default async function AdminLayout({
     redirect("/admin/login");
   }
 
+  // Second factor: when enforced, a password-only session is sent back to finish signing in.
+  if (process.env.ADMIN_MFA_REQUIRED === "true" && (claims as { aal?: string }).aal !== "aal2") {
+    redirect("/admin/login?mfa=1");
+  }
+
   // Fetch pending counts for sidebar badges — best-effort (don't fail the whole layout).
   let pendingKyc = 0;
   let pendingTx = 0;

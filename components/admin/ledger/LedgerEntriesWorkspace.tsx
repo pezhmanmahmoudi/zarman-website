@@ -8,7 +8,6 @@ import { AdminRefreshNotice } from "@/components/admin/ui/AdminRefreshNotice";
 import { AdminRefreshScope } from "@/components/admin/ui/AdminRefreshScope";
 import { useAdminSnapshot } from "@/components/admin/ui/useAdminSnapshot";
 import { LedgerEntriesTable, type LedgerRow } from "./LedgerEntriesTable";
-import styles from "@/styles/admin/LedgerWorkspace.module.css";
 import shared from "@/styles/admin/AdminWorkspace.module.css";
 
 type Records = Awaited<ReturnType<typeof getLedgerData>>;
@@ -27,16 +26,11 @@ export function LedgerEntriesWorkspace({ initialRecords, initialAccounts, curren
   return <AdminRefreshScope refresh={refresh}>
     <AdminRefreshNotice error={refreshError} refreshing={refreshing} onRefresh={refresh} />
     <section className={shared.panel} aria-labelledby="ledger-records-title">
-      <div className={styles.paginationTop}>
-        <AdminPagination label="Ledger pagination above entries" currentPage={page} totalCount={records.total} pageSize={pageSize} />
-      </div>
       <LedgerEntriesTable rows={records.pageLedgerRows as LedgerRow[]} bankAccounts={accounts} titleSlot={
         <div className={shared.headerActions}><h2 id="ledger-records-title" className={shared.panelTitle}>All entries</h2>
-          <span className={shared.recordCount}>{records.total.toLocaleString("en-AU")} {records.total === 1 ? "record" : "records"}</span><AdminRefreshButton /></div>
+          <AdminRefreshButton /></div>
       } />
-      <div className={styles.paginationBottom}>
-        <AdminPagination label="Ledger pagination below entries" currentPage={page} totalCount={records.total} pageSize={pageSize} />
-      </div>
+      <AdminPagination label="Ledger pagination" currentPage={page} totalCount={records.total} pageSize={pageSize} />
     </section>
   </AdminRefreshScope>;
 }

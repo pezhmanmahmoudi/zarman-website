@@ -3,14 +3,16 @@
 import { createClient, type User } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { after } from "next/server";
+import { headers } from "next/headers";
+import { buildChangeLines, changedProtectedKeys, createPendingBankChange, notifyAdminsOfBankChange, pickProtected, verifyAdminPassword } from "@/lib/admin-security/bank-change";
 import { newRequestTelegramMessage, sendTelegramAdminMessage } from "@/lib/notifications/telegram";
 import { customerTelegramConfig, dispatchCustomerTelegramSafely } from "@/lib/notifications/customer-telegram";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { requireAdmin } from "@/app/actions/admin.actions";
-import { applyPromoCode, calcLoyaltyDiscount, FINANCE_CONFIG_DEFAULTS, toCompanyTradeType, type PromoCodeData } from "@/lib/pricing";
+import { applyPromoCode, checkPromoEligibility, toPromoCodeData, calcLoyaltyDiscount, FINANCE_CONFIG_DEFAULTS, toCompanyTradeType, type PromoCodeData } from "@/lib/pricing";
 import { calculateQuoteMoney } from "@/lib/requests/quote-money";
 import { DEFAULT_REQUEST_SETTINGS, isMoney, isUuid, messageInputError, mutationInputError, publicRequestSettings, quoteInputError, settingsInputError } from "@/lib/requests/validation";
-import type { ActionResult, ExchangeRequest, PublicRequestSettings, QuoteInput, QuoteSnapshot, RequestDelivery, RequestDetail, RequestMessageInput, RequestMessageResult, RequestMutationInput, RequestQuote, RequestReceipt, RequestSettings, SettingsRecord } from "@/lib/requests/types";
+import type { ActionResult, CompletionEmailState, ExchangeRequest, PublicRequestSettings, QuoteInput, QuoteSnapshot, RequestDelivery, RequestDetail, RequestMessageInput, RequestMessageResult, RequestMutationInput, RequestQuote, RequestReceipt, RequestSettings, SettingsRecord } from "@/lib/requests/types";
 import { inspectReceiptUpload, MAX_REQUEST_RECEIPT_BYTES, REQUEST_RECEIPTS_BUCKET } from "@/lib/requests/receipt-upload";
 import { validatedNotificationSettings } from "@/lib/requests/notification-config";
 import { createNotificationDatabase, createRequestEmailSender, notificationRuntimeSettings, notificationWorkerFailureDiagnostic, sendRequestNotifications } from "@/lib/requests/notifications";
@@ -127,9 +129,9 @@ export async function createRequestQuote(input: QuoteInput): Promise<ActionResul
     let promo: PromoCodeData | null = null;
     const promoCode = input.promoCode?.trim().toUpperCase() || null;
     if (promoCode) {
-      const lookup = await db.from("promo_codes").select("code,discount_type,discount_value,max_uses,used_count,active,expires_at").eq("code", promoCode).single();
+      const lookup = await db.from("promo_codes").select("*").eq("code", promoCode).single();
       if (lookup.error || !lookup.data) throw new Error("This promotion code is not available.");
-      promo = lookup.data as PromoCodeData;
+      promo = toPromoCodeData(lookup.data as Record<string, unknown>);
       const benefit = applyPromoCode(1, baseRate, input.txType, promo);
       if (!benefit.valid) throw new Error(benefit.error);
       appliedRate = benefit.effectiveRate;
@@ -154,6 +156,17 @@ export async function createRequestQuote(input: QuoteInput): Promise<ActionResul
     const amountValue = input.amountValue ?? input.rawAmount;
     const money = calculateQuoteMoney({ amount: amountValue, currency: amountCurrency, rate: appliedRate, txType: input.txType, config, priorityFeeAud: priority });
     const { rawAmountAud, equivalentToman: equivalent, baseFeeAud: fee, priorityFeeAmount: priorityAmount, fundingTotal } = money;
+    if (promo) {
+      let customerUses = 0;
+      if (promo.per_customer_limit != null) {
+        const used = await db.from("exchange_requests").select("id", { count: "exact", head: true })
+          .eq("user_id", user.id).filter("quote->>promo_code", "eq", promo.code).not("status", "in", "(cancelled,rejected,expired)");
+        if (used.error) throw used.error;
+        customerUses = used.count ?? 0;
+      }
+      const eligible = checkPromoEligibility(promo, { rawAmountAud, customerUses });
+      if (!eligible.valid) throw new Error(eligible.error);
+    }
     if (rawAmountAud > policy.settings.max_amount_aud) throw new Error("The calculated AUD amount exceeds the service limit.");
     discount = Math.round(Math.abs(baseRate - appliedRate) * rawAmountAud);
     if (!Number.isFinite(appliedRate) || appliedRate <= 0 || !Number.isSafeInteger(equivalent) || equivalent <= 0 || !Number.isFinite(fundingTotal) || fundingTotal <= 0 || fundingTotal > Number.MAX_SAFE_INTEGER / 100) throw new Error("This amount cannot be quoted. Please review the amount and fees.");
@@ -461,6 +474,48 @@ export async function retryAdminRequestEmail(input: { requestId: string; deliver
       first_attempt_at: data.first_attempt_at, lease_expires_at: data.lease_expires_at };
   });
 }
+function completionEmailState(delivery: { id: string; status: string } | null | undefined): CompletionEmailState {
+  const status = delivery?.status;
+  const state = status === "provider_accepted" || status === "delivered" ? "sent"
+    : status === "pending" || status === "leased" ? "sending"
+    : status === "failed" || status === "reconciliation_required" || status === "suppressed" ? "failed"
+    : "not_sent";
+  return { state, deliveryId: delivery?.id ?? null };
+}
+/** Whether the completion email (the one carrying the receipt) has gone to the customer. */
+export async function getCompletionEmailStatus(requestId: string): Promise<ActionResult<CompletionEmailState>> {
+  return result(async () => {
+    await requireAdmin();
+    if (!isUuid(requestId)) throw new Error("Request not found.");
+    const { data, error } = await database().from("exchange_request_notification_deliveries").select("id,status")
+      .eq("request_id", requestId).eq("event_type", "complete").eq("audience", "customer")
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (error) throw error;
+    return completionEmailState(data);
+  });
+}
+/** For a request completed without the email box ticked. Idempotent: an email that was
+ * already sent or queued is never sent twice. */
+export async function sendCompletionEmail(requestId: string): Promise<ActionResult<CompletionEmailState>> {
+  return result(async () => {
+    const actor = await requireAdmin();
+    if (!isUuid(requestId)) throw new Error("Request not found.");
+    const db = database();
+    const queued = await db.rpc("send_completion_email", { p_actor_id: actor.id, p_request_id: requestId });
+    if (queued.error?.code === "PGRST202") throw new Error("The completion email could not be sent. Apply migration 20261031_68_send_completion_email, then try again.");
+    if (queued.error) throw queued.error;
+    let delivery = queued.data as { id: string; status: string };
+    if (delivery.status === "failed") {
+      // Same email identity and payload; the provider dedupes inside its 24h window.
+      const retried = await db.rpc("retry_request_notification", { p_actor_id: actor.id, p_request_id: requestId, p_delivery_id: delivery.id });
+      if (retried.error) throw retried.error;
+      delivery = retried.data as { id: string; status: string };
+    }
+    if (delivery.status === "pending") after(() => sendApprovedEmails(requestId, delivery.id));
+    else if (delivery.status === "reconciliation_required") throw new Error("This email needs manual review. Check Activity & email history on the request.");
+    return completionEmailState(delivery);
+  });
+}
 export async function deleteAdminRequest(id: string): Promise<ActionResult<{ transactionId: string; warning?: string }>> {
   return result(async () => {
     const admin = await requireAdmin();
@@ -517,7 +572,7 @@ export async function getRequestSettings(): Promise<ActionResult<SettingsRecord>
   // Administrators must be able to repair settings saved before new fields existed.
   return result(async () => { await requireAdmin(); return settingsRecord(false); });
 }
-export async function saveRequestSettings(input: { expectedVersion: number; settings: RequestSettings }): Promise<ActionResult<SettingsRecord>> {
+export async function saveRequestSettings(input: { expectedVersion: number; settings: RequestSettings; stepUpPassword?: string }): Promise<ActionResult<SettingsRecord>> {
   return result(async () => {
     const actor = await requireAdmin();
     if (!input || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) throw new Error("Refresh the settings before saving.");
@@ -531,11 +586,28 @@ export async function saveRequestSettings(input: { expectedVersion: number; sett
         throw new Error("Configure a valid notification sender, HTTPS site URL and webhook secret before enabling requests.");
       }
     }
-    const { data, error } = await database().rpc("save_exchange_request_settings", {
+    const db = database();
+    // Payment details never change in place: a change is queued for approval, everything else saves normally.
+    const live = await settingsRecord(false);
+    const changedKeys = changedProtectedKeys(live.settings, input.settings);
+    let toSave: RequestSettings = input.settings;
+    if (changedKeys.length) {
+      await verifyAdminPassword(db, actor, input.stepUpPassword);
+      toSave = { ...input.settings, ...pickProtected(live.settings) };
+    }
+    const { data, error } = await db.rpc("save_exchange_request_settings", {
       p_actor_id: actor.id, p_expected_version: input.expectedVersion,
-      p_settings: Object.fromEntries(Object.entries(input.settings).filter(([key]) => key !== "management_emails")),
+      p_settings: Object.fromEntries(Object.entries(toSave).filter(([key]) => key !== "management_emails")),
     });
     if (error) throw error;
+    if (changedKeys.length) {
+      const list = await headers();
+      const ip = list.get("x-forwarded-for")?.split(",")[0]?.trim() || list.get("x-real-ip") || null;
+      const previous = pickProtected(live.settings), payload = pickProtected(input.settings);
+      const pending = await createPendingBankChange(db, { admin: actor, previous, payload, ip });
+      await db.from("audit_logs").insert({ actor_id: actor.id, actor_email: actor.email ?? "", action: "BANK_DETAILS_CHANGE_REQUESTED", target_type: "exchange_request_settings", target_id: pending.id, new_value: { keys: changedKeys } });
+      await notifyAdminsOfBankChange(db, { kind: "requested", actorEmail: actor.email ?? "an administrator", ip, effectiveAfter: pending.effective_after, changes: buildChangeLines(previous, payload) });
+    }
     return data as SettingsRecord;
   });
 }
