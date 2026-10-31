@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useId } from "react";
+import React, { useMemo, useState, useRef, useId } from "react";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { SelectBox } from "../SelectBox/SelectBox";
 import s from "./DatePicker.module.css";
@@ -12,7 +12,11 @@ type CustomDatePickerProps = {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /** Which years the month/year lists offer. The year of the current value is always included. */
+  years?: YearRange;
 };
+
+export type YearRange = "any" | "recent" | "future" | "birth" | "expiry" | "issue";
 
 const parseIsoDate = (raw: string) => {
   if (!raw) return null;
@@ -28,14 +32,23 @@ const parseIsoDate = (raw: string) => {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
-const MIN_YEAR = 1900;
-const MAX_YEAR = new Date().getFullYear() + 20; 
-const YEARS = Array.from({ length: MAX_YEAR - MIN_YEAR + 1 }, (_, i) => MIN_YEAR + i);
+/** Year bounds per use: dates of birth never lie ahead, expiry dates lie ahead, ledger dates are recent. */
+const yearBounds = (range: YearRange, thisYear: number): [number, number] => {
+  switch (range) {
+    case "recent": return [thisYear - 10, thisYear + 1];
+    case "future": return [thisYear - 1, thisYear + 10];
+    case "birth": return [1900, thisYear];
+    case "expiry": return [thisYear - 5, thisYear + 20];
+    case "issue": return [thisYear - 10, thisYear];
+    default: return [1900, thisYear + 20];
+  }
+};
 
 const monthOptions = MONTHS.map((m, idx) => ({ label: m, value: idx.toString() }));
-const yearOptions = YEARS.map(y => y.toString());
 
-export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm/yyyy", disabled = false, className }: CustomDatePickerProps) {
+const displayDate = (raw: string) => { const parsed = parseIsoDate(raw); return parsed ? `${parsed.getDate()} ${MONTHS[parsed.getMonth()]} ${parsed.getFullYear()}` : raw; };
+
+export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm/yyyy", disabled = false, className, years = "any" }: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   
   const [viewDate, setViewDate] = useState(() => {
@@ -66,6 +79,14 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
 
   const currentYear = viewDate.getFullYear();
   const currentMonth = viewDate.getMonth();
+
+  const yearOptions = useMemo(() => {
+    const [low, high] = yearBounds(years, new Date().getFullYear());
+    const selected = parseIsoDate(value)?.getFullYear();
+    const first = Math.min(low, selected ?? low, currentYear);
+    const last = Math.max(high, selected ?? high, currentYear);
+    return Array.from({ length: last - first + 1 }, (_, index) => String(first + index));
+  }, [years, value, currentYear]);
   
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
@@ -147,7 +168,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
           ref={triggerRef}
           type="button"
           disabled={disabled}
-          className={`${s.input} ${isOpen ? s.inputActive : ""}`}
+          className={`${s.input} ${isOpen ? s.inputActive : ""} ${value ? "" : s.inputEmpty}`}
           aria-label={value ? `Date: ${value}` : placeholder}
           aria-haspopup="dialog"
           aria-expanded={isOpen}
@@ -160,7 +181,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
               requestAnimationFrame(() => popoverRef.current?.querySelector<HTMLElement>("button")?.focus());
             }
           }}
-        >{value || placeholder}</button>
+        >{displayDate(value) || placeholder}</button>
         <CalendarIcon size={18} className={s.icon} aria-hidden="true" />
       </div>
 

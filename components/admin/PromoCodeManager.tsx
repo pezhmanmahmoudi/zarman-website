@@ -395,7 +395,7 @@ export function PromoCodeManager({ initialCodes, rates }: { initialCodes: PromoC
                 <div className={styles.field}>
                   <span className={styles.label}>Valid until</span>
                   <div className={styles.datePicker}>
-                    <CustomDatePicker value={form.expires_at} onChange={value => setForm({ ...form, expires_at: value })} placeholder="No expiry" />
+                    <CustomDatePicker value={form.expires_at} onChange={value => setForm({ ...form, expires_at: value })} placeholder="No expiry" years="future" />
                   </div>
                   <div className={styles.chips} role="group" aria-label="Quick expiry">
                     {EXPIRY_PRESETS.map(preset => {

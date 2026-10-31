@@ -309,6 +309,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
                 <CustomDatePicker
                   value={editForm.createdAt}
                   onChange={(val) => setEditField("createdAt", val)}
+                  years="recent"
                   placeholder="dd/mm/yyyy"
                 />
               </div>
@@ -393,6 +394,7 @@ export function UserTransactionTimeline({ userId, transactions, recipients, bank
                 <CustomDatePicker
                   value={form.createdAt}
                   onChange={(val) => setField("createdAt", val)}
+                  years="recent"
                   placeholder="dd/mm/yyyy"
                 />
               </div>

@@ -39,11 +39,11 @@ test("one queue preserves manual approval and routes linked transfers through th
   const rows = [row("manual"), row("online", { status: "ready" })];
   const html = markup(h.render(TransactionQueue, { rows, bankAccounts: [] }));
   assert.equal((html.match(/class="AdminWorkspace_recordRow"/g) ?? []).length, 2);
-  assert.match(html, /Review transaction/);
+  assert.match(html, /Review transfer/);
   assert.doesNotMatch(html, /data-manual="manual"/);
   assert.doesNotMatch(html, /data-manual="online"/);
   assert.match(html, /href="\/admin\/transactions\/requests\/request-online"/);
-  assert.match(html, /Reconcile &amp; complete/);
+  assert.match(html, /Review settlement/);
 });
 
 test("funding updates change next step; funded holds and customer questions cannot enter To complete", () => {
@@ -71,19 +71,29 @@ test("queue search covers snapshot customers, manual customers and transaction c
   }
 });
 
-test("request rows show one blue workflow action and rejection without email or duplicate view", () => {
+test("request rows show one blue workflow action; rejection sits in the details drawer without email or duplicate view", () => {
   const h = queueHarness();
   const { TransactionTable } = h.load("components/admin/transactions/TransactionTable.tsx");
-  const html = markup(h.render(TransactionTable, { isPending: true, bankAccounts: [], rows: [
+  const props = { isPending: true, bankAccounts: [], rows: [
     row("review", { status: "under_review" }), row("paying", { status: "processing" }), row("done", { status: "completed" }),
-  ] }));
-  assert.match(html, /request-review\?intent=reject/);
-  assert.doesNotMatch(html, /intent=email|View details for ZE-(?:review|paying|done)/);
-  assert.equal((html.match(/AdminWorkspace_transferAction/g) || []).length, 3);
-  assert.match(html, />Trade</); assert.doesNotMatch(html, /Customer trade/);
-  assert.match(html, /Rate \/ AUD/);
-  assert.doesNotMatch(html, /request-(?:paying|done)\?intent=reject/);
-  assert.doesNotMatch(html, /data-manual/);
+  ] };
+  const closed = markup(h.render(TransactionTable, props));
+  assert.equal((closed.match(/AdminWorkspace_transferAction(?=[" ])/g) || []).length, 3); // exact class token, not sub-classes like transferActionLabel
+  assert.doesNotMatch(closed, /intent=email|View details for ZE-/);
+  assert.match(closed, />Trade</); assert.doesNotMatch(closed, /Customer trade/);
+  assert.match(closed, /Rate \/ AUD/);
+  assert.doesNotMatch(closed, /request-review\?intent=reject/);
+  assert.doesNotMatch(closed, /data-manual/);
+  // Rejecting is offered in the drawer, and only while the request can still be rejected.
+  for (const [id, canReject] of [["review", true], ["paying", false], ["done", false]]) {
+    const view = queueHarness();
+    const { TransactionTable: Table } = view.load("components/admin/transactions/TransactionTable.tsx");
+    const tree = view.render(Table, props);
+    nodes(tree, node => node.props["aria-label"] === `Details and more actions for ZE-${id}`)[0].props.onClick();
+    const opened = markup(view.render(Table, props));
+    assert.equal(opened.includes(`request-${id}?intent=reject`), canReject, `reject link for ${id}`);
+    assert.doesNotMatch(opened, /intent=email/);
+  }
 });
 
 test("request shortcuts accept only explicit email or reject intents", async () => {
@@ -128,9 +138,10 @@ test("history keeps exports and legacy edits but does not offer incompatible edi
   let tree = h.render(TransactionTable, props);
   assert.doesNotMatch(markup(tree), /data-edit-ref/);
   assert.doesNotMatch(markup(tree), /data-email/);
-  assert.match(markup(tree), /data-reject="manual"/);
+  // Reject lives in the drawer now, not in every table row.
+  assert.doesNotMatch(markup(tree), /data-reject/);
   assert.match(markup(tree), /<strong><bdi>Taylor Smith<\/bdi><\/strong>/);
-  nodes(tree, node => node.props["aria-label"] === "View details for ZE-manual")[0].props.onClick();
+  nodes(tree, node => node.props["aria-label"] === "View details · ZE-manual")[0].props.onClick();
   tree = h.render(TransactionTable, props);
   const html = markup(tree);
   assert.match(html, /data-edit-ref="manual"/);
@@ -143,7 +154,6 @@ test("history keeps exports and legacy edits but does not offer incompatible edi
   detail.props.onClose();
   tree = h.render(TransactionTable, props);
   assert.doesNotMatch(markup(tree), /role="dialog"/);
-  assert.doesNotMatch(markup(tree), /View details for ZE-online/);
   assert.match(markup(tree), /href="\/admin\/transactions\/requests\/request-online"/);
 });
 
@@ -152,10 +162,10 @@ test("manual review opens the existing approval controls and a refreshed request
   const { TransactionTable } = h.load("components/admin/transactions/TransactionTable.tsx");
   const props = { rows: [row("manual")], isPending: true, bankAccounts: [] };
   let tree = h.render(TransactionTable, props);
-  nodes(tree, node => node.props["aria-label"] === "View details for ZE-manual")[0].props.onClick();
+  nodes(tree, node => node.props["aria-label"] === "Step 1: Review transfer · ZE-manual")[0].props.onClick();
   assert.match(markup(h.render(TransactionTable, props)), /data-manual="manual"/);
   const refreshed = markup(h.render(TransactionTable, { ...props, rows: [row("manual", { status: "ready" })] }));
-  assert.match(refreshed, /Reconcile &amp; complete/);
+  assert.match(refreshed, /Review settlement/);
   assert.doesNotMatch(refreshed, /data-manual|data-edit-ref|data-edit-amount/);
 });
 

@@ -1,41 +1,54 @@
 "use client";
 
+// Customer Telegram status for one activity event, laid out exactly like the "Customer email" line
+// above it (icon + label on the left, status on the right, retry underneath when needed).
+
 import { useRef, useState } from "react";
 import { Send } from "lucide-react";
 import { retryCustomerTelegram } from "@/app/actions/customer-telegram.actions";
 import type { CustomerTelegramDelivery } from "@/lib/notifications/customer-telegram-types";
-import { requestDate } from "./request-labels";
-import { requestActivityLabel } from "@/lib/requests/journey";
 import styles from "@/styles/requests/RequestWorkspace.module.css";
 
-const labels = { pending: "Awaiting send", sending: "Sending", sent: "Sent to Telegram", failed: "Not sent", uncertain: "Delivery unconfirmed — check before retrying", cancelled: "Cancelled · connection unavailable" };
-export function TelegramDeliveryActivity({ requestId, deliveries, unavailable, onUpdated }: { requestId: string; deliveries: CustomerTelegramDelivery[]; unavailable?: boolean; onUpdated: () => Promise<void> }) {
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
+const labels: Record<CustomerTelegramDelivery["status"], string> = {
+  pending: "Queued for sending", sending: "Sending", sent: "Sent to Telegram", failed: "Delivery failed",
+  uncertain: "Delivery needs checking", cancelled: "Not sent · Telegram not connected",
+};
+const tones: Partial<Record<CustomerTelegramDelivery["status"], "good" | "bad">> = { sent: "good", failed: "bad", uncertain: "bad" };
+
+export function TelegramUnavailableNote() {
+  return <p role="status" className={styles.fieldHint}>Telegram delivery history could not be loaded. Refresh to try again.</p>;
+}
+
+/** `delivery` is null when no Telegram message was queued for this event. */
+export function TelegramEventLine({ requestId, delivery, onUpdated }: { requestId: string; delivery: CustomerTelegramDelivery | null; onUpdated: () => Promise<void> }) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pending = useRef(false);
-  async function retry(delivery: CustomerTelegramDelivery) {
-    if (pending.current) return;
-    pending.current = true; setBusy(delivery.id); setError("");
+
+  async function retry() {
+    if (!delivery || pending.current) return;
+    pending.current = true; setBusy(true); setError("");
     try {
-      const result = await retryCustomerTelegram({ requestId, deliveryId: delivery.id, allowDuplicate: confirmId === delivery.id });
+      const result = await retryCustomerTelegram({ requestId, deliveryId: delivery.id, allowDuplicate: confirming });
       if (result.error) setError(result.error === "disconnected" ? "The customer has disconnected Telegram." : "Could not queue this notification. Refresh and try again.");
-      else { setConfirmId(null); await onUpdated(); }
+      else { setConfirming(false); await onUpdated(); }
     } catch { setError("Could not queue this notification. Refresh and try again."); }
-    finally { pending.current = false; setBusy(null); }
+    finally { pending.current = false; setBusy(false); }
   }
-  if (!deliveries.length && !unavailable) return null;
-  return <section aria-label="Customer Telegram notifications">
-    <h3 className="mb-3 mt-5 text-sm font-semibold">Customer Telegram</h3>
-    {unavailable && <p role="status" className="text-sm text-amber-800">Telegram delivery history could not be loaded. Refresh to try again.</p>}
-    <ul className={styles.emailActivity}>{deliveries.map(delivery => {
-      const status = delivery.status;
-      return <li key={delivery.id}>
-      <span><Send size={13}/>{requestActivityLabel(delivery.event_type,"en")}</span><span>{labels[status]}</span><time className="text-xs" dateTime={delivery.created_at}>{requestDate(delivery.created_at,"en")}</time>
-      {["pending","failed"].includes(status) && <button type="button" className={styles.emailRetry} disabled={busy !== null} onClick={() => void retry(delivery)}>{busy === delivery.id ? "Sending…" : "Retry Telegram"}</button>}
-      {status === "uncertain" && (confirmId !== delivery.id ? <button type="button" className={styles.emailRetry} disabled={busy !== null} onClick={() => setConfirmId(delivery.id)}>Review retry</button> : <div className="basis-full rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm" role="group" aria-label="Confirm Telegram retry"><p className="mb-2">Telegram may already have delivered this message. Sending again may duplicate it.</p><button type="button" className={styles.emailRetry} disabled={busy !== null} onClick={() => void retry(delivery)}>Send again</button><button type="button" className="ms-4 min-h-11 underline" disabled={busy !== null} onClick={() => setConfirmId(null)}>Cancel</button></div>)}
-    </li>;
-    })}</ul>
-    {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
-  </section>;
+
+  const status = delivery?.status;
+  return <li data-tone={status ? tones[status] : undefined}>
+    <span><Send size={13} aria-hidden="true" />Customer Telegram</span>
+    <span>{status ? labels[status] : "Not sent"}</span>
+    {(status === "pending" || status === "failed") && <button type="button" className={styles.emailRetry} disabled={busy} onClick={() => void retry()}>{busy ? "Queuing…" : "Retry Telegram"}</button>}
+    {status === "uncertain" && (!confirming
+      ? <button type="button" className={styles.emailRetry} disabled={busy} onClick={() => setConfirming(true)}>Review retry</button>
+      : <div className={styles.retryWarning} role="group" aria-label="Confirm Telegram retry">
+          <p>Telegram may already have delivered this message. Sending again may duplicate it.</p>
+          <div><button type="button" className={styles.emailRetry} disabled={busy} onClick={() => void retry()}>Send again</button>
+            <button type="button" className={styles.textButton} disabled={busy} onClick={() => setConfirming(false)}>Cancel</button></div>
+        </div>)}
+    {error && <p role="alert" className={styles.retryError}>{error}</p>}
+  </li>;
 }

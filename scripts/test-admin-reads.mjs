@@ -71,10 +71,13 @@ function setup({ tables = {}, role = "admin", fail = () => false, apiLimit = 1_0
 
   const db = {
     from: (table) => new ReadQuery(table),
-    auth: { getUser: async () => {
-      authChecks++;
-      return { data: { user: currentRole ? { id: "offline-admin", app_metadata: { role: currentRole } } : null }, error: null };
-    } },
+    auth: {
+      getSession: async () => ({ data: { session: currentRole ? { access_token: "token" } : null }, error: null }),
+      getUser: async () => {
+        authChecks++;
+        return { data: { user: currentRole ? { id: "offline-admin", app_metadata: { role: currentRole } } : null }, error: null };
+      },
+    },
   };
   const compiledModule = { exports: {} };
   vm.runInNewContext(`(function(require,module,exports,process){${compiled}\n})`)(
@@ -118,11 +121,13 @@ test("navigation reads only pending queues and verifies capability without count
     testimonials: [{ status: "pending" }, { status: "rejected" }],
   } });
   const result = await context.actions.getAdminNavigationCounts();
-  assert.deepEqual(JSON.parse(JSON.stringify(result)), { pendingKycCount: 2, pendingTxCount: 1, pendingFeedbackCount: 1 });
-  assert.equal(context.calls.length, 4);
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), { pendingKycCount: 2, pendingTxCount: 1, pendingFeedbackCount: 1, dueRecurringCount: 0 });
+  // Direct calls recheck access per read (no render cache): the pending counts and the due-recurring
+  // reminder each verify capability. Only the reminder needs a privileged client.
+  assert.deepEqual(context.calls.map(call => call.table).sort(), ["audit_logs", "audit_logs", "profiles", "recurring_expenses", "testimonials", "transactions"]);
   assert.equal(context.calls[0].table, "audit_logs");
   assert.equal(context.calls[0].options.count, undefined);
-  assert.equal(context.serviceClients, 0);
+  assert.equal(context.serviceClients, 1);
 });
 
 test("dashboard counters reject unavailable data instead of displaying false zeroes", async () => {
@@ -181,7 +186,8 @@ test("the transaction workspace uses one fresh authorization per browser action 
   await assert.rejects(context.actions.getAdminTransactionWorkspace("active"), /Forbidden/);
   assert.equal(context.authChecks, 3);
   assert.equal(context.serviceClients, 2, "a revoked role cannot reuse privileged access from the previous action");
-  assert.equal(context.calls.length, authorizedReadCount);
+  // Identity verification and the session's own RLS capability probe run together; nothing else is read.
+  assert.deepEqual(context.calls.slice(authorizedReadCount).map(query => query.table), ["audit_logs"]);
 });
 
 test("transaction workspace reads independent history, counts and accounts while the queue is still loading", async () => {
@@ -206,7 +212,7 @@ test("transaction workspace denies unauthorized and failed-capability reads befo
     const context = setup({ role });
     await assert.rejects(context.actions.getAdminTransactionWorkspace("history"), /Unauthorized|Forbidden/);
     assert.equal(context.serviceClients, 0);
-    assert.equal(context.calls.length, 0);
+    assert.equal(context.calls.filter(query => query.table !== "audit_logs").length, 0, "at most the session's own capability probe");
   }
   const forbidden = setup({ fail: query => query.table === "audit_logs" });
   await assert.rejects(forbidden.actions.getAdminTransactionWorkspace("active"), /capability check failed/);
@@ -348,7 +354,7 @@ test("unauthenticated and non-admin requests cannot initialize a privileged ledg
       const context = setup({ role });
       await assert.rejects(context.actions[action](), /Unauthorized|Forbidden/);
       assert.equal(context.serviceClients, 0);
-      assert.equal(context.calls.length, 0);
+      assert.equal(context.calls.filter(query => query.table !== "audit_logs").length, 0, "at most the session's own capability probe");
     }
   }
 });
@@ -376,7 +382,7 @@ test("treasury rejects unauthorized direct server-action calls before creating a
       (name) => {
         if (name === "@/app/actions/admin.actions") return context.actions;
         if (name === "@supabase/supabase-js") return { createClient: () => { privilegedAccess = true; throw new Error("Privileged client should not be created"); } };
-        if (["next/cache", "@/lib/accounting-engine", "@/lib/treasury-engine", "@/lib/strategy-engine", "@/lib/bank-account-ordering", "@/lib/reconciliation-engine", "@/lib/jalali"].includes(name)) return {};
+        if (["next/cache", "@/lib/accounting-engine", "@/lib/treasury-engine", "@/lib/strategy-engine", "@/lib/bank-account-ordering", "@/lib/reconciliation-engine", "@/lib/financial-reads", "@/lib/owner-funding", "@/lib/jalali"].includes(name)) return {};
         throw new Error(`Unexpected treasury dependency: ${name}`);
       },
       treasuryModule,

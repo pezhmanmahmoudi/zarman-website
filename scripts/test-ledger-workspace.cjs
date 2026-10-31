@@ -85,14 +85,15 @@ test("default ledger Entries render only the visible records without insights or
   assert.equal(calls.treasury, 0);
   assert.deepEqual(calls.insights, []);
   assert.match(html, /All entries/);
-  assert.match(html, /266 records/);
+  // The count lives in the pager ("x–y of 266"), not repeated beside the title.
+  assert.doesNotMatch(html, /266 records/);
   assert.match(html, /Example sender/);
   assert.doesNotMatch(html, /Period metrics/);
   assert.match(html, /href="\/admin\/ledger"[^>]+aria-current="page"/);
   assert.deepEqual(calls.table[0].rows, rows);
   assert.deepEqual(calls.table[0].bankAccounts, bankAccounts);
-  assert.equal(calls.pagination.length, 2);
-  assert.notEqual(calls.pagination[0].label, calls.pagination[1].label);
+  // One pager, below the table (a second one above duplicated the controls and the border).
+  assert.equal(calls.pagination.length, 1);
 });
 
 test("selected page size and filters are shared by records, both paginators, and CSV toolbar", async () => {

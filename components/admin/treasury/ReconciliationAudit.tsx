@@ -185,7 +185,7 @@ export default function ReconciliationAudit({ bankAccounts, accounting, reconcil
       <div className={s.auditToolbar}>
         <div className={s.formGroup} style={{ maxWidth: 220 }}>
           <label className={s.formLabel}>{FA.auditAsOfLabel}</label>
-          <CustomDatePicker value={asOfDate} onChange={setAsOfDate} disabled={isPending} />
+          <CustomDatePicker value={asOfDate} onChange={setAsOfDate} years="recent" disabled={isPending} />
         </div>
         <div className={s.auditSummaryRow}>
           <span className={`${s.auditChip} ${matchedCount > 0 ? s.auditChipSuccess : ""}`}>

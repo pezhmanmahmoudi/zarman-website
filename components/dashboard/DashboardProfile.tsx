@@ -73,6 +73,9 @@ type FormDataState = {
   stateOfIssue: string;
   consentNotice: boolean;
   consentDVS: boolean;
+  pepAnswer: "" | "yes" | "no";
+  pepRelation: "" | "self" | "family" | "close_associate";
+  pepDetails: string;
 };
 
 const provincesArray = Object.values(provincesData) as ProvinceRecord[];
@@ -102,6 +105,9 @@ function buildFormData(profile: DashboardProfileData | null | undefined): FormDa
     stateOfIssue: profile?.state_of_issue || "",
     consentNotice: false,
     consentDVS: false,
+    pepAnswer: "",
+    pepRelation: "",
+    pepDetails: "",
   };
 }
 
@@ -221,6 +227,11 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
       passport_number: formData.passportNumber, state_of_issue: formData.stateOfIssue,
       expiry_date: formData.expiryDate, evidence,
     }));
+    if (!formData.pepAnswer) newErrors.pep = "Please answer the politically exposed person question.";
+    else if (formData.pepAnswer === "yes") {
+      if (!formData.pepRelation) newErrors.pep = "Tell us whether this is you, a family member or a close associate.";
+      else if (!formData.pepDetails.trim()) newErrors.pepDetails = "Describe the position held and the country.";
+    }
     if (!formData.consentNotice || !formData.consentDVS) newErrors.consents = "Please accept both verification consents.";
     setErrors(newErrors);
     if (Object.keys(newErrors).length) {
@@ -260,6 +271,9 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
       expiry_date: formData.expiryDate || null,
       consent_notice: formData.consentNotice,
       consent_dvs: formData.consentDVS,
+      pep_declaration: formData.pepAnswer === "yes"
+        ? { is_pep: true, relation: formData.pepRelation || null, details: formData.pepDetails.trim() }
+        : { is_pep: false },
     }).catch(() => ({ error: (isEntryStage || isEn) ? "Could not submit verification. Your details are still here. Please try again." : "ثبت احراز هویت ممکن نشد. اطلاعات شما حفظ شده است؛ دوباره تلاش کنید." }));
 
     if (result.error) {
@@ -365,7 +379,7 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
     if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => stepTitle.current?.focus({preventScroll:true}));
   }
   const input = (name: keyof FormDataState, en: string, fa: string, placeholder?: string) => <div className={fieldClass}><label className={labelClass} htmlFor={`profile-${name}`}>{formText(en,fa)}</label><input id={`profile-${name}`} name={name} placeholder={placeholder} value={typeof formData[name] === "string" ? formData[name] : ""} onChange={handleChange} disabled={isSubmitting || uploadingEvidence} className={dashboardInputClass} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `profile-error-${name}` : undefined}/>{fieldError(name)}</div>;
-  const date = (name: "dob" | "expiryDate", en: string, fa: string) => <div className={fieldClass}><label className={labelClass}>{formText(en,fa)}</label><CustomDatePicker value={formData[name]} onChange={value => changeField(name,value)} placeholder="dd/mm/yyyy" disabled={isSubmitting || uploadingEvidence} className={cn(selectClass,errors[name] && "[&>button]:border-rose-400!")}/>{fieldError(name)}</div>;
+  const date = (name: "dob" | "expiryDate", en: string, fa: string) => <div className={fieldClass}><label className={labelClass}>{formText(en,fa)}</label><CustomDatePicker value={formData[name]} onChange={value => changeField(name,value)} years={name === "dob" ? "birth" : "expiry"} placeholder="dd/mm/yyyy" disabled={isSubmitting || uploadingEvidence} className={cn(selectClass,errors[name] && "[&>button]:border-rose-400!")}/>{fieldError(name)}</div>;
   const personalSection = <section aria-label={formText("Personal Information", "مشخصات فردی")} className="space-y-5">
     <div className="flex items-center justify-between gap-3"><h2 className="m-0! text-lg! font-semibold leading-7! text-[#302346]!">{formText("Personal Information", "مشخصات فردی")}</h2>{!isEditingPersonal && <DashboardButton tone="secondary" onClick={startPersonalEdit} disabled={isSubmitting || isSavingPersonal}>{formText("Edit", "ویرایش")}</DashboardButton>}</div>
     {isEditingPersonal ? <><div className="grid gap-4 sm:grid-cols-2">{([{name:"firstName",en:"First name",fa:"نام"},{name:"lastName",en:"Last name",fa:"نام خانوادگی"},{name:"mobileNumber",en:"Mobile number",fa:"شماره همراه"}] as const).map(field => <div key={field.name} className={fieldClass}><label className={labelClass} htmlFor={`personal-${field.name}`}>{formText(field.en,field.fa)}</label><input id={`personal-${field.name}`} name={field.name} value={personalDraft[field.name]} onChange={handlePersonalChange} className={dashboardInputClass} disabled={isSavingPersonal || isSubmitting} aria-invalid={Boolean(errors[field.name])} aria-describedby={errors[field.name] ? `profile-error-${field.name}` : undefined}/>{fieldError(field.name)}</div>)}</div><div className="flex flex-wrap gap-3"><DashboardButton onClick={savePersonalEdit} disabled={isSavingPersonal || isSubmitting}>{isSavingPersonal ? formText("Saving…", "در حال ذخیره…") : formText("Save details", "ذخیره اطلاعات")}</DashboardButton><DashboardButton tone="secondary" onClick={cancelPersonalEdit} disabled={isSavingPersonal || isSubmitting}>{formText("Cancel", "لغو")}</DashboardButton></div></> : <dl className="m-0 grid gap-3 sm:grid-cols-2">{[{name:"firstName",label:formText("Full name", "نام و نام خانوادگی"),value:[personalData.firstName,profile?.middle_name,personalData.lastName].filter(Boolean).join(" ")},{name:"mobileNumber",label:formText("Mobile number", "شماره همراه"),value:personalData.mobileNumber},{name:"email",label:formText("Email address", "ایمیل"),value:profile?.email}].map(field => <div key={field.name} className={cn("min-w-0 rounded-2xl border border-[#e4ddef] bg-white/75 px-4 py-3.5",field.name === "email" && "sm:col-span-2")}><dt className="text-xs leading-5 text-[#6a6279]">{field.label}</dt><dd className="m-0 mt-1.5 text-sm font-semibold leading-6 text-[#302346] [overflow-wrap:anywhere]" data-private-value><bdi>{field.value || "—"}</bdi></dd>{fieldError(field.name)}</div>)}</dl>}
@@ -424,6 +438,22 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
             {["driver_license","passport","foreign_passport"].includes(formData.docType) && date("expiryDate","Expiry date","Expiry date")}
             {["photo_id","proof_of_age","national_id","concession_card"].includes(formData.docType) && date("expiryDate","Expiry date (if shown on the card)","Expiry date (if shown on the card)")}
           </KycDocumentEvidence>
+          <fieldset className="space-y-3 border-t border-[#e9ecf0] pt-6" disabled={isSubmitting || uploadingEvidence}>
+            <legend className="text-sm font-medium leading-relaxed text-[#3c4257]">{formText("Are you, or is a close family member or close associate of yours, a politically exposed person (PEP)?", "آیا شما، یکی از اعضای نزدیک خانواده یا از نزدیکان شما، شخص دارای موقعیت سیاسی (PEP) هستید؟")}</legend>
+            <p className="m-0 text-xs leading-relaxed text-[#626a76]">{formText("This means holding, or having held, a senior public position such as a head of state or government, minister, member of parliament, senior judge, senior military officer, ambassador, or an executive of a state-owned company, in any country, including Iran. Close family means a spouse, parent, child or sibling.", "یعنی داشتن یا داشتن پیشین یک سمت عمومی ارشد مانند رئیس دولت، وزیر، نماینده مجلس، قاضی ارشد، فرمانده ارشد نظامی، سفیر یا مدیر شرکت دولتی، در هر کشوری از جمله ایران. خانواده نزدیک یعنی همسر، والدین، فرزند یا خواهر و برادر.")}</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <label className="flex items-center gap-2 text-sm text-[#3c4257]"><input type="radio" name="pepAnswer" value="no" checked={formData.pepAnswer === "no"} onChange={handleChange} className="size-4 accent-[#635bff]"/>{formText("No", "خیر")}</label>
+              <label className="flex items-center gap-2 text-sm text-[#3c4257]"><input type="radio" name="pepAnswer" value="yes" checked={formData.pepAnswer === "yes"} onChange={handleChange} className="size-4 accent-[#635bff]"/>{formText("Yes", "بله")}</label>
+            </div>
+            {formData.pepAnswer === "yes" && <div className="space-y-3 rounded-lg bg-[#f6f9fc] p-4">
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                {([["self", "It is me", "خودم"], ["family", "A close family member", "عضو نزدیک خانواده"], ["close_associate", "A close associate", "از نزدیکان"]] as const).map(([value, en, fa]) =>
+                  <label key={value} className="flex items-center gap-2 text-sm text-[#3c4257]"><input type="radio" name="pepRelation" value={value} checked={formData.pepRelation === value} onChange={handleChange} className="size-4 accent-[#635bff]"/>{formText(en, fa)}</label>)}
+              </div>
+              {input("pepDetails","Position held and country","سمت و کشور","e.g. Member of parliament, Iran (2016-2020)")}
+            </div>}
+            {fieldError("pep")}
+          </fieldset>
           <div className="space-y-4 border-t border-[#e9ecf0] pt-6">
             <label className="flex items-start gap-3 text-sm leading-relaxed text-[#626a76]"><input type="checkbox" name="consentNotice" checked={formData.consentNotice} onChange={handleChange} disabled={isSubmitting || uploadingEvidence} className="mt-1 size-4 shrink-0 accent-[#635bff]"/><span>I have read and agree to the <a className="text-[#5147cc] underline underline-offset-4" href={"/" + locale + "/legal/privacy-policy"} target="_blank" rel="noopener noreferrer">Privacy Policy</a> and <a className="text-[#5147cc] underline underline-offset-4" href={"/" + locale + "/legal/dvs-notice"} target="_blank" rel="noopener noreferrer">Verification Notice</a>, including how my identity details and any supporting documents are handled.</span></label>
             <label className="flex items-start gap-3 text-sm leading-relaxed text-[#626a76]"><input type="checkbox" name="consentDVS" checked={formData.consentDVS} onChange={handleChange} disabled={isSubmitting || uploadingEvidence} className="mt-1 size-4 shrink-0 accent-[#635bff]"/><span>{KYC_DVS_CONSENT_STATEMENT}</span></label>

@@ -219,7 +219,8 @@ test("transfer preserves explicit choice, validates destination, creates account
       for (const field of ["institutionId", "paymentLink", "username", "password"]) assert.equal(getInstitution()[field], "");
     }
     getPicker().onSelect("__edu_exam__"); next().props.onClick();
-    assert.equal(elements(render(), n => n.props.role === "alert").length, 1);
+    // Missing details are reported next to their fields (each error renders as its own alert), not as one banner.
+    assert.deepEqual(Object.keys(getInstitution().errors).sort(), ["institution", "paymentLink"]);
     getInstitution().onInstitutionChange("oet");
     getInstitution().onPaymentLinkChange("https://example.com/?password=secret");
     next().props.onClick(); assert.ok(getInstitution());

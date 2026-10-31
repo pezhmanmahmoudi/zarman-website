@@ -108,7 +108,7 @@ export function KycDocumentEvidence({ country, documentType, onDocumentTypeChang
               onChange({...evidence,addressType:value,address:undefined,addressDate:""});
             }
           }} labeledOptions={KYC_ADDRESS_DOCUMENTS.map(({value,label}) => ({value,label}))} placeholder="Choose proof of address" dir="ltr" disabled={locked} className={flow.control}/>{error("addressType")}</div>
-          <div><label className={styles.label}>Document issue date</label><CustomDatePicker value={evidence.addressDate} onChange={value => onChange({...evidence,addressDate:value})} disabled={locked || !addressDoc} className={flow.control}/>{error("addressDate")}</div>
+          <div><label className={styles.label}>Document issue date</label><CustomDatePicker value={evidence.addressDate} onChange={value => onChange({...evidence,addressDate:value})} years="issue" disabled={locked || !addressDoc} className={flow.control}/>{error("addressDate")}</div>
         </div>
         {addressDoc && <p className={styles.note}>Use a {addressDoc.label.toLowerCase()} issued within the last {addressDoc.maxAgeDays} days. The name and address must match your account details.</p>}
         {fileSlot("address")}

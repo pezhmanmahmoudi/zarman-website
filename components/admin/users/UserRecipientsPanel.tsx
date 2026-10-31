@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState} from "react";
+import React, { useEffect, useMemo, useState} from "react";
 import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
 import { MapPin, Plus, Pencil, Save, X } from "lucide-react";
 import cardStyles from "@/styles/admin/AdminCards.module.css";
@@ -9,6 +9,9 @@ import formStyles from "@/styles/admin/AdminForms.module.css";
 import { createAssistedRecipientForUser, updateAssistedRecipientForUser } from "@/app/actions/admin.actions";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import { RecipientComplianceButtons } from "@/components/admin/RecipientComplianceButtons";
+import { RecipientScreening } from "@/components/admin/compliance/RecipientScreening";
+import { fetchRecipientsCompliance } from "@/lib/compliance/client";
+import type { RecipientCompliance } from "@/lib/compliance/request-compliance";
 
 interface Recipient {
   id: string;
@@ -153,6 +156,25 @@ function splitLegacyAddress(raw: string): {
 
 export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: UserRecipientsPanelProps) {
   const [isPending, startTransition] = useTransition();
+  const [screening, setScreening] = useState<Record<string, RecipientCompliance>>({});
+  const [screeningLoading, setScreeningLoading] = useState(true);
+  const recipientKey = recipients.map(recipient => recipient.id).join(",");
+  const applyScreening = (list: RecipientCompliance[]) => setScreening(Object.fromEntries(list.map(item => [item.recipientId, item])));
+  const refreshScreening = async () => {
+    if (!userId) return;
+    const result = await fetchRecipientsCompliance(userId, true);
+    if (result.data) applyScreening(result.data);
+  };
+  // Internal DFAT + PEP screens run automatically for this customer's recipients (free).
+  useEffect(() => {
+    if (!userId) return;
+    const controller = new AbortController();
+    fetchRecipientsCompliance(userId, true, controller.signal)
+      .then(result => { if (!controller.signal.aborted && result.data) applyScreening(result.data); })
+      .catch(() => { /* Aborted on navigation; recipients then show as not screened. */ })
+      .finally(() => { if (!controller.signal.aborted) setScreeningLoading(false); });
+    return () => controller.abort();
+  }, [userId, recipientKey]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecipientId, setEditingRecipientId] = useState<string | null>(null);
   const [status, setStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -781,11 +803,13 @@ export function UserRecipientsPanel({ userId, recipients, onRecipientCreated }: 
                         </>
                       )}
                     </dl>
-                    {/* Compliance check buttons — manual admin trigger only */}
-                    <div style={{ marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px dashed var(--border-soft)" }}>
-                      <RecipientComplianceButtons
-                        recipientId={r.id}
-                      />
+                    {/* Internal sanctions + PEP result; NameScan stays available on demand. */}
+                    <div style={{ marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px dashed var(--border-soft)", display: "grid", gap: "0.5rem" }}>
+                      <RecipientScreening result={screening[r.id]} loading={screeningLoading} onChanged={() => void refreshScreening()} />
+                      <details>
+                        <summary style={{ cursor: "pointer", fontSize: "0.72rem", color: "var(--text-soft)" }}>NameScan</summary>
+                        <div style={{ marginTop: "0.4rem" }}><RecipientComplianceButtons recipientId={r.id} /></div>
+                      </details>
                     </div>
                   </>
                 )}

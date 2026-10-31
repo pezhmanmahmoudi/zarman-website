@@ -203,8 +203,8 @@ export default function LedgerToolbar({ currentParams, bankAccounts, exportFilte
         <div className={toolbar.field} data-wide><span>Date range</span><SelectBox placeholder="Date range" labeledOptions={rangeOptions} value={currentParams.range || (currentParams.start || currentParams.end ? "custom" : "all")} onChange={value => navigate(value === "custom" ? { range: value } : { range: value, start: null, end: null })} disabled={navigating} dir="ltr" /></div>
         <div className={toolbar.field} data-wide><span>Bank account</span><SelectBox placeholder="Bank account" labeledOptions={accountOptions} value={currentParams.account || "all"} onChange={value => navigate({ account: value === "all" ? null : value })} disabled={navigating} dir="ltr" /></div>
         {isCustom && <>
-          <div className={toolbar.field}><span>From</span><CustomDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" disabled={navigating} /></div>
-          <div className={toolbar.field}><span>To</span><CustomDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" disabled={navigating} /></div>
+          <div className={toolbar.field}><span>From</span><CustomDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" years="recent" disabled={navigating} /></div>
+          <div className={toolbar.field}><span>To</span><CustomDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" years="recent" disabled={navigating} /></div>
           <div className={toolbar.apply}>
             {invalidRange && <p className={toolbar.error} role="alert">End date must be on or after the start date.</p>}
             <button type="button" className={styles.action} onClick={() => navigate({ start: customStart, end: customEnd, range: "custom" })} disabled={!customStart || !customEnd || invalidRange || navigating}><Check /> Apply dates</button>

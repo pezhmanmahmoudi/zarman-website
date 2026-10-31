@@ -196,6 +196,7 @@ export default function OwnerLoanForm({ loans, bankAccounts, defaultOpen = false
               <CustomDatePicker 
                 value={form.date} 
                 onChange={(newDate) => field("date", newDate)} 
+                years="recent"
                 disabled={financialFieldsDisabled}
               />
             </div>

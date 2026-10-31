@@ -218,12 +218,14 @@ test("invalid input shows an accessible error; out-of-range input clamps before 
 
 test("changing rows resets to page one; pending navigation blocks all controls and duplicates", () => {
   const ui = interactivePager();
-  nodes(ui.render(), node => node.type === "select")[0].props.onChange({ target: { value: "50" } });
+  // Rows per page is the shared SelectBox (it receives the chosen value, not a DOM event).
+  const rowSize = node => Array.isArray(node.props?.options) && typeof node.props?.onChange === "function";
+  nodes(ui.render(), rowSize)[0].props.onChange("50");
   assert.equal(ui.pushes[0][0], helpers.adminPaginationHref("/admin/ledger", query, 1, 50));
   ui.setPending(true);
   const tree = ui.render();
   assert.equal(tree.props["aria-busy"], true);
-  for (const control of nodes(tree, node => ["select", "button"].includes(node.type))) assert.equal(control.props.disabled, true);
+  for (const control of nodes(tree, node => node.type === "button" || rowSize(node))) assert.equal(control.props.disabled, true);
   for (const control of nodes(ui.renderJump(), node => ["input", "button"].includes(node.type))) assert.equal(control.props.disabled, true);
   nodes(tree, node => node.props?.["aria-label"] === "Next page")[0].props.onClick();
   nodes(ui.renderJump(), node => node.type === "form")[0].props.onSubmit({ preventDefault() {} });

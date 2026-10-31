@@ -204,6 +204,9 @@ function harness(overrides = {}) {
     "@/lib/requests/validation": validation, "@/lib/requests/receipt-upload": upload, "@/lib/pricing": pricing,
     "@/lib/requests/notification-config": notificationConfig,
     "@/lib/requests/conflicts": conflicts,
+    "@/lib/compliance/request-compliance": { COMPLIANCE_GATED_COMMANDS: ["await_funds", "resume_funded_request", "finalize_funds", "start_processing", "reconcile_complete", "complete"],
+      complianceGateError: async (_db, requestId) => { state.gateChecks = (state.gateChecks || []).concat([requestId]); if (state.gateThrows) throw state.gateThrows; return state.gateBlock ?? null; } },
+    "@/lib/compliance/screening": { complianceDb: () => db, isComplianceUnavailable: error => error?.code === "42P01" },
     "@/lib/requests/notifications": {
       notificationRuntimeSettings: () => ({ apiKey: "test-key", from: "Zarman <sender@example.invalid>", siteUrl: "https://example.invalid" }),
       createNotificationDatabase: () => ({ notification: true }),
@@ -983,4 +986,33 @@ test("completion email: failed deliveries retry the same delivery; reconciliatio
   const rejected = harness({ admin: true, rpc: () => ({ data: null, error: { code: "P0001", message: "Only a completed request has a completion email" } }) });
   assert.match((await rejected.actions.sendCompletionEmail(REQUEST)).error, /completed request/);
   assert.equal(rejected.state.after, undefined);
+});
+
+test("compliance gate blocks approval and settlement commands until sanctions/PEP checks are clear", async () => {
+  const { actions, state } = harness({ admin: true });
+  const base = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, sendEmail: false };
+  state.gateBlock = "Customer sanctions check (DFAT) has a potential match awaiting admin review.";
+  const blocked = await actions.mutateAdminRequest({ ...base, action: "await_funds" });
+  assert.match(blocked.error, /Compliance check required|potential match/);
+  assert.equal(state.calls.filter(call => call.rpc).length, 0);
+  // Non-financial commands are not gated.
+  state.gateChecks = [];
+  await actions.mutateAdminRequest({ ...base, action: "request_info", payload: { message: "Please send a receipt." } });
+  assert.deepEqual(state.gateChecks, []);
+  // Customers never go through the admin gate.
+  state.gateBlock = null;
+  await actions.mutateMyRequest({ ...base, action: "cancel", payload: { message: "Changed my mind" } });
+  assert.deepEqual(state.gateChecks, []);
+});
+
+test("an unverifiable compliance status fails closed, while a not-yet-migrated database does not block", async () => {
+  const { actions, state } = harness({ admin: true });
+  const base = { requestId: REQUEST, commandKey: COMMAND, expectedVersion: 1, sendEmail: false };
+  state.gateThrows = new Error("connection reset");
+  const failed = await actions.mutateAdminRequest({ ...base, action: "await_funds" });
+  assert.match(failed.error, /could not be verified/);
+  assert.equal(state.calls.filter(call => call.rpc).length, 0);
+  state.gateThrows = Object.assign(new Error("relation does not exist"), { code: "42P01" });
+  const unmigrated = await actions.mutateAdminRequest({ ...base, action: "await_funds" });
+  assert.doesNotMatch(String(unmigrated.error), /Compliance/);
 });

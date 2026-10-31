@@ -51,6 +51,8 @@ function compile(file, mocks = {}) {
     if (id.endsWith(".module.css")) return cssModule(id);
     if (id === "next/link") return { __esModule: true, default: props => React.createElement("a", props) };
     if (id === "next/image") return { __esModule: true, default: props => React.createElement("img", props) };
+    // Pure helper used by the dashboard's recurring-expense reminders; compile the real one.
+    if (id === "@/lib/treasury-navigation") return compile("lib/treasury-navigation.ts");
     return require(id);
   };
   vm.runInThisContext(`(function(require,module,exports){${js}\n})`, { filename: file })(
@@ -59,11 +61,12 @@ function compile(file, mocks = {}) {
   return compiled.exports;
 }
 
-async function renderDashboard(stats = emptyStats, logs = []) {
+async function renderDashboard(stats = emptyStats, logs = [], dueExpenses = []) {
   const calls = [];
   const Dashboard = compile(dashboardPath, {
     "@/app/actions/admin.actions": {
       getAdminStats: async () => stats,
+      getDueRecurringExpenses: async () => dueExpenses,
       getAuditLogs: async (page, pageSize) => {
         calls.push({ page, pageSize });
         return { data: logs, count: logs.length };
@@ -117,6 +120,20 @@ test("dashboard displays the returned queue counts, their total, and useful dest
     assert.ok(html.includes(`href="/admin/${destination}"`), `Missing ${destination} destination`);
   }
   assert.deepEqual(calls, [{ page: 1, pageSize: 7 }]);
+});
+
+test("due recurring expenses get a reminder that links to posting them; none means no section", async () => {
+  const none = await renderDashboard();
+  assert.doesNotMatch(none.html, /Recurring expenses due/);
+  const { html } = await renderDashboard(emptyStats, [], [
+    { id: "r1", title: "Website hosting", amount: 40, currency: "AUD", next_due_date: "2026-10-30", daysOverdue: 0 },
+    { id: "r2", title: "Office rent", amount: 2000, currency: "AUD", next_due_date: "2026-10-27", daysOverdue: 3 },
+  ]);
+  assert.match(html, /Recurring expenses due/);
+  assert.match(html, /2 scheduled payments are due or overdue/);
+  assert.match(html, /Due today/);
+  assert.match(html, /3 days overdue/);
+  assert.match(html, /Post payments/);
 });
 
 test("empty queues and audit history render an honest empty state", async () => {

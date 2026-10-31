@@ -9,6 +9,7 @@ import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { runManualAmlCheck } from "@/lib/compliance/manual";
 import { generateAmlPdf } from "@/lib/compliance/pdf";
 import { getCustomerVerificationConsent } from "@/lib/compliance/customer-consent";
+import { insertScreening } from "@/lib/compliance/request-compliance";
 
 const PRIVILEGED_ROLES = new Set(["admin", "supabase_admin", "service_role"]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -105,6 +106,19 @@ export async function POST(req: NextRequest) {
       compliance_aml_flag: amlFlag,
     })
     .eq("id", userId);
+
+  // Record the vendor result in the shared screening log so the sanctions and PEP vendor ticks
+  // on the customer and transaction panels reflect it. Non-fatal (e.g. migration not applied yet).
+  try {
+    const vendorOutcome = amlResult.outcome === "FAILED" ? "failed" : amlResult.outcome === "CLEAR" ? "clear" : "potential_match";
+    await insertScreening(db, {
+      requestId: null, profileId: userId, party: "customer", kind: "combined", method: "vendor_namescan", subjectName: fullName, subjectDob: profile.dob ?? null,
+      outcome: vendorOutcome, matches: vendorOutcome === "potential_match" ? [{
+        source: "pep", reference: amlResult.referenceId ?? "namescan", listedName: fullName, matchedName: fullName, entryType: "NameScan result", percent: 0, strength: "possible", dob: "unknown", listedDob: null,
+        details: { Matches: String(amlResult.matchCount), "Possible matches": String(amlResult.possibleMatchCount), Lists: amlResult.listsScreened.join(", "), Note: "Review the downloaded NameScan report." },
+      }] : [], vendorReference: amlResult.referenceId, vendorResponse: amlResult.rawResponse, note: amlResult.errorMessage ?? null, performedBy: user.id,
+    });
+  } catch { /* Screening log is supplementary to the profile fields and audit log. */ }
 
   // 6. Audit log — non-fatal if it fails.
   try {

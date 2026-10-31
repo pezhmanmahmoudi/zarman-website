@@ -76,6 +76,8 @@
   background-color: rgba(99, 91, 255, .06);
   cursor: pointer;
 }
+/* First/last page buttons; kept as a named hook for styling and tests. */
+.boundaryButton { flex-shrink: 0; }
 .iconButton > svg { width: var(--control-icon, 1rem); height: var(--control-icon, 1rem); }
 
 /* Rows-per-page uses the shared SelectBox so the menu matches every other admin dropdown. */

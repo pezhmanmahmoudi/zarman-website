@@ -3,7 +3,6 @@
 import { createClient, type User } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { after } from "next/server";
-import { headers } from "next/headers";
 import { buildChangeLines, changedProtectedKeys, createPendingBankChange, notifyAdminsOfBankChange, pickProtected, verifyAdminPassword } from "@/lib/admin-security/bank-change";
 import { newRequestTelegramMessage, sendTelegramAdminMessage } from "@/lib/notifications/telegram";
 import { customerTelegramConfig, dispatchCustomerTelegramSafely } from "@/lib/notifications/customer-telegram";
@@ -21,6 +20,8 @@ import { decryptPaymentAccountAccess, encryptPaymentAccountAccess, validatePayme
 import { requestMatchesSearch, requestNeedsAttention, type ActivityFilter, type RequestPage } from "@/lib/dashboard/activity";
 import { cleanSearchTerm, DASHBOARD_PAGE_SIZE, ilikeAny, requestedPage } from "@/lib/dashboard/paging";
 import { isRequestConflict, REQUEST_CONFLICT_MESSAGE } from "@/lib/requests/conflicts";
+import { COMPLIANCE_GATED_COMMANDS, complianceGateError } from "@/lib/compliance/request-compliance";
+import { complianceDb, isComplianceUnavailable } from "@/lib/compliance/screening";
 
 const REQUEST_DELIVERY_COLUMNS = "id,event_id,request_id,audience,recipient_email,locale,status,attempts,last_error,created_at,first_attempt_at,lease_expires_at,provider_id";
 
@@ -312,16 +313,15 @@ async function readDetail(id: string, userId?: string): Promise<RequestDetail> {
   const db = database();
   let query = db.from("exchange_requests").select("*").eq("id", id);
   if (userId) query = query.eq("user_id", userId);
-  const request = await query.single();
-  if (request.error || !request.data) throw new Error("Request not found.");
+  const requestRead = query.single();
   const eventQuery = userId
     ? db.from("exchange_request_events").select("id,request_id,sequence,event_type,status,public_message,actor_id,created_at")
       .eq("request_id", id).eq("customer_visible", true).order("sequence", { ascending: true })
     : db.from("exchange_request_events").select("id,request_id,sequence,event_type,status,public_message,actor_id,created_at,internal_message,send_email")
       .eq("request_id", id).order("sequence", { ascending: true });
-  // These reads depend on the authorized request lookup above, not on one another.
-  // Keep admin-only data out of customer queries while avoiding a second read wave.
-  const [events, receipts, messages, deliveries, payments, telegram] = await Promise.all([
+  // Keep admin-only data out of customer queries. For a customer these reads wait for the
+  // ownership check above; an admin is already authorised, so the request row joins the same wave.
+  const readRelated = () => Promise.all([
     eventQuery,
     db.from("exchange_request_receipts").select("id,request_id,original_name,content_type,size_bytes,sha256,uploaded_by,created_at").eq("request_id", id).order("created_at", { ascending: false }),
     db.from("exchange_request_messages").select("id,request_id,event_id,event_sequence,sender_id,sender_role,body,send_email,created_at").eq("request_id", id).order("event_sequence", { ascending: true }),
@@ -329,6 +329,17 @@ async function readDetail(id: string, userId?: string): Promise<RequestDetail> {
     userId ? null : db.from("exchange_request_current_payments").select("id,request_id,payment_reference,amount,currency,account_id,created_at,original_amount,corrected_at,excluded").eq("request_id", id).order("created_at", { ascending: false }),
     userId || !customerTelegramConfig() ? null : db.from("customer_telegram_deliveries").select("id,event_id,event_type,status,attempts,last_error,created_at,sent_at,lease_expires_at").eq("request_id", id).order("created_at", { ascending: false }).limit(100),
   ]);
+  let request: Awaited<typeof requestRead>;
+  let related: Awaited<ReturnType<typeof readRelated>>;
+  if (userId) {
+    request = await requestRead;
+    if (request.error || !request.data) throw new Error("Request not found.");
+    related = await readRelated();
+  } else {
+    [request, related] = await Promise.all([requestRead, readRelated()]);
+  }
+  if (request.error || !request.data) throw new Error("Request not found.");
+  const [events, receipts, messages, deliveries, payments, telegram] = related;
   if (events.error) throw events.error;
   if (receipts.error) throw receipts.error;
   if (messages.error) throw messages.error;
@@ -354,6 +365,15 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
   const actor = admin ? await requireAdmin() : await customer();
   const invalid = mutationInputError(input, admin);
   if (invalid) throw new Error(invalid);
+  // AML/CTF program: sanctions + PEP screening must be recorded and clear (and category C
+  // approved) before a request is approved or money moves. Skipped only until the compliance
+  // migration has been applied; any other failure to verify blocks the command.
+  if (admin && (COMPLIANCE_GATED_COMMANDS as readonly string[]).includes(input.action)) {
+    let blocked: string | null = null;
+    try { blocked = await complianceGateError(complianceDb(), input.requestId, actor.id); }
+    catch (error) { if (!isComplianceUnavailable(error)) throw new Error("Compliance status could not be verified. Please try again."); }
+    if (blocked) throw new Error(blocked);
+  }
   const db = database();
   let accountingDate: string | undefined;
   if (["complete", "reconcile_complete", "confirm_funds", "correct_funds", "finalize_funds", "resume_funded_request", "confirm_refund"].includes(input.action)) {
@@ -601,6 +621,7 @@ export async function saveRequestSettings(input: { expectedVersion: number; sett
     });
     if (error) throw error;
     if (changedKeys.length) {
+      const { headers } = await import("next/headers");
       const list = await headers();
       const ip = list.get("x-forwarded-for")?.split(",")[0]?.trim() || list.get("x-real-ip") || null;
       const previous = pickProtected(live.settings), payload = pickProtected(input.settings);

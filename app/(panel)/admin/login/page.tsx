@@ -39,7 +39,6 @@ export default function AdminLoginPage() {
       if (!data.user || data.user.app_metadata?.role !== "admin") return;
       if (!(await continueWithSecondFactor())) setStep("enroll");
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on arrival
   }, []);
 
   const verifyCode = async (value: string) => {
@@ -52,7 +51,7 @@ export default function AdminLoginPage() {
     router.push("/admin/dashboard");
   };
 
-  const useDifferentAccount = async () => {
+  const switchAccount = async () => {
     await supabase.auth.signOut();
     setStep("password"); setCode(""); setError(""); setPassword("");
   };
@@ -129,7 +128,7 @@ export default function AdminLoginPage() {
             <button type="submit" className={styles.submitBtn} style={{ marginTop: "1.25rem" }} disabled={loading || code.length !== 6}>
               <Lock size={16} />{loading ? "Verifying..." : "Verify and continue"}
             </button>
-            <button type="button" onClick={() => void useDifferentAccount()} disabled={loading}
+            <button type="button" onClick={() => void switchAccount()} disabled={loading}
               style={{ display: "block", margin: "1rem auto 0", background: "none", border: 0, color: "inherit", opacity: 0.7, fontSize: ".8125rem", textDecoration: "underline", cursor: "pointer" }}>
               Use a different account
             </button>

@@ -349,3 +349,9 @@
 .customerLayout .note {
   overflow-wrap: anywhere;
 }
+
+/* Collapsible DVS controls under the unified compliance grid */
+.dvsDrawer { border: 1px solid var(--border-soft); border-radius: 0.65rem; padding: 0.5rem 0.7rem; background: var(--bg-card); }
+.dvsDrawer > summary { cursor: pointer; font-size: 0.74rem; font-weight: 700; color: var(--text-soft); list-style: none; }
+.dvsDrawer > summary::-webkit-details-marker { display: none; }
+.dvsDrawer[open] > summary { margin-bottom: 0.6rem; }

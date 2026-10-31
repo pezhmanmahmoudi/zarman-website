@@ -8,7 +8,12 @@ const vm = require("node:vm");
 function compile(file) {
   const source = ts.transpileModule(readFileSync(resolve(__dirname, "..", file), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const compiled = { exports: {} };
-  vm.runInNewContext(source, { module: compiled, exports: compiled.exports, Intl, Date });
+  // Local helpers the compiled module imports (labels use the shared number formatter).
+  const localRequire = id => {
+    if (id === "@/lib/numbers") return compile("lib/numbers.ts");
+    throw new Error(`Unexpected dependency ${id}`);
+  };
+  vm.runInNewContext(source, { module: compiled, exports: compiled.exports, require: localRequire, Intl, Date });
   return compiled.exports;
 }
 const journey = compile("lib/requests/journey.ts");

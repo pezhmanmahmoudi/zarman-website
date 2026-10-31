@@ -39,7 +39,8 @@ test("small transfers include the fee on the correct side and reject invalid pre
 test("pricing details show stored rate, Toman benefits and only applicable discounts", () => {
   const { RequestPricingDetails } = h.load("components/requests/RequestPricingDetails.tsx");
   const html = markup(React.createElement(RequestPricingDetails, { request }));
-  for (const value of ["182,600 Toman", "6,688,626 Toman", "SAVE", "123,456 Toman"]) assert.ok(html.includes(value));
+  assert.match(html, /Final exchange rate/); // the rate and its currency are rendered in separate elements
+  for (const value of ["182,600", "6,688,626 Toman", "SAVE", "123,456 Toman"]) assert.ok(html.includes(value), `missing ${value}`);
   const adjusted = markup(React.createElement(RequestPricingDetails, { request: { ...request, original_quote: request.quote,
     quote: { ...request.quote, admin_adjusted: true, loyalty_discount: 99999999 } } }));
   assert.match(adjusted, /Original loyalty savings/); assert.match(adjusted, /6,688,626/); assert.doesNotMatch(adjusted, /99,999,999/);

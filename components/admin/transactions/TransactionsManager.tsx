@@ -412,11 +412,11 @@ export function TransactionsManager({
           <div id="history-date-filters" className={workspace.datePanel} hidden={!datesOpen} role="group" aria-label="Filter by date">
             <div className={workspace.filterField}>
               <span className={workspace.fieldLabel}>From</span>
-              <CustomDatePicker value={filterStart} onChange={value => { setFilterStart(value); setDateError(""); }} placeholder="Start date" className={workspace.datePicker} />
+              <CustomDatePicker value={filterStart} onChange={value => { setFilterStart(value); setDateError(""); }} placeholder="Start date" years="recent" className={workspace.datePicker} />
             </div>
             <div className={workspace.filterField}>
               <span className={workspace.fieldLabel}>To</span>
-              <CustomDatePicker value={filterEnd} onChange={value => { setFilterEnd(value); setDateError(""); }} placeholder="End date" className={workspace.datePicker} />
+              <CustomDatePicker value={filterEnd} onChange={value => { setFilterEnd(value); setDateError(""); }} placeholder="End date" years="recent" className={workspace.datePicker} />
             </div>
             <button type="button" className={workspace.action} onClick={() => {
               if (filterStart && filterEnd && filterStart > filterEnd) { setDateError("The end date must be on or after the start date."); return; }

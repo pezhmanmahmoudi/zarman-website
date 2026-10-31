@@ -150,6 +150,7 @@ export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted
                 <CustomDatePicker
                   value={form.dob}
                   onChange={(val) => setField("dob", val)}
+                  years="birth"
                 />
               </div>
               <div className={formStyles.fieldGroup}>
@@ -270,6 +271,7 @@ export function UserKycManager({ profile, onProfileUpdated, onKycStatusCommitted
                 <CustomDatePicker
                   value={form.expiry_date}
                   onChange={(val) => setField("expiry_date", val)}
+                  years="expiry"
                 />
               </div>
               <div className={formStyles.fieldGroup}>

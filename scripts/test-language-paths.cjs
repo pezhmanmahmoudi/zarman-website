@@ -106,7 +106,17 @@ const previousWindow = global.window;
 try {
   global.window = { location: { hash: "#rates" } };
   let navigated = false;
-  const anchor = LanguageSwitcher({ onNavigate: () => { navigated = true; } });
+  // The switcher uses hooks, so call it inside a render and read the anchor to the other language from its output.
+  let tree;
+  renderToStaticMarkup(React.createElement(function Probe() { tree = LanguageSwitcher({ onNavigate: () => { navigated = true; } }); return null; }));
+  const findAnchor = node => {
+    if (!React.isValidElement(node)) return null;
+    if (node.type === "a") return node;
+    for (const child of React.Children.toArray(node.props.children)) { const found = findAnchor(child); if (found) return found; }
+    return null;
+  };
+  const anchor = findAnchor(tree);
+  assert.ok(anchor, "the switcher exposes an anchor to the other language");
   const currentTarget = { href: anchor.props.href };
   anchor.props.onClick({ currentTarget });
   assert.equal(currentTarget.href, "/en#rates");

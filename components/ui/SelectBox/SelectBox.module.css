@@ -17,7 +17,7 @@
   justify-content: flex-start;
   gap: 0.5rem;
   width: 100%;
-  border-radius: 0.5rem; /* شعاع استاندارد مدرن */
+  border-radius: var(--control-radius, 0.5rem);
   cursor: pointer;
   transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
   box-sizing: border-box;
@@ -36,7 +36,7 @@
 }
 .triggerOpen.triggerDefault {
   border-color: var(--accent, #4f46e5);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb, 79, 70, 229), 0.15);
 }
 
 /* ── Variant: Ghost (استفاده در ماشین حساب) ── */
@@ -93,7 +93,7 @@
   flex-shrink: 0;
   color: var(--text-dim, #94a3b8);
   margin: 0;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .chevronOpen { transform: rotate(180deg); color: var(--accent, #4f46e5); }
 
@@ -114,10 +114,7 @@
   border-radius: 0.75rem;
   
   /* سایه چندلایه مدرن (Premium Shadow) */
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  box-shadow: 0 10px 24px -8px rgba(15, 23, 42, 0.22), 0 2px 6px -2px rgba(15, 23, 42, 0.1);
   
   overflow: hidden;
   padding: 0.25rem; /* پدینگ داخلی کل منو */
@@ -206,21 +203,22 @@
 }
 
 .option:hover {
-  background: var(--bg-soft, rgba(148, 163, 184, 0.12));
+  background: rgba(var(--accent-rgb, 79, 70, 229), 0.06);
 }
 
 .optionSelected {
-  background: var(--accent, #4f46e5);
-  color: #ffffff !important; /* رنگ متن آیتم انتخاب شده همیشه سفید بماند */
-  font-weight: 500;
+  background: rgba(var(--accent-rgb, 79, 70, 229), 0.1);
+  color: var(--accent, #4f46e5);
+  font-weight: 600;
 }
 
 .optionSelected:hover {
-  background: var(--accent-hover, #4338ca);
+  background: rgba(var(--accent-rgb, 79, 70, 229), 0.16);
 }
 
 .checkIcon {
   flex-shrink: 0;
+  color: var(--accent, #4f46e5);
   margin-right: 0.5rem; /* فاصله آیکون تیک از متن */
 }
 .wrapper[data-dir="ltr"] .checkIcon {
@@ -239,7 +237,8 @@
   z-index: 10;
   font-size: 16px;
 }
-.optionActive:not(.optionSelected) { background: var(--bg-soft, #f1f5f9); outline: 1px solid var(--border-med, #cbd5e1); outline-offset: -1px; }
+.optionActive:not(.optionSelected) { background: rgba(var(--accent-rgb, 79, 70, 229), 0.06); }
+.optionActive.optionSelected { box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb, 79, 70, 229), 0.35); }
 .trigger:focus-visible { outline: 2px solid var(--accent, #4f46e5); outline-offset: 2px; }
 .wrapper:has(.nativeOverlay:focus-visible) .trigger { outline: 2px solid var(--accent, #4f46e5); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .trigger, .chevron, .dropdown, .option { animation: none; transition: none; } }

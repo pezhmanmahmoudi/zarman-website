@@ -338,6 +338,7 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts, 
               <CustomDatePicker
                 value={form.start_date}
                 onChange={d => field("start_date", d)}
+                years="recent"
                 disabled={isPending}
               />
             </div>
@@ -483,6 +484,7 @@ export default function RecurringExpenseForm({ recurringExpenses, bankAccounts, 
                                   [item.id]: { ...prev[item.id], date: d },
                                 }))
                               }
+                              years="recent"
                               disabled={isPending}
                             />
                           </div>

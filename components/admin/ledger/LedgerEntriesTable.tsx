@@ -145,7 +145,7 @@ export function LedgerEntriesTable({ rows, bankAccounts, titleSlot }: { rows: Le
         <button type="submit" form="ledger-entry-editor" className={`${styles.action} ${styles.primaryAction}`} disabled={saving}>{saving ? "Saving…" : "Save entry"}</button></div>}>
       <form id="ledger-entry-editor" className={styles.editorForm} onSubmit={save} aria-busy={saving}>
         <fieldset className={styles.editorFields} disabled={saving}>
-          <label>Date<CustomDatePicker value={draft.date} onChange={value => setField("date", value)} placeholder="Entry date" disabled={saving} /></label>
+          <label>Date<CustomDatePicker value={draft.date} onChange={value => setField("date", value)} placeholder="Entry date" years="recent" disabled={saving} /></label>
           <label>Type<SelectBox dir="ltr" placeholder="Entry type" value={draft.type} onChange={changeType} disabled={saving} labeledOptions={[{ label: "Buy AUD", value: "buy_aud" }, { label: "Sell AUD", value: "sell_aud" }, { label: "Transfer", value: "transfer" }]} /></label>
           <label>Sender<input value={draft.sender} onChange={event => setField("sender", event.target.value)} dir="auto" /></label>
           <label>Recipient<input value={draft.recipient} onChange={event => setField("recipient", event.target.value)} dir="auto" /></label>

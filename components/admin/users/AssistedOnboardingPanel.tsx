@@ -224,6 +224,7 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                   <CustomDatePicker
                     value={form.dob}
                     onChange={(val) => setField("dob", val)}
+                    years="birth"
                     disabled={isPending}
                   />
                 </div>
@@ -382,6 +383,7 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                       <CustomDatePicker
                         value={form.expiry_date}
                         onChange={(val) => setField("expiry_date", val)}
+                        years="expiry"
                         disabled={isPending}
                       />
                     </div>
@@ -399,6 +401,7 @@ export function AssistedOnboardingPanel({ onCreated }: Props) {
                       <CustomDatePicker
                         value={form.expiry_date}
                         onChange={(val) => setField("expiry_date", val)}
+                        years="expiry"
                         disabled={isPending}
                       />
                     </div>

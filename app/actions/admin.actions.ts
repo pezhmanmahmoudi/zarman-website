@@ -3,8 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { revalidateTag } from "next/cache";
-import { headers } from "next/headers";
-import { notifyAdminsOfSecurityEvent } from "@/lib/admin-security/alerts";
+import type { SecurityEvent } from "@/lib/admin-security/alerts";
 import { createSupabaseServerComponentClient } from "@/lib/supabase-server";
 import { getRatesSnapshot } from "@/lib/rates";
 import { calcExecutionRateFromSettlement, toCompanyTradeType } from "@/lib/pricing";
@@ -62,7 +61,15 @@ function throwAdminAuthError(code: AdminAuthErrorCode, message: string): never {
 // Service-role client — bypasses RLS for privileged writes.
 // NEVER expose this client or its key to the browser.
 // ---------------------------------------------------------------------------
+/** Alerts load on demand, so merely importing this module never pulls in the Telegram/email transports. */
+async function notifyAdminsOfSecurityEvent(db: ReturnType<typeof makeServiceRoleClient>, event: SecurityEvent) {
+  const alerts = await import("@/lib/admin-security/alerts");
+  await alerts.notifyAdminsOfSecurityEvent(db, event);
+}
+
 async function requestIp() {
+  // Loaded on demand: only the alert paths need request headers.
+  const { headers } = await import("next/headers");
   const list = await headers();
   return list.get("x-forwarded-for")?.split(",")[0]?.trim() || list.get("x-real-ip") || null;
 }
@@ -201,7 +208,22 @@ export async function requireAdmin(
   // where refreshing a token must never attempt to write cookies. The proxy owns
   // session-cookie renewal; every call still verifies the user and RLS capability.
   const db = supabaseServer ?? (await createSupabaseServerComponentClient());
-  const { data, error } = await db.auth.getUser();
+  // The session cookie is read locally once. The Auth server then verifies that token while the
+  // MFA claim and the RLS capability are checked at the same time: the same three checks as
+  // before, in one network round trip instead of several. All must pass, in the order below.
+  // (getUser() without a token would hold the client's auth lock for its whole request and
+  // serialise the capability query behind it.)
+  const { data: sessionData } = await db.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    throwAdminAuthError("AUTH_UNAUTHORIZED", "Unauthorized: no active admin session.");
+  }
+  const mfaRequired = process.env.ADMIN_MFA_REQUIRED === "true";
+  const [{ data, error }, claimsResult, { error: capabilityError }] = await Promise.all([
+    db.auth.getUser(accessToken),
+    mfaRequired ? db.auth.getClaims(accessToken) : Promise.resolve(null),
+    db.from("audit_logs").select("id", { head: true }).limit(1),
+  ]);
   if (error || !data.user) {
     throwAdminAuthError("AUTH_UNAUTHORIZED", "Unauthorized: no active admin session.");
   }
@@ -212,17 +234,9 @@ export async function requireAdmin(
   }
 
   // Server actions enforce the second factor too, so a stolen password-only session cannot call them directly.
-  if (process.env.ADMIN_MFA_REQUIRED === "true") {
-    const { data: claimsData } = await db.auth.getClaims();
-    if ((claimsData?.claims as { aal?: string } | undefined)?.aal !== "aal2") {
-      throwAdminAuthError("AUTH_FORBIDDEN", "Forbidden: two-factor authentication required.");
-    }
+  if (mfaRequired && (claimsResult?.data?.claims as { aal?: string } | undefined)?.aal !== "aal2") {
+    throwAdminAuthError("AUTH_FORBIDDEN", "Forbidden: two-factor authentication required.");
   }
-
-  const { error: capabilityError } = await db
-    .from("audit_logs")
-    .select("id", { head: true })
-    .limit(1);
 
   if (capabilityError) {
     throwAdminAuthError(
@@ -339,8 +353,8 @@ export type DueRecurringExpense = {
 // Best-effort: a missing table or read failure just means no reminders.
 export const getDueRecurringExpenses = cache(async (): Promise<DueRecurringExpense[]> => {
   try {
-    await getAuthorizedServerClient();
-    const db = makeServiceRoleClient();
+    // Shares the render's single authorization and privileged client with the other navigation reads.
+    const db = await getAuthorizedServiceReadClient();
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(new Date());
     const { data, error } = await db
       .from("recurring_expenses")

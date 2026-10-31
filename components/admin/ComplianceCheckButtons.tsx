@@ -2,11 +2,12 @@
 
 import React, { useState} from "react";
 import { useAdminTransition as useTransition } from "@/components/admin/ui/useAdminTransition";
-import { ShieldCheck, Search, Download, AlertTriangle, Loader2, CheckCircle2, Flag, Save } from "lucide-react";
+import { ShieldCheck, Download, AlertTriangle, Loader2, Save } from "lucide-react";
 import styles from "@/styles/admin/ComplianceButtons.module.css";
 import { recordCustomerComplianceCheck, saveCustomerComplianceReview } from "@/app/actions/admin.actions";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
+import { CustomerScreeningPanel } from "@/components/admin/compliance/CustomerScreeningPanel";
 import { AUSTRAC_ID_TYPES, AUSTRAC_ID_TYPE_OTHER, type AustracIdType } from "@/lib/compliance/austrac-id-types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -129,13 +130,6 @@ async function triggerComplianceCheck(type: CheckType, userId: string): Promise<
   return { amlFlag, outcome: outcomeHeader ?? null };
 }
 
-function formatDateTime(value: string | null): string {
-  if (!value) return "-";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
-}
-
 function formatMethod(method: string | null): string {
   if (!method) return "-";
   const labels: Record<string, string> = {
@@ -144,6 +138,7 @@ function formatMethod(method: string | null): string {
     manual_video_call: "Manual: video call",
     manual_in_person: "Manual: in person",
     vendor_namescan: "Vendor (NameScan)",
+    internal_dfat: "Internal (DFAT list)",
     manual_austrac_watchlist: "Manual: AUSTRAC list review",
     manual_internal_review: "Manual: internal review",
   };
@@ -154,14 +149,6 @@ function formatMethod(method: string | null): string {
 // dropdowns, so recorded values map 1:1 onto the exported IFTI-DRA report.
 const AUSTRAC_ID_TYPE_OPTIONS: { value: AustracIdType; label: string }[] =
   AUSTRAC_ID_TYPES.map((value) => ({ value, label: value }));
-
-function formatAltIdType(type: string | null): string {
-  return type || "-";
-}
-
-function formatAltAddressType(type: string | null): string {
-  return type || "-";
-}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -203,14 +190,14 @@ export function ComplianceCheckButtons({
   const [dvsMethod, setDvsMethod] = useState<DvsMethod>(
     (initialDvsMethod as DvsMethod) ?? (dvsCapableInitial ? "vendor_rapidid" : "manual_document_review")
   );
-  const [amlMethod, setAmlMethod] = useState<AmlMethod>((initialAmlMethod as AmlMethod) ?? "vendor_namescan");
+  const [amlMethod] = useState<AmlMethod>((initialAmlMethod as AmlMethod) ?? "vendor_namescan");
   const [dvsInfo, setDvsInfo] = useState<PersistedCheckInfo>({
     status: initialDvsStatus ?? "not_started",
     method: initialDvsMethod ?? null,
     checkedAt: initialDvsCheckedAt ?? null,
     outcome: initialDvsOutcome ?? null,
   });
-  const [amlInfo, setAmlInfo] = useState<PersistedCheckInfo>({
+  const [, setAmlInfo] = useState<PersistedCheckInfo>({
     status: initialAmlStatus ?? "not_started",
     method: initialAmlMethod ?? null,
     checkedAt: initialAmlCheckedAt ?? null,
@@ -434,43 +421,16 @@ export function ComplianceCheckButtons({
   };
 
   const dvsState = state.dvs;
-  const amlState = state.aml;
   const dvsCompleted = dvsInfo.status === "completed";
-  const amlCompleted = amlInfo.status === "completed";
   const dvsManualSelected = dvsMethod.startsWith("manual_");
-  const amlManualSelected = amlMethod.startsWith("manual_");
 
   return (
     <div className={`${styles.root}${layout === "customer" ? ` ${styles.customerLayout}` : ""}`}>
       <div className={styles.checksSection}>
-      <div className={styles.heading}>
-        <ShieldCheck size={13} />
-        Compliance Checks
-      </div>
+      <CustomerScreeningPanel userId={userId} dvs={{ applicable: showDvs, status: dvsInfo.status, method: formatMethod(dvsInfo.method), outcome: dvsInfo.outcome, checkedAt: dvsInfo.checkedAt }} />
 
-      <div className={styles.summaryGrid}>
-        {showDvs && (
-          <div className={styles.summaryCard}>
-            <div className={styles.summaryTitle}>DVS</div>
-            <div className={styles.summaryLine}><strong>Status:</strong> {dvsInfo.status}</div>
-            <div className={styles.summaryLine}><strong>Method:</strong> {formatMethod(dvsInfo.method)}</div>
-            <div className={styles.summaryLine}><strong>Checked:</strong> {formatDateTime(dvsInfo.checkedAt)}</div>
-            {dvsInfo.method === "manual_document_review" && altIdType && (
-              <>
-                <div className={styles.summaryLine}><strong>Identity Doc:</strong> {formatAltIdType(altIdType)} {altIdNumber && `— ${altIdNumber}`}</div>
-                <div className={styles.summaryLine}><strong>Address Doc:</strong> {formatAltAddressType(altAddressType)} {altAddressReference && `— ${altAddressReference}`}</div>
-              </>
-            )}
-          </div>
-        )}
-        <div className={styles.summaryCard}>
-          <div className={styles.summaryTitle}>AML / CTF</div>
-          <div className={styles.summaryLine}><strong>Status:</strong> {amlInfo.status}</div>
-          <div className={styles.summaryLine}><strong>Method:</strong> {formatMethod(amlInfo.method)}</div>
-          <div className={styles.summaryLine}><strong>Checked:</strong> {formatDateTime(amlInfo.checkedAt)}</div>
-        </div>
-      </div>
-
+      {showDvs && <details className={styles.dvsDrawer} open={!dvsCompleted || undefined}>
+        <summary>Identity verification (DVS)</summary>
       <div className={styles.btnRow}>
         {/* DVS button (AU customers — vendor check when a supported AU document is on
             file, otherwise manual verification via alternative documents) */}
@@ -569,6 +529,7 @@ export function ComplianceCheckButtons({
                 <CustomDatePicker
                   value={altAddressDate}
                   onChange={setAltAddressDate}
+                  years="issue"
                   placeholder="Document date (optional)"
                 />
 
@@ -609,106 +570,15 @@ export function ComplianceCheckButtons({
               </span>
             )}
 
-            {(dvsState === "success" || dvsInfo.status === "completed") && (
-              <span className={styles.statusOk}>
-                <CheckCircle2 size={11} />
-                DVS check completed
-              </span>
-            )}
           </div>
         )}
-
-        {/* AML button (all customers) */}
-        <div className={styles.checkGroup}>
-          <label className={styles.inlineLabel}>AML method</label>
-          <SelectBox
-            className={styles.methodSelect}
-            labeledOptions={[
-              { value: "vendor_namescan", label: "Vendor (NameScan)" },
-              { value: "manual_austrac_watchlist", label: "Manual: AUSTRAC list review" },
-              { value: "manual_internal_review", label: "Manual: internal compliance review" },
-            ]}
-            value={amlMethod}
-            onChange={(val) => setAmlMethod(val as AmlMethod)}
-            disabled={amlState === "loading"}
-            dir="ltr"
-          />
-
-          <button
-            type="button"
-              className={`${styles.btn} ${(amlCompleted || amlState === "success") ? styles.btnSuccess : styles.btnSecondary}`}
-            onClick={() => run("aml")}
-              disabled={amlState === "loading" || (amlManualSelected && amlCompleted)}
-            title="Run PEP & sanctions screening via NameScan"
-          >
-            {amlState === "loading" ? (
-              <Loader2 size={13} className={styles.spinner} />
-            ) : amlState === "success" ? (
-              <Download size={13} />
-            ) : (
-              <Search size={13} />
-            )}
-            {amlState === "loading"
-              ? "Screening..."
-              : amlManualSelected
-                ? (amlCompleted ? "AML Completed" : "Mark AML Completed")
-                : "Run AML Screening"}
-          </button>
-
-          {amlState === "error" && state.amlError && (
-            <span className={styles.errorMsg}>
-              <AlertTriangle size={11} />
-              {state.amlError}
-            </span>
-          )}
-
-          {(amlState === "success" || amlInfo.status === "completed") && state.amlFlag === "clear" && (
-            <span className={styles.statusOk}>
-              <CheckCircle2 size={11} />
-              AML completed: no sanctions/PEP hit
-            </span>
-          )}
-
-          {(amlState === "success" || amlInfo.status === "completed") && state.amlFlag === "review_required" && (
-            <span className={styles.statusWarn}>
-              <Flag size={11} />
-              AML completed: potential sanctions/PEP match, review required
-            </span>
-          )}
-
-          {(amlState === "success" || amlInfo.status === "completed") && state.amlFlag === "failed" && (
-            <span className={styles.statusWarn}>
-              <AlertTriangle size={11} />
-              AML completed with vendor failure, review report details
-            </span>
-          )}
-
-          {(amlState === "success" || amlInfo.status === "completed") && state.amlFlag === "none" && (
-            <span className={styles.statusOk}>
-              <CheckCircle2 size={11} />
-              AML check completed
-            </span>
-          )}
-        </div>
       </div>
 
-      {/* Country context note */}
-      {!auCustomer && (
-        <p className={styles.note}>
-          DVS not available — customer is outside Australia. AML screening applies to all jurisdictions.
-        </p>
-      )}
-      {auCustomer && !dvsCapable && (
-        <p className={styles.note}>
-          No Australian driver licence or passport on file — select &quot;Manual: alternative documents&quot; above and
-          record an identity document (photo ID, proof of age, foreign passport, etc.) plus a proof of residential
-          address (utility bill, bank statement, etc.) to complete DVS.
-        </p>
-      )}
+      </details>}
       </div>
 
       <div className={styles.reviewBlock}>
-        <div className={styles.reviewHeader}>Customer Flag and Internal Note</div>
+        <div className={styles.reviewHeader}>Flag and note</div>
         <label className={styles.checkboxRow}>
           <input
             type="checkbox"

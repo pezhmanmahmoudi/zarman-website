@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { headers } from "next/headers";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import {
   buildChangeLines, loadPendingBankChange, notifyAdminsOfBankChange, pendingBankChangeRow, verifyAdminPassword,
@@ -17,6 +16,7 @@ function database() {
 }
 
 async function clientIp() {
+  const { headers } = await import("next/headers");
   const list = await headers();
   return list.get("x-forwarded-for")?.split(",")[0]?.trim() || list.get("x-real-ip") || null;
 }

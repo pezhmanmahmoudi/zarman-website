@@ -28,6 +28,8 @@ function profileHarness({ locale = "en", profile = base, submit = async () => ({
   const button = text => elements(render(), node => typeof node.props.onClick === "function" && nodeText(node) === text)[0];
   return { h, render, button, SelectBox, DatePicker, AustralianLocationFields,
     input(name, value) { const element = elements(render(), node => node.type === "input" && node.props.name === name)[0]; assert.ok(element, `Missing field ${name}`); element.props.onChange({ target: { name, value, type: element.props.type || "text" } }); },
+    pep(value) { elements(render(), node => node.type === "input" && node.props.name === "pepAnswer" && node.props.value === value)[0].props.onChange({ target: { name: "pepAnswer", type: "radio", value } }); },
+    pepRelation(value) { elements(render(), node => node.type === "input" && node.props.name === "pepRelation" && node.props.value === value)[0].props.onChange({ target: { name: "pepRelation", type: "radio", value } }); },
     consent(name, checked) { elements(render(), node => node.props.name === name)[0].props.onChange({ target: { name, type: "checkbox", checked } }); },
     documents() { return elements(render(), node => node.props.onDocumentTypeChange !== undefined)[0]; },
     stepper() { return elements(render(), node => node.props.stepListLabel !== undefined)[0]; },
@@ -121,7 +123,9 @@ test("identity submission requires both original consents and preserves document
     elements(h.render(), node => node.type === h.DatePicker)[0].props.onChange("2030-04-05");
     await h.button(submit).props.onClick(); assert.equal(calls.length, 0); assert.ok(elements(h.render(), node => node.props.id === "profile-error-consents").length);
     h.consent("consentNotice", true); await h.button(submit).props.onClick(); assert.equal(calls.length, 0);
-    h.consent("consentDVS", true); await h.button(submit).props.onClick(); assert.equal(calls.length, 1);
+    h.consent("consentDVS", true); await h.button(submit).props.onClick(); assert.equal(calls.length, 0);
+    assert.ok(elements(h.render(), node => node.props.id === "profile-error-pep").length);
+    h.pep("no"); await h.button(submit).props.onClick(); assert.equal(calls.length, 1); assert.deepEqual(calls[0].pep_declaration, { is_pep: false });
     assert.equal(elements(h.render(), node => node.props.name === "passportNumber")[0].props.value, "N0012345");
     assert.equal(h.button(submit).props.disabled, false); assert.ok(elements(h.render(), node => node.props.role === "alert").length);
     assert.equal(calls[0].consent_notice, true); assert.equal(calls[0].consent_dvs, true); assert.equal(calls[0].document_type, "passport");
@@ -150,7 +154,7 @@ test("Iran residents are assigned an Iranian passport and cannot submit without 
   assert.equal(h.documents().props.documentType,"foreign_passport");assert.equal(h.documents().props.country,"Iran");
   assert.equal(h.documents().props.evidence.documentIssuer,"Iran");
   h.documents().props.onDocumentTypeChange("passport");assert.equal(h.documents().props.documentType,"foreign_passport");
-  h.consent("consentNotice",true); h.consent("consentDVS",true);
+  h.pep("no"); h.consent("consentNotice",true); h.consent("consentDVS",true);
   await h.button("Submit verification").props.onClick();assert.equal(calls.length,0);
   assert.ok(h.documents().props.errors["evidence-front"]);assert.ok(h.documents().props.errors.documentNumber);assert.ok(h.documents().props.errors.expiryDate);
   elements(h.render(), node => node.type === h.DatePicker)[0].props.onChange("2030-04-05");
@@ -247,4 +251,21 @@ test("new guided forms retain actual Persian text and the amount character white
   }
   const hub = fs.readFileSync("components/dashboard/DashboardRequestHub.tsx", "utf8");
   assert.match(hub, /pattern=\{aud \? "\[0-9۰-۹٠-٩\.,٫،٬\]\*" : undefined\}/);
+});
+
+test("a customer who answers Yes to the PEP question must say who and where before submitting", async () => {
+  const calls = [];
+  const h = profileHarness({ submit: async payload => { calls.push(payload); return { success: true }; } });
+  const submit = "Submit verification";
+  h.button("Next Step").props.onClick(); h.button("Next Step").props.onClick();
+  h.documents().props.onDocumentTypeChange("passport"); h.input("passportNumber", "N0012345");
+  elements(h.render(), node => node.type === h.DatePicker)[0].props.onChange("2030-04-05");
+  h.consent("consentNotice", true); h.consent("consentDVS", true);
+  h.pep("yes"); await h.button(submit).props.onClick(); assert.equal(calls.length, 0);
+  assert.ok(elements(h.render(), node => node.props.id === "profile-error-pep").length);
+  h.pepRelation("family"); await h.button(submit).props.onClick(); assert.equal(calls.length, 0);
+  assert.ok(elements(h.render(), node => node.props.id === "profile-error-pepDetails").length);
+  h.input("pepDetails", "  Member of parliament, Iran  "); await h.button(submit).props.onClick();
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].pep_declaration, { is_pep: true, relation: "family", details: "Member of parliament, Iran" });
 });

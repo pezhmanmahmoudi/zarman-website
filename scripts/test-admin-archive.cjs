@@ -34,7 +34,10 @@ function archiveService(options = {}) {
     return query;
   } };
   const session = {
-    auth: { getUser: async () => ({ data: { user: state.unauthenticated ? null : { id: "admin", email: "admin@example.test", app_metadata: { role: state.role ?? "admin" } } }, error: null }) },
+    auth: {
+      getSession: async () => ({ data: { session: state.unauthenticated ? null : { access_token: "token" } }, error: null }),
+      getUser: async () => ({ data: { user: state.unauthenticated ? null : { id: "admin", email: "admin@example.test", app_metadata: { role: state.role ?? "admin" } } }, error: null }),
+    },
     from: () => ({ select: () => ({ limit: async () => ({ error: null }) }) }),
   };
   const dependencies = {

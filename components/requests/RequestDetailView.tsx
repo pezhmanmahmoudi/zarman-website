@@ -3,34 +3,60 @@
 import { toCompanyTradeType } from "@/lib/pricing";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Download, ExternalLink, Mail, RefreshCw, Trash2 } from "lucide-react";
 import { deleteAdminRequest, getAdminRequest, getMyRequest, getRequestBankAccounts, mutateAdminRequest, mutateMyRequest, retryAdminRequestEmail } from "@/app/actions/request.actions";
 import type { ExchangeRequest, RequestCommand, RequestDetail, RequestMutationInput } from "@/lib/requests/types";
 import { isRequestConflict, REQUEST_CONFLICT_MESSAGE } from "@/lib/requests/conflicts";
 import { requestDate, requestLabel, requestMoney, requestError, isRequestTerminal, type RequestLocale } from "./request-labels";
-import { canRetryRequestEmail, getRequestJourney, requestActivityLabel, requestEmailStatus, requestMilestones, requestStageLabel } from "@/lib/requests/journey";
+import { canRetryRequestEmail, getRequestJourney, requestActivityLabel, requestEmailStatus, requestEventSteps, requestMilestones, requestStageLabel, REQUEST_STEP_BY_MILESTONE } from "@/lib/requests/journey";
 import { isExchangeRate, isMoney } from "@/lib/requests/validation";
 import { localiseAmountDraft, normaliseAmountDigits } from "@/lib/numbers";
 import { RequestPricingSummary } from "./RequestPricingSummary";
 import { CompletedTransactionEditor } from "@/components/admin/transactions/CompletedTransactionEditor";
-import { RequestTransactionSummary } from "./RequestTransactionSummary";
 import { RequestPaymentAccount } from "./RequestPaymentAccount";
 import { AdminCopyButton, AdminCopyRow } from "./AdminCopyField";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import { sortBankAccountsByPriority } from "@/lib/bank-account-ordering";
-import { RequestProgress } from "./RequestProgress";
-import { RequestPaymentInstructions } from "./RequestPaymentInstructions";
+import { ComplianceBadge, RequestComplianceDetails, complianceNeedsAction, useRequestCompliance } from "@/components/admin/compliance/RequestCompliancePanel";
 import { RequestReceiptUpload } from "./RequestReceiptUpload";
 import { RequestAdminMessageBanner, RequestConversation } from "./RequestConversation";
 import { supabase } from "@/lib/supabase";
 import { DashboardButton } from "@/components/dashboard/dashboard-ui";
 import { DASHBOARD_AUTO_REFRESH_MS, dashboardRefreshDue } from "@/lib/dashboard/refresh-policy";
-import { DashboardLottieScene } from "@/components/dashboard/DashboardLottieScene";
-import { TelegramNotifications } from "@/components/dashboard/TelegramNotifications";
-import { TelegramDeliveryActivity } from "./TelegramDeliveryActivity";
+import { TelegramEventLine, TelegramUnavailableNote } from "./TelegramDeliveryActivity";
 import styles from "@/styles/requests/Requests.module.css";
 import workspace from "@/styles/requests/RequestWorkspace.module.css";
 import customer from "@/styles/requests/RequestCustomerDetail.module.css";
+
+// Customer-only views (progress, payment instructions, Telegram settings) carry the dashboard's
+// animation libraries. Loading them on demand keeps those libraries out of the admin page; the
+// customer page starts fetching them on mount, well before the request details arrive.
+const customerViews = {
+  progress: () => import("./RequestProgress").then(module => module.RequestProgress),
+  payment: () => import("./RequestPaymentInstructions").then(module => module.RequestPaymentInstructions),
+  summary: () => import("./RequestTransactionSummary").then(module => module.RequestTransactionSummary),
+  telegram: () => import("@/components/dashboard/TelegramNotifications").then(module => module.TelegramNotifications),
+  lottie: () => import("@/components/dashboard/DashboardLottieScene").then(module => module.DashboardLottieScene),
+};
+const RequestProgress = dynamic(customerViews.progress);
+const RequestPaymentInstructions = dynamic(customerViews.payment);
+const RequestTransactionSummary = dynamic(customerViews.summary);
+const TelegramNotifications = dynamic(customerViews.telegram);
+const DashboardLottieScene = dynamic(customerViews.lottie);
+
+// Active bank accounts rarely change: read them once per tab (5 min) instead of on every transaction.
+// Each server action also queues navigation behind it, so skipping repeat reads keeps Back responsive.
+const BANK_ACCOUNTS_TTL_MS = 5 * 60_000;
+let bankAccountsCache: { at: number; result: ReturnType<typeof getRequestBankAccounts> } | null = null;
+function loadBankAccounts() {
+  if (!bankAccountsCache || Date.now() - bankAccountsCache.at > BANK_ACCOUNTS_TTL_MS) {
+    const entry = { at: Date.now(), result: getRequestBankAccounts() };
+    bankAccountsCache = entry;
+    entry.result.then(result => { if (result.error && bankAccountsCache === entry) bankAccountsCache = null; }, () => { if (bankAccountsCache === entry) bankAccountsCache = null; });
+  }
+  return bankAccountsCache.result;
+}
 
 const commandLabels: Record<RequestCommand, [string, string]> = {
   reopen: ["Reopen request", "بازگشایی درخواست"],
@@ -176,8 +202,13 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
   }, [admin, id, autoRefresh]);
 
   useEffect(() => {
+    if (admin) return;
+    for (const load of Object.values(customerViews)) void load();
+  }, [admin]);
+
+  useEffect(() => {
     if (!admin) return;
-    getRequestBankAccounts().then(result => {
+    loadBankAccounts().then(result => {
       if (result.data) setAccounts(result.data.map(account => ({ ...account, id: String(account.id) })));
       else if (result.error) setError(result.error);
     }).catch(() => setError("Could not load bank accounts."));
@@ -316,6 +347,13 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
   }
 
   const request = detail?.request;
+  const compliance = useRequestCompliance(admin ? id : undefined, request?.version, admin);
+  const [complianceOpen, setComplianceOpen] = useState<boolean | null>(null);
+  const showCompliance = complianceOpen ?? complianceNeedsAction(compliance);
+  const openCompliance = () => {
+    setComplianceOpen(true);
+    window.setTimeout(() => document.getElementById("request-compliance")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+  };
   const visibleSavedDeposit = savedDeposit?.requestId === request?.id ? savedDeposit : null;
   const payments = admin ? detail?.payments || [] : [];
   const hasMismatchedDeposit = payments.some(payment => !payment.excluded && payment.currency !== request?.quote.funding_currency) || !!(visibleSavedDeposit && visibleSavedDeposit.currency !== request?.quote.funding_currency);
@@ -340,6 +378,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
   const activeRefundKind = refundKind === "priority" && request?.priority_fee_status !== "refund_pending" ? "principal" : refundKind;
   const journey = request ? getRequestJourney(request) : null;
   const milestones = request ? requestMilestones(request, detail?.events || []) : [];
+  const eventSteps = requestEventSteps(detail?.events || []);
   const messageRequired = ["request_info", "respond", "cancel", "reject", "reopen", "record_uncertain_payout"].includes(currentAction);
   const accountsFor = (currency: "AUD" | "IRT") => sortBankAccountsByPriority(accounts
     .filter(account => account.currency.toUpperCase() === currency || (currency === "IRT" && account.currency.toLowerCase() === "toman"))
@@ -390,7 +429,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
     }
   };
 
-  const milestoneHistory = <section className={styles.card}><h2>{fa ? "مراحل انجام حواله" : "Transfer milestones"}</h2><ol className={workspace.milestoneList}>{milestones.filter(milestone => milestone.done).map(milestone => <li key={milestone.key}><Check size={15} /><div><strong>{milestone.label[fa ? 1 : 0]}</strong>{milestone.at && <time dir="ltr" dateTime={milestone.at}>{requestDate(milestone.at, locale)}</time>}</div></li>)}</ol><span className={workspace.timezone}>{fa ? "زمان‌ها به وقت سیدنی" : "Sydney time"}</span></section>;
+  const milestoneHistory = <section className={styles.card}><h2>{fa ? "مراحل انجام حواله" : "Transfer milestones"}</h2><ol className={workspace.milestoneList}>{milestones.filter(milestone => milestone.done).map(milestone => <li key={milestone.key}><span className={workspace.stepBadge} data-step={REQUEST_STEP_BY_MILESTONE[milestone.key]} data-filled aria-hidden="true">{REQUEST_STEP_BY_MILESTONE[milestone.key]}</span><div><strong>{milestone.label[fa ? 1 : 0]}</strong>{milestone.at && <time dir="ltr" dateTime={milestone.at}>{requestDate(milestone.at, locale)}</time>}</div></li>)}</ol><span className={workspace.timezone}>{fa ? "زمان‌ها به وقت سیدنی" : "Sydney time"}</span></section>;
   const actionTitle = currentAction === "finalize_funds" ? (fa ? "بررسی پرداخت دریافتی" : "Verify incoming payment") : currentAction === "await_funds" ? (request?.payment_approved_at ? "Resume customer payment" : "Request approval") : currentAction === "confirm_funds" ? "Verify incoming payment" : ["complete", "reconcile_complete"].includes(currentAction) ? "Reconcile destination payment" : currentAction === "confirm_refund" ? "Refund confirmation" : currentAction ? actionLabel(currentAction) : "";
   const actionPanel = request && commands.length > 0 && <div id="request-action-panel">
     {currentAction && <form onSubmit={submit} className={workspace.actionForm} noValidate>
@@ -431,16 +470,16 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
         {currentAction === "resume_funded_request" && <label className={styles.checkbox}><input id="request-honour-quote" type="checkbox" required checked={honourQuote} onChange={event => setHonourQuote(event.target.checked)} {...fieldValidation("honour-quote")} /><span>Checks complete. Honour the accepted quote and release the confirmed funds for processing. *</span></label>}
         {["complete", "reconcile_complete"].includes(currentAction) && <>
           <div className={styles.fields}>{accountSelect("payer-account", "Payout account", payerAccount, setPayerAccount, request.quote.recipient_currency)}{accountSelect("receiver-account", "Collection account", receiverAccount, setReceiverAccount, request.quote.funding_currency)}</div>
-          <div className={styles.field}><span>Transfer method *</span><SelectBox ariaLabel="Transfer method" dir="ltr" value={transferMethod} onChange={value => setTransferMethod(value as typeof transferMethod)} disabled={busy} labeledOptions={[{ value: "free", label: "Free transfer" }, { value: "pol", label: "Pol" }, { value: "paya", label: "Paya" }, { value: "satna", label: "Satna" }]} /></div>
+          <div className={`${styles.field} ${workspace.selectField}`}><span>Transfer method *</span><SelectBox ariaLabel="Transfer method" dir="ltr" value={transferMethod} onChange={value => setTransferMethod(value as typeof transferMethod)} disabled={busy} labeledOptions={[{ value: "free", label: "Free transfer" }, { value: "pol", label: "Pol" }, { value: "paya", label: "Paya" }, { value: "satna", label: "Satna" }]} /></div>
         </>}
         {currentAction === "confirm_refund" && <>
-          <div className={styles.field}><span>Refund</span><SelectBox ariaLabel="Refund" dir="ltr" value={activeRefundKind} onChange={value => setRefundKind(value as "priority" | "principal")} disabled={busy} labeledOptions={[...(request.priority_fee_status === "refund_pending" ? [{ value: "priority", label: "Priority fee" }] : []), ...(request.funding_status === "refund_pending" ? [{ value: "principal", label: "Principal" }] : [])]} /></div>
+          <div className={`${styles.field} ${workspace.selectField}`}><span>Refund</span><SelectBox ariaLabel="Refund" dir="ltr" value={activeRefundKind} onChange={value => setRefundKind(value as "priority" | "principal")} disabled={busy} labeledOptions={[...(request.priority_fee_status === "refund_pending" ? [{ value: "priority", label: "Priority fee" }] : []), ...(request.funding_status === "refund_pending" ? [{ value: "principal", label: "Principal" }] : [])]} /></div>
           <label className={styles.field}>Return reference *<input id="request-refund-reference" required value={refundReference} onChange={event => setRefundReference(event.target.value)} maxLength={200} {...fieldValidation("refund-reference")} /></label>
           {accountSelect("refund-account", "Account debited", refundAccount, setRefundAccount, request.quote.funding_currency)}
         </>}
         {messageRequired && <label className={styles.field}>{currentAction === "reopen" ? (fa ? "دلیل بازگشایی (یادداشت داخلی)" : "Reason for reopening (internal note)") : currentAction === "record_uncertain_payout" ? "Internal reconciliation note" : admin ? "Message to customer" : (fa ? "دلیل" : "Reason")} *<textarea id="request-action-message" value={message} onChange={event => setMessage(event.target.value)} required minLength={3} maxLength={2000} rows={2} dir="auto" {...fieldValidation("action-message")} /></label>}
-        {admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" style={{ margin: 0, alignSelf: "center" }} checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} /><Mail size={16} style={{ alignSelf: "center" }} aria-hidden="true" /><span>{fa ? "ارسال ایمیل به مشتری" : "Send email to customer"}</span></label>}
-        <label className={`${styles.checkbox} ${workspace.confirmChoice}`}><input id="request-confirmation" type="checkbox" style={{ margin: 0, alignSelf: "center" }} checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required {...fieldValidation("confirmation")} /><span>{currentAction === "reopen" ? (fa ? "بازگشایی این درخواست با همان مبالغ و نرخ را برای ادامهٔ بررسی تأیید می‌کنم." : "I confirm reopening this request at its existing amounts and rate for further review.") : currentAction === "finalize_funds" ? (fa ? "پرداخت مشتری و مبالغ نهایی را بررسی و تأیید می‌کنم." : "I verified the customer payment and approve these final amounts.") : currentAction === "cancel" ? (fa ? "لغو را تأیید می‌کنم؛ بازپرداخت جداگانه پیگیری می‌شود." : "Confirm cancellation; any refund is tracked separately.") : currentAction === "confirm_funds" ? `I verified cleared funds in the bank account: the entered amount and ${currencyLabel(fundingCurrency)} currency.` : ["complete", "reconcile_complete"].includes(currentAction) ? "I verified the destination account, amount and successful settlement." : currentAction === "confirm_refund" ? "I verified the returned funds in the original currency." : (fa ? "اطلاعات را بررسی و تأیید می‌کنم." : "I checked and approve the request details.")} *</span></label>
+        {admin && <label className={`${styles.checkbox} ${workspace.emailChoice}`}><input type="checkbox" checked={sendEmail} onChange={event => setSendEmail(event.target.checked)} /><Mail size={16} aria-hidden="true" /><span>{fa ? "ارسال ایمیل به مشتری" : "Send email to customer"}</span></label>}
+        <label className={`${styles.checkbox} ${workspace.confirmChoice}`}><input id="request-confirmation" type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required {...fieldValidation("confirmation")} /><span>{currentAction === "reopen" ? (fa ? "بازگشایی این درخواست با همان مبالغ و نرخ را برای ادامهٔ بررسی تأیید می‌کنم." : "I confirm reopening this request at its existing amounts and rate for further review.") : currentAction === "finalize_funds" ? (fa ? "پرداخت مشتری و مبالغ نهایی را بررسی و تأیید می‌کنم." : "I verified the customer payment and approve these final amounts.") : currentAction === "cancel" ? (fa ? "لغو را تأیید می‌کنم؛ بازپرداخت جداگانه پیگیری می‌شود." : "Confirm cancellation; any refund is tracked separately.") : currentAction === "confirm_funds" ? `I verified cleared funds in the bank account: the entered amount and ${currencyLabel(fundingCurrency)} currency.` : ["complete", "reconcile_complete"].includes(currentAction) ? "I verified the destination account, amount and successful settlement." : currentAction === "confirm_refund" ? "I verified the returned funds in the original currency." : (fa ? "اطلاعات را بررسی و تأیید می‌کنم." : "I checked and approve the request details.")} *</span></label>
         {validation && <p id="request-form-feedback" className={workspace.formFeedback} role="alert" tabIndex={-1}>{validation.message}</p>}
         <div className={styles.actions}><button className={["cancel", "reject"].includes(currentAction) ? styles.danger : styles.button} type="submit" disabled={busy}>{busy ? (fa ? "در حال ثبت…" : "Saving…") : referenceRequired && fundingCurrency !== expectedCurrency ? "Record deposit for review" : actionLabel(currentAction)}</button>{(currentAction !== recommended || separateDeposit) && <button type="button" className={workspace.textButton} onClick={() => { setAction(""); setSeparateDeposit(false); setConfirmed(false); setValidation(null); }}>{fa ? "انصراف" : "Back"}</button>}</div>
       </fieldset>
@@ -459,6 +498,7 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
           {request && <ul className={workspace.headerMeta}>
             <li><span className={workspace.stageBadge}>{requestStageLabel(request, locale)}</span>{request.service_tier === "priority" && <span className={`${styles.badge} ${styles.priority}`}>Priority</span>}</li>
             <li><strong dir="auto">{request.quote.sender_snapshot.name}</strong><bdi className={workspace.headerEmail}>{request.quote.sender_snapshot.email}</bdi></li>
+            <li><ComplianceBadge state={compliance} onOpen={openCompliance} /></li>
             <li>Submitted <time dir="ltr" dateTime={request.created_at}>{requestDate(request.created_at, locale)}</time></li>
           </ul>}
         </div>
@@ -526,6 +566,19 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
             {request.quote.institution_name && <RequestPaymentAccount key={request.id + request.funding_status} requestId={request.id} funded={request.funding_status === "confirmed"} />}
           </section>
           {milestoneHistory}
+          <details className={`${styles.card} ${workspace.disclosure}`}><summary>Activity & notification history<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}>
+            <ol className={workspace.activityList}>{[...detail.events].reverse().map(event => {
+              const eventMessages = messages.filter(item => item.event_id === event.id);
+              const actor = eventMessages[0]?.sender_role === "customer" || event.actor_id === request.user_id ? "Customer" : event.actor_id ? "Zarman team" : "System";
+              const deliveries = detail.deliveries?.filter(delivery => delivery.event_id === event.id && delivery.audience === "customer") || [];
+              const telegramLines = detail.telegramDeliveries?.filter(delivery => delivery.event_id === event.id) || [];
+              const privateNote = event.internal_message && event.internal_message !== event.public_message && !/^[s]*[[{]/.test(event.internal_message) ? event.internal_message : null;
+              const step = eventSteps.get(event.id) ?? 1;
+              return <li key={event.id} data-step={step}><span className={workspace.stepBadge} data-step={step} aria-label={step === "alert" ? "Needs attention" : `Step ${step}`}>{step === "alert" ? "!" : step}</span><div className={workspace.activityBody}><div className={workspace.activityHeading}><strong>{requestActivityLabel(event.event_type, locale)}</strong><time dir="ltr" dateTime={event.created_at}>{requestDate(event.created_at, locale)}</time></div><span className={workspace.activityActor}>{actor}</span>{privateNote && <details className={workspace.activityNotes}><summary>Internal note</summary><p dir="auto">{privateNote}</p></details>}{(deliveries.length > 0 || telegramLines.length > 0) && <ul className={workspace.emailActivity}>{deliveries.map(delivery => <li key={delivery.id} data-tone={["delivered", "provider_accepted"].includes(delivery.status) ? "good" : ["failed", "suppressed", "reconciliation_required"].includes(delivery.status) ? "bad" : undefined}><span><Mail size={13} aria-hidden="true" />{fa ? "ایمیل مشتری" : "Customer email"}</span><span>{requestEmailStatus(delivery.status, delivery.last_error, locale, delivery.lease_expires_at)}</span>{canRetryRequestEmail(delivery) && <button type="button" className={workspace.emailRetry} disabled={retryingEmail !== null} onClick={() => void retryEmail(delivery.id)}>{retryingEmail === delivery.id ? (fa ? "در حال ثبت…" : "Queuing…") : (fa ? "تلاش مجدد ارسال ایمیل" : "Retry customer email")}</button>}</li>)}
+                {detail.telegramDeliveries && (telegramLines.length > 0 ? telegramLines.map(delivery => <TelegramEventLine key={delivery.id} requestId={id} delivery={delivery} onUpdated={refresh} />) : <TelegramEventLine requestId={id} delivery={null} onUpdated={refresh} />)}</ul>}</div></li>;
+            })}</ol>
+            {detail.telegramUnavailable && <TelegramUnavailableNote />}
+          </div></details>
           <details className={`${styles.card} ${workspace.disclosure}`}><summary>Accepted quote<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}><dl className={styles.facts}>
             <div className={styles.fact}><dt>Transfer fee</dt><dd><bdi>{requestMoney(request.quote.base_fee_aud, "AUD", locale)}</bdi></dd></div>
             {Number(request.quote.discount_amount) > 0 && <div className={styles.fact}><dt>Promo discount{request.quote.promo_code ? ` (${request.quote.promo_code})` : ""}</dt><dd><bdi>{requestMoney(request.quote.discount_amount, "AUD", locale)}</bdi></dd></div>}
@@ -533,15 +586,8 @@ export function RequestDetailView({ id, admin = false, locale = "en", initialInt
             <div className={styles.fact}><dt>Source of funds</dt><dd dir="auto">{request.quote.source_of_funds}</dd></div>
             <div className={styles.fact}><dt>Purpose</dt><dd dir="auto">{request.quote.reason_for_transfer}</dd></div>
           </dl></div></details>
-          <details className={`${styles.card} ${workspace.disclosure}`}><summary>Activity & notification history<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}>
-            <ol className={workspace.activityList}>{[...detail.events].reverse().map(event => {
-              const eventMessages = messages.filter(item => item.event_id === event.id);
-              const actor = eventMessages[0]?.sender_role === "customer" || event.actor_id === request.user_id ? "Customer" : event.actor_id ? "Zarman team" : "System";
-              const deliveries = detail.deliveries?.filter(delivery => delivery.event_id === event.id && delivery.audience === "customer") || [];
-              const privateNote = event.internal_message && event.internal_message !== event.public_message && !/^[\s]*[\[{]/.test(event.internal_message) ? event.internal_message : null;
-              return <li key={event.id}><div className={workspace.activityHeading}><strong>{requestActivityLabel(event.event_type, locale)}</strong><time dir="ltr" dateTime={event.created_at}>{requestDate(event.created_at, locale)}</time></div><span className={workspace.activityActor}>{actor}</span>{privateNote && <details className={workspace.activityNotes}><summary>Internal note</summary><p dir="auto">{privateNote}</p></details>}{deliveries.length > 0 && <ul className={workspace.emailActivity}>{deliveries.map(delivery => <li key={delivery.id}><span><Mail size={13} />{fa ? "ایمیل مشتری" : "Customer email"}</span><span>{requestEmailStatus(delivery.status, delivery.last_error, locale, delivery.lease_expires_at)}</span>{canRetryRequestEmail(delivery) && <button type="button" className={workspace.emailRetry} disabled={retryingEmail !== null} onClick={() => void retryEmail(delivery.id)}>{retryingEmail === delivery.id ? (fa ? "در حال ثبت…" : "Queuing…") : (fa ? "تلاش مجدد ارسال ایمیل" : "Retry customer email")}</button>}</li>)}</ul>}</li>;
-            })}</ol>
-            <TelegramDeliveryActivity requestId={id} deliveries={detail.telegramDeliveries || []} unavailable={detail.telegramUnavailable} onUpdated={refresh}/>
+          <details id="request-compliance" className={`${styles.card} ${workspace.disclosure}`} open={showCompliance} onToggle={event => setComplianceOpen(event.currentTarget.open)}><summary>Compliance screening<ChevronDown size={16} /></summary><div className={workspace.disclosureBody}>
+            <RequestComplianceDetails requestId={request.id} state={compliance} />
           </div></details>
         </div>
       </div></> : <>

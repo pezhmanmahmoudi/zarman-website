@@ -68,7 +68,21 @@ export type CustomerKycSubmission = {
   document_type: string; license_number?: string | null; card_number?: string | null;
   state_of_issue?: string | null; passport_number?: string | null; expiry_date?: string | null;
   consent_notice: boolean; consent_dvs: boolean; evidence?: KycEvidenceDraft;
+  /** Politically exposed person self-declaration (customer, close family, close associate). */
+  pep_declaration?: { is_pep: boolean; relation?: "self" | "family" | "close_associate" | null; details?: string };
 };
+
+const PEP_RELATIONS = ["self", "family", "close_associate"];
+
+/** Returns an error message, or the normalised declaration. */
+function validPepDeclaration(input: CustomerKycSubmission["pep_declaration"]) {
+  if (!input || typeof input.is_pep !== "boolean") return { error: "Please answer the politically exposed person question." };
+  if (!input.is_pep) return { isPep: false as const, relation: null, details: null };
+  if (!PEP_RELATIONS.includes(String(input.relation))) return { error: "Tell us whether this is you, a family member or a close associate." };
+  const details = typeof input.details === "string" ? input.details.trim() : "";
+  if (!details || details.length > 1000) return { error: "Describe the position held and the country." };
+  return { isPep: true as const, relation: input.relation as string, details };
+}
 
 export async function submitCustomerKycEvidence(payload: CustomerKycSubmission) {
   const user = await identity();
@@ -81,6 +95,8 @@ export async function submitCustomerKycEvidence(payload: CustomerKycSubmission) 
   const today = kycToday();
   if (!validIsoDate(payload.dob) || payload.dob >= today) return { error: "Enter a valid date of birth in the past." };
   if (payload.consent_notice !== true || payload.consent_dvs !== true) return { error: "Please accept both verification consents." };
+  const pep = validPepDeclaration(payload.pep_declaration);
+  if ("error" in pep) return { error: pep.error };
   const evidence = payload.evidence ?? emptyKycEvidence();
   const roles = [...requiredKycUploads(doc.value), ...(evidence.source_of_funds ? ["source_of_funds" as const] : [])];
   const ids = roles.map(role => evidence[role]!.id);
@@ -114,6 +130,15 @@ export async function submitCustomerKycEvidence(payload: CustomerKycSubmission) 
   };
   const { data, error } = await db.rpc("submit_customer_kyc_evidence", { p_user_id: user.id, p_details: details, p_upload_ids: ids });
   if (error) return { error: "We could not submit verification. Check your account status or try again; your details are still in the form." };
+  // Recorded for AML/CTF screening. Verification is already submitted at this point, so a failure
+  // here never rejects it: the missing answer is flagged on the admin compliance panel instead.
+  try {
+    const declared = await db.from("profiles").update({
+    pep_self_declared: pep.isPep, pep_declaration_relation: pep.relation, pep_declaration_details: pep.details,
+    pep_declared_at: new Date().toISOString(), pep_declaration_source: "customer_form",
+  }).eq("id", user.id);
+    if (declared.error) console.error("[submitCustomerKycEvidence] PEP declaration was not stored");
+  } catch { console.error("[submitCustomerKycEvidence] PEP declaration was not stored"); }
   return { success: true, submissionId: data as string };
 }
 

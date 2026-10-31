@@ -2,7 +2,6 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { applyPromoCode, checkPromoEligibility, toPromoCodeData } from "@/lib/pricing";
-import type { PromoCodeData } from "@/lib/pricing";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import type { Recipient, Transaction } from "@/app/[locale]/dashboard/dashboard.types";
 import { normalizeRecipientInput } from "@/lib/dashboard/recipient-input";

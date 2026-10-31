@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, ShieldCheck, ArrowLeftRight, MessageSquare, Settings,
   ClipboardList, Users, LogOut, Menu, X, BookOpen, TrendingUp,
-  ChartNoAxesCombined, ExternalLink, KeyRound, LockKeyhole, ShieldAlert, type LucideIcon,
+  ChartNoAxesCombined, ExternalLink, KeyRound, LockKeyhole, ShieldAlert, ListChecks, type LucideIcon,
 } from "lucide-react";
 import { AdminDialog } from "@/components/admin/ui/AdminDialog";
 import styles from "@/styles/admin/AdminShell.module.css";
@@ -42,6 +42,7 @@ export function AdminSidebar({ adminEmail, pendingKyc, pendingTx, pendingFeedbac
       { href: "/admin/transactions", label: "Transactions", icon: ArrowLeftRight, badge: pendingTx },
       { href: "/admin/kyc", label: "Identity verification", icon: ShieldCheck, badge: pendingKyc },
       { href: "/admin/users", label: "Customers", icon: Users },
+      { href: "/admin/settings", label: "Settings", icon: Settings },
       { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, badge: pendingFeedback },
     ] },
     { label: "Finance", items: [
@@ -51,9 +52,9 @@ export function AdminSidebar({ adminEmail, pendingKyc, pendingTx, pendingFeedbac
       { href: "/admin/reports/austrac", label: "AUSTRAC reporting", icon: ShieldAlert },
     ] },
     { label: "Administration", items: [
+      { href: "/admin/compliance", label: "Compliance lists", icon: ListChecks },
       { href: "/admin/audit", label: "Audit log", icon: ClipboardList },
       { href: "/admin/security", label: "Two-factor security", icon: KeyRound },
-      { href: "/admin/settings", label: "Settings", icon: Settings },
     ] },
   ];
 

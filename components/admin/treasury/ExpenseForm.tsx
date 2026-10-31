@@ -181,6 +181,7 @@ export default function ExpenseForm({ expenses, bankAccounts, defaultOpen = fals
               <CustomDatePicker 
                 value={form.date} 
                 onChange={(newDate) => field("date", newDate)} 
+                years="recent"
                 disabled={isPending} 
               />
             </div>

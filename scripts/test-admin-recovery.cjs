@@ -74,11 +74,18 @@ test("an unmounted workspace cannot publish a delayed response or error", async 
 function sessionClients({ writable = false, cleanupFails = false } = {}) {
   let cookieWrites = 0, authChecks = 0, deletions = 0;
   const makeClient = handlers => ({
-    auth: { getUser: async () => {
-      authChecks++;
-      handlers.cookies.setAll([{ name: "session", value: "renewed", options: {} }]);
-      return { data: { user: { id: "admin", email: "admin@example.test", app_metadata: { role: "admin" } } }, error: null };
-    } },
+    auth: {
+      // Reading the session is where an expired token is renewed (and cookies would be written).
+      getSession: async () => {
+        handlers.cookies.setAll([{ name: "session", value: "renewed", options: {} }]);
+        return { data: { session: { access_token: "token" } }, error: null };
+      },
+      getUser: async () => {
+        authChecks++;
+        handlers.cookies.setAll([{ name: "session", value: "renewed", options: {} }]);
+        return { data: { user: { id: "admin", email: "admin@example.test", app_metadata: { role: "admin" } } }, error: null };
+      },
+    },
     from: () => ({ select: () => ({ limit: async () => ({ error: null }) }) }),
   });
   const server = compile("lib/supabase-server.ts", {

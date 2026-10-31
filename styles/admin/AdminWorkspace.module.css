@@ -152,6 +152,10 @@ a.customer:hover { color: var(--accent); text-decoration: underline; text-underl
   .header { align-items: flex-start; }
   .toolbar { flex-wrap: wrap; gap: .5rem; padding: .625rem .75rem; }
   .toolbar > .recordCount { display: none; }
+  /* One scrollable row instead of wrapping into several lines. */
+  .toolbar > .filters { flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; margin-inline: -.75rem; padding: .25rem .75rem; margin-block: -.25rem; }
+  .toolbar > .filters::-webkit-scrollbar { display: none; }
+  .toolbar > .filters > :is(button, a) { flex: none; white-space: nowrap; scroll-snap-align: start; }
   .tabs > :is(a, button) { flex: 1; padding-inline: .5rem; }
   /* Compact filter bar: search on one row, Filters/Export as an even pair. */
   .historyControls { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; padding: .75rem; gap: .625rem; }

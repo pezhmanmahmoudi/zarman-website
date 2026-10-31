@@ -104,7 +104,8 @@ export function SelectBox({
   const openList = () => {
     if (disabled || !allOptions.length) return;
     typeaheadRef.current = { text: "", time: 0 };
-    setActiveIndex(Math.max(0, allOptions.indexOf(value)));
+    // Nothing selected yet: do not pre-highlight the first row, it reads as a selection.
+    setActiveIndex(allOptions.indexOf(value));
     setOpen(true);
   };
   const choose = (index: number) => {

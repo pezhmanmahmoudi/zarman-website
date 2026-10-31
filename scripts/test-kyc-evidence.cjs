@@ -45,14 +45,14 @@ test("empty, oversized and unsupported uploads are rejected and signatures must 
 
 function actionHarness({rows,auth=true,role="customer",rpcError=null}={}){
   const calls=[];
-  const db={from(table){const q={select(...args){calls.push([table,"select",...args]);return q;},eq(...args){calls.push([table,"eq",...args]);return q;},in(){return q;},order(){return q;},limit(){return q;},maybeSingle(){return q;},single(){return q;},then(resolve,reject){return Promise.resolve({data:table==="customer_kyc_uploads"?rows:[],error:null}).then(resolve,reject);}};return q;},async rpc(name,args){calls.push(["rpc",name,args]);return {data:"submission-id",error:rpcError};}};
+  const db={from(table){const q={select(...args){calls.push([table,"select",...args]);return q;},eq(...args){calls.push([table,"eq",...args]);return q;},update(...args){calls.push([table,"update",...args]);return q;},in(){return q;},order(){return q;},limit(){return q;},maybeSingle(){return q;},single(){return q;},then(resolve,reject){return Promise.resolve({data:table==="customer_kyc_uploads"?rows:[],error:null}).then(resolve,reject);}};return q;},async rpc(name,args){calls.push(["rpc",name,args]);return {data:"submission-id",error:rpcError};}};
   const h=dashboardHarness({mocks:{
     "@supabase/supabase-js":{createClient:()=>db},
     "@/lib/supabase-server":{createSupabaseServerActionClient:async()=>({auth:{getUser:async()=>({data:{user:auth?{id:OWNER,app_metadata:{role}}:null},error:null})}})},
   }});
   return {actions:h.load("app/actions/kyc-evidence.actions.ts"),calls};
 }
-const passport=()=>({first_name:"Alex",last_name:"Morgan",mobile_number:"0412345678",dob:"1990-01-01",country:"Australia",address:"1 Test Street",city:"Sydney",state:"NSW",postcode:"2000",document_type:"passport",passport_number:"N100",expiry_date:"2090-01-01",consent_notice:true,consent_dvs:true,evidence:policy.emptyKycEvidence()});
+const passport=()=>({first_name:"Alex",last_name:"Morgan",mobile_number:"0412345678",dob:"1990-01-01",country:"Australia",address:"1 Test Street",city:"Sydney",state:"NSW",postcode:"2000",document_type:"passport",passport_number:"N100",expiry_date:"2090-01-01",consent_notice:true,consent_dvs:true,pep_declaration:{is_pep:false},evidence:policy.emptyKycEvidence()});
 const foreign=()=>({...passport(),document_type:"foreign_passport",evidence:{...draft(),back:undefined,address:undefined}});
 const frontRow={id:FRONT,user_id:OWNER,role:"front",document_type:"foreign_passport",sha256:"unique"};
 test("Iran residence requires an Iranian passport and an owner-bound photo-page upload on the server",async()=>{
@@ -276,4 +276,20 @@ test("document selections replay their illustrations without clearing files on s
   assert.equal(props.evidence.address,undefined);
   assert.equal(scenes()[2].props.name,"document-upload-idle");
   h.cleanup();
+});
+test("the PEP self-declaration is mandatory, validated, and stored on the profile after submission",async()=>{
+  for(const pep_declaration of [undefined,{},{is_pep:"no"},{is_pep:true},{is_pep:true,relation:"cousin",details:"MP, Iran"},{is_pep:true,relation:"self",details:"  "}]){
+    const h=actionHarness({rows:[frontRow]});
+    const result=await h.actions.submitCustomerKycEvidence({...foreign(),pep_declaration});
+    assert.ok(result.error,JSON.stringify(pep_declaration));assert.equal(h.calls.filter(c=>c[0]==="rpc").length,0);
+  }
+  const yes=actionHarness({rows:[frontRow]});
+  assert.equal((await yes.actions.submitCustomerKycEvidence({...foreign(),pep_declaration:{is_pep:true,relation:"family",details:"  Minister, Iran (2010-2014) "}})).success,true);
+  const update=yes.calls.find(c=>c[0]==="profiles"&&c[1]==="update");
+  assert.equal(update[2].pep_self_declared,true);assert.equal(update[2].pep_declaration_relation,"family");
+  assert.equal(update[2].pep_declaration_details,"Minister, Iran (2010-2014)");assert.equal(update[2].pep_declaration_source,"customer_form");
+  const no=actionHarness({rows:[frontRow]});
+  assert.equal((await no.actions.submitCustomerKycEvidence(foreign())).success,true);
+  const cleared=no.calls.find(c=>c[0]==="profiles"&&c[1]==="update");
+  assert.equal(cleared[2].pep_self_declared,false);assert.equal(cleared[2].pep_declaration_details,null);
 });

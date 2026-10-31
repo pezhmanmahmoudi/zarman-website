@@ -127,3 +127,29 @@ export function canRetryRequestEmail(delivery: RequestDelivery, now = Date.now()
   return ["pending", "failed"].includes(delivery.status)
     || (delivery.status === "leased" && !!delivery.lease_expires_at && Date.parse(delivery.lease_expires_at) <= now);
 }
+
+/** Journey step (1-5, matching requestMilestones) for each milestone key. */
+export const REQUEST_STEP_BY_MILESTONE: Record<string, number> = { submitted: 1, approved: 2, receipt: 3, received: 4, completed: 5 };
+
+const EVENT_STEPS: Record<string, number | "alert"> = {
+  submitted: 1, pricing_revised: 1, pricing_accepted: 1, review: 1, request_info: 1, respond: 1, reopened: 1,
+  await_funds: 2,
+  receipt_uploaded: 3, payment_evidence: 3,
+  ready: 4, confirm_funds: 4, funds_recorded: 4, funds_corrected: 4, funds_finalized: 4, resume_funded_request: 4,
+  start_processing: 5, complete: 5, reconcile_complete: 5, amounts_corrected: 5,
+  cancel: "alert", reject: "alert", expired: "alert", refund_pending: "alert", refund_returned: "alert",
+  record_uncertain_payout: "alert", funding_clearance_review: "alert", handling_overdue: "alert",
+};
+
+/** Step shown beside each activity row: the event's own step, or the step the request was on when it happened (messages, notes). */
+export function requestEventSteps(events: RequestEvent[]): Map<string, number | "alert"> {
+  const steps = new Map<string, number | "alert">();
+  let current = 1;
+  for (const event of [...events].sort((a, b) => a.sequence - b.sequence)) {
+    const own = EVENT_STEPS[event.event_type];
+    if (own === "alert") { steps.set(event.id, "alert"); continue; }
+    if (typeof own === "number") current = event.event_type === "reopened" ? own : Math.max(current, own);
+    steps.set(event.id, current);
+  }
+  return steps;
+}

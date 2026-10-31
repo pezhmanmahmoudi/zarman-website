@@ -129,8 +129,11 @@ test("uncovered sales defer profit and realise it when the short is covered", ()
   const beforeCover = snapshot([sale]);
   near(beforeCover.audInventory, -100);
   near(beforeCover.realizedTradingProfit, 0);
-  near(beforeCover.wac, 110);
-  assert.ok(beforeCover.accountingWarnings.some(message => message.includes("short by 100.00")));
+  // `wac` is the purchase cost basis (none yet); a short position is valued at its sale proceeds.
+  near(beforeCover.wac, 0);
+  near(beforeCover.inventoryValuationRate, 110);
+  // The warning is now in Persian ("net AUD stock of 100.00 is negative"); the amount must still be named.
+  assert.ok(beforeCover.accountingWarnings.some(message => message.includes("100.00") && message.includes("منفی")));
   const buy = trade({ id: "cover", type: "buy_aud", amount_aud: 150, amount_toman: 15000,
     exchange_rate: 100, date_gregorian: "2026-01-02", payer_account_id: "irt", receiver_account_id: "aud" });
   const a = snapshot([sale, buy]);

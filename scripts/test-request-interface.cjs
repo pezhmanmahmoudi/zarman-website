@@ -31,7 +31,10 @@ function load(file, { states = {}, actions = {}, captureEffects = false, supabas
   const cache = new Map();
   function compile(filename) {
     if (cache.has(filename)) return cache.get(filename);
-    const js = ts.transpileModule(fs.readFileSync(filename, "utf8"), {
+    // Lazy views (`import("./X").then(...)` behind next/dynamic) resolve synchronously here so a
+    // single render still shows the complete page.
+    const source = fs.readFileSync(filename, "utf8").replace(/\bimport\((["'][^"'\n]+["'])\)\.then\(/g, "__syncImport($1).then(");
+    const js = ts.transpileModule(source, {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
     }).outputText;
     const compiled = { exports: {} };
@@ -43,6 +46,8 @@ function load(file, { states = {}, actions = {}, captureEffects = false, supabas
         removeChannel: async () => undefined,
       } };
       if (id === "next/link") return { __esModule: true, default: props => React.createElement("a", props) };
+      if (id === "next/dynamic") return { __esModule: true, default: loader => loader() };
+      if (id === "next/navigation") return { useRouter: () => ({ refresh() {}, push() {}, replace() {} }), usePathname: () => "/admin/transactions", useSearchParams: () => new URLSearchParams() };
       if (id === "next/image") return { __esModule: true, default: props => { const attributes = { ...props }; delete attributes.unoptimized; return React.createElement("img", attributes); } };
       if (id.endsWith(".module.css")) {
         const cssPath = id.startsWith("@/") ? path.resolve(projectRoot, id.slice(2)) : path.resolve(path.dirname(filename), id);
@@ -67,7 +72,8 @@ function load(file, { states = {}, actions = {}, captureEffects = false, supabas
       }
       return require(id);
     };
-    vm.runInThisContext(`(function(require,module,exports){${js}\n})`, { filename })(localRequire, compiled, compiled.exports);
+    const syncImport = id => ({ then: pick => pick(localRequire(id)) });
+    vm.runInThisContext(`(function(require,module,exports,__syncImport){${js}\n})`, { filename })(localRequire, compiled, compiled.exports, syncImport);
     cache.set(filename, compiled.exports);
     return compiled.exports;
   }
@@ -1010,11 +1016,12 @@ test("activity exposes private evidence details to management only", () => {
 test("staff confirm final amounts once for approved, held or late requests", () => {
   for (const status of ["under_review", "awaiting_funds", "action_required", "expired"]) {
     const html = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: { request: { ...request, status }, events: [], receipts: [] }, 1: false } });
-    assert.match(html, /Confirm final amounts/); assert.doesNotMatch(html, /Correct recorded deposits|Include this deposit|Confirm funds received/);
+    assert.match(html, /Verify incoming payment/); assert.match(html, /Confirm funds received/);
+    assert.doesNotMatch(html, /Correct recorded deposits|Include this deposit/);
   }
   for (const funding_status of ["refund_pending", "refunded"]) {
     const html = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: { request: { ...request, status: "action_required", funding_status }, events: [], receipts: [] }, 1: false } });
-    assert.doesNotMatch(html, /Confirm final amounts/);
+    assert.doesNotMatch(html, /Verify incoming payment|Confirm funds received/);
   }
 });
 
@@ -1189,7 +1196,7 @@ test("a definite stale approval conflict can be retried using the refreshed requ
   const detail = { request, events: [], receipts: [], messages: [] };
   const calls = [];
   const harness = load("components/requests/RequestDetailView.tsx", { states: {
-    0: detail, 1: false, 6: "confirm_funds", 8: false, 9: "100", 12: "AUD", 15: "aud-account", 21: true,
+    0: detail, 1: false, 6: "finalize_funds", 8: false, 15: "aud-account", 21: true,
   }, actions: {
     mutateAdminRequest: async input => {
       calls.push(input);
@@ -1203,7 +1210,7 @@ test("a definite stale approval conflict can be retried using the refreshed requ
   elements(tree, node => node.type === "button" && textOf(node) === "Refresh")[0].props.onClick();
   await new Promise(resolve => setImmediate(resolve));
   tree = harness.rerender("RequestDetailView", props);
-  const confirmation = elements(tree, node => node.type === "label" && textOf(node).includes("I verified cleared funds in the bank account"))[0];
+  const confirmation = elements(tree, node => node.type === "label" && textOf(node).includes("I verified the customer payment"))[0];
   const checkbox = elements(confirmation, node => node.type === "input")[0];
   assert.equal(checkbox.props.checked, false);
   checkbox.props.onChange({ target: { checked: true } });
@@ -1225,7 +1232,7 @@ test("all conflict formats refresh once and stop stale form callbacks without re
     const calls = [];
     let reads = 0;
     const h = load("components/requests/RequestDetailView.tsx", { states: {
-      0: detail, 1: false, 6: "confirm_funds", 8: false, 9: "100", 12: "AUD", 15: "aud-account", 21: true,
+      0: detail, 1: false, 6: "finalize_funds", 8: false, 15: "aud-account", 21: true,
     }, actions: {
       mutateAdminRequest: async input => { calls.push(input); return conflict; },
       getAdminRequest: async () => {
@@ -1245,7 +1252,7 @@ test("all conflict formats refresh once and stop stale form callbacks without re
     assert.equal(calls.length, 1); assert.equal(reads, 1);
     let tree = h.rerender("RequestDetailView", props);
     assert.match(markup(tree), /This request has changed/);
-    const confirmation = elements(tree, node => node.type === "label" && textOf(node).includes("I verified cleared funds in the bank account"))[0];
+    const confirmation = elements(tree, node => node.type === "label" && textOf(node).includes("I verified the customer payment"))[0];
     const checkbox = elements(confirmation, node => node.type === "input")[0];
     assert.equal(checkbox.props.checked, false);
     checkbox.props.onChange({ target: { checked: true } });
@@ -1260,7 +1267,7 @@ test("all conflict formats refresh once and stop stale form callbacks without re
 });
 
 test("admin approval steps remain actionable and validate the explicit approval confirmation", async () => {
-  for (const [status, action] of [["submitted", "await_funds"], ["awaiting_funds", "confirm_funds"], ["ready", "reconcile_complete"], ["processing", "complete"]]) {
+  for (const [status, action] of [["submitted", "await_funds"], ["awaiting_funds", "finalize_funds"], ["ready", "reconcile_complete"], ["processing", "complete"]]) {
     const calls = [];
     const harness = load("components/requests/RequestDetailView.tsx", { states: {
       0: { request: { ...request, status, payment_approved_at: status === "submitted" ? null : request.payment_approved_at, funding_status: ["ready", "processing"].includes(status) ? "confirmed" : "unpaid" }, events: [], receipts: [], messages: [] },
@@ -1272,7 +1279,7 @@ test("admin approval steps remain actionable and validate the explicit approval 
     const html = markup(tree);
     assert.match(html, /class="actionForm"/);
     assert.match(html, /Send email to customer/);
-    assert.match(html, /type="checkbox" required=""/);
+    assert.match(html, /id="request-confirmation" type="checkbox"[^>]*required=""/);
     const form = elements(tree, node => node.type === "form")[0];
     const submit = elements(form, node => node.type === "button" && node.props.type === "submit")[0];
     assert.notEqual(submit.props.disabled, true);
@@ -1542,7 +1549,7 @@ test("legacy wrong-currency deposits remain visible while admin final amounts re
   const detail = incomingDetail("IRT"); detail.request = { ...detail.request, status: "action_required", funding_status: "unpaid" };
   detail.payments = [{ id: "wrong-currency", payment_reference: "AUTO-OLD", amount: 2000, currency: "AUD", account_id: "aud-account", created_at: request.created_at }];
   const html = render("RequestDetailView", { id: request.id, admin: true, locale: "en" }, { states: { 0: detail, 1: false, 22: fundingAccounts } });
-  assert.match(html, /Currency mismatch|expected currency/); assert.match(html, /Confirm final amounts/);
+  assert.match(html, /Currency mismatch|expected currency/); assert.match(html, /Verify incoming payment/);
   assert.doesNotMatch(html, /Resume payment|Correct recorded deposits|Include this deposit|finance team/);
 });
 
