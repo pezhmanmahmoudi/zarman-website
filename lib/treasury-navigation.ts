@@ -36,3 +36,12 @@ export function resolveTreasuryView(value: string | string[] | undefined): Treas
 export function treasuryViewHref(view: TreasuryView): string {
   return `/admin/treasury?view=${view}`;
 }
+
+export function resolveProfitPeriod(value: string | string[] | undefined): string {
+  return typeof value === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? value : "all";
+}
+
+export function profitPeriodHref(period: string): string {
+  const href = treasuryViewHref("profitability");
+  return period === "all" ? href : `${href}&period=${period}`;
+}

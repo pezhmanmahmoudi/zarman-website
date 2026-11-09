@@ -23,6 +23,7 @@ import { sortBankAccountsByPriority } from "@/lib/bank-account-ordering";
 import { calcAccountBalancesAsOf } from "@/lib/reconciliation-engine";
 import { readAllFinancialRows } from "@/lib/financial-reads";
 import { ownerFundingInput, validateOwnerFunding, changesLinkedOwnerFunding, changesOwnerFundingSettlement, type OwnerFundingPayload } from "@/lib/owner-funding";
+import { buildProfitStatement, firstActivityDate, profitPeriodRange, type ProfitStatement, type ProfitStatementLedgerRow } from "@/lib/profit-statement";
 
 // ── Private helpers ────────────────────────────────────────────────────────
 
@@ -32,6 +33,16 @@ function makeServiceRoleClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
+}
+
+/** Buy rate in force on a date; dates before the first rate use that first rate. */
+async function buyRateAsOf(db: ReturnType<typeof makeServiceRoleClient>, date: string): Promise<number> {
+  const before = await db.from("rates_history").select("buy_aud").lte("date", date).order("date", { ascending: false }).limit(1).maybeSingle();
+  if (before.error) throw new Error("نرخ پایان دوره دریافت نشد؛ صورت سود محاسبه نشد.");
+  if (before.data) return Number(before.data.buy_aud ?? 0);
+  const first = await db.from("rates_history").select("buy_aud").order("date", { ascending: true }).limit(1).maybeSingle();
+  if (first.error) throw new Error("نرخ پایان دوره دریافت نشد؛ صورت سود محاسبه نشد.");
+  return Number(first.data?.buy_aud ?? 0);
 }
 
 async function writeAuditLog(args: {
@@ -95,6 +106,8 @@ export type TreasuryPageData = {
   allBankAccounts: any[];
   reconciliations: any[];
   settings: TreasurySettingsRow;
+  /** Only loaded for the profitability workspace. */
+  profitStatement?: ProfitStatement | null;
 };
 
 // ── Server Actions ─────────────────────────────────────────────────────────
@@ -102,7 +115,7 @@ export type TreasuryPageData = {
 /**
  * دریافت پویای کل اطلاعات خزانه‌داری صرافی زرمان بر مبنای دفتر کل دوطرفه (Multi-Pocket)
  */
-export async function getTreasuryFullData(): Promise<TreasuryPageData> {
+export async function getTreasuryFullData(options: { profitPeriod?: string } = {}): Promise<TreasuryPageData> {
   await requireAdmin();
   const db = makeServiceRoleClient();
 
@@ -176,8 +189,10 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
   }));
 
   // ۲. آماده‌سازی سطرهای لجر با فیلدهای مبدأ و مقصد
-  const ledgerRows: LedgerRowInput[] = (ledgerRes.data ?? []).map((r: any) => ({
+  const ledgerRows: ProfitStatementLedgerRow[] = (ledgerRes.data ?? []).map((r: any) => ({
     id: String(r.id),
+    date_jalali: r.date_jalali as string | null,
+    notes: r.notes as string | null,
     type: r.type as string,
     entry_type: r.entry_type as string | null,
     amount_aud: Number(r.amount_aud ?? 0),
@@ -266,6 +281,23 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
 
   const strategy = generateStrategyOutput(treasury, accounting);
 
+  let profitStatement: ProfitStatement | null = null;
+  if (options.profitPeriod) {
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(new Date());
+    const firstDate = firstActivityDate(ledgerRows, expenseInputs, loanInputs);
+    const range = profitPeriodRange(options.profitPeriod, firstDate, today);
+    const [closingRate, openingRate] = await Promise.all([
+      range.to >= today ? currentBuyRate : buyRateAsOf(db, range.to),
+      range.openingDate ? buyRateAsOf(db, range.openingDate) : 0,
+    ]);
+    profitStatement = buildProfitStatement({
+      range, firstDate, today, ledgerRows, expenses: expenseInputs, ownerLoans: loanInputs,
+      accounts: accountsMeta, closingRate, openingRate,
+      serviceFeeIncomeIRT: Number(serviceFeeRes.data ?? 0),
+      pendingServiceFeeLiabilityIRT,
+    });
+  }
+
   const accountById = new Map(allAccounts.map((a: any) => [String(a.id), a]));
   const reconciliations = (reconciliationRes.data ?? []).map((r: any) => {
     const account = accountById.get(String(r.account_id));
@@ -289,6 +321,7 @@ export async function getTreasuryFullData(): Promise<TreasuryPageData> {
     allBankAccounts: allAccounts,
     reconciliations,
     settings,
+    profitStatement,
   };
 }
 

@@ -2,7 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-import { renderTransactionReceiptPdf } from "@/emails/TransactionReceiptPdf";
+import { receiptBankDetail, receiptContacts, renderTransferReceipt, type ReceiptContactSource } from "@/lib/requests/receipt";
 import { renderTransactionReceiptHtml } from "@/emails/TransactionReceiptEmail";
 import { requireAdmin } from "@/app/actions/admin.actions";
 
@@ -66,32 +66,6 @@ type TxRecipient = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function buildBankDetail(recipient: NonNullable<TxRecipient>): string {
-  const dir = recipient.direction;
-  if (!dir) return "";
-
-  if (dir === "aud") {
-    const parts: string[] = [];
-    if (recipient.bank_name) parts.push(String(recipient.bank_name));
-    if (recipient.bsb) parts.push(`BSB ${recipient.bsb}`);
-    if (recipient.account_number) parts.push(`Acc ${recipient.account_number}`);
-    return parts.join(" / ");
-  }
-
-  // IRT direction
-  const isMelli = recipient.bank_type === "bank_melli";
-  if (isMelli) {
-    const parts: string[] = ["Bank Melli"];
-    if (recipient.irt_account_number) parts.push(`Acc ${recipient.irt_account_number}`);
-    if (recipient.card_number) parts.push(`Card ${recipient.card_number}`);
-    return parts.join(" / ");
-  }
-
-  // Other Iranian bank — use Shaba
-  if (recipient.shaba_number) return `Shaba ${recipient.shaba_number}`;
-  return recipient.bank_name ? String(recipient.bank_name) : "";
-}
-
 function formatAUD(amount: number): string {
   return `${amount.toLocaleString("en-AU", {
     minimumFractionDigits: 2,
@@ -122,8 +96,9 @@ export async function sendTransactionReceipt(
   const { data: tx, error: txError } = await db
     .from("transactions")
     .select(`
-      id, type, amount_aud, equivalent_toman, final_amount, status, created_at,
+      id, type, amount_aud, equivalent_toman, final_amount, status, created_at, approved_at,
       source_of_funds, reason_for_transfer, promo_code, reference_code, payment_link,
+      applied_rate, ledger_fee_aud,
       profiles(
         first_name, last_name, email, mobile_number,
         address, city, state, postcode
@@ -194,7 +169,7 @@ export async function sendTransactionReceipt(
         recipient.irt_state, recipient.irt_postcode, recipient.irt_country,
       ].filter(Boolean).join(", ");
     }
-    receiverBankDetail = buildBankDetail(recipient);
+    receiverBankDetail = receiptBankDetail(recipient);
   } else {
     // Edu / payment link transaction — no saved recipient
     receiverFullName = "Exam / University / Institution";
@@ -232,9 +207,23 @@ export async function sendTransactionReceipt(
     paymentLink,
   };
 
+  const contacts = receiptContacts(tx as unknown as ReceiptContactSource);
+  const audMoney = { currency: "AUD" as const, amount: audAmount };
+  const tomanMoney = { currency: "IRT" as const, amount: tomanAmount };
   const [emailHtml, pdfBytes] = await Promise.all([
     Promise.resolve(renderTransactionReceiptHtml(receiptProps)),
-    renderTransactionReceiptPdf(receiptProps),
+    renderTransferReceipt({
+      reference: String(receiptProps.referenceId),
+      approvedAt: tx.approved_at ?? tx.created_at,
+      sender: { name: senderFullName, lines: contacts.senderLines },
+      recipient: { name: receiverFullName, lines: contacts.recipientLines },
+      sent: isCompanyBuying ? audMoney : tomanMoney,
+      received: isCompanyBuying ? tomanMoney : audMoney,
+      rate: tx.applied_rate ? Number(tx.applied_rate) : null,
+      feeAud: tx.ledger_fee_aud != null ? Number(tx.ledger_fee_aud) : null,
+      reasonForTransfer: contacts.reasonForTransfer,
+      promoCode: contacts.promoCode,
+    }),
   ]);
 
   // 5. Send via Resend

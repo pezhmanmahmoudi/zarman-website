@@ -382,7 +382,7 @@ test("treasury rejects unauthorized direct server-action calls before creating a
       (name) => {
         if (name === "@/app/actions/admin.actions") return context.actions;
         if (name === "@supabase/supabase-js") return { createClient: () => { privilegedAccess = true; throw new Error("Privileged client should not be created"); } };
-        if (["next/cache", "@/lib/accounting-engine", "@/lib/treasury-engine", "@/lib/strategy-engine", "@/lib/bank-account-ordering", "@/lib/reconciliation-engine", "@/lib/financial-reads", "@/lib/owner-funding", "@/lib/jalali"].includes(name)) return {};
+        if (["next/cache", "@/lib/accounting-engine", "@/lib/treasury-engine", "@/lib/strategy-engine", "@/lib/bank-account-ordering", "@/lib/reconciliation-engine", "@/lib/financial-reads", "@/lib/owner-funding", "@/lib/profit-statement", "@/lib/jalali"].includes(name)) return {};
         throw new Error(`Unexpected treasury dependency: ${name}`);
       },
       treasuryModule,

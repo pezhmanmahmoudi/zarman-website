@@ -21,10 +21,8 @@ const font = await pdf.embedFont(StandardFonts.HelveticaBold);
 pdf.setTitle(`SAMPLE ONLY - Zarman receipt ${code}`);
 pdf.setSubject("Design sample only. No funds have been transferred.");
 for (const page of pdf.getPages()) {
-  page.drawRectangle({ x: 42, y: 630, width: page.getWidth() - 84, height: 22, color: rgb(1, .95, .88) });
-  page.drawText("SAMPLE ONLY - NOT PROOF OF TRANSFER", { x: 50, y: 638, size: 10, font, color: rgb(.55, .22, .03) });
-  page.drawRectangle({ x: 36, y: 53, width: page.getWidth() - 72, height: 19, color: rgb(1, 1, 1) });
-  page.drawText("Illustrative data only. No payment or settlement has taken place.", { x: 42, y: 60, size: 9, font, color: rgb(.55, .22, .03) });
+  page.drawRectangle({ x: 0, y: page.getHeight() - 13, width: page.getWidth(), height: 13, color: rgb(1, .95, .88) });
+  page.drawText("SAMPLE ONLY - NOT PROOF OF TRANSFER - NO PAYMENT OR SETTLEMENT HAS TAKEN PLACE", { x: 90, y: page.getHeight() - 10, size: 8, font, color: rgb(.55, .22, .03) });
 }
 const pdfOutput = resolve("output/pdf/zarman-sample-receipt-en.pdf");
 await mkdir(resolve("output/pdf"), { recursive: true });

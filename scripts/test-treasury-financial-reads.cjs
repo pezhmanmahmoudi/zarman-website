@@ -33,6 +33,7 @@ function harness({ tables = {}, errors = {}, enabled = false, rpcError = null, p
         select() { return query; },
         order() { return query; },
         eq() { return query; },
+        lte() { return query; },
         limit(amount) { to = amount - 1; return query; },
         range(start, end) { from = start; to = end; return query; },
         maybeSingle() { single = true; return query; },
@@ -58,9 +59,35 @@ function harness({ tables = {}, errors = {}, enabled = false, rpcError = null, p
     '@/lib/reconciliation-engine': {},
     '@/lib/financial-reads': financialReads,
     '@/lib/owner-funding': ownerFunding,
+    '@/lib/profit-statement': {
+      firstActivityDate: () => '2026-01-05',
+      profitPeriodRange: period => (period === 'all'
+        ? { period, from: null, to: '9999-12-31', openingDate: null }
+        : { period, from: `${period}-01`, to: `${period}-31`, openingDate: '2026-02-28' }),
+      buildProfitStatement: input => { captured.profitStatement = input; return { period: input.range.period }; },
+    },
   });
   return { ...actions, captured };
 }
+
+test('the profit statement is only built when requested and uses the period-end rates', async () => {
+  const skipped = harness();
+  assert.equal((await skipped.getTreasuryFullData()).profitStatement, null);
+  assert.equal(skipped.captured.profitStatement, undefined);
+
+  const all = harness();
+  await all.getTreasuryFullData({ profitPeriod: 'all' });
+  assert.equal(all.captured.profitStatement.closingRate, 172000);
+  assert.equal(all.captured.profitStatement.openingRate, 0);
+
+  const month = harness({ tables: { rates_history: [{ buy_aud: 150000 }] } });
+  const result = await month.getTreasuryFullData({ profitPeriod: '2026-03' });
+  assert.deepEqual(result.profitStatement, { period: '2026-03' });
+  assert.equal(month.captured.profitStatement.closingRate, 150000);
+  assert.equal(month.captured.profitStatement.openingRate, 150000);
+
+  await assert.rejects(harness({ errors: { rates_history: { code: '57014', message: 'Timed out' } } }).getTreasuryFullData({ profitPeriod: '2026-03' }));
+});
 
 test('treasury reads every financial source beyond API limits and preserves funding metadata', async () => {
   const count = 1207;

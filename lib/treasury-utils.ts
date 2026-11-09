@@ -1,6 +1,22 @@
 // lib/treasury-utils.ts
 import s from "@/styles/admin/Treasury.module.css";
 
+export const EXPENSE_CATEGORIES: { value: string; label: string }[] = [
+  { value: "it_infrastructure", label: "زیرساخت و IT" },
+  { value: "office",        label: "اداری" },
+  { value: "rent",          label: "اجاره" },
+  { value: "software",      label: "نرم‌افزار" },
+  { value: "bank_fees",     label: "کارمزد بانکی" },
+  { value: "marketing",     label: "بازاریابی" },
+  { value: "salary",        label: "حقوق" },
+  { value: "tax",           label: "مالیات" },
+  { value: "miscellaneous", label: "متفرقه" },
+];
+
+export const EXPENSE_CATEGORY_FA: Record<string, string> = Object.fromEntries(
+  EXPENSE_CATEGORIES.map(c => [c.value, c.label]),
+);
+
 // ── Persian strings ────────────────────────────────────────────────────────
 export const FA = {
   pageTitle: "خزانه‌داری و استراتژی",

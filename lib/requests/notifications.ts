@@ -7,7 +7,7 @@ import {
   type RequestEmailPayload,
   type RequestEmailSnapshot,
 } from "./notification-template";
-import { renderRequestReceiptPdf } from "./receipt";
+import { loadReceiptContacts, renderRequestReceiptPdf } from "./receipt";
 import { validNotificationEmail, validatedNotificationSettings } from "./notification-config";
 
 const IDEMPOTENCY_SAFE_WINDOW_MS = 23 * 60 * 60 * 1000;
@@ -222,7 +222,7 @@ export async function sendRequestNotifications(options: NotificationWorkerOption
         if (!receipt) throw new Error("completion_receipt_unavailable");
         payload.attachments = [{
           filename: `zarman-receipt-${delivery.request_id}.pdf`,
-          content: Buffer.from(await renderRequestReceiptPdf(receipt)).toString("base64"),
+          content: Buffer.from(await renderRequestReceiptPdf(receipt, await loadReceiptContacts(options.db, receipt.transaction_id))).toString("base64"),
           contentType: "application/pdf",
         }];
       }

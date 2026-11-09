@@ -183,6 +183,79 @@ test("PDF keeps Persian names and pins metadata to settlement; repeated renderin
   assert.ok((await PDFDocument.load(long)).getPageCount() >= 1);
 });
 
+test("an amended transfer prints the approved figures on the same receipt, with no separate corrected version", async () => {
+  const approved = { ...completion, funding_total: 120000000, recipient_amount: 1200 };
+  assert.deepEqual(
+    await receipts.renderRequestReceiptPdf({ ...approved, corrected_at: "2026-10-03T01:00:00Z", revision: 1 }),
+    await receipts.renderRequestReceiptPdf(approved),
+  );
+  assert.notDeepEqual(await receipts.renderRequestReceiptPdf(approved), await receipts.renderRequestReceiptPdf(completion));
+});
+
+test("the receipt prints the published identifiers and the agreed notices only", () => {
+  const footer = read("components/layout/Footer/Footer.tsx");
+  const source = read("lib/requests/receipt.ts");
+  for (const identifier of ["ABN 70 692 742 957", "ACN 692 742 957", "IND100907570"]) {
+    assert.ok(footer.includes(identifier), `Footer no longer publishes ${identifier}`);
+    assert.ok(source.includes(identifier), `Receipt must print ${identifier}`);
+  }
+  assert.match(source, /reported to AUSTRAC under transaction code \$\{reference\}/);
+  assert.doesNotMatch(source, /not registered for GST|tax invoice|valid without a signature|Corrected Remittance/i);
+  assert.doesNotMatch(source, /IRANSans|Peyda|borderDashArray/, "The receipt is English-only and has no dotted lines");
+});
+
+test("both ways of recording a transfer produce the same receipt from the same fields", () => {
+  const row = {
+    reason_for_transfer: "Family support لینک پرداخت: https://example.test/pay", promo_code: "WELCOME",
+    profiles: [{ mobile_number: "+61 400 000 000", address: "1 Example Street", city: "Sydney", state: "NSW", postcode: "2000" }],
+    recipients: { direction: "irt", bank_type: "bank_melli", irt_phone: "+98 900 000 0000", irt_address: "خیابان نمونه", irt_city: "تهران", irt_account_number: "123", card_number: "6037 9900 0000 4321" },
+  };
+  assert.deepEqual({ ...receipts.receiptContacts(row) }, {
+    senderLines: ["+61 400 000 000", "1 Example Street, Sydney, NSW, 2000"],
+    recipientLines: ["+98 900 000 0000", "خیابان نمونه, تهران", "Bank Melli / Acc 123 / Card ending 4321"],
+    reasonForTransfer: "Family support", promoCode: "WELCOME",
+  });
+  const toAustralia = receipts.receiptContacts({ recipients: { direction: "aud", bank_name: "NAB", bsb: "083-000", account_number: "12345678", recipient_phone: "+61 411 111 111", residential_city: "Melbourne" } });
+  assert.deepEqual([...toAustralia.recipientLines], ["+61 411 111 111", "Melbourne", "NAB / BSB 083-000 / Acc 12345678"]);
+  assert.deepEqual({ ...receipts.receiptContacts({}) }, { senderLines: [], recipientLines: [], reasonForTransfer: null, promoCode: null });
+});
+
+test("missing contact details never hold back a receipt", async () => {
+  assert.equal(await receipts.loadReceiptContacts({ rpc() {} }, transactionId), null);
+  const failing = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { message: "Timed out" } }) }) }) }) };
+  assert.equal(await receipts.loadReceiptContacts(failing, transactionId), null);
+  const found = { from: table => { assert.equal(table, "transactions"); return { select: () => ({ eq: (column, value) => { assert.deepEqual([column, value], ["id", transactionId]); return { maybeSingle: async () => ({ data: { promo_code: "WELCOME" }, error: null }) }; } }) }; } };
+  assert.equal((await receipts.loadReceiptContacts(found, transactionId)).promoCode, "WELCOME");
+});
+
+test("nothing Persian reaches the page: names are spelled out and optional lines are left off", () => {
+  assert.equal(receipts.englishName("علی روحانی"), "Ali Rohani");
+  assert.equal(receipts.englishName("سارا"), "Sara");
+  assert.equal(receipts.englishName("Sam Example"), "Sam Example");
+  assert.doesNotMatch(receipts.englishName("محمد‌رضا هنگامه (الکس)"), /[؀-ۿ]/);
+  assert.equal(receipts.englishLine("خیابان نمونه، تهران"), "");
+  assert.equal(receipts.englishLine("۰۹۱۲ ۳۴۵"), "0912 345");
+  assert.equal(receipts.englishLine(" Family support "), "Family support");
+});
+
+test("the receipt renders stored Persian in either direction, stays deterministic and pins the approval date", async () => {
+  const receipt = {
+    reference: "ZE123456", approvedAt: "2026-10-02T05:12:00Z",
+    sender: { name: "Sam Example", lines: ["+61 400 000 000", "1 Example Street, Sydney NSW 2000"] },
+    recipient: { name: "سارا نمونه", lines: ["", "خیابان نمونه، تهران", "Shaba IR000000000000000000000000"] },
+    sent: { currency: "AUD", amount: 2500 }, received: { currency: "IRT", amount: 445000000 },
+    rate: 178000, feeAud: 10, expressFee: { currency: "AUD", amount: 20 }, reasonForTransfer: "Family support", promoCode: "WELCOME",
+  };
+  const first = await receipts.renderTransferReceipt(receipt);
+  assert.deepEqual(first, await receipts.renderTransferReceipt(receipt));
+  const pdf = await PDFDocument.load(first, { updateMetadata: false });
+  assert.equal(pdf.getPageCount(), 1);
+  assert.equal(pdf.getCreationDate().toISOString(), "2026-10-02T05:12:00.000Z");
+  assert.equal(pdf.getModificationDate().toISOString(), "2026-10-02T05:12:00.000Z");
+  const reversed = await receipts.renderTransferReceipt({ ...receipt, sent: receipt.received, received: receipt.sent, rate: null, feeAud: null, expressFee: null, reasonForTransfer: null, promoCode: null });
+  assert.equal((await PDFDocument.load(reversed)).getPageCount(), 1);
+});
+
 function workerDb(row, options = {}) {
   let claimed = false;
   const calls = [];

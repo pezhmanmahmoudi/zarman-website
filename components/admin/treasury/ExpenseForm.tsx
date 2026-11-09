@@ -5,6 +5,7 @@ import { useAdminTransition as useTransition } from "@/components/admin/ui/useAd
 import { Trash2, PlusCircle, Pencil, ChevronDown } from "lucide-react";
 import { addExpense, deleteExpense, updateExpense } from "@/app/actions/treasury.actions";
 import { fmtIRT, fmtAUD } from "@/lib/accounting-engine";
+import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_FA } from "@/lib/treasury-utils";
 import s from "@/styles/admin/Treasury.module.css";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
@@ -30,22 +31,8 @@ type Props = {
   bankAccounts: { id: string; account_name: string; currency: string }[];
 };
 
-const CATEGORIES: { value: string; label: string }[] = [
-  { value: "it_infrastructure", label: "زیرساخت و IT" },
-  { value: "office",        label: "اداری" },
-  { value: "rent",          label: "اجاره" },
-  { value: "software",      label: "نرم‌افزار" },
-  { value: "bank_fees",     label: "کارمزد بانکی" },
-  { value: "marketing",     label: "بازاریابی" },
-  { value: "salary",        label: "حقوق" },
-  { value: "tax",           label: "مالیات" },
-  { value: "miscellaneous", label: "متفرقه" },
-  
-];
-
-const CATEGORY_FA: Record<string, string> = Object.fromEntries(
-  CATEGORIES.map(c => [c.value, c.label]),
-);
+const CATEGORIES = EXPENSE_CATEGORIES;
+const CATEGORY_FA = EXPENSE_CATEGORY_FA;
 
 const EMPTY = {
   date:          "",

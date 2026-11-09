@@ -102,6 +102,8 @@ export type AccountingSnapshot = {
   inventoryMarketValueIRT: number;
   paidExpensesIRT: number;
   pendingExpensesIRT: number;
+  /** Unpaid expenses at the snapshot rate; this is what net assets deduct. */
+  pendingExpensesCurrentIRT: number;
   operatingProfit: number;
   totalProfit: number;
   ownerLoanBalanceIRT: number;
@@ -155,7 +157,7 @@ function sortLedgerRows(rows: LedgerRowInput[]): LedgerRowInput[] {
   });
 }
 
-function executionRate(row: LedgerRowInput): number {
+export function executionRate(row: LedgerRowInput): number {
   const explicitRate = n(row.exchange_rate);
   if (explicitRate > 0) return explicitRate;
   const aud = n(row.amount_aud);
@@ -553,6 +555,17 @@ function calcOwnerLoansWithFX(
   };
 }
 
+/** AUD cost an expense takes from net assets: unpaid, or paid from a matching drawer. */
+export function expenseCostAUD(expense: ExpenseRowInput, accountCurrencies: Map<string, string>, rate: number): number {
+  const recognized = expense.status === "pending" || (expense.status === "paid" &&
+    accountCurrencies.get(expense.payer_account_id ?? "") === expense.currency);
+  return recognized ? n(expense.amount) / (expense.currency === "AUD" ? 1 : rate) : 0;
+}
+
+export function transferFeeAUD(row: LedgerRowInput, accountCurrencies: Map<string, string>): number {
+  return row.entry_type === "transfer" && accountCurrencies.get(row.payer_account_id ?? "") === "AUD" ? n(row.fee_aud) : 0;
+}
+
 // ── Main Export ────────────────────────────────────────────────────────────
 
 export function calcAccountingSnapshot(
@@ -628,15 +641,8 @@ export function calcAccountingSnapshot(
   // again. Owner withdrawals and unearned service fees are not expenses.
   const accountCurrencies = new Map(accountsMeta.map(account => [account.id, account.currency]));
   const totalExpensesAUD = safeRate > 0
-    ? expenses.reduce((sum, expense) => {
-      const recognized = expense.status === "pending" || (expense.status === "paid" &&
-        accountCurrencies.get(expense.payer_account_id ?? "") === expense.currency);
-      if (!recognized) return sum;
-      return sum + n(expense.amount) / (expense.currency === "AUD" ? 1 : safeRate);
-    }, 0) + sortedRows.reduce((sum, row) => sum + (
-      row.entry_type === "transfer" && accountCurrencies.get(row.payer_account_id ?? "") === "AUD"
-        ? n(row.fee_aud) : 0
-    ), 0)
+    ? expenses.reduce((sum, expense) => sum + expenseCostAUD(expense, accountCurrencies, safeRate), 0)
+      + sortedRows.reduce((sum, row) => sum + transferFeeAUD(row, accountCurrencies), 0)
     : null;
   const incomeBeforeExpensesAUD = netProfitAUD !== null && totalExpensesAUD !== null
     ? netProfitAUD + totalExpensesAUD : null;
@@ -653,6 +659,7 @@ export function calcAccountingSnapshot(
     inventoryMarketValueIRT,
     paidExpensesIRT: expCalc.paidIRT,
     pendingExpensesIRT: expCalc.pendingIRT,
+    pendingExpensesCurrentIRT: expCalc.pendingCurrentIRT,
     operatingProfit,
     totalProfit,
     ownerLoanBalanceIRT: loanCalc.balanceIRT,

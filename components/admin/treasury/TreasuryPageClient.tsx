@@ -12,8 +12,8 @@ import { AdminRefreshButton } from "@/components/admin/ui/AdminRefreshButton";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 import s from "@/styles/admin/TreasuryWorkspace.module.css";
 
-export function TreasuryPageClient({ initialData, view }: { initialData: TreasuryPageData; view: TreasuryView }) {
-  const load = useCallback(() => getTreasuryFullData(), []);
+export function TreasuryPageClient({ initialData, view, profitPeriod }: { initialData: TreasuryPageData; view: TreasuryView; profitPeriod?: string }) {
+  const load = useCallback(() => getTreasuryFullData({ profitPeriod }), [profitPeriod]);
   const { data, refresh, refreshing, refreshError } = useAdminSnapshot(initialData, load);
   const criticalCount = data.strategy?.criticalAlertCount ?? 0;
 

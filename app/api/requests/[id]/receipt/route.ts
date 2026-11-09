@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import { isUuid } from "@/lib/requests/validation";
-import { renderRequestReceiptPdf, type RequestCompletionReceiptSnapshot } from "@/lib/requests/receipt";
+import { loadReceiptContacts, renderRequestReceiptPdf, type RequestCompletionReceiptSnapshot } from "@/lib/requests/receipt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   if (receipt.error || !receipt.data) return new Response("Receipt not found", { status: 404, headers });
   try {
     const snapshot = receipt.data.snapshot as RequestCompletionReceiptSnapshot;
-    const pdf = await renderRequestReceiptPdf(snapshot);
+    const pdf = await renderRequestReceiptPdf(snapshot, await loadReceiptContacts(db, snapshot.transaction_id));
     const filename = `zarman-receipt-${snapshot.reference_code.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80)}.pdf`;
     return new Response(Buffer.from(pdf), { headers: { ...headers, "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${filename}"` } });
   } catch { return new Response("The receipt could not be generated. Please retry shortly", { status: 503, headers }); }

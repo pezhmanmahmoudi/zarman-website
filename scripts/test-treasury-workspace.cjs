@@ -151,3 +151,39 @@ test("treasury page resolves URL state on the server and retrieves one shared sn
     assert.match(html, /<h1 class="pageTitle">Treasury<\/h1>/);
   }
 });
+
+test("treasury URLs keep only well-formed profit periods", () => {
+  for (const value of [undefined, "", "2026-13", "2026-1", "__proto__", ["2026-10"]]) assert.equal(navigation.resolveProfitPeriod(value), "all");
+  assert.equal(navigation.resolveProfitPeriod("2026-10"), "2026-10");
+  assert.equal(navigation.profitPeriodHref("all"), "/admin/treasury?view=profitability");
+  assert.equal(navigation.profitPeriodHref("2026-10"), "/admin/treasury?view=profitability&period=2026-10");
+});
+
+test("profitability leads with AUD profit and lists every period", () => {
+  const line = (aud, irt = aud * 100) => ({ aud, irt });
+  const statement = {
+    period: "2026-10", periodLabel: "اکتبر 2026", from: "2026-10-01", to: "2026-10-31", closingRate: 100,
+    months: Array.from({ length: 14 }, (_, i) => ({ value: `m${i}`, label: `month-${i}` })),
+    net: line(1234.5), realized: line(1200), paper: line(34.5), rateSensitivityAUD: -86, tomanCostBasisProfitIRT: 999,
+    lines: { trading: line(2000), fees: line(100), expenses: line(-500), operating: line(1600), realizedFx: line(10), unpaidExpenses: line(0), adjustments: line(40), rateEffect: line(-450), inventory: line(34.5), translation: line(0) },
+    owner: { openingNetAssets: line(1000), contributed: line(200), withdrawn: line(50), retained: line(1184.5), closingNetAssets: line(2384.5) },
+    balances: { audBanks: line(1000), irtBanks: line(1500), transit: line(0), customers: line(-115.5), ownerLoan: line(0), unpaid: line(0), freeAUD: 884.5 },
+    expenses: { categories: [{ category: "rent", ...line(500) }], transferFees: line(0), months: [{ month: "2026-10", label: "اکتبر 2026", ...line(500) }] },
+    adjustmentRows: [{ id: "a", date: "1405/06/29", account: "NAB_PM", aud: 331.31, irt: 0, notes: "تطبیق حساب" }],
+    checks: { balancesDifferenceAUD: 0, stockDifferenceAUD: 0 },
+  };
+  const Section = compile("components/admin/treasury/ProfitabilitySection.tsx").default;
+  const html = renderToStaticMarkup(React.createElement(Section, { statement }));
+  assert.match(html, /سود خالص · اکتبر 2026/);
+  assert.ok(html.indexOf("1,234.50") < html.indexOf("سود معاملات"), "AUD profit must lead the page");
+  assert.ok(html.includes('href="/admin/treasury?view=profitability"'));
+  assert.equal((html.match(/month-\d+/g) || []).length, 12);
+  assert.ok(html.includes("href=\"/admin/ledger?type=adjustment&amp;start=2026-10-01&amp;end=2026-10-31\""));
+  assert.match(html, /NAB_PM/);
+  assert.match(html, /می‌خواند/);
+  assert.doesNotMatch(html, /role="alert"/);
+
+  const mismatch = renderToStaticMarkup(React.createElement(Section, { statement: { ...statement, checks: { balancesDifferenceAUD: 0, stockDifferenceAUD: 25 } } }));
+  assert.match(mismatch, /role="alert"/);
+  assert.match(renderToStaticMarkup(React.createElement(Section, { statement: null })), /نرخ خرید معتبر/);
+});
