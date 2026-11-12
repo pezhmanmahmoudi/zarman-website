@@ -192,8 +192,8 @@ export function HomeAppPromptView({ locale, variant, push, onInstall, onLater, o
   const showLater = variant === "install" || variant === "notifications" || variant === "signin" || variant === "blocked";
 
   const banner = variant === "enabled"
-    ? { title: "Notifications are on", body: "You'll hear from us here." }
-    : { title: "Transfer approved", body: "Transfer ZE9999 is approved. Your payment details are ready." };
+    ? { title: "Notifications are on", body: "Your transfer updates will appear here." }
+    : { title: "Transfer approved", body: "ZE9999 · Payment details are ready." };
 
   return (
     <dialog ref={dialog} className={styles.dialog} dir={fa ? "rtl" : "ltr"} lang={lang} data-variant={variant}
@@ -209,7 +209,7 @@ export function HomeAppPromptView({ locale, variant, push, onInstall, onLater, o
               <div className={styles.screen} data-muted={variant === "blocked" || variant === "unsupported" || undefined}>
                 <div className={styles.status} dir="ltr"><span>9:41</span><span className={styles.island} /></div>
                 <div className={styles.banner} dir="ltr">
-                  <Image src="/images/icon-192.png" unoptimized alt="" width={28} height={28} className={styles.bannerIcon} />
+                  <Image src="/images/apple-touch-icon.png" unoptimized alt="" width={28} height={28} className={styles.bannerIcon} />
                   <div className={styles.bannerText}>
                     <div className={styles.bannerMeta}><strong>{BRAND}</strong><span>now</span></div>
                     <p className={styles.bannerTitle}>{banner.title}</p>
@@ -219,7 +219,7 @@ export function HomeAppPromptView({ locale, variant, push, onInstall, onLater, o
                 <div className={styles.apps} dir="ltr">
                   {/* ZarmanEx sits in the first row so the frame never crops it. */}
                   {Array.from({ length: 8 }, (_, index) => index === 1
-                    ? <span key={index} className={styles.ourApp}><Image src="/images/icon-192.png" unoptimized alt="" width={40} height={40} /><em>{BRAND}</em></span>
+                    ? <span key={index} className={styles.ourApp}><Image src="/images/apple-touch-icon.png" unoptimized alt="" width={40} height={40} /><em>{BRAND}</em></span>
                     : <span key={index} className={styles.otherApp} />)}
                 </div>
               </div>

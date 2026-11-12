@@ -54,28 +54,30 @@ export async function sendCustomerPush(config: NonNullable<ReturnType<typeof cus
 }
 
 // Notifications are sent in English only. {ref} is the transfer's reference code.
+// The title says what happened; the body names the transfer and adds only the next step,
+// never repeating the title. The app name is already shown by the system above the title.
 // Bodies never include amounts or messages written by the team: lock screens show them.
 const PUSH_COPY: Record<string, [title: string, body: string]> = {
-  reopened: ["Transfer reopened", "Transfer request {ref} has been reopened and is back under review."],
-  admin_message: ["New message from ZarmanEx", "You have a new message about transfer {ref}. Open it to read and reply."],
-  review: ["Transfer under review", "We're reviewing transfer {ref} and will let you know as soon as there's an update."],
-  await_funds: ["Transfer approved", "Transfer {ref} is approved. Your payment details are ready."],
-  request_info: ["Action needed", "We need a few more details to continue transfer {ref}."],
-  funds_recorded: ["Payment recorded", "We've recorded a payment for transfer {ref}."],
-  ready: ["Payment received", "Your payment for transfer {ref} has been received and verified."],
-  resume_funded_request: ["Approved for settlement", "Transfer {ref} is approved and will be settled shortly."],
-  start_processing: ["Transfer in progress", "We're now processing transfer {ref}."],
-  record_uncertain_payout: ["Confirming your transfer", "We're confirming the outcome of transfer {ref} and will update you shortly."],
-  complete: ["Transfer complete", "Transfer {ref} has been completed. Your receipt is ready."],
-  reject: ["Transfer declined", "Transfer request {ref} was declined. Open it for details."],
-  cancel: ["Transfer cancelled", "Transfer request {ref} has been cancelled."],
-  refund_pending: ["Refund in progress", "A refund for transfer {ref} is being processed."],
-  refund_returned: ["Refund completed", "The refund for transfer {ref} has been confirmed. Open it for details."],
-  expired: ["Transfer request expired", "Transfer request {ref} has expired. You can start a new one any time."],
+  reopened: ["Transfer reopened", "{ref} · Back under review."],
+  admin_message: ["New message", "{ref} · Open to read and reply."],
+  review: ["Under review", "{ref} · We'll update you shortly."],
+  await_funds: ["Transfer approved", "{ref} · Payment details are ready."],
+  request_info: ["Action needed", "{ref} · We need a few more details."],
+  funds_recorded: ["Payment recorded", "{ref} · We'll verify it shortly."],
+  ready: ["Payment received", "{ref} · Verified and confirmed."],
+  resume_funded_request: ["Approved for settlement", "{ref} · We'll start shortly."],
+  start_processing: ["Transfer in progress", "{ref} · We'll let you know once it's done."],
+  record_uncertain_payout: ["Confirming your transfer", "{ref} · We'll update you shortly."],
+  complete: ["Transfer complete", "{ref} · Your receipt is ready."],
+  reject: ["Transfer declined", "{ref} · Open for details."],
+  cancel: ["Transfer cancelled", "{ref} · Open for details."],
+  refund_pending: ["Refund in progress", "{ref} · We'll confirm once it's done."],
+  refund_returned: ["Refund completed", "{ref} · Open for details."],
+  expired: ["Request expired", "{ref} · Start a new one any time."],
 };
 PUSH_COPY.confirm_funds = PUSH_COPY.ready;
 PUSH_COPY.reconcile_complete = PUSH_COPY.complete;
-const FALLBACK_COPY: [string, string] = ["Transfer update", "There's a new update on transfer {ref}."];
+const FALLBACK_COPY: [string, string] = ["Transfer update", "{ref} · Open to see what's new."];
 
 /**
  * The text is always English. `siteLocale` is the language the customer uses
@@ -98,7 +100,7 @@ export function customerPushPayload(delivery: { requestId: string; eventType: st
 
 /** The confirmation sent by "Send a test". */
 export function customerPushTestPayload(siteLocale: "en" | "fa"): PushPayload {
-  return { title: "ZarmanEx notifications are on", body: "From now on, we'll let you know here whenever your transfers are updated.",
+  return { title: "Notifications are on", body: "Your transfer updates will appear here.",
     url: `/${siteLocale}/dashboard`, tag: "zarman-test", lang: "en" };
 }
 

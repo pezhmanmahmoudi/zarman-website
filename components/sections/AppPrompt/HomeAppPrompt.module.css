@@ -108,7 +108,7 @@
 }
 @keyframes drop { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
 /* The app icon carries its own background and rounded corners. */
-.bannerIcon { flex-shrink: 0; width: 1.6rem; height: 1.6rem; border-radius: 0.4rem; outline: 1px solid rgba(0, 0, 0, 0.08); outline-offset: -1px; }
+.bannerIcon { flex-shrink: 0; width: 1.6rem; height: 1.6rem; border-radius: 0.4rem; }
 .bannerText { min-width: 0; flex: 1; }
 .bannerMeta { display: flex; justify-content: space-between; gap: 0.4rem; font-size: 0.5625rem; line-height: 1.3; color: #6e6e73; }
 .bannerMeta strong { color: var(--label); font-weight: 600; }

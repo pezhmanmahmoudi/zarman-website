@@ -53,10 +53,10 @@ test("notifications are English, link to the transfer in the customer's site lan
   assert.equal(payload.tag, "request-r-1");
   assert.equal(payload.lang, "en");
   assert.equal(payload.title, "Transfer complete");
-  assert.equal(payload.body, "Transfer ZE3F9A1B2C has been completed. Your receipt is ready.", "bidi controls are stripped from the reference");
+  assert.equal(payload.body, "ZE3F9A1B2C · Your receipt is ready.", "bidi controls are stripped from the reference");
   assert.equal(payload.timestamp, Date.parse("2026-11-12T01:02:03Z"));
   const unknown = push.customerPushPayload({ requestId: "r-2", eventType: "admin_note", reference: "ZE2" }, "en");
-  assert.deepEqual([unknown.title, unknown.body, unknown.url], ["Transfer update", "There's a new update on transfer ZE2.", "/en/dashboard/requests/r-2"]);
+  assert.deepEqual([unknown.title, unknown.body, unknown.url], ["Transfer update", "ZE2 · Open to see what's new.", "/en/dashboard/requests/r-2"]);
 });
 
 test("every customer-facing event has its own English title and body, with no amounts", () => {
@@ -68,7 +68,10 @@ test("every customer-facing event has its own English title and body, with no am
       const text = payload.title + payload.body;
       assert.notEqual(payload.title, "Transfer update", `${eventType} uses the generic fallback`);
       assert.ok(payload.body.includes("ZEABCD") && !payload.body.includes("{ref}"), `${eventType} names the transfer`);
-      assert.ok(payload.title.length <= 40 && payload.body.length <= 140, `${eventType} fits a lock screen`);
+      assert.ok(payload.title.length <= 28 && payload.body.length <= 60, `${eventType} stays short`);
+      assert.ok(payload.body.startsWith("ZEABCD · "), `${eventType} leads with the transfer code`);
+      const repeated = payload.title.toLowerCase().split(/\W+/).filter(word => word.length >= 5 && payload.body.toLowerCase().includes(word));
+      assert.deepEqual(repeated, [], `${eventType} body repeats its title`);
       assert.doesNotMatch(text, /[؀-ۿ]/, `${eventType}/${siteLocale} must be English`);
       assert.doesNotMatch(text, /\$|AUD|\d{3,}/, "no amounts");
     }
