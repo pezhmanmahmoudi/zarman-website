@@ -39,7 +39,7 @@ function harness(file, props, { ios = false } = {}) {
   const loaded = { exports: {} };
   const localRequire = id => {
     if (id === "react") return hooks;
-    if (id.endsWith("useAnchoredPopover")) return { useAnchoredPopover: options => { popover = options; } };
+    if (id.endsWith("useAnchoredPopover")) return { useAnchoredPopover: options => { popover = options; }, useFloatingLayer: () => node => node, isInsidePopoverStack: () => false };
     if (id.endsWith(".module.css")) return { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) };
     if (id === "@/components/ui/SelectBox/SelectBox") return { SelectBox: () => null };
     if (id === "@/lib/australian-driver-licence") return { normalizeAustralianState: value => value };

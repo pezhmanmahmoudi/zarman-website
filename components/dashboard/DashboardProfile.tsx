@@ -18,6 +18,7 @@ import { normalizeAustralianState } from "@/lib/australian-driver-licence";
 import { useLocale } from "@/context/LocaleContext";
 import { KycDocumentEvidence } from "@/components/dashboard/KycDocumentEvidence";
 import { TelegramNotifications } from "./TelegramNotifications";
+import { AppNotificationsCard } from "./AppNotificationsCard";
 import { emptyKycEvidence, isIranCountry, KYC_AU_STATES, validateKycEvidence, validateKycIdentityDetails, type KycEvidenceDraft } from "@/lib/kyc/evidence";
 import { KYC_DVS_CONSENT_STATEMENT } from "@/lib/kyc/consent";
 import flow from "@/styles/dashboard/DashboardProfileFlow.module.css";
@@ -470,6 +471,7 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
       </footer>
       </div>
     </DashboardMagicCard>}
+    <AppNotificationsCard locale={locale} motionEnabled={motionEnabled} anchor/>
     <TelegramNotifications locale={locale} overview motionEnabled={motionEnabled}/>
   </div>;
 }

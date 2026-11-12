@@ -2,7 +2,7 @@
 
 import React, { useEffect, useId, useRef, useState } from "react";
 import { Info } from "lucide-react";
-import { useAnchoredPopover } from "../useAnchoredPopover";
+import { useAnchoredPopover, useFloatingLayer } from "../useAnchoredPopover";
 import styles from "./Tooltip.module.css";
 
 export default function Tooltip({ text, children, iconSize = 14 }: { text: string, children: React.ReactNode, iconSize?: number }) {
@@ -10,6 +10,7 @@ export default function Tooltip({ text, children, iconSize = 14 }: { text: strin
   const anchorRef = useRef<HTMLSpanElement>(null);
   const popoverRef = useRef<HTMLSpanElement>(null);
   const id = useId();
+  const floatingLayer = useFloatingLayer();
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const show = () => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -34,7 +35,7 @@ export default function Tooltip({ text, children, iconSize = 14 }: { text: strin
       <button type="button" className={styles.trigger} aria-label="More information" aria-describedby={open ? id : undefined} onClick={show}>
         <Info size={iconSize} className={styles.icon} strokeWidth={2.5} aria-hidden="true" />
       </button>
-      {open && <span ref={popoverRef} id={id} role="tooltip" popover="manual" className={styles.tooltip}>{text}</span>}
+      {open && floatingLayer(<span ref={popoverRef} id={id} role="tooltip" popover="manual" className={styles.tooltip}>{text}</span>)}
     </span>
   );
 }

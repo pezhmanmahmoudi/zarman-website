@@ -1,9 +1,41 @@
 "use client";
 
-import { useLayoutEffect, useRef, type RefObject } from "react";
+import { useLayoutEffect, useRef, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { getAnchoredPosition } from "./anchored-position";
 
 const openPopovers: HTMLElement[] = [];
+
+const subscribeNever = () => () => {};
+const hasNativePopover = () => typeof HTMLElement.prototype.showPopover === "function";
+
+/**
+ * Browsers without the Popover API (Chrome/Android WebView before 114 and
+ * several vendor browsers such as older Samsung Internet, Mi Browser and
+ * Huawei Browser) have no top layer. There a `position: fixed` popover is
+ * positioned against any ancestor with a filter or transform (e.g. the
+ * dashboard's reveal animation) and clipped by `overflow: hidden` cards, so
+ * it opens off-screen. In those browsers render it in a portal instead: into
+ * the topmost modal dialog (the only part of the page that is not inert, so
+ * it must hold the anchor), or into <body>.
+ */
+export function useFloatingLayer() {
+  const native = useSyncExternalStore(subscribeNever, hasNativePopover, () => true);
+  return (node: ReactNode) => {
+    if (native || !node) return node;
+    let modals: NodeListOf<HTMLDialogElement>;
+    try { modals = document.querySelectorAll("dialog:modal"); }
+    catch { modals = document.querySelectorAll("dialog[open]"); }
+    return createPortal(node, modals[modals.length - 1] ?? document.body);
+  };
+}
+
+/** True when `target` is inside `popover` or a popover opened on top of it (e.g. the month list in a calendar). */
+export function isInsidePopoverStack(popover: HTMLElement | null, target: EventTarget | null) {
+  if (!popover || !(target instanceof Node)) return false;
+  const index = openPopovers.indexOf(popover);
+  return popover.contains(target) || (index >= 0 && openPopovers.slice(index + 1).some(child => child.contains(target)));
+}
 
 /**
  * Native popovers escape overflow/transform clipping without losing inherited
@@ -36,7 +68,11 @@ export function useAnchoredPopover({
     popover.style.margin = "0";
     popover.style.boxSizing = "border-box";
     if (typeof popover.showPopover === "function") popover.showPopover();
-    else popover.removeAttribute("popover");
+    else {
+      // No top layer: useFloatingLayer has portaled it, so stacking order is all we need.
+      popover.removeAttribute("popover");
+      popover.style.zIndex = "2147483000";
+    }
     let preferredHeight = Math.min(popover.scrollHeight, maxHeight);
     openPopovers.push(popover);
 
@@ -84,7 +120,7 @@ export function useAnchoredPopover({
     };
     const scheduleUpdate = () => { if (!frame) frame = requestAnimationFrame(update); };
     const onPointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Node && !anchor.contains(event.target) && !popover.contains(event.target)) closeRef.current("outside");
+      if (event.target instanceof Node && !anchor.contains(event.target) && !isInsidePopoverStack(popover, event.target)) closeRef.current("outside");
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented && openPopovers[openPopovers.length - 1] === popover) {

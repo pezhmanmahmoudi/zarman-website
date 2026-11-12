@@ -1,6 +1,23 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
+import { removeCustomerPush } from "@/app/actions/customer-push.actions";
+
+/**
+ * A deliberate sign-out stops this device's push notifications, so a shared
+ * phone does not keep receiving the previous customer's alerts. Idle timeouts
+ * keep them. Never blocks sign-out for more than a couple of seconds.
+ */
+async function forgetPushOnThisDevice() {
+  try {
+    if (!("serviceWorker" in navigator)) return;
+    const registration = await navigator.serviceWorker.getRegistration("/");
+    const subscription = await registration?.pushManager.getSubscription();
+    if (!subscription) return;
+    await Promise.race([removeCustomerPush(subscription.endpoint), new Promise(resolve => window.setTimeout(resolve, 2_500))]);
+    await subscription.unsubscribe();
+  } catch { /* Sign-out must not depend on push. */ }
+}
 
 export const SIGN_OUT_STARTED = "zarman:sign-out-started";
 export const SIGNED_OUT = "zarman:signed-out";
@@ -35,6 +52,8 @@ export function signOutAndRedirect(locale: string, reason?: "timeout") {
     // Do not wait on a browser auth lock while ending the server session.
     void supabase.auth.stopAutoRefresh().catch(() => {});
     try {
+      // Only pages controlled by the push service worker can hold a subscription; others sign out without delay.
+      if (!reason && typeof navigator !== "undefined" && navigator.serviceWorker?.controller) await forgetPushOnThisDevice();
       const response = await fetch("/api/auth/signout", {
         method: "POST", credentials: "same-origin", cache: "no-store", signal: controller.signal,
       });

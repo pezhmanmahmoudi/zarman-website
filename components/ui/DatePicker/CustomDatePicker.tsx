@@ -4,7 +4,7 @@ import React, { useMemo, useState, useRef, useId } from "react";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { SelectBox } from "../SelectBox/SelectBox";
 import s from "./DatePicker.module.css";
-import { useAnchoredPopover } from "../useAnchoredPopover";
+import { isInsidePopoverStack, useAnchoredPopover, useFloatingLayer } from "../useAnchoredPopover";
 
 type CustomDatePickerProps = {
   value: string; // Format: "YYYY-MM-DD"
@@ -60,6 +60,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
   const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const calendarId = useId();
+  const floatingLayer = useFloatingLayer();
   useAnchoredPopover({
     open: isOpen && !disabled,
     anchorRef: containerRef,
@@ -161,7 +162,9 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
 
   return (
     <div className={s.container} ref={containerRef} onBlur={event => {
-      if (event.relatedTarget && !containerRef.current?.contains(event.relatedTarget as Node)) setIsOpen(false);
+      // The calendar may be portaled outside the container on browsers without the Popover API.
+      if (event.relatedTarget && !containerRef.current?.contains(event.relatedTarget as Node)
+        && !isInsidePopoverStack(popoverRef.current, event.relatedTarget)) setIsOpen(false);
     }}>
       <div className={`${s.inputWrapper}${className ? " " + className : ""}`}>
         <button
@@ -185,7 +188,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = "dd/mm
         <CalendarIcon size={18} className={s.icon} aria-hidden="true" />
       </div>
 
-      {isOpen && !disabled && (
+      {isOpen && !disabled && floatingLayer(
         <div id={calendarId} ref={popoverRef} popover="manual" role="dialog" aria-label="Choose date" className={s.popover}>
           <div className={s.header}>
             <button type="button" onClick={handlePrevMonth} className={s.navBtn} title="Previous Month">

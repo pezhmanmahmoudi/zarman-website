@@ -6,6 +6,7 @@ import { after } from "next/server";
 import { buildChangeLines, changedProtectedKeys, createPendingBankChange, notifyAdminsOfBankChange, pickProtected, verifyAdminPassword } from "@/lib/admin-security/bank-change";
 import { newRequestTelegramMessage, sendTelegramAdminMessage } from "@/lib/notifications/telegram";
 import { customerTelegramConfig, dispatchCustomerTelegramSafely } from "@/lib/notifications/customer-telegram";
+import { dispatchCustomerPushSafely } from "@/lib/notifications/customer-push";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
 import { requireAdmin } from "@/app/actions/admin.actions";
 import { applyPromoCode, checkPromoEligibility, toPromoCodeData, calcLoyaltyDiscount, FINANCE_CONFIG_DEFAULTS, toCompanyTradeType, type PromoCodeData } from "@/lib/pricing";
@@ -441,6 +442,7 @@ async function mutate(input: RequestMutationInput, admin: boolean): Promise<Exch
   }
   if (error) throw error;
   if (admin) after(() => dispatchCustomerTelegramSafely(input.requestId));
+  if (admin) after(() => dispatchCustomerPushSafely(input.requestId));
   if (admin && input.sendEmail === true) after(() => sendApprovedEmails(input.requestId));
   return admin ? data as ExchangeRequest : customerRequest(data as ExchangeRequest);
 }
@@ -579,6 +581,7 @@ async function sendMessage(input: RequestMessageInput, admin: boolean): Promise<
   });
   if (error) throw error;
   if (admin) after(() => dispatchCustomerTelegramSafely(input.requestId));
+  if (admin) after(() => dispatchCustomerPushSafely(input.requestId));
   if (admin && input.sendEmail === true) after(() => sendApprovedEmails(input.requestId));
   return data as RequestMessageResult;
 }

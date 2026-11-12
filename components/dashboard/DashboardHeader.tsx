@@ -30,10 +30,15 @@ export function DashboardHeader({ activeTab, profile, privateAmounts, onTogglePr
       <div className="flex min-w-0 items-center gap-3"><Image src="/images/logo-no-text-light.svg" alt="Zarman" width={32} height={32} className="shrink-0 min-[900px]:hidden"/><div className="hidden min-w-0 min-[480px]:block"><span className="block truncate text-sm font-semibold text-[#453854]">{activeTab === "overview" ? fa ? "پنل مدیریت تراکنش" : "Transaction Management Panel" : activeTab === "feedback" ? fa ? "ثبت بازخورد" : "Submit Feedback" : copy[activeTab]}</span></div></div>
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         {profile?.kyc_status === "approved" && <span className="me-2 hidden items-center gap-1.5 rounded-full bg-[#e6f6f0]/70 px-3 py-2 text-[11px] text-[#347963] lg:inline-flex"><ShieldCheck size={14} aria-hidden="true"/>{fa ? "هویت تأیید شده" : "Identity verified"}</span>}
-        <Link className={`${controls.control} ${controls.language}`} href={switchPath} aria-label={targetLocale === "fa" ? "فارسی" : "English"} lang={targetLocale} dir={targetLocale === "fa" ? "rtl" : "ltr"}>{targetLocale === "fa" ? "فارسی" : "English"}</Link>
+        <Link className={`${controls.control} ${controls.language}`} href={switchPath} aria-label={targetLocale === "fa" ? "فارسی" : "English"} lang={targetLocale} dir={targetLocale === "fa" ? "rtl" : "ltr"}>
+          {/* Phones show a short code so the profile can take the space. */}
+          <span className={controls.languageFull}>{targetLocale === "fa" ? "فارسی" : "English"}</span>
+          <span className={controls.languageShort} aria-hidden="true">{targetLocale === "fa" ? "فا" : "EN"}</span>
+        </Link>
         <button type="button" className={`${controls.control} ${controls.settings}`} onClick={() => setPreferences(true)} aria-label={fa ? "تنظیمات نمایش" : "Display preferences"} title={fa ? "تنظیمات نمایش" : "Display preferences"}><SlidersHorizontal size={19} strokeWidth={1.7} aria-hidden="true"/></button>
         <Link className={controls.profileLink} href={dashboardHref(locale, "profile")} aria-label={copy.profile} title={copy.profile} aria-current={activeTab === "profile" ? "page" : undefined}>
           <span className={`${controls.control} ${controls.avatar}`}><DashboardInitials name={profileName}/></span>
+          <span className={controls.profileLabel} aria-hidden="true">{fa ? "پروفایل" : "Profile"}</span>
         </Link>
         <button type="button" className={`${controls.control} ${controls.settings} ${controls.mobileSignOut}`} onClick={signOut} disabled={signingOut} aria-busy={signingOut} aria-label={signingOut ? (fa ? "در حال خروج…" : "Signing out…") : copy.signOut} title={copy.signOut}><LogOut size={19} strokeWidth={1.7} aria-hidden="true"/></button>
       </div>

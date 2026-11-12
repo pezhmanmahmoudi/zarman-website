@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useId, useSyncExternalStore } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import styles from "./SelectBox.module.css";
-import { useAnchoredPopover } from "../useAnchoredPopover";
+import { useAnchoredPopover, useFloatingLayer } from "../useAnchoredPopover";
 
 export type OptionGroup = { label: string; options: string[] };
 export type LabeledOption = { label: string; value: string };
@@ -51,6 +51,7 @@ export function SelectBox({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const typeaheadRef = useRef({ text: "", time: 0 });
+  const floatingLayer = useFloatingLayer();
 
   useAnchoredPopover({
     open: open && !disabled && !isIOS,
@@ -277,8 +278,8 @@ export function SelectBox({
         </span>
       </button>
 
-      {expanded && (
-        <div ref={popoverRef} popover="manual" className={dropdownClasses} onClick={event => {
+      {expanded && floatingLayer(
+        <div ref={popoverRef} popover="manual" dir={dir} className={dropdownClasses} onClick={event => {
           // Cancel the enclosing label's default click on the trigger, which
           // would otherwise reopen the popup after mouse or touch selection.
           event.preventDefault();

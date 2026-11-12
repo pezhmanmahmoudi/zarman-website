@@ -40,6 +40,8 @@ const nextConfig: NextConfig = {
       ...['/admin/:path*', '/api/:path*', ...['fa', 'en'].flatMap((locale) =>
         ['dashboard', 'login', 'forgot-password', 'reset-password', 'auth'].map((path) => `/${locale}/${path}/:path*`)
       )].map((source) => ({ source, headers: noindexHeaders })),
+      // Push service worker: always revalidate so fixes reach installed apps promptly.
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache' }] },
       {
         source: '/(.*)',
         headers: [

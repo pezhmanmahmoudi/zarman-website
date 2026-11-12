@@ -5,9 +5,9 @@ import type { Profile } from "@/app/[locale]/dashboard/dashboard.types";
 import { useLocale } from "@/context/LocaleContext";
 import { useDashboard } from "./DashboardShell";
 import { DashboardIdentityCard } from "./DashboardIdentityCard";
-import { TelegramNotifications } from "./TelegramNotifications";
+import { AppNotificationsCard } from "./AppNotificationsCard";
 
-/** Keep success on screen for its first visit; the next visit uses Telegram in the same slot. */
+/** Keep success on screen for its first visit; the next visit shows the ZarmanEx app and notifications card in the same slot. */
 export function DashboardOverviewNotice({ profile, motionEnabled }: { profile: Profile | null; motionEnabled: boolean }) {
   return <OverviewNotice key={`${profile?.id}:${profile?.kyc_status}`} profile={profile} motionEnabled={motionEnabled} />;
 }
@@ -39,5 +39,5 @@ function OverviewNotice({ profile, motionEnabled }: { profile: Profile | null; m
   }, [showApproval, profile?.id, acknowledgeIdentityNotice]);
 
   if (!approved || showApproval) return <div ref={host}><DashboardIdentityCard profile={profile} motionEnabled={motionEnabled} /></div>;
-  return <TelegramNotifications locale={locale} overview motionEnabled={motionEnabled} />;
+  return <AppNotificationsCard locale={locale} motionEnabled={motionEnabled} />;
 }

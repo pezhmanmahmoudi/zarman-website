@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import { normalizeAustralianState } from "@/lib/australian-driver-licence";
 import styles from "@/styles/dashboard/DashboardProfile.module.css";
-import { useAnchoredPopover } from "@/components/ui/useAnchoredPopover";
+import { useAnchoredPopover, useFloatingLayer } from "@/components/ui/useAnchoredPopover";
 
 type AuLocationEntry = {
   suburb: string;
@@ -127,6 +127,7 @@ export function SuggestionField({
   const trimmedValue = value.trim();
   const hasSuggestions = suggestions.length > 0;
   const showDropdown = !disabled && isOpen && hasSuggestions;
+  const floatingLayer = useFloatingLayer();
 
   useAnchoredPopover({
     open: showDropdown, anchorRef: shellRef, popoverRef,
@@ -210,7 +211,7 @@ export function SuggestionField({
         >
           <ChevronDown size={16} className={showDropdown ? styles.auSuggestionChevronOpen : ""} />
         </button>
-        {showDropdown && (
+        {showDropdown && floatingLayer(
           <div ref={popoverRef} popover="manual" dir="ltr" className={styles.auSuggestionDropdown} role="listbox" aria-label={label} id={listboxId}>
             {visibleSuggestions.map((suggestion, index) => (
               <button

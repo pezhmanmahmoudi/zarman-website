@@ -103,14 +103,16 @@ test("logout is idempotent when there is no session cookie", async () => {
   assert.equal((await h.POST(h.request("https://zarman.test", "preference=keep"))).status, 200);
 });
 
-function browser(fetch) {
+function browser(fetch, extraGlobals = {}, removeCustomerPush = async () => ({ data: {} })) {
   const events = [], redirects = [], storage = [], timers = [], auth = [];
   const api = compile("lib/auth/sign-out.ts", {
     "@/lib/supabase": { supabase: { auth: {
       stopAutoRefresh: async () => { auth.push("stop"); }, startAutoRefresh: async () => { auth.push("start"); },
       signOut: () => { throw Error("Browser auth locks must not govern logout"); },
     } } },
+    "@/app/actions/customer-push.actions": { removeCustomerPush },
   }, {
+    ...extraGlobals,
     fetch, crypto: { randomUUID: () => "synthetic-notification" },
     window: {
       setTimeout: fn => { timers.push(fn); return timers.length; }, clearTimeout() {},
@@ -144,4 +146,19 @@ test("logout network timeout restores controls for retry without reporting a sig
   assert.deepEqual(h.auth, ["stop", "start"]);
   succeed = true; await h.api.signOutAndRedirect("en");
   assert.deepEqual(h.redirects, ["/en/login"]);
+});
+
+test("a deliberate logout removes this device's push subscription before ending the session; a timeout keeps it", async () => {
+  const order = [];
+  const subscription = { endpoint: "https://fcm.googleapis.com/fcm/send/device", unsubscribe: async () => { order.push("unsubscribe"); } };
+  const navigator = { serviceWorker: { controller: {}, getRegistration: async () => ({ pushManager: { getSubscription: async () => subscription } }) } };
+  const fetch = async () => { order.push("signout"); return { ok: true, json: async () => ({ signedOut: true }) }; };
+  const h = browser(fetch, { navigator }, async endpoint => { order.push(`remove:${endpoint}`); return { data: {} }; });
+  await h.api.signOutAndRedirect("fa");
+  assert.deepEqual(order, ["remove:https://fcm.googleapis.com/fcm/send/device", "unsubscribe", "signout"]);
+
+  order.length = 0;
+  const idle = browser(fetch, { navigator }, async () => { order.push("remove"); return { data: {} }; });
+  await idle.api.signOutAndRedirect("fa", "timeout");
+  assert.deepEqual(order, ["signout"]);
 });

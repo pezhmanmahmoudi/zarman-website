@@ -14,6 +14,7 @@ import { getFinanceConfig } from "@/lib/finance-config";
 import { getFaqItems, getFaqAnswerText } from "@/data/faq";
 import { SITE_URL, organizationId, websiteId, getPageMetadata, serializeJsonLd } from "@/lib/seo";
 import ExchangeHighlightSection from "@/components/sections/ExchangeHighlight/ExchangeHighlightSection";
+import HomeAppPrompt from "@/components/sections/AppPrompt/HomeAppPrompt";
 
 export const revalidate = 300;
 
@@ -125,6 +126,7 @@ export default async function Home({
       <div className="flex flex-col w-full relative">
         <Hero />
         <RateSection />
+        <HomeAppPrompt />
         <AboutSection />
         <TrustStrip />
         <ServiceSection />

@@ -1,0 +1,90 @@
+/* ZarmanEx app + notifications card (dashboard overview and profile).
+   Same structure as the Telegram card, in the brand's violet. Every button is a real,
+   visible button: solid primary, outlined/tinted secondary, never bare text. */
+
+.surface {
+  --app-surface: linear-gradient(160deg, #f8f7ff 8%, #ecebff 100%);
+  --app-border: #d3cff5;
+}
+.panel { min-width: 0; scroll-margin-top: 100px; color: #24243f; }
+
+.header { display: flex; align-items: center; gap: 24px; }
+.illustration { display: flex; align-items: center; justify-content: center; width: 88px; height: 88px; flex-shrink: 0; }
+.illustration .scene { width: 100% !important; height: 100% !important; max-width: 100%; max-height: 100%; }
+.heading { flex: 1; min-width: 0; }
+.panel .eyebrow { margin: 0 0 6px; color: #5d5a78; font-size: 12px; font-weight: 500; line-height: 1.7; }
+.panel .heading h2 {
+  margin: 0 !important; color: #24243f !important; font-size: 18px !important; font-weight: 600 !important;
+  line-height: 1.65 !important; letter-spacing: normal !important; overflow-wrap: anywhere;
+}
+.panel .description { max-width: 640px; margin: 6px 0 0; color: #5d5a78; font-size: 12px; line-height: 1.85; }
+.headerAction { display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%; }
+
+/* ── Buttons ── */
+.panel .button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; max-width: 100%; padding: 10px 18px; border: 1px solid; border-radius: 12px;
+  font: inherit; font-size: 13px; font-weight: 600; line-height: 22px; white-space: normal; text-align: center;
+  text-decoration: none; cursor: pointer; transition: background-color 150ms, border-color 150ms, color 150ms;
+}
+.panel .primary { border-color: #4f46e5; background: #4f46e5; color: #ffffff; }
+.panel .primary:hover:not(:disabled) { border-color: #4338ca; background: #4338ca; }
+.panel .primary:active:not(:disabled) { background: #3730a3; }
+.panel .secondary { border-color: #a29cdc; background: #ffffff; color: #3b3399; }
+.panel .secondary:hover:not(:disabled) { border-color: #7c74cf; background: #f4f2ff; }
+.panel .secondary:active:not(:disabled) { background: #e9e6ff; }
+.panel .danger { border-color: #d8a3b0; background: #ffffff; color: #a3213f; }
+.panel .danger:hover:not(:disabled) { border-color: #c8798c; background: #fff0f3; }
+.panel .button:disabled { opacity: 0.6; cursor: wait; }
+.panel .headerButton { width: fit-content; padding: 8px 14px; gap: 6px; border-radius: 999px; font-size: 12px; line-height: 20px; }
+.panel :is(button, a):focus-visible { outline: 3px solid #6d64e8; outline-offset: 3px; }
+.chevron { transition: transform 150ms; }
+.chevron[data-expanded="true"] { transform: rotate(180deg); }
+
+/* ── Dropdown ── */
+.details { display: grid; gap: 0; margin-top: 24px; border-top: 1px solid #d9d4f5; }
+.details[hidden] { display: none; }
+.block { padding: 20px 0; border-bottom: 1px solid #e4e0fa; }
+.block:last-child { border-bottom: 0; padding-bottom: 0; }
+.block h3 { margin: 0 0 12px !important; color: #24243f !important; font-size: 14px !important; font-weight: 600 !important; line-height: 1.6 !important; }
+.text { margin: 0; color: #5d5a78; font-size: 12.5px; line-height: 1.85; }
+.status { display: flex; align-items: center; gap: 8px; margin: 0; color: #1f7a52; font-size: 13px; font-weight: 500; line-height: 1.8; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+
+.devices { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.devices li { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: baseline; gap: 12px; font-size: 12.5px; line-height: 1.85; color: #3d3a58; }
+.devices strong { color: #24243f; font-weight: 600; }
+
+.steps { display: grid; gap: 8px; margin: 0; padding-inline-start: 1.2rem; color: #3d3a58; font-size: 12.5px; line-height: 1.9; }
+
+.features { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.features li { display: flex; align-items: flex-start; gap: 12px; }
+.featureIcon { display: grid; flex-shrink: 0; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #ffffff; color: #4f46e5; box-shadow: inset 0 0 0 1px #e1ddfb; }
+.features strong { display: block; color: #24243f; font-size: 13px; font-weight: 600; line-height: 1.7; }
+.features small { display: block; color: #5d5a78; font-size: 12px; line-height: 1.8; }
+
+.chip {
+  display: inline-block; padding: 0 0.5em; border-radius: 6px; background: #ffffff;
+  box-shadow: inset 0 0 0 1px #dcd8f7; font-family: var(--font-en-stack); font-size: 0.92em; font-weight: 600;
+  white-space: nowrap; unicode-bidi: isolate;
+}
+
+.error { margin: 16px 0 0; padding-inline-start: 12px; border-inline-start: 3px solid #c23b54; color: #9c2340; font-size: 12px; line-height: 1.85; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.spinner { flex-shrink: 0; animation: app-spin 1.2s linear infinite; }
+@keyframes app-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 767px) {
+  .header { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 12px 16px; }
+  .illustration { width: 64px; height: 64px; }
+  .headerAction { grid-column: 1 / -1; }
+  .details { margin-top: 20px; }
+}
+@media (max-width: 479px) {
+  .headerAction .button, .actions .button { flex: 1 1 100%; width: 100%; }
+  .devices li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel .button, .chevron { transition: none; }
+  .spinner { animation: none; }
+}

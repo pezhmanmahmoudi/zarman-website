@@ -201,6 +201,7 @@ function harness(overrides = {}) {
     "@/lib/admin-security/bank-change": { buildChangeLines: () => [], changedProtectedKeys: () => [], pickProtected: () => ({}),
       createPendingBankChange: async () => ({}), notifyAdminsOfBankChange: async () => {}, verifyAdminPassword: async () => {} },
     "@/lib/notifications/customer-telegram": { customerTelegramConfig: () => ({ enabled: false }), dispatchCustomerTelegramSafely: async () => {} },
+    "@/lib/notifications/customer-push": { dispatchCustomerPushSafely: async () => {} },
     "@/lib/requests/validation": validation, "@/lib/requests/receipt-upload": upload, "@/lib/pricing": pricing,
     "@/lib/requests/notification-config": notificationConfig,
     "@/lib/requests/conflicts": conflicts,

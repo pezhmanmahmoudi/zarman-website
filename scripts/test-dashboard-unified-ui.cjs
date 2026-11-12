@@ -26,7 +26,7 @@ const dialogMocks = Object.fromEntries(["Dialog", "DialogContent", "DialogTitle"
   ({ children, dir }) => React.createElement(name === "DialogTitle" ? "h2" : name === "DialogDescription" ? "p" : "div", { dir }, children),
 ]));
 
-test("profile shortcut keeps its accessible name without visible text and mobile logout handles failure, retry and duplicate clicks", async () => {
+test("profile shortcut keeps its accessible name, shows a phone-only label, and mobile logout handles failure, retry and duplicate clicks", async () => {
   for (const locale of ["en", "fa"]) {
     const calls = [];
     const h = dashboardHarness({ locale, mocks: {
@@ -40,7 +40,12 @@ test("profile shortcut keeps its accessible name without visible text and mobile
     const shortcut = elements(render(), n => n.props.href === `/${locale}/dashboard?tab=profile`)[0];
     assert.equal(shortcut.props["aria-current"], "page");
     assert.equal(shortcut.props["aria-label"], copy.profile);
-    assert.equal(React.Children.count(shortcut.props.children), 1, "avatar only, without visible profile text");
+    // Avatar plus a short label that only phones show; the label is hidden from assistive tech (the link has an aria-label).
+    const shortcutParts = React.Children.toArray(shortcut.props.children);
+    assert.equal(shortcutParts.length, 2, "avatar and phone-only profile label");
+    assert.match(String(shortcutParts[1].props.className), /profileLabel/);
+    assert.equal(shortcutParts[1].props["aria-hidden"], "true");
+    assert.equal(shortcutParts[1].props.children, locale === "fa" ? "پروفایل" : "Profile");
     assert.equal(shortcut.props.title, copy.profile);
     // The accessible name changes to "Signing out…" while pending, so find the button by its role in the layout.
     const button = () => elements(render(), n => n.type === "button" && String(n.props.className || "").includes("mobileSignOut"))[0];
@@ -234,7 +239,12 @@ for (const locale of ["en", "fa"]) {
     const header = h.render(DashboardHeader, { activeTab: "history", profile: { first_name: "Pezhman", last_name: "Morgan" }, privateAmounts: false, onTogglePrivacy() {}, motion: false, onToggleMotion() {} });
     const switchLink = elements(header, node => node.props.lang === nextLocale)[0];
     assert.equal(switchLink.props.href, `/${nextLocale}/dashboard/requests/request-123?from=history&focus=request-payment-details`);
-    assert.equal(switchLink.props.children, nextLocale === "fa" ? "فارسی" : "English");
+    // Full name on larger screens, a short code on phones (the short code is hidden from assistive tech).
+    const [fullName, shortCode] = React.Children.toArray(switchLink.props.children);
+    assert.equal(fullName.props.children, nextLocale === "fa" ? "فارسی" : "English");
+    assert.equal(shortCode.props.children, nextLocale === "fa" ? "فا" : "EN");
+    assert.equal(shortCode.props["aria-hidden"], "true");
+    assert.equal(switchLink.props["aria-label"], nextLocale === "fa" ? "فارسی" : "English");
     assert.equal(switchLink.props.dir, nextLocale === "fa" ? "rtl" : "ltr");
     const headerHtml = renderToStaticMarkup(header);
     assert.match(headerHtml, /data-avatar-initials="true"[^>]*>PM<\/bdi>/);

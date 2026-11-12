@@ -18,5 +18,17 @@
 .profileLink:hover .avatar,.profileLink[aria-current="page"] .avatar{background:#e6dff2;border-color:#a995cd}
 .mobileSignOut:disabled{opacity:.5;cursor:wait}
 @media(min-width:900px){.mobileSignOut{display:none}}
+
+/* Phones: a small language chip, and a clearly labelled profile pill. */
+.languageShort,.profileLabel{display:none}
+@media(max-width:899px){
+  .language{min-width:0;width:40px;min-height:36px;height:36px;padding:0;border-radius:10px;border-color:#e2deec;background:transparent;color:#6b6080;font-size:12px}
+  .languageFull{display:none}
+  .languageShort{display:inline}
+  .profileLink{width:auto;height:44px;gap:8px;padding-inline:4px 14px;border:1px solid #cfc3e6;border-radius:999px;background:#f3effb}
+  .profileLink .avatar,.profileLink:hover .avatar,.profileLink[aria-current="page"] .avatar{width:36px;min-height:36px;height:36px;border-color:#635bff;background:#635bff;color:#ffffff}
+  .profileLink:hover,.profileLink[aria-current="page"]{border-color:#a995cd;background:#ebe4f8}
+  .profileLabel{display:inline;color:#3d2f5c;font-size:13px;font-weight:600;line-height:1}
+}
 .initials {font-family:var(--font-en,Inter),Inter,IRANSansX,Peyda,system-ui,sans-serif!important;font-size:14px;font-weight:600;line-height:1;letter-spacing:0;unicode-bidi:isolate}
 @media(prefers-reduced-motion:reduce){.control{transition:none}}

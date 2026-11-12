@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ZarmanEx app icon · Sky · editable source (100×100 grid)
+
+  Layers: background · diamond-frame · artwork (clipped to the inner diamond):
+          z-letter · uluru (+ uluru-grooves) · damavand (gap, mountain, snow line)
+  Logo colour: #2F2F7F   Background: #CFE6FF → #F3F8FF ("bg" gradient)
+  The gaps and grooves are painted with the background gradient, so they follow it automatically.
+  Keep the icon a full square: phones round or crop it themselves.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 100 100">
+<defs><linearGradient id="bg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="100"><stop offset="0" stop-color="#CFE6FF"/><stop offset="1" stop-color="#F3F8FF"/></linearGradient></defs>
+<rect width="100" height="100" fill="url(#bg)"/><g transform="translate(50 50) scale(.86) translate(-50 -50)"><defs><clipPath id="win"><rect x="24.6" y="24.6" width="50.8" height="50.8" rx="8" transform="rotate(45 50 50)" /></clipPath></defs>
+  <g id="diamond-frame"><rect x="20" y="20" width="60" height="60" rx="11" transform="rotate(45 50 50)" fill="none" stroke="#2F2F7F" stroke-width="2.8"/></g>
+  <g id="artwork" clip-path="url(#win)" fill="#2F2F7F">
+    <g id="uluru"><path d="M31,37.4 C31.6,34 32.6,31 35.6,30.1 C39,29.400000000000002 42.5,30.200000000000003 46.5,29.8
+    C51,29.400000000000002 56,29.25 60.5,29.950000000000003 C63.8,30.5 66,32.2 67.4,34.2 C68.1,35.4 68.6,36.6 69,37.4 Z"/><g id="uluru-grooves" fill="url(#bg)"><path d="M41.98,30.9 H43.02 Q42.62,32.85 42.11,34.8 Q41.99,32.85 41.98,30.9 Z"/><path d="M48.48,30.9 H49.52 Q49.31,32.85 49,34.8 Q48.69,32.85 48.48,30.9 Z"/><path d="M54.98,30.9 H56.02 Q56.01,32.85 55.89,34.8 Q55.38,32.85 54.98,30.9 Z"/></g></g>
+    <path id="z-letter" d="M51.5,36.9 H69 L52,63.4 H100 V70.2 H0 V63.4 H34.5 Z"/>
+    <g id="damavand">
+      <path id="damavand-gap" d="M55.36,64 V63.4 L61.56,51.15 Q62.31,50.85 63.06,51.15 L69.25,63.4 V64 Z" fill="url(#bg)" stroke="url(#bg)" stroke-width="3.6" stroke-linejoin="round"/>
+      <rect id="z-bottom-bar-repair" x="0" y="63.4" width="100" height="6.800000000000004"/>
+      <path id="damavand-mountain" d="M55.36,64 V63.4 L61.56,51.15 Q62.31,50.85 63.06,51.15 L69.25,63.4 V64 Z"/>
+      <path id="damavand-snow-line" d="M60.07,55 Q61.19,56.5 61.97,55.2 Q62.98,56.6 63.65,55.25 Q64.14,56 64.55,55" fill="none" stroke="url(#bg)" stroke-width="1" stroke-linecap="round"/>
+    </g>
+  </g></g></svg>
