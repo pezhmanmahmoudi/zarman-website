@@ -21,7 +21,8 @@
     "test:admin": "node --test scripts/test-admin-toast.cjs scripts/test-admin-archive.cjs scripts/test-admin-recovery.cjs scripts/test-admin-reads.mjs scripts/test-admin-overlays.mjs scripts/test-admin-layout.cjs scripts/test-admin-editing.cjs scripts/test-admin-pagination.cjs scripts/test-admin-transaction-workspace.cjs scripts/test-admin-shared-tables.cjs scripts/test-treasury-workspace.cjs scripts/test-profit-statement.cjs scripts/test-ledger-workspace.cjs scripts/test-austrac-deadlines.mjs scripts/test-austrac-compliance.mjs scripts/test-ifti-dra-incoming.mjs",
     "test:compliance": "node --test scripts/test-compliance-engine.mjs scripts/test-compliance-service.mjs",
     "test:kyc": "node --test scripts/test-kyc-evidence.cjs scripts/test-kyc-evidence-db.mjs scripts/test-kyc-text-identity-db.mjs scripts/test-kyc-consent-gates.cjs",
-    "test:push": "node --test scripts/test-customer-push.mjs"
+    "test:push": "node --test scripts/test-customer-push.mjs",
+    "test:security": "node --test scripts/test-security-rls-db.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

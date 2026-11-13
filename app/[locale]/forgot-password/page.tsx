@@ -40,19 +40,9 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError("");
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", email.toLowerCase().trim())
-      .maybeSingle();
-
-    if (!profile) {
-      setError("No account found with this email address.");
-      setLoading(false);
-      return;
-    }
-
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+    // Never look the address up in profiles from the browser: customer records are private, and
+    // the reset endpoint already answers identically for unknown addresses (no account enumeration).
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim());
 
     if (resetError) {
       setError(resetError.message);
@@ -108,7 +98,7 @@ export default function ForgotPasswordPage() {
     setOtpError("");
 
     const { error } = await supabase.auth.verifyOtp({
-      email,
+      email: email.trim(),
       token: code,
       type: "recovery",
     });
@@ -130,7 +120,7 @@ export default function ForgotPasswordPage() {
     setOtpError("");
     setOtpDigits(Array(OTP_LENGTH).fill(""));
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
     if (error) {
       setOtpError("Failed to resend code. Please try again.");
       return;
@@ -237,7 +227,7 @@ export default function ForgotPasswordPage() {
 
                 <div className={styles.emailInfoWrapper}>
                   <p className={styles.cleanSubtitle}>
-                    Enter the 6-digit code we sent to:
+                    If an account exists for this email, we sent a 6-digit code to:
                   </p>
                   <div className={styles.emailBadge}>{email}</div>
                 </div>

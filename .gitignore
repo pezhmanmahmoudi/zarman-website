@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# production backups must never be committed (they are written outside the repo; this is a second guard)
+ZarmanBackups/
+zarman-prod_*
+*.dump
+*.7z

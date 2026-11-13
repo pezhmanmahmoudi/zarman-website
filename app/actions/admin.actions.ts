@@ -23,6 +23,8 @@ const MAX_AUDIT_PAGE_SIZE = 100;
 const MAX_AUDIT_PAGE = 10_000;
 const MAX_SEARCH_QUERY_LENGTH = 64;
 const PRIVILEGED_ROLES = new Set(["admin", "supabase_admin", "service_role"]);
+// Mirrors transactions_status_check; rejected early so a bad value never reaches the ledger logic below it.
+const TRANSACTION_STATUSES = new Set(["pending", "approved", "rejected", "archived"]);
 const COMPLIANCE_NOTE_MAX_LENGTH = 2_000;
 const COMPLIANCE_REASON_MAX_LENGTH = 500;
 
@@ -306,6 +308,27 @@ async function writeAuditLog({
   throw new Error(
     `Audit log write failed after ${AUDIT_LOG_RETRY_COUNT} attempts: ${lastError ?? "unknown error"}`
   );
+}
+
+/** Audits a change that has already committed. A failed audit write never undoes that change,
+ * but it is reported (action name only — no customer data) so gaps in the trail are visible. */
+async function recordAdminAudit(
+  admin: { id: string; email?: string | null },
+  entry: { action: string; targetType: string; targetId: string | number; oldValue?: unknown; newValue?: unknown },
+) {
+  try {
+    await writeAuditLog({
+      actorId: admin.id,
+      actorEmail: admin.email ?? "",
+      action: entry.action,
+      targetType: entry.targetType,
+      targetId: String(entry.targetId),
+      oldValue: entry.oldValue,
+      newValue: entry.newValue,
+    });
+  } catch {
+    console.error(`[admin audit] ${entry.action} could not be recorded`);
+  }
 }
 
 // ===========================================================================
@@ -1092,6 +1115,13 @@ export async function archiveTransaction(transactionId: string | number) {
   const { error } = await db.from("transactions").update({ status: "archived" }).eq("id", transactionId);
   if (error) return { error: error.message };
 
+  await recordAdminAudit(admin, {
+    action: "TRANSACTION_ARCHIVED",
+    targetType: "transaction",
+    targetId: transactionId,
+    oldValue: { status: before.status },
+    newValue: { status: "archived", user_id: before.user_id, amount_aud: before.amount_aud, type: before.type },
+  });
   return { success: true };
 }
 
@@ -1779,15 +1809,25 @@ export async function updateAssistedRecipientForUser(payload: any) {
 }
 
 export async function updateTransactionReferenceCode(transactionId: string | number, newCode: string) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   if (!transactionId) return { error: "Missing transaction ID." };
 
   const db = makeServiceRoleClient();
+  const { data: before } = await db.from("transactions").select("reference_code").eq("id", transactionId).maybeSingle();
+  if (!before) return { error: "Transaction not found." };
+  const referenceCode = newCode.trim() || null;
   const { error } = await db
     .from("transactions")
-    .update({ reference_code: newCode.trim() || null })
+    .update({ reference_code: referenceCode })
     .eq("id", transactionId);
   if (error) return { error: error.message };
+  await recordAdminAudit(admin, {
+    action: "TRANSACTION_REFERENCE_UPDATED",
+    targetType: "transaction",
+    targetId: transactionId,
+    oldValue: { reference_code: before.reference_code },
+    newValue: { reference_code: referenceCode },
+  });
   return { success: true };
 }
 
@@ -1815,7 +1855,7 @@ export async function updateCustomerCode(userId: string, newCode: string) {
 }
 
 export async function updateTransactionAmount(transactionId: string | number, field: string, newValue: number) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   if (!transactionId) return { error: "Missing transaction ID." };
   const allowedFields = ["amount_aud", "equivalent_toman"];
   if (!allowedFields.includes(field)) return { error: "Invalid field." };
@@ -1823,7 +1863,7 @@ export async function updateTransactionAmount(transactionId: string | number, fi
 
   const db = makeServiceRoleClient();
   const [current, linked] = await Promise.all([
-    db.from("transactions").select("status").eq("id", transactionId).maybeSingle(),
+    db.from("transactions").select("status, amount_aud, equivalent_toman").eq("id", transactionId).maybeSingle(),
     db.from("exchange_requests").select("id").eq("transaction_id", transactionId).maybeSingle(),
   ]);
   if (current.error || linked.error) return { error: "The transaction could not be loaded. Refresh and try again." };
@@ -1836,6 +1876,13 @@ export async function updateTransactionAmount(transactionId: string | number, fi
     .eq("id", transactionId).eq("status", current.data.status).select("id").maybeSingle();
   if (error) return { error: error.message };
   if (!updated) return { error: "This transaction changed. Refresh before editing its amount." };
+  await recordAdminAudit(admin, {
+    action: "TRANSACTION_AMOUNT_UPDATED",
+    targetType: "transaction",
+    targetId: transactionId,
+    oldValue: { [field]: (current.data as Record<string, unknown>)[field] ?? null },
+    newValue: { [field]: newValue },
+  });
   return { success: true };
 }
 
@@ -1849,9 +1896,13 @@ export async function updateAssistedTransactionForUser(payload: any) {
   // Fetch current state before update to detect status change to approved
   const { data: before } = await db
     .from("transactions")
-    .select("status, type, amount_aud, equivalent_toman, applied_rate, created_at, user_id")
+    .select("status, type, amount_aud, equivalent_toman, applied_rate, created_at, user_id, reference_code, source_of_funds, reason_for_transfer, payment_link, recipient_id")
     .eq("id", transactionId)
     .maybeSingle();
+  if (!before) return { error: "Transaction not found." };
+  if (payload.status !== undefined && !TRANSACTION_STATUSES.has(payload.status)) {
+    return { error: "Invalid transaction status." };
+  }
 
   const patch: Record<string, unknown> = {};
   if (payload.type !== undefined && ["buy_aud", "sell_aud"].includes(payload.type)) {
@@ -1876,6 +1927,13 @@ export async function updateAssistedTransactionForUser(payload: any) {
 
   const { error } = await db.from("transactions").update(patch).eq("id", transactionId);
   if (error) return { error: error.message };
+  await recordAdminAudit(admin, {
+    action: "TRANSACTION_UPDATED",
+    targetType: "transaction",
+    targetId: transactionId,
+    oldValue: Object.fromEntries(Object.keys(patch).map((key) => [key, (before as Record<string, unknown>)[key] ?? null])),
+    newValue: { ...patch, user_id: before.user_id },
+  });
 
   // ── If status is being changed to approved and wasn't before, stamp approved_at + insert ledger ──
   const wasNotApproved = before?.status !== "approved";
@@ -2055,13 +2113,15 @@ export async function createPromoCode(payload: PromoCodeInput) {
 
 /** Only operational fields are editable; the discount itself is immutable once customers hold quotes with it. */
 export async function updatePromoCode(id: string, payload: { active?: unknown }) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   if (!id) return { error: "Missing ID." };
   if (payload.active === undefined) return { error: "Nothing to update." };
 
   const db = makeServiceRoleClient();
-  const { error } = await db.from("promo_codes").update({ active: Boolean(payload.active) }).eq("id", id);
+  const active = Boolean(payload.active);
+  const { error } = await db.from("promo_codes").update({ active }).eq("id", id);
   if (error) return { error: error.message };
+  await recordAdminAudit(admin, { action: "PROMO_CODE_UPDATED", targetType: "promo_code", targetId: id, newValue: { active } });
   return { success: true };
 }
 
