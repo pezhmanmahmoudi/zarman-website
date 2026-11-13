@@ -947,6 +947,10 @@ test("completion email: status maps delivery states and sending is admin-only, i
     assert.equal(h.state.calls[0].filters.request_id, REQUEST);
   }
   assert.equal((await harness({ admin: true, deliveries: null }).actions.getCompletionEmailStatus(REQUEST)).data.state, "not_sent");
+  // A live lease is still sending; an expired one was cut off and needs a manual retry.
+  const live = new Date(Date.now() + 60_000).toISOString(), lapsed = new Date(Date.now() - 60_000).toISOString();
+  assert.equal((await harness({ admin: true, deliveries: { id: COMMAND, status: "leased", lease_expires_at: live } }).actions.getCompletionEmailStatus(REQUEST)).data.state, "sending");
+  assert.equal((await harness({ admin: true, deliveries: { id: COMMAND, status: "leased", lease_expires_at: lapsed } }).actions.getCompletionEmailStatus(REQUEST)).data.state, "interrupted");
 
   // A skipped delivery is re-armed by the RPC; the worker then runs for that delivery only.
   const queued = harness({ admin: true, rpc: () => ({ data: { id: COMMAND, status: "pending" }, error: null }) });
@@ -975,6 +979,21 @@ test("completion email: failed deliveries retry the same delivery; reconciliatio
   assert.deepEqual(failed.state.calls.map(call => call.rpc), ["send_completion_email", "retry_request_notification"]);
   assert.equal(failed.state.calls[1].args.p_delivery_id, COMMAND);
   assert.equal(failed.state.after.length, 1);
+
+  // An interrupted send (expired lease) is re-armed through the same audited retry.
+  const lapsed = new Date(Date.now() - 60_000).toISOString();
+  const interrupted = harness({ admin: true, rpc: name => name === "send_completion_email"
+    ? { data: { id: COMMAND, status: "leased", lease_expires_at: lapsed }, error: null } : { data: { id: COMMAND, status: "pending" }, error: null } });
+  assert.equal((await interrupted.actions.sendCompletionEmail(REQUEST)).data.state, "sending");
+  assert.deepEqual(interrupted.state.calls.map(call => call.rpc), ["send_completion_email", "retry_request_notification"]);
+  assert.equal(interrupted.state.calls[1].args.p_delivery_id, COMMAND);
+  assert.equal(interrupted.state.after.length, 1);
+
+  // A send still holding its lease is never retried alongside itself.
+  const holding = harness({ admin: true, rpc: () => ({ data: { id: COMMAND, status: "leased", lease_expires_at: new Date(Date.now() + 60_000).toISOString() }, error: null }) });
+  assert.equal((await holding.actions.sendCompletionEmail(REQUEST)).data.state, "sending");
+  assert.deepEqual(holding.state.calls.map(call => call.rpc), ["send_completion_email"]);
+  assert.equal(holding.state.after, undefined);
 
   const reconcile = harness({ admin: true, rpc: () => ({ data: { id: COMMAND, status: "reconciliation_required" }, error: null }) });
   assert.match((await reconcile.actions.sendCompletionEmail(REQUEST)).error, /manual review/);

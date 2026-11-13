@@ -8,6 +8,9 @@ import {
 } from "@/components/admin/transactions/TransactionsManager";
 
 export const metadata = { title: "Transactions | Zarman Admin" };
+// Server actions run under this page's function; the completion email builds a
+// receipt PDF in after(), which the default limit could cut off mid-send.
+export const maxDuration = 60;
 
 type HistoryStatusFilter = "all" | "approved" | "rejected" | "archived";
 type HistoryDirectionFilter = "all" | "incoming" | "outgoing";

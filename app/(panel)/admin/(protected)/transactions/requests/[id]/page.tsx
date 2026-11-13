@@ -2,6 +2,9 @@ import { RequestDetailView } from "@/components/requests/RequestDetailView";
 import shellStyles from "@/styles/admin/AdminShell.module.css";
 
 export const metadata = { title: "Transfer details | Zarman Admin" };
+// Server actions run under this page's function; the completion email builds a
+// receipt PDF in after(), which the default limit could cut off mid-send.
+export const maxDuration = 60;
 
 export default async function TransactionRequestPage({ params, searchParams }: {
   params: Promise<{ id: string }>;

@@ -496,9 +496,16 @@ export async function retryAdminRequestEmail(input: { requestId: string; deliver
       first_attempt_at: data.first_attempt_at, lease_expires_at: data.lease_expires_at };
   });
 }
-function completionEmailState(delivery: { id: string; status: string } | null | undefined): CompletionEmailState {
+type CompletionDelivery = { id: string; status: string; lease_expires_at?: string | null };
+/** A lease that ran out without a finish: the background send was cut off (e.g. the
+ * function hit its time limit). No scheduler reclaims it, so it needs a manual retry. */
+function interruptedLease(delivery: CompletionDelivery | null | undefined, now = Date.now()) {
+  return delivery?.status === "leased" && !!delivery.lease_expires_at && Date.parse(delivery.lease_expires_at) <= now;
+}
+function completionEmailState(delivery: CompletionDelivery | null | undefined): CompletionEmailState {
   const status = delivery?.status;
   const state = status === "provider_accepted" || status === "delivered" ? "sent"
+    : interruptedLease(delivery) ? "interrupted"
     : status === "pending" || status === "leased" ? "sending"
     : status === "failed" || status === "reconciliation_required" || status === "suppressed" ? "failed"
     : "not_sent";
@@ -509,7 +516,7 @@ export async function getCompletionEmailStatus(requestId: string): Promise<Actio
   return result(async () => {
     await requireAdmin();
     if (!isUuid(requestId)) throw new Error("Request not found.");
-    const { data, error } = await database().from("exchange_request_notification_deliveries").select("id,status")
+    const { data, error } = await database().from("exchange_request_notification_deliveries").select("id,status,lease_expires_at")
       .eq("request_id", requestId).eq("event_type", "complete").eq("audience", "customer")
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (error) throw error;
@@ -526,12 +533,13 @@ export async function sendCompletionEmail(requestId: string): Promise<ActionResu
     const queued = await db.rpc("send_completion_email", { p_actor_id: actor.id, p_request_id: requestId });
     if (queued.error?.code === "PGRST202") throw new Error("The completion email could not be sent. Apply migration 20261031_68_send_completion_email, then try again.");
     if (queued.error) throw queued.error;
-    let delivery = queued.data as { id: string; status: string };
-    if (delivery.status === "failed") {
+    let delivery = queued.data as CompletionDelivery;
+    if (delivery.status === "failed" || interruptedLease(delivery)) {
       // Same email identity and payload; the provider dedupes inside its 24h window.
+      // Past that window the RPC returns reconciliation_required instead of re-arming.
       const retried = await db.rpc("retry_request_notification", { p_actor_id: actor.id, p_request_id: requestId, p_delivery_id: delivery.id });
       if (retried.error) throw retried.error;
-      delivery = retried.data as { id: string; status: string };
+      delivery = retried.data as CompletionDelivery;
     }
     if (delivery.status === "pending") after(() => sendApprovedEmails(requestId, delivery.id));
     else if (delivery.status === "reconciliation_required") throw new Error("This email needs manual review. Check Activity & email history on the request.");
