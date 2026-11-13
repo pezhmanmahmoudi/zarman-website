@@ -7,6 +7,11 @@ export type DashboardLottieSceneAsset = {
   segment?: readonly [number, number];
   /** Zoom for artwork drawn small inside a large canvas, centred on `origin`. */
   zoom?: { scale: number; origin: string };
+  /**
+   * Complex artwork (roughly 500+ animated shapes). These start only after the page has finished
+   * loading, one at a time, so they never compete with the page's own rendering or with each other.
+   */
+  heavy?: boolean;
 };
 
 /**
@@ -25,21 +30,22 @@ export const dashboardLottieScenes = {
   "feedback-heart": { src: "/animations/dashboard/preview/add-to-favorites.json", holdOnComplete: true },
   alert: { src: "/animations/dashboard/preview/alert.json", holdOnComplete: true },
   announcement: { src: "/animations/dashboard/preview/announcement.json", holdOnComplete: true },
-  "activity-history": { src: "/animations/dashboard/preview/isometric-data-analysis.json", holdOnComplete: true },
+  "activity-history": { src: "/animations/dashboard/preview/isometric-data-analysis.json", holdOnComplete: true, heavy: true },
   "bank-card": { src: "/animations/dashboard/preview/card-lottie-animation.json", holdOnComplete: true },
   "dashboard-loading": { src: "/animations/dashboard/preview/hand-loding.json", loop: true, holdOnComplete: true },
   "loyalty-milestone": { src: "/animations/dashboard/preview/gift-reward-animation.json", plays: 3, holdOnComplete: true },
-  "compliance-review": { src: "/animations/dashboard/preview/compliance.json", loop: true, holdOnComplete: true },
+  // Plays once and holds its last frame (every layer is drawn there); looping kept ~700 shapes animating forever.
+  "compliance-review": { src: "/animations/dashboard/preview/compliance.json", holdOnComplete: true, heavy: true },
   "mobile-payment": { src: "/animations/dashboard/preview/mobile-payment.json", holdOnComplete: true },
-  "transfer-setup": { src: "/animations/dashboard/preview/3d-mobile-payment.json", holdOnComplete: true },
-  "recipient-selection": { src: "/animations/dashboard/preview/recruitment-d8f3ec5d7be5.json", holdOnComplete: true },
+  "transfer-setup": { src: "/animations/dashboard/preview/3d-mobile-payment.json", holdOnComplete: true, heavy: true },
+  "recipient-selection": { src: "/animations/dashboard/preview/recruitment-d8f3ec5d7be5.json", holdOnComplete: true, heavy: true },
   "payment-failed": { src: "/animations/dashboard/preview/payment-failed.json", holdOnComplete: true },
   "payment-confirmed": { src: "/animations/dashboard/preview/payment-success.json", holdOnComplete: true },
   "transfer-complete": { src: "/animations/dashboard/preview/payment-sucessful.json", holdOnComplete: true },
   // Loops because the envelope flies away and the last frames are empty.
   "request-submitted": { src: "/animations/dashboard/preview/submitted-5c929bc9f3af.json", loop: true, holdOnComplete: true },
   // Keep only the first 84 frames: 3.5 seconds at the original 24 fps.
-  "recipient-avatar": { src: "/animations/dashboard/preview/profile-avatar-for-child-bd507410b67b.json", holdOnComplete: true, segment: [0, 84] },
+  "recipient-avatar": { src: "/animations/dashboard/preview/profile-avatar-for-child-bd507410b67b.json", holdOnComplete: true, segment: [0, 84], heavy: true },
   "feedback-review": { src: "/animations/dashboard/preview/review.json", holdOnComplete: true },
   "google-logo-effect": { src: "/animations/dashboard/preview/google-logo-effect.json", holdOnComplete: true },
   "identity-fingerprint": { src: "/animations/dashboard/preview/fingerprint-01ac4fd147c2.json", holdOnComplete: true },

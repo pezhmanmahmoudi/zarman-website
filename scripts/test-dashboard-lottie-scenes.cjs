@@ -149,3 +149,47 @@ test("refresh lives in the active transfer hero, never the empty or finished her
   for (const value of [null, { ...request, status: "completed" }, { ...request, status: "cancelled" }]) assert.doesNotMatch(render(value), /aria-label="Refresh Status"/);
   assert.match(render(null), /New transfer/);
 });
+
+test("complex scenes are marked heavy and play once; light scenes are unaffected", () => {
+  const h = dashboardHarness();
+  const scenes = h.load("lib/dashboard/lottie-scenes.ts").dashboardLottieScenes;
+  for (const [name, scene] of Object.entries(scenes)) {
+    const raw = fs.readFileSync(path.join(__dirname, "../public", scene.src), "utf8");
+    const shapes = (raw.match(/"ty":/g) ?? []).length;
+    if (shapes >= 500) assert.equal(scene.heavy, true, `${name} has ${shapes} animated shapes and must be heavy`);
+    if (scene.heavy) {
+      assert.notEqual(scene.loop, true, `${name} is heavy and must not loop`);
+      assert.equal(scene.holdOnComplete, true, `${name} must hold its last frame`);
+    }
+  }
+  assert.equal(scenes["compliance-review"].loop, undefined);
+});
+
+test("heavy scenes wait for the idle page, then run strictly one at a time", async () => {
+  const h = dashboardHarness();
+  const { createHeavySceneQueue } = h.load("lib/dashboard/lottie-heavy-queue.ts");
+  let becomeIdle;
+  const idle = new Promise(resolve => { becomeIdle = resolve; });
+  const timers = []; const fakeTimers = { setTimeout(fn, ms) { timers.push({ fn, ms, cleared: false }); return timers.length - 1; }, clearTimeout(id) { if (timers[id]) timers[id].cleared = true; } };
+  const request = createHeavySceneQueue(() => idle, 10_000, fakeTimers);
+  const granted = [];
+  const doneA = request(() => granted.push("A"));
+  const doneB = request(() => granted.push("B"));
+  const doneC = request(() => granted.push("C"));
+  await Promise.resolve();
+  assert.deepEqual(granted, [], "nothing plays before the page is idle");
+  becomeIdle(); await idle; await Promise.resolve();
+  assert.deepEqual(granted, ["A"], "only one heavy scene plays at a time");
+  doneB();                                   // B leaves (e.g. scrolled away) before its turn
+  doneA(); assert.deepEqual(granted, ["A", "C"], "finishing A hands the slot to the next waiting scene");
+  const doneD = request(() => granted.push("D"));
+  assert.deepEqual(granted, ["A", "C"], "D waits while C plays");
+  const active = timers.filter(t => !t.cleared).at(-1);
+  assert.equal(active.ms, 10_000);
+  active.fn();                               // C stalls: the cap releases it
+  assert.deepEqual(granted, ["A", "C", "D"]);
+  doneC(); doneD();
+  const doneE = request(() => granted.push("E"));
+  assert.deepEqual(granted, ["A", "C", "D", "E"], "an idle queue grants immediately");
+  doneE();
+});

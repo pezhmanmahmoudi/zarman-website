@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { dashboardLottieScenes, type DashboardLottieSceneAsset, type DashboardLottieSceneName } from "@/lib/dashboard/lottie-scenes";
+import { requestHeavySceneSlot } from "@/lib/dashboard/lottie-heavy-queue";
 import { useDashboardMotion } from "./DashboardMotion";
 import type { DashboardLottieScenePlayerProps } from "./DashboardLottieScenePlayer";
 
@@ -75,6 +76,10 @@ function LottieScene({ name, size, className, animate, replayKey }: Omit<Props, 
   const [failed, setFailed] = useState(false);
   const asset: DashboardLottieSceneAsset = dashboardLottieScenes[name];
   const Fallback = fallbacks[name];
+  // Heavy scenes play only while they hold the shared one-at-a-time slot (granted after page load).
+  const heavy = asset.heavy === true;
+  const [slot, setSlot] = useState(!heavy);
+  const wantsToPlay = animate && visible && foreground && !complete && !failed;
 
   useEffect(() => {
     const node = host.current;
@@ -94,13 +99,19 @@ function LottieScene({ name, size, className, animate, replayKey }: Omit<Props, 
   }, []);
 
   useEffect(() => {
-    if (!animate || !visible || !foreground || complete || failed || Player) return;
+    if (!heavy || !wantsToPlay) return;
+    const done = requestHeavySceneSlot(() => setSlot(true));
+    return () => { done(); setSlot(false); };
+  }, [heavy, wantsToPlay]);
+
+  useEffect(() => {
+    if (!animate || !visible || !foreground || complete || failed || Player || !slot) return;
     let active = true;
     void import("./DashboardLottieScenePlayer").then(module => {
       if (active) setPlayer(() => module.DashboardLottieScenePlayer);
     }).catch(() => { if (active) setFailed(true); });
     return () => { active = false; };
-  }, [animate, visible, foreground, complete, failed, Player]);
+  }, [animate, visible, foreground, complete, failed, Player, slot]);
 
   const mounted = Player && (!complete || asset.holdOnComplete) && !failed;
   const showPlayer = mounted && animate && visible && foreground && ready;
@@ -111,7 +122,7 @@ function LottieScene({ name, size, className, animate, replayKey }: Omit<Props, 
       <Fallback size={Math.max(20, Math.min(40, size * .34))} strokeWidth={1.55} className={name === "telegram-chatbot" ? "text-[#1685ba]" : undefined} />
     </span>
     {mounted && <span className={showPlayer ? undefined : "invisible"}>
-      <Player name={name} replayKey={replayKey} playing={animate && visible && foreground && !complete}
+      <Player name={name} replayKey={replayKey} playing={wantsToPlay && slot}
         onReady={() => setReady(true)} onComplete={() => setCompletedReplay(replayKey)} onError={() => setFailed(true)} />
     </span>}
   </span>;
