@@ -3,11 +3,10 @@ import Link from "next/link";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { fmtAUD, fmtIRT, fmtRate } from "@/lib/accounting-engine";
 import { EXPENSE_CATEGORY_FA } from "@/lib/treasury-utils";
-import { profitPeriodHref } from "@/lib/treasury-navigation";
-import type { MoneyLine, ProfitStatement } from "@/lib/profit-statement";
+import type { MoneyLine, ProfitStatement, ProfitTrendPoint } from "@/lib/profit-statement";
+import ProfitPeriodPicker from "@/components/admin/treasury/ProfitPeriodPicker";
+import ProfitTrendSection from "@/components/admin/treasury/ProfitTrendSection";
 import s from "@/styles/admin/ProfitStatement.module.css";
-
-const RECENT_MONTHS = 12;
 const AGREEMENT_TOLERANCE_AUD = 0.01;
 
 function Amount({ value, format, min }: { value: number; format: (value: number) => string; min: number }) {
@@ -51,7 +50,7 @@ function Fact({ label, hint, line }: { label: string; hint: string; line: MoneyL
 
 const hasValue = (line: MoneyLine) => Math.abs(line.aud) >= 0.005 || Math.abs(line.irt) >= 0.5;
 
-export default function ProfitabilitySection({ statement: st }: { statement?: ProfitStatement | null }) {
+export default function ProfitabilitySection({ statement: st, trend }: { statement?: ProfitStatement | null; trend?: ProfitTrendPoint[] }) {
   if (!st) {
     return <p className={s.empty}>برای ساختن صورت سود، نرخ خرید معتبر و نرخ ثبت آورده مالک لازم است. بخش هشدارهای خزانه را بررسی کنید.</p>;
   }
@@ -63,13 +62,7 @@ export default function ProfitabilitySection({ statement: st }: { statement?: Pr
 
   return (
     <div className={s.page}>
-      <nav className={s.periods} aria-label="دوره صورت سود">
-        {[{ value: "all", label: "کل دوره" }, ...st.months.slice(0, RECENT_MONTHS)].map(option => (
-          <Link key={option.value} href={profitPeriodHref(option.value)} prefetch={false}
-            aria-current={option.value === st.period ? "page" : undefined}
-            className={`${s.period} ${option.value === st.period ? s.periodActive : ""}`}>{option.label}</Link>
-        ))}
-      </nav>
+      <ProfitPeriodPicker period={st.period} months={st.months} from={st.from} to={st.to} />
 
       <section className={s.hero} aria-labelledby="profit-net">
         <div className={s.headline}>
@@ -99,6 +92,8 @@ export default function ProfitabilitySection({ statement: st }: { statement?: Pr
           </p>
         </div>
       )}
+
+      <ProfitTrendSection points={trend} selected={st.period} />
 
       <section className={s.card}>
         <h3>این سود از کجا آمده؟</h3>

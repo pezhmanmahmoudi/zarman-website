@@ -90,6 +90,29 @@ function activityMonths(firstDate: string | null, today: string): string[] {
   return months;
 }
 
+function dayBefore(date: string): string {
+  const day = new Date(`${date}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() - 1);
+  return day.toISOString().slice(0, 10);
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A free date range (the ledger's filters). No bounds means the whole history. */
+export function dateRangePeriod(start?: string | null, end?: string | null): ProfitPeriodRange {
+  const from = start && ISO_DATE.test(start) ? start : null;
+  const to = end && ISO_DATE.test(end) ? end : null;
+  if (!from && !to) return { period: "all", from: null, to: "9999-12-31", openingDate: null };
+  return { period: "range", from, to: to ?? "9999-12-31", openingDate: from ? dayBefore(from) : null };
+}
+
+function rangeLabel(range: ProfitPeriodRange): string {
+  if (range.period === "all") return "کل دوره";
+  if (/^\d{4}-\d{2}$/.test(range.period)) return monthLabel(range.period);
+  if (range.from && range.to !== "9999-12-31") return `${range.from} تا ${range.to}`;
+  return range.from ? `از ${range.from}` : `تا ${range.to}`;
+}
+
 /** A month outside the recorded history falls back to the whole history. */
 export function profitPeriodRange(requested: string, firstDate: string | null, today: string): ProfitPeriodRange {
   if (!activityMonths(firstDate, today).includes(requested)) return { period: "all", from: null, to: "9999-12-31", openingDate: null };
@@ -154,7 +177,7 @@ export function buildProfitStatement(input: ProfitStatementInput): ProfitStateme
   const paidAUD = [...byCategory.values()].reduce((sum, line) => sum + line.aud, 0) + transferFees.aud;
   const unpaidAUD = expenses.filter(e => e.status === "pending" && inPeriod(e.date)).reduce((sum, e) => sum + expenseCostAUD(e, currencies, rate), 0);
 
-  const lastMonth = range.period === "all" ? input.today.slice(0, 7) : range.period;
+  const lastMonth = (range.to < input.today ? range.to : input.today).slice(0, 7);
   const firstMonth = input.firstDate?.slice(0, 7) ?? lastMonth;
   const monthExpenses = (month: string) => sumLines(
     ...paid.filter(e => e.date.slice(0, 7) === month).map(e => ({ aud: expenseCostAUD(e, currencies, rate), irt: expenseIRT(e) })),
@@ -203,7 +226,7 @@ export function buildProfitStatement(input: ProfitStatementInput): ProfitStateme
 
   return {
     period: range.period,
-    periodLabel: range.period === "all" ? "کل دوره" : monthLabel(range.period),
+    periodLabel: rangeLabel(range),
     from: range.from,
     to: range.to,
     months: activityMonths(input.firstDate, input.today).map(month => ({ value: month, label: monthLabel(month) })),
@@ -241,4 +264,63 @@ export function buildProfitStatement(input: ProfitStatementInput): ProfitStateme
       stockDifferenceAUD: closing.audInventory - (audDrawers - outsideStockAUD),
     },
   };
+}
+
+export type ProfitTrendPoint = {
+  month: string;
+  label: string;
+  /** True for the month still in progress; it is valued at today's rate. */
+  partial: boolean;
+  /** Net profit earned in the month, AUD (closing minus opening snapshot). */
+  netAUD: number;
+  /** Net profit since the first recorded day, AUD, at the month-end rate. */
+  cumulativeAUD: number;
+  netAssetsAUD: number;
+};
+
+type ProfitTrendInput = Omit<ProfitStatementInput, "range" | "closingRate" | "openingRate"> & {
+  /** Buy rate in force on a date; month ends use the rate recorded on or before that day. */
+  rateAt: (date: string) => number;
+};
+
+/**
+ * Month-by-month net profit for the whole history. Each month is the same
+ * snapshot difference the monthly statement uses, so a bar always equals the
+ * headline of that month's statement.
+ */
+function monthEnd(month: string): string {
+  const [year, index] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, index, 0)).toISOString().slice(0, 10);
+}
+
+/** The dates whose buy rate values each trend month: its last day, or today for the month in progress. */
+export function profitTrendRateDates(firstDate: string | null, today: string): string[] {
+  return activityMonths(firstDate, today).reverse().map(month => monthEnd(month) >= today ? today : monthEnd(month));
+}
+
+export function buildProfitTrend(input: ProfitTrendInput): ProfitTrendPoint[] {
+  const months = activityMonths(input.firstDate, input.today).reverse();
+  const points: ProfitTrendPoint[] = [];
+  let previous = 0;
+  for (const month of months) {
+    const end = monthEnd(month);
+    const partial = end >= input.today;
+    const rate = input.rateAt(partial ? input.today : end);
+    if (!(rate > 0)) return [];
+    const snapshot = calcAccountingSnapshot(
+      input.ledgerRows.filter(row => row.date_gregorian <= end),
+      input.expenses.filter(expense => expense.date <= end),
+      input.ownerLoans.filter(loan => loan.date <= end),
+      input.accounts, rate, input.serviceFeeIncomeIRT, input.pendingServiceFeeLiabilityIRT,
+    );
+    if (snapshot.netProfitAUD === null || snapshot.netAssetsAUD === null) return [];
+    points.push({
+      month, label: monthLabel(month), partial,
+      netAUD: snapshot.netProfitAUD - previous,
+      cumulativeAUD: snapshot.netProfitAUD,
+      netAssetsAUD: snapshot.netAssetsAUD,
+    });
+    previous = snapshot.netProfitAUD;
+  }
+  return points;
 }

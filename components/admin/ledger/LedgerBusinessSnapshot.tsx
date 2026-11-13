@@ -1,5 +1,6 @@
 import {
   ArrowDownLeft,
+  ReceiptText,
   ArrowUpRight,
   Banknote,
   BriefcaseBusiness,
@@ -13,7 +14,10 @@ import {
 import styles from "@/styles/admin/LedgerOverview.module.css";
 
 type LedgerBusinessSnapshotProps = {
-  operatingProfit: number;
+  /** Null when record filters make expenses unassignable. */
+  operatingProfit: number | null;
+  /** Paid expenses and transfer fees of the date range; null without a valid rate. */
+  periodExpenses: number | null;
   periodTradingProfit: number;
   periodFeeIncome: number;
   audInventory: number;
@@ -34,7 +38,8 @@ type LedgerBusinessSnapshotProps = {
 const fmtIRT = (value: number) => Math.round(value).toLocaleString("en-AU");
 const fmtAUD = (value: number) => value.toLocaleString("en-AU", { maximumFractionDigits: 2 });
 
-function Value({ value, currency }: { value: number; currency: "IRT" | "AUD" }) {
+function Value({ value, currency }: { value: number | null; currency: "IRT" | "AUD" }) {
+  if (value === null) return <bdi className={styles.value} dir="ltr">—</bdi>;
   return (
     <bdi className={styles.value} dir="ltr">
       {currency === "AUD" ? fmtAUD(value) : fmtIRT(value)} <small>{currency}</small>
@@ -69,13 +74,17 @@ export default function LedgerBusinessSnapshot(props: LedgerBusinessSnapshotProp
 
       <div className={styles.primaryGrid}>
         <article className={`${styles.primaryMetric} ${styles.primaryMetricEmphasis}`}>
-          <span className={`${styles.icon} ${props.operatingProfit >= 0 ? styles.iconPositive : styles.iconNegative}`}>
+          <span className={`${styles.icon} ${props.operatingProfit === null ? styles.iconNeutral : props.operatingProfit >= 0 ? styles.iconPositive : styles.iconNegative}`}>
             <TrendingUp size={20} />
           </span>
           <div>
-            <span className={styles.label}>سود عملیاتی خالص</span>
+            <span className={styles.label}>سود عملیاتی دوره (تومانی)</span>
             <Value value={props.operatingProfit} currency="IRT" />
-            <small className={styles.description}>سود معاملات و کارمزد، پس از هزینه‌های پرداخت‌شده</small>
+            <small className={styles.description}>
+              {props.operatingProfit === null
+                ? "با فیلتر نوع، حساب یا جستجو محاسبه نمی‌شود؛ هزینه‌ها به سطر خاصی تعلق ندارند"
+                : "سود ناخالص منهای هزینه‌های دوره؛ بر پایه بهای خرید، بدون اثر رشد نرخ"}
+            </small>
           </div>
         </article>
 
@@ -126,6 +135,10 @@ export default function LedgerBusinessSnapshot(props: LedgerBusinessSnapshotProp
         <div className={styles.detailItem}>
           <span><Banknote size={15} /> درآمد کارمزد دوره</span>
           <Value value={props.periodFeeIncome} currency="IRT" />
+        </div>
+        <div className={styles.detailItem}>
+          <span><ReceiptText size={15} /> هزینه‌های دوره</span>
+          <Value value={props.periodExpenses === null ? null : -props.periodExpenses} currency="IRT" />
         </div>
         <div className={styles.detailItem}>
           <span><ArrowDownLeft size={15} /> میانگین نرخ خرید</span>

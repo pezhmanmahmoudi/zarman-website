@@ -3,7 +3,8 @@ import { getTreasuryFullData } from "@/app/actions/treasury.actions";
 import type { AdminLedgerFilters } from "@/app/actions/admin.actions";
 import LedgerBusinessSnapshot from "./LedgerBusinessSnapshot";
 import LedgerCharts from "./LazyLedgerCharts";
-import BusinessValueCards from "@/components/admin/treasury/BusinessValueCards";
+import Link from "next/link";
+import BusinessValueCards, { type BusinessValueSnapshot } from "@/components/admin/treasury/BusinessValueCards";
 import { readAllFinancialRows } from "@/lib/financial-reads";
 import { calcFeeIncomeToman, calcPrincipalToman } from "@/lib/pricing";
 import styles from "@/styles/admin/LedgerWorkspace.module.css";
@@ -24,8 +25,10 @@ type InventoryFact = {
 
 /** Only rendered by the Insights view; record browsing does not load this data. */
 export default async function LedgerInsights({ filters }: { filters: AdminLedgerFilters }) {
-  const { accounting, treasury } = await getTreasuryFullData();
   const { start: startDate, end: endDate, type: filterType, search: filterSearch, account: filterAccount } = filters;
+  // AUD profit and expenses follow the date range; they come from the same
+  // statement as Treasury › Profitability so both pages always agree.
+  const { accounting, treasury, profitStatement: statement } = await getTreasuryFullData({ profitRange: { start: startDate, end: endDate } });
   // Read the same chronological inventory facts used by enterprise reports.
   const db = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -138,11 +141,32 @@ export default async function LedgerInsights({ filters }: { filters: AdminLedger
   ].filter(item => item.value > 0);
 
 
+  // Expenses belong to the period, not to individual ledger rows, so an operating
+  // profit exists only when the selection is a pure date range.
+  const periodExpensesIrt = statement ? -statement.lines.expenses.irt : null;
+  const periodOperatingProfit = !hasRecordFilter && periodExpensesIrt !== null
+    ? periodTradingProfit + periodFeesIrt - periodExpensesIrt : null;
+  const businessValues: BusinessValueSnapshot = statement ? {
+    currentBuyRate: statement.closingRate,
+    netAssetsAUD: statement.owner.closingNetAssets.aud,
+    netProfitAUD: statement.net.aud,
+    retainedProfitAUD: statement.owner.retained.aud,
+    totalExpensesAUD: -statement.lines.expenses.aud,
+    incomeBeforeExpensesAUD: statement.net.aud - statement.lines.expenses.aud,
+  } : accounting;
+
   return <div className={styles.insights}>
-    <BusinessValueCards accounting={accounting} />
-    <p className={styles.insightNote}>سود دوره طبق فیلترهاست؛ مانده‌ها برای کل صرافی‌اند.</p>
+    <BusinessValueCards accounting={businessValues} periodLabel={statement?.periodLabel} />
+    <p className={styles.insightNote} dir="rtl">
+      سود خالص دلاری (کارت بالا) معیار اصلی است و کاهش ارزش دارایی‌های تومانی با رشد نرخ را هم کسر می‌کند؛
+      «سود عملیاتی تومانی» در بخش پایین فقط کارایی معاملات را نشان می‌دهد و برای همین اگر به دلار تبدیل شود بزرگ‌تر است.
+      {" "}سودها و هزینه‌ها برای بازه تاریخ انتخاب‌شده‌اند؛ موجودی و نقدینگی، مانده امروز کل صرافی است.
+      {hasRecordFilter && " فیلتر نوع، حساب یا جستجو فقط روی حجم و سود معاملات اثر دارد."}
+      {" "}<Link href="/admin/treasury?view=profitability" prefetch={false}>ریز سود در خزانه › سودآوری</Link>
+    </p>
         <LedgerBusinessSnapshot
-          operatingProfit={accounting.operatingProfit}
+          operatingProfit={periodOperatingProfit}
+          periodExpenses={periodExpensesIrt}
           periodTradingProfit={periodTradingProfit}
           periodFeeIncome={periodFeesIrt}
           audInventory={accounting.audInventory}

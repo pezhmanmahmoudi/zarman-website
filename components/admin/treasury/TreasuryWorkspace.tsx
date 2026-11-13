@@ -155,7 +155,7 @@ function TreasuryContent({ view, data }: { view: TreasuryView; data: TreasuryPag
     case "strategy": return <StrategyCenter strategy={strategy} treasury={treasury} />;
     case "inventory": return <MarketInventory treasury={treasury} strategy={strategy} />;
     case "exposure": return <ExposureSection treasury={treasury} strategy={strategy} />;
-    case "profitability": return <ProfitabilitySection statement={data.profitStatement} />;
+    case "profitability": return <ProfitabilitySection statement={data.profitStatement} trend={data.profitTrend} />;
     case "settings": return <TreasurySettings settings={settings} />;
   }
 }

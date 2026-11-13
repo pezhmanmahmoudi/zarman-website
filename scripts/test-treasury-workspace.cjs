@@ -20,7 +20,8 @@ function compile(file, mocks = {}) {
   const localRequire = id => {
     if (id in mocks) return mocks[id];
     if (id.endsWith(".module.css")) {
-      const css = fs.readFileSync(path.join(root, id.replace(/^@\//, "")), "utf8");
+      const cssPath = id.startsWith("@/") ? path.join(root, id.slice(2)) : path.resolve(root, path.dirname(file), id);
+      const css = fs.readFileSync(cssPath, "utf8");
       const classes = {};
       postcss.parse(css).walkRules(rule => {
         for (const match of rule.selector.matchAll(/\.([a-zA-Z_][\w-]*)/g)) classes[match[1]] = match[1];
@@ -35,6 +36,8 @@ function compile(file, mocks = {}) {
       delete linkProps.prefetch;
       return React.createElement("a", linkProps);
     } };
+    if (id === "next/navigation") return { useRouter: () => ({ push() {}, refresh() {} }) };
+    if (id === "next/dynamic") return { __esModule: true, default: () => function DynamicChart() { return React.createElement("div", { "data-chart": "lazy" }); } };
     if (id.startsWith("@/lib/")) return compile(`${id.slice(2)}.ts`, mocks);
     if (id.startsWith("@/") || id.startsWith(".")) {
       const base = id.startsWith("@/") ? path.join(root, id.slice(2)) : path.resolve(root, path.dirname(file), id);
@@ -163,7 +166,7 @@ test("profitability leads with AUD profit and lists every period", () => {
   const line = (aud, irt = aud * 100) => ({ aud, irt });
   const statement = {
     period: "2026-10", periodLabel: "اکتبر 2026", from: "2026-10-01", to: "2026-10-31", closingRate: 100,
-    months: Array.from({ length: 14 }, (_, i) => ({ value: `m${i}`, label: `month-${i}` })),
+    months: [{ value: "2026-11", label: "نوامبر 2026" }, { value: "2026-10", label: "اکتبر 2026" }, { value: "2026-09", label: "سپتامبر 2026" }],
     net: line(1234.5), realized: line(1200), paper: line(34.5), rateSensitivityAUD: -86, tomanCostBasisProfitIRT: 999,
     lines: { trading: line(2000), fees: line(100), expenses: line(-500), operating: line(1600), realizedFx: line(10), unpaidExpenses: line(0), adjustments: line(40), rateEffect: line(-450), inventory: line(34.5), translation: line(0) },
     owner: { openingNetAssets: line(1000), contributed: line(200), withdrawn: line(50), retained: line(1184.5), closingNetAssets: line(2384.5) },
@@ -173,11 +176,30 @@ test("profitability leads with AUD profit and lists every period", () => {
     checks: { balancesDifferenceAUD: 0, stockDifferenceAUD: 0 },
   };
   const Section = compile("components/admin/treasury/ProfitabilitySection.tsx").default;
-  const html = renderToStaticMarkup(React.createElement(Section, { statement }));
+  const trend = [
+    { month: "2026-09", label: "سپتامبر 2026", partial: false, netAUD: 100, cumulativeAUD: 100, netAssetsAUD: 1100 },
+    { month: "2026-10", label: "اکتبر 2026", partial: false, netAUD: 1234.5, cumulativeAUD: 1334.5, netAssetsAUD: 2384.5 },
+    { month: "2026-11", label: "نوامبر 2026", partial: true, netAUD: -20, cumulativeAUD: 1314.5, netAssetsAUD: 2364.5 },
+  ];
+  const html = renderToStaticMarkup(React.createElement(Section, { statement, trend }));
   assert.match(html, /سود خالص · اکتبر 2026/);
   assert.ok(html.indexOf("1,234.50") < html.indexOf("سود معاملات"), "AUD profit must lead the page");
   assert.ok(html.includes('href="/admin/treasury?view=profitability"'));
-  assert.equal((html.match(/month-\d+/g) || []).length, 12);
+  // Monthly mode: step to the neighbouring months, newest-first list.
+  assert.ok(html.includes('href="/admin/treasury?view=profitability&amp;period=2026-09"'), "previous month link");
+  assert.ok(html.includes('href="/admin/treasury?view=profitability&amp;period=2026-11"'), "next month link");
+  assert.match(html, /aria-current="page"[^>]*>ماهانه</);
+  // Growth trend: pace tiles, lazy chart and an accessible table view.
+  assert.match(html, /روند رشد سود/);
+  assert.match(html, /بهترین ماه/);
+  assert.match(html, /data-chart="lazy"/);
+  assert.match(html, /تا امروز؛ با نرخ امروز/);
+  assert.doesNotMatch(renderToStaticMarkup(React.createElement(Section, { statement })), /روند رشد سود/);
+
+  const all = renderToStaticMarkup(React.createElement(Section, { statement: { ...statement, period: "all", periodLabel: "کل دوره", from: null, to: "9999-12-31" } }));
+  assert.match(all, /aria-current="page"[^>]*>کل دوره</);
+  assert.ok(all.includes('href="/admin/treasury?view=profitability&amp;period=2026-11"'), "monthly switch opens the latest month");
+  assert.doesNotMatch(all, /انتخاب ماه/);
   assert.ok(html.includes("href=\"/admin/ledger?type=adjustment&amp;start=2026-10-01&amp;end=2026-10-31\""));
   assert.match(html, /NAB_PM/);
   assert.match(html, /می‌خواند/);

@@ -19,7 +19,7 @@ function compile(file) {
   modules.set(file, compiled.exports);
   return compiled.exports;
 }
-const { buildProfitStatement, profitPeriodRange } = compile("lib/profit-statement.ts");
+const { buildProfitStatement, buildProfitTrend, dateRangePeriod, profitPeriodRange, profitTrendRateDates } = compile("lib/profit-statement.ts");
 const { calcAccountingSnapshot } = compile("lib/accounting-engine.ts");
 const accounts = [
   { id: "aud", name: "AUD cash", currency: "AUD", type: "bank" },
@@ -113,4 +113,32 @@ test("the stock check flags dollars that moved without entering trading stock", 
 test("a statement is unavailable without a valid closing rate", () => {
   assert.equal(build("all", 0), null);
   assert.equal(build("all", Number.NaN), null);
+});
+
+test("each trend bar equals that month's statement and the line ends at the whole-history profit", () => {
+  const rates = { "2026-01-31": 130, "2026-02-28": 160, "2026-03-15": 170 };
+  assert.deepEqual(profitTrendRateDates(base.firstDate, base.today), Object.keys(rates));
+  const trend = buildProfitTrend({ ...base, rateAt: date => rates[date] ?? 0 });
+  assert.deepEqual(trend.map(p => [p.month, p.partial]), [["2026-01", false], ["2026-02", false], ["2026-03", true]]);
+  near(trend[0].netAUD, build("2026-01", 130, 130).net.aud);
+  near(trend[1].netAUD, build("2026-02", 160, 130).net.aud);
+  near(trend[2].netAUD, build("2026-03", 170, 160).net.aud);
+  near(trend.at(-1).cumulativeAUD, build("all", 170).net.aud);
+  near(trend.reduce((sum, p) => sum + p.netAUD, 0), trend.at(-1).cumulativeAUD);
+  near(trend[1].netAssetsAUD, engine("2026-02-28", 160).netAssetsAUD);
+  assert.deepEqual(buildProfitTrend({ ...base, rateAt: () => 0 }), []);
+});
+
+test("a free date range is the movement between the day before it starts and its end", () => {
+  assert.deepEqual(dateRangePeriod(undefined, ""), { period: "all", from: null, to: "9999-12-31", openingDate: null });
+  assert.deepEqual(dateRangePeriod("2026-03-01", "bad"), { period: "range", from: "2026-03-01", to: "9999-12-31", openingDate: "2026-02-28" });
+  const range = dateRangePeriod("2026-02-01", "2026-02-28");
+  const st = buildProfitStatement({ ...base, range, closingRate: 160, openingRate: 130 });
+  const month = build("2026-02", 160, 130);
+  assertStatementAdds(st);
+  near(st.net.aud, month.net.aud);
+  near(st.lines.expenses.irt, month.lines.expenses.irt);
+  assert.equal(st.periodLabel, "2026-02-01 تا 2026-02-28");
+  assert.deepEqual(st.expenses.months.map(row => row.month), ["2026-02", "2026-01"]);
+  assert.equal(buildProfitStatement({ ...base, range: dateRangePeriod("2026-02-10"), closingRate: 160, openingRate: 130 }).periodLabel, "از 2026-02-10");
 });

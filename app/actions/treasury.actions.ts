@@ -23,7 +23,10 @@ import { sortBankAccountsByPriority } from "@/lib/bank-account-ordering";
 import { calcAccountBalancesAsOf } from "@/lib/reconciliation-engine";
 import { readAllFinancialRows } from "@/lib/financial-reads";
 import { ownerFundingInput, validateOwnerFunding, changesLinkedOwnerFunding, changesOwnerFundingSettlement, type OwnerFundingPayload } from "@/lib/owner-funding";
-import { buildProfitStatement, firstActivityDate, profitPeriodRange, type ProfitStatement, type ProfitStatementLedgerRow } from "@/lib/profit-statement";
+import {
+  buildProfitStatement, buildProfitTrend, dateRangePeriod, firstActivityDate, profitPeriodRange, profitTrendRateDates,
+  type ProfitStatement, type ProfitStatementLedgerRow, type ProfitTrendPoint,
+} from "@/lib/profit-statement";
 
 // ── Private helpers ────────────────────────────────────────────────────────
 
@@ -108,6 +111,15 @@ export type TreasuryPageData = {
   settings: TreasurySettingsRow;
   /** Only loaded for the profitability workspace. */
   profitStatement?: ProfitStatement | null;
+  /** Month-by-month net profit; only loaded for the profitability workspace. */
+  profitTrend?: ProfitTrendPoint[];
+};
+
+export type TreasuryDataOptions = {
+  /** A month (YYYY-MM) or "all" for the profitability workspace; also loads the monthly trend. */
+  profitPeriod?: string;
+  /** A free date range, e.g. the ledger's filters; loads the statement only. */
+  profitRange?: { start?: string; end?: string };
 };
 
 // ── Server Actions ─────────────────────────────────────────────────────────
@@ -115,7 +127,7 @@ export type TreasuryPageData = {
 /**
  * دریافت پویای کل اطلاعات خزانه‌داری صرافی زرمان بر مبنای دفتر کل دوطرفه (Multi-Pocket)
  */
-export async function getTreasuryFullData(options: { profitPeriod?: string } = {}): Promise<TreasuryPageData> {
+export async function getTreasuryFullData(options: TreasuryDataOptions = {}): Promise<TreasuryPageData> {
   await requireAdmin();
   const db = makeServiceRoleClient();
 
@@ -282,20 +294,30 @@ export async function getTreasuryFullData(options: { profitPeriod?: string } = {
   const strategy = generateStrategyOutput(treasury, accounting);
 
   let profitStatement: ProfitStatement | null = null;
-  if (options.profitPeriod) {
+  let profitTrend: ProfitTrendPoint[] | undefined;
+  if (options.profitPeriod || options.profitRange) {
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(new Date());
     const firstDate = firstActivityDate(ledgerRows, expenseInputs, loanInputs);
-    const range = profitPeriodRange(options.profitPeriod, firstDate, today);
-    const [closingRate, openingRate] = await Promise.all([
-      range.to >= today ? currentBuyRate : buyRateAsOf(db, range.to),
-      range.openingDate ? buyRateAsOf(db, range.openingDate) : 0,
+    const range = options.profitPeriod
+      ? profitPeriodRange(options.profitPeriod, firstDate, today)
+      : dateRangePeriod(options.profitRange?.start, options.profitRange?.end);
+    const rateOn = async (date: string) => date >= today ? currentBuyRate : buyRateAsOf(db, date);
+    const trendDates = options.profitPeriod ? profitTrendRateDates(firstDate, today) : [];
+    const [closingRate, openingRate, trendRates] = await Promise.all([
+      rateOn(range.to),
+      range.openingDate ? rateOn(range.openingDate) : 0,
+      Promise.all(trendDates.map(rateOn)),
     ]);
-    profitStatement = buildProfitStatement({
-      range, firstDate, today, ledgerRows, expenses: expenseInputs, ownerLoans: loanInputs,
-      accounts: accountsMeta, closingRate, openingRate,
+    const statementInput = {
+      firstDate, today, ledgerRows, expenses: expenseInputs, ownerLoans: loanInputs, accounts: accountsMeta,
       serviceFeeIncomeIRT: Number(serviceFeeRes.data ?? 0),
       pendingServiceFeeLiabilityIRT,
-    });
+    };
+    profitStatement = buildProfitStatement({ ...statementInput, range, closingRate, openingRate });
+    if (options.profitPeriod) {
+      const rates = new Map(trendDates.map((date, index) => [date, trendRates[index]]));
+      profitTrend = buildProfitTrend({ ...statementInput, rateAt: date => rates.get(date) ?? 0 });
+    }
   }
 
   const accountById = new Map(allAccounts.map((a: any) => [String(a.id), a]));
@@ -322,6 +344,7 @@ export async function getTreasuryFullData(options: { profitPeriod?: string } = {
     reconciliations,
     settings,
     profitStatement,
+    profitTrend,
   };
 }
 

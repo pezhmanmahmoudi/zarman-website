@@ -8,7 +8,17 @@ import s from "@/styles/admin/Treasury.module.css";
 export type BusinessValueSnapshot = Pick<AccountingSnapshot,
   "currentBuyRate" | "netAssetsAUD" | "netProfitAUD" | "retainedProfitAUD" | "incomeBeforeExpensesAUD" | "totalExpensesAUD">;
 
-export default function BusinessValueCards({ accounting: a }: { accounting: BusinessValueSnapshot }) {
+/** `periodLabel` names a filtered period; without it the cards describe the whole history. */
+export default function BusinessValueCards({ accounting: a, periodLabel }: { accounting: BusinessValueSnapshot; periodLabel?: string }) {
+  const period = periodLabel && periodLabel !== "کل دوره" ? periodLabel : null;
+  const labels = period ? {
+    incomeBeforeExpensesAUD: `درآمد پیش از هزینه‌ها · ${period} (AUD)`,
+    netAssetsAUD: "خالص دارایی صرافی · پایان بازه (AUD)",
+    netProfitAUD: `سود خالص · ${period} (AUD)`,
+    hintIncomeBeforeExpensesAUD: "سود خالص این بازه به‌علاوه هزینه‌های پرداخت‌شده در آن.",
+    hintNetAssetsAUD: "دارایی‌ها منهای بدهی‌ها در پایان بازه، با نرخ خرید همان روز.",
+    hintNetProfitAUD: "رشد خالص دارایی در این بازه، بدون آورده و برداشت مالک.",
+  } : FA;
   const hasConversionRate = Number.isFinite(a.currentBuyRate) && a.currentBuyRate > 0;
   const netAssetsAUD = hasConversionRate && a.netAssetsAUD != null && Number.isFinite(a.netAssetsAUD) ? a.netAssetsAUD : null;
   const netProfitAUD = hasConversionRate && a.netProfitAUD != null && Number.isFinite(a.netProfitAUD) ? a.netProfitAUD : null;
@@ -27,7 +37,7 @@ export default function BusinessValueCards({ accounting: a }: { accounting: Busi
               {incomeBeforeExpensesAUD === null ? "—" : `${fmtAUD(incomeBeforeExpensesAUD)} AUD`}
             </span>
             <span className={cardStyles.statLabel}>
-              <Tooltip text={FA.hintIncomeBeforeExpensesAUD}>{FA.incomeBeforeExpensesAUD}</Tooltip>
+              <Tooltip text={labels.hintIncomeBeforeExpensesAUD}>{labels.incomeBeforeExpensesAUD}</Tooltip>
             </span>
             <span className={cardStyles.statLabel}>
               {FA.totalExpensesAUD}: <span dir="ltr">{totalExpensesAUD === null ? "—" : `${fmtAUD(totalExpensesAUD)} AUD`}</span>
@@ -43,7 +53,7 @@ export default function BusinessValueCards({ accounting: a }: { accounting: Busi
               {netAssetsAUD === null ? "—" : `${fmtAUD(netAssetsAUD)} AUD`}
             </span>
             <span className={cardStyles.statLabel}>
-              <Tooltip text={FA.hintNetAssetsAUD}>{FA.netAssetsAUD}</Tooltip>
+              <Tooltip text={labels.hintNetAssetsAUD}>{labels.netAssetsAUD}</Tooltip>
             </span>
           </div>
         </div>
@@ -56,7 +66,7 @@ export default function BusinessValueCards({ accounting: a }: { accounting: Busi
               {netProfitAUD === null ? "—" : `${fmtAUD(netProfitAUD)} AUD`}
             </span>
             <span className={cardStyles.statLabel}>
-              <Tooltip text={FA.hintNetProfitAUD}>{FA.netProfitAUD}</Tooltip>
+              <Tooltip text={labels.hintNetProfitAUD}>{labels.netProfitAUD}</Tooltip>
             </span>
             <span className={cardStyles.statLabel}>
               {FA.retainedProfitAUD}: <span dir="ltr">{retainedProfitAUD === null ? "—" : `${fmtAUD(retainedProfitAUD)} AUD`}</span>
