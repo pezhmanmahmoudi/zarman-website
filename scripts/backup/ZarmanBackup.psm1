@@ -150,17 +150,25 @@ function Compare-Fingerprint {
   $prod = @{}; foreach ($r in $Production) { $prod["$($r.kind)|$($r.identity)"] = $r }
   $rest = @{}; foreach ($r in $Restored) { $rest["$($r.kind)|$($r.identity)"] = $r }
   $failures = New-Object System.Collections.Generic.List[string]
+  $aclNotDumped = New-Object System.Collections.Generic.List[string]
   $excluded = 0
   foreach ($k in ($prod.Keys | Sort-Object)) {
     $p = $prod[$k]
     if (Test-InScope $p.identity $ExcludedScopes) { $excluded++; continue }
     if (-not $rest.ContainsKey($k)) { $failures.Add("missing $($p.kind) $($p.identity)") | Out-Null }
-    elseif ($rest[$k].detail -cne $p.detail) { $failures.Add("different $($p.kind) $($p.identity)") | Out-Null }
+    elseif ($rest[$k].detail -cne $p.detail) {
+      # Privileges equal to an extension's initial privileges are never in a pg_dump; everything else
+      # about the object (its owner) must still match exactly.
+      if ($p.detail.EndsWith(' acl_source=extension-initial') -and
+          ($p.detail -replace ' acl=.*$', '') -ceq ($rest[$k].detail -replace ' acl=.*$', '')) {
+        $aclNotDumped.Add("$($p.kind) $($p.identity)") | Out-Null
+      } else { $failures.Add("different $($p.kind) $($p.identity)") | Out-Null }
+    }
   }
   foreach ($k in ($rest.Keys | Sort-Object)) {
     if (-not $prod.ContainsKey($k)) { $failures.Add("unexpected $($rest[$k].kind) $($rest[$k].identity) in the restored copy") | Out-Null }
   }
-  [pscustomobject]@{ Compared = $prod.Count - $excluded; Excluded = $excluded; Failures = $failures.ToArray() }
+  [pscustomobject]@{ Compared = $prod.Count - $excluded; Excluded = $excluded; Failures = $failures.ToArray(); AclNotDumped = $aclNotDumped.ToArray() }
 }
 
 # ---------------------------------------------------------------------------- pg_restore TOC

@@ -26,6 +26,8 @@ param(
   [string]$PgBin,
   [switch]$Rollback,
   [switch]$VerifyOnly,
+  # Proceed without a passing backup report (the migration changes no rows; the rollback is exact). Logged.
+  [switch]$SkipBackupCheck,
   # Local rehearsal only (refused for any non-loopback host): name of an environment variable holding the password.
   [string]$RehearsalSecretVariable
 )
@@ -50,8 +52,10 @@ $log = Join-Path $BackupRoot "security-72_${mode}_$stamp.log"
 function Say([string]$Text, [string]$Color = 'Gray') { Write-Host $Text -ForegroundColor $Color; Add-Content -LiteralPath $log -Value $Text -Encoding UTF8 }
 
 # 1. Backup gate (not needed for a read-only verification).
-if (-not $VerifyOnly) {
-  $report = Get-ChildItem -Path $BackupRoot -Filter '*_REPORT.txt' -Recurse -ErrorAction SilentlyContinue |
+if ($SkipBackupCheck -and -not $VerifyOnly) {
+  Say 'WARNING: backup check skipped at the operator''s request (-SkipBackupCheck).' 'Yellow'
+} elseif (-not $VerifyOnly) {
+  $report =Get-ChildItem -Path $BackupRoot -Filter '*_REPORT.txt' -Recurse -ErrorAction SilentlyContinue |
     Where-Object { $_.LastWriteTime -gt (Get-Date).AddHours(-24) -and (Get-Content -LiteralPath $_.FullName -TotalCount 1) -match '^RESULT: PASS' } |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
   if (-not $report) { throw "No production backup with 'RESULT: PASS' from the last 24 hours in $BackupRoot. Run scripts\backup\Backup-ZarmanProduction.ps1 first." }

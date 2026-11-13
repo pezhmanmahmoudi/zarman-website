@@ -310,6 +310,7 @@ try {
   $cmpCatalog = Compare-Fingerprint -Production $prodFingerprint -Restored (Import-Fingerprint (Join-Path $DbDir 'restored-catalog-fingerprint.csv')) -ExcludedScopes $excludedScopes
   if ($cmpCatalog.Excluded) { $NotRestoreTested.Add("$($cmpCatalog.Excluded) catalog object(s) inside the excluded scope(s) above") | Out-Null }
   foreach ($f in $cmpCatalog.Failures) { Fail "catalog: $f" }
+  foreach ($a in $cmpCatalog.AclNotDumped) { $NotRestoreTested.Add("$a - privileges (owner matches); they equal the extension's initial privileges, which pg_dump never dumps and Supabase recreates") | Out-Null }
   Say "      data: $($cmpData.Identical.Count) tables identical to production (row count + content checksum), $($cmpData.Changed.Count) changed while dumping (within range)"
   foreach ($c in $cmpData.Changed) { Say "            changed during dump: $c" }
   Say "      catalog: $($cmpCatalog.Compared) objects compared by definition and permissions, $($cmpCatalog.Failures.Count) differences"

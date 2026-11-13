@@ -31,7 +31,12 @@ SELECT kind, identity, detail FROM (
                 SELECT (CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END) || ':' || a.privilege_type
                        || (CASE WHEN a.is_grantable THEN '*' ELSE '' END) AS v
                 FROM aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) a) z
-              ORDER BY v COLLATE "C"), ',') AS detail
+              ORDER BY v COLLATE "C"), ',')
+         -- pg_dump never dumps privileges that equal an extension's initial privileges (pg_init_privs 'e');
+         -- the platform/extension recreates them. Marked so the comparison can report them, not fail on them.
+         || CASE WHEN EXISTS (SELECT 1 FROM pg_init_privs ip WHERE ip.classoid = 'pg_namespace'::regclass AND ip.objoid = n.oid
+                              AND ip.privtype = 'e' AND ip.initprivs = n.nspacl)
+                 THEN ' acl_source=extension-initial' ELSE '' END AS detail
   FROM ns n
 
   UNION ALL

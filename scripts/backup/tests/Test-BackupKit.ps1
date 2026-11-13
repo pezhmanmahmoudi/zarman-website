@@ -93,6 +93,13 @@ Check 'fingerprint: missing object and case-different grant both fail' ($cf.Fail
 $px = @($p) + @([pscustomobject]@{ kind = 'relation'; identity = 'realtime.schema_migrations'; detail = 'x' }, [pscustomobject]@{ kind = 'index'; identity = 'realtime.schema_migrations.schema_migrations_pkey'; detail = 'y' }, [pscustomobject]@{ kind = 'relation'; identity = 'realtime.schema_migrations_old'; detail = 'z' })
 $cf = Compare-Fingerprint -Production $px -Restored $p -ExcludedScopes @('realtime.schema_migrations')
 Check 'fingerprint: objects inside an explicit exclusion are counted, a similarly named table is still compared' ($cf.Excluded -eq 2 -and $cf.Failures.Count -eq 1 -and $cf.Failures[0] -eq 'missing relation realtime.schema_migrations_old')
+$sp = @([pscustomobject]@{ kind = 'schema'; identity = 'graphql'; detail = 'owner=supabase_admin acl=anon:USAGE,supabase_admin:CREATE,supabase_admin:USAGE acl_source=extension-initial' })
+$cf = Compare-Fingerprint -Production $sp -Restored @([pscustomobject]@{ kind = 'schema'; identity = 'graphql'; detail = 'owner=supabase_admin acl=supabase_admin:CREATE,supabase_admin:USAGE' })
+Check 'fingerprint: extension-initial schema privileges (never dumped) are reported, not failed' ($cf.Failures.Count -eq 0 -and $cf.AclNotDumped.Count -eq 1)
+$cf = Compare-Fingerprint -Production $sp -Restored @([pscustomobject]@{ kind = 'schema'; identity = 'graphql'; detail = 'owner=postgres acl=postgres:CREATE,postgres:USAGE' })
+Check 'fingerprint: extension-initial schema with a different owner still fails' ($cf.Failures.Count -eq 1 -and $cf.AclNotDumped.Count -eq 0)
+$cf = Compare-Fingerprint -Production @([pscustomobject]@{ kind = 'schema'; identity = 'public'; detail = 'owner=pg_database_owner acl=anon:USAGE' }) -Restored @([pscustomobject]@{ kind = 'schema'; identity = 'public'; detail = 'owner=pg_database_owner acl=' })
+Check 'fingerprint: an ordinary schema with different privileges still fails' ($cf.Failures.Count -eq 1)
 
 $scratch = Join-Path $env:TEMP ('zarman-kit-unit-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Path "$scratch\a\b" -Force | Out-Null

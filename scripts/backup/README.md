@@ -84,4 +84,4 @@ This runs the unit tests, then rehearses the whole backup against a throw-away l
 - a restore error;
 - the rehearsal switches refused against a non-local host.
 
-Last result: 93 passed, 0 failed.
+Last result: 96 passed, 0 failed.
