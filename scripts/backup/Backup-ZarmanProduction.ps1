@@ -352,14 +352,27 @@ try {
     Write-Host "      Creating $([IO.Path]::GetFileName($archive)): at 'Enter password' type the passphrase, Enter; at 'Verify password' type it again, Enter." -ForegroundColor Cyan
     & $SevenZip a -t7z -mhe=on -mx=5 -bsp0 $passArg $archive (Join-Path $set[1] '*')
     if ($LASTEXITCODE -ne 0) { Stop-Run "7-Zip could not create $archive (exit $LASTEXITCODE)." }
-    Write-Host "      Testing $([IO.Path]::GetFileName($archive)): no prompt text is shown for this step - type the passphrase once more and press Enter." -ForegroundColor Cyan
-    $testOut = Join-Path $Work "7z-test-$($set[0]).txt"
-    $testExit = Invoke-ConsoleProcess $SevenZip @('t', $passArg, $archive) -StdoutFile $testOut -StderrFile "$testOut.err"
-    $testText = (Get-Content -LiteralPath $testOut -Raw) + (Get-Content -LiteralPath "$testOut.err" -Raw -ErrorAction SilentlyContinue)
-    $reported = [regex]::Match($testText, '(?m)^Files:\s*(\d+)')
-    $nFiles = if ($reported.Success) { [int]$reported.Groups[1].Value } elseif ($testText -match 'Everything is Ok') { 1 } else { -1 }
-    if ($testExit -ne 0 -or $testText -notmatch 'Everything is Ok' -or $nFiles -ne $fileCount) {
-      Stop-Run "Archive test failed for $([IO.Path]::GetFileName($archive)) (exit $testExit; files $nFiles of $fileCount). Wrong passphrase or damaged archive."
+    if ($RehearsalArchiveSecretVariable) {
+      # Automated rehearsal: output captured so the file count can be checked too.
+      $testOut = Join-Path $Work "7z-test-$($set[0]).txt"
+      $testExit = Invoke-ConsoleProcess $SevenZip @('t', $passArg, $archive) -StdoutFile $testOut -StderrFile "$testOut.err"
+      $testText = (Get-Content -LiteralPath $testOut -Raw) + (Get-Content -LiteralPath "$testOut.err" -Raw -ErrorAction SilentlyContinue)
+      $reported = [regex]::Match($testText, '(?m)^Files:\s*(\d+)')
+      $nFiles = if ($reported.Success) { [int]$reported.Groups[1].Value } elseif ($testText -match 'Everything is Ok') { 1 } else { -1 }
+      if ($testExit -ne 0 -or $testText -notmatch 'Everything is Ok' -or $nFiles -ne $fileCount) {
+        Stop-Run "Archive test failed for $([IO.Path]::GetFileName($archive)) (exit $testExit; files $nFiles of $fileCount). Wrong passphrase or damaged archive."
+      }
+    } else {
+      # Interactive: 7-Zip must own the console to show and read its password prompt, so its output is
+      # not captured. Its exit code is 0 only if the passphrase is right and every file's CRC checks out.
+      $testExit = -1
+      for ($attempt = 1; $attempt -le 3 -and $testExit -ne 0; $attempt++) {
+        Write-Host "      Testing $([IO.Path]::GetFileName($archive)) (attempt $attempt of 3): at 'Enter password' type the passphrase, Enter." -ForegroundColor Cyan
+        & $SevenZip t $archive
+        $testExit = $LASTEXITCODE
+        if ($testExit -ne 0 -and $attempt -lt 3) { Write-Host '      Test did not pass (wrong passphrase?). Try again.' -ForegroundColor Yellow }
+      }
+      if ($testExit -ne 0) { Stop-Run "Archive test failed for $([IO.Path]::GetFileName($archive)) (7-Zip exit $testExit). Wrong passphrase or damaged archive." }
     }
     Say ("      {0}: {1:N1} MB, {2} files, integrity test OK" -f [IO.Path]::GetFileName($archive), ((Get-Item $archive).Length / 1MB), $fileCount)
     $archives += $archive

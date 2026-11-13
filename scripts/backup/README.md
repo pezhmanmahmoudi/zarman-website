@@ -41,7 +41,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\backup\Backup-Zarm
 Prompts, in order:
 1. `Supabase database password (hidden)`: the database password from the Supabase Dashboard.
 2. Database archive: 7-Zip shows `Enter password` and then `Verify password`. Type the passphrase each time.
-3. Database archive test: **no prompt text is shown**. Type the passphrase once more and press Enter.
+3. Database archive test: 7-Zip shows `Enter password` once more. Type the passphrase (3 attempts allowed).
 4. Storage archive: the same three entries.
 
 Use one long passphrase for all of them, and save it in your password manager **before** starting.
