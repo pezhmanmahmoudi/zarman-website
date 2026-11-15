@@ -8,7 +8,20 @@
   overflow: hidden;
   isolation: isolate;
   min-height: clamp(680px, 90dvh, 880px);
-  background-color: var(--color-bg-base);
+  /* The hero is a light section on an otherwise dark site: re-point the
+     semantic tokens so every child picks up light-theme colours. */
+  --color-bg-base: #ffffff;
+  --color-bg-surface: #ffffff;
+  --color-bg-surface-hover: #f8fafc;
+  --color-text-primary: #0a1a3f;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #64748b;
+  --color-border-ghost: rgba(15, 23, 42, 0.08);
+  --color-border-ghost-light: rgba(15, 23, 42, 0.14);
+  --color-accent-secondary: #4f46e5;
+  color-scheme: light;
+  background-color: #ffffff;
+  color: var(--color-text-primary);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -41,19 +54,24 @@
   }
 }
 
-/* Background Architecture */
-.bgBase {
+/* Background: white canvas with the animated Zarman silk wave. */
+.wave {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 0%, rgba(17, 22, 34, 0.8) 0%, transparent 70%);
   z-index: 0;
+  pointer-events: none;
 }
 
-.bgGlow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(800px 800px at 15% 40%, rgba(79, 70, 229, 0.05) 0%, transparent 80%);
-  z-index: 1;
+/* Single-column layouts: the copy is centred and spans the full width, so keep
+   the wave to a band across the top (behind the header) and fade it out before
+   the headline. */
+@media (max-width: 1024px) {
+  .wave {
+    bottom: auto;
+    height: clamp(300px, 46vw, 420px);
+    -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 45%, transparent 100%);
+  }
 }
 
 .container {
@@ -98,7 +116,7 @@
   align-items: center;
   gap: 12px;
   margin: 0 0 var(--space-4);
-  color: #cdd8ff;
+  color: #4338ca;
   font-family: var(--font-primary);
   font-size: clamp(0.96rem, 1.05vw, 1.08rem);
   font-weight: 700;
@@ -107,7 +125,6 @@
   padding: 0 0 0.62rem 18px;
   text-transform: uppercase;
   isolation: isolate;
-  text-shadow: 0 8px 26px rgba(59, 130, 246, 0.2);
 }
 
 .eyebrow::after {
@@ -138,7 +155,7 @@
   font-family: var(--font-en-stack);
   font-weight: 800;
   letter-spacing: 0.22em;
-  background: linear-gradient(95deg, #f6f8ff 0%, #dbeafe 28%, #a5b4fc 60%, #60a5fa 100%);
+  background: linear-gradient(95deg, #312e81 0%, #4338ca 40%, #4f46e5 70%, #0891b2 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -332,6 +349,21 @@
   font-family: var(--font-primary) !important;
 }
 
+/* The shared secondary button is styled for dark surfaces; give it a light outline here. */
+.hero .btnSecondary {
+  color: #4338ca;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(79, 70, 229, 0.28);
+  box-shadow: 0 8px 20px -14px rgba(30, 41, 99, 0.35);
+}
+
+.hero .btnSecondary:hover {
+  color: #3730a3;
+  background: #ffffff;
+  border-color: rgba(79, 70, 229, 0.5);
+  box-shadow: 0 16px 32px -18px rgba(30, 41, 99, 0.45);
+}
+
 .meta {
   display: flex;
   flex-wrap: wrap;
@@ -376,11 +408,16 @@
   justify-content: center;
   gap: var(--space-2);
   align-self: center;
-  background-color: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: 6px 16px;
-  border-radius: var(--radius-pill);
+  background-color: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 8px 16px;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px -10px rgba(15, 23, 42, 0.35), 0 2px 6px rgba(15, 23, 42, 0.08);
+  opacity: 1 !important;
+  position: relative;
+  z-index: 2;
 }
+.hero .widgetHeader .status { color: #047857; font-weight: 700; }
 
 
 .pulseDot {
@@ -408,7 +445,7 @@
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
   font-weight: var(--font-weight-bold);
-  color: #10b981;
+  color: #047857;
 }
 
 .splitCard {
@@ -417,10 +454,10 @@
   background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border-ghost);
   border-radius: var(--radius-xl);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4), var(--highlight-top);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 30px 60px -30px rgba(30, 41, 99, 0.35), 0 18px 36px -18px rgba(15, 23, 42, 0.12);
   overflow: hidden;
   min-height: 240px;
-  background-image: radial-gradient(circle at 70% 20%, rgba(124, 58, 237, 0.05) 0%, transparent 60%);
+  background-image: radial-gradient(circle at 70% 20%, rgba(124, 58, 237, 0.04) 0%, transparent 60%);
 }
 
 .ratesData {
@@ -434,7 +471,7 @@
 
 .logoSection {
   width: 150px;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(0,0,0,0.2) 100%);
+  background: linear-gradient(135deg, #eef0ff 0%, #e0e7ff 100%);
   border-left: 1px solid var(--color-border-ghost);
   display: flex;
   align-items: center;
@@ -447,7 +484,7 @@
   width: 100%;
   height: auto;
   max-width: 100px;
-  filter: drop-shadow(0 0 15px rgba(124, 58, 237, 0.4));
+  filter: drop-shadow(0 6px 14px rgba(79, 70, 229, 0.25));
 }
 
 .rateCol {
@@ -499,12 +536,12 @@
   direction: inherit;
 
   /* ایجاد عمق و حالت شیشه‌ای مات به جای رنگ تخت */
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.15) 0%, rgba(15, 23, 42, 0.6) 100%);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(12px);
 
   /* حاشیه‌های ظریف برای القای حس برش با دقت بالا (Etched UI) */
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 0 0 var(--radius-xl) var(--radius-xl);
   padding: 14px 24px;
 
@@ -530,9 +567,8 @@
   font-family: var(--font-en), sans-serif;
   font-size: 13px;
   font-weight: 500;
-  color: #10b981;
+  color: #059669;
   letter-spacing: 0.5px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
 @keyframes fadeInStrip {

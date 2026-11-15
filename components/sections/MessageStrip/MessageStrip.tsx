@@ -47,7 +47,7 @@ function subscribeReducedMotion(onChange: () => void) {
   return () => mq.removeEventListener("change", onChange);
 }
 
-export default function MessageStrip() {
+export default function MessageStrip({ variant = "dark" }: { variant?: "dark" | "light" } = {}) {
   const { locale } = useParams<{ locale: string }>();
   const isEn = locale === "en";
 
@@ -122,7 +122,7 @@ export default function MessageStrip() {
   const activeTone = STRIP_MESSAGES[active].icon;
 
   return (
-    <div className={styles.root}>
+    <div className={`${styles.root} ${variant === "light" ? styles.light : ""}`}>
       <div
         ref={cardRef}
         className={`${styles.card} ${styles[`tone_${activeTone}`]}`}
