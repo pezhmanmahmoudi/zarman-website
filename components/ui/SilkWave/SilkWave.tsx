@@ -62,7 +62,7 @@ float strands(float x, float cpp) {
   return 0.42 * vn(x * 38.0) + 0.30 * oct(x, 96.0, 3.0, cpp) + 0.18 * oct(x, 240.0, 7.0, cpp) + 0.05;
 }
 vec3 pal(float t) {
-  t = clamp(t, 0.0, 1.0) * 3.0;
+  t = pow(clamp(t, 0.0, 1.0), 0.8) * 3.0; // more room for the warm rose end
   float f = fract(t);
   f = f * f * (3.0 - 2.0 * f);
   int i = int(floor(t));
@@ -135,8 +135,8 @@ void main() {
   vec4 c = vec4(0.0);
   c = over(c, sheet(q, 0.16, 0.50, 0.26, 0.62, 0.30, 0.00, 0.62, 0.55, 0.3, 0.96, 0.02, 0.85, 0.7));
   c = over(c, sheet(q, 0.30, 0.52, 0.22, 0.50, 0.26, 0.28, 0.74, 0.70, 1.7, 0.78, 0.25, 1.15, 0.9));
-  c = over(c, sheet(q, 0.50, 0.62, 0.34, 0.70, 0.70, 0.62, 1.00, 1.00, 2.9, 0.97, 0.02, 1.00, 0.8));
-  c = over(c, sheet(q, 0.70, 0.66, 0.42, 0.34, 0.10, 0.80, 1.00, 1.00, 4.4, 0.55, 0.50, 1.35, 1.1));
+  c = over(c, sheet(q, 0.50, 0.62, 0.34, 0.70, 0.70, 0.55, 1.00, 1.00, 2.9, 0.97, 0.02, 1.00, 0.8));
+  c = over(c, sheet(q, 0.66, 0.66, 0.42, 0.56, 0.36, 0.88, 1.00, 1.00, 4.4, 0.55, 0.50, 1.35, 1.1));
   o = c;
 }`;
 
@@ -271,7 +271,7 @@ export default function SilkWave({ mirror = false, palette = SILK_PALETTE, speed
         gl.uniform2f(uRes, w, h);
         // Keep the sweep's angle and position sensible from wide desktops to tall phones.
         const aspect = h / w;
-        gl.uniform2f(uFrame, aspect < 1 ? 0.24 : 0.08, Math.min(Math.max(aspect, 1), 2.2));
+        gl.uniform2f(uFrame, aspect < 1 ? 0.12 : -0.02, Math.min(Math.max(aspect, 1), 2.2));
       };
 
       const draw = () => {
