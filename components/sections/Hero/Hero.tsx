@@ -157,10 +157,10 @@ export default function Hero() {
             </p>
 
             <div className={styles.actions}>
-              <Button href={`/${locale}/register`} variant="primary" size="lg" className={styles.btn}>
+              <Button href={`/${locale}/register`} variant="primary" size="md" className={styles.btn}>
                 {isEn ? "Get Started" : "شروع ثبت‌نام"}
               </Button>
-              <Button href={whatsappUrl} variant="secondary" size="lg" className={`${styles.btn} ${styles.btnSecondary}`} target="_blank" rel="noopener noreferrer">
+              <Button href={whatsappUrl} variant="secondary" size="md" className={`${styles.btn} ${styles.btnSecondary}`} target="_blank" rel="noopener noreferrer">
                 {isEn ? "Contact Us" : "تماس با ما"}
               </Button>
             </div>
