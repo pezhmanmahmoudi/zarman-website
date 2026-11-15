@@ -102,7 +102,7 @@ export default function Hero() {
         }
       `}</style></noscript>
       <div className={styles.wave} aria-hidden="true">
-        <SilkWave mirror={!isEn} />
+        <SilkWave mirror={!isEn} narrowShift={-0.24} />
       </div>
 
       <div className={styles.container}>

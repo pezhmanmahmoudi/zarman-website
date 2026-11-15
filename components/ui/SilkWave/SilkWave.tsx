@@ -179,13 +179,15 @@ type SilkWaveProps = {
   mirror?: boolean;
   /** Four colour stops, cool -> warm. */
   palette?: string[];
+  /** Extra sideways shift on narrow (<700px) canvases; negative pulls the wave into view. */
+  narrowShift?: number;
   /** Animation speed multiplier (1 = calibrated default). */
   speed?: number;
   className?: string;
   style?: React.CSSProperties;
 };
 
-export default function SilkWave({ mirror = false, palette = SILK_PALETTE, speed = 1, className, style }: SilkWaveProps) {
+export default function SilkWave({ mirror = false, palette = SILK_PALETTE, narrowShift = 0, speed = 1, className, style }: SilkWaveProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fallback, setFallback] = useState(false);
   const [ready, setReady] = useState(false);
@@ -271,7 +273,8 @@ export default function SilkWave({ mirror = false, palette = SILK_PALETTE, speed
         gl.uniform2f(uRes, w, h);
         // Keep the sweep's angle and position sensible from wide desktops to tall phones.
         const aspect = h / w;
-        gl.uniform2f(uFrame, aspect < 1 ? 0.12 : -0.02, Math.min(Math.max(aspect, 1), 2.2));
+        const shift = canvas.clientWidth < 700 ? narrowShift : 0;
+        gl.uniform2f(uFrame, (aspect < 1 ? 0.12 : -0.02) + shift, Math.min(Math.max(aspect, 1), 2.2));
       };
 
       const draw = () => {
@@ -364,7 +367,7 @@ export default function SilkWave({ mirror = false, palette = SILK_PALETTE, speed
       cancelIdle();
       teardown?.();
     };
-  }, [mirror, paletteKey, speed]);
+  }, [mirror, paletteKey, speed, narrowShift]);
 
   if (fallback) {
     const p = paletteKey.split(",");

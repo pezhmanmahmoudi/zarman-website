@@ -68,9 +68,9 @@
 @media (max-width: 1024px) {
   .wave {
     bottom: auto;
-    height: clamp(300px, 46vw, 420px);
-    -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent 100%);
-    mask-image: linear-gradient(to bottom, #000 45%, transparent 100%);
+    height: clamp(420px, 110vw, 560px);
+    -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
   }
 }
 
