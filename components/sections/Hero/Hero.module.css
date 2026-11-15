@@ -68,15 +68,16 @@
 @media (max-width: 1024px) {
   .wave {
     bottom: auto;
-    height: clamp(300px, 46vw, 420px);
-    -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent 100%);
-    mask-image: linear-gradient(to bottom, #000 45%, transparent 100%);
+    height: clamp(420px, 110vw, 560px);
+    -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
   }
 }
 
 .container {
   position: relative;
-  z-index: 3;
+  /* No z-index: the copy must share the wave's stacking context so its
+     blend mode can tint against the wave (it still paints above it). */
   flex: 1;
   display: flex;
   align-items: center;
@@ -697,4 +698,17 @@
   .stripContainer {
     margin: var(--space-4) 0 var(--space-8) 0;
   }
+}
+
+/* Stripe-style dynamic text colour: the accent line and subtitle multiply
+   with whatever is behind them. On white they show their own colour; over
+   the wave they pick up its hue and get darker, so they stay readable. */
+.hero .titleAccent {
+  color: #3730a3;
+  mix-blend-mode: multiply;
+}
+
+.hero .subtitle {
+  color: #334155;
+  mix-blend-mode: multiply;
 }
