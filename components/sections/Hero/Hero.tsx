@@ -16,6 +16,7 @@ import {
   WHATSAPP_MESSAGE_TRANSFER_HELP,
 } from "@/lib/constants/contact";
 import MessageStrip from "@/components/sections/MessageStrip/MessageStrip";
+import SilkWave from "@/components/ui/SilkWave/SilkWave";
 
 export default function Hero() {
   const heroRef = useRef<HTMLElement | null>(null);
@@ -100,8 +101,9 @@ export default function Hero() {
           visibility: visible !important; opacity: 1 !important; animation: none !important;
         }
       `}</style></noscript>
-      <div className={styles.bgBase} aria-hidden="true" />
-      <div className={styles.bgGlow} aria-hidden="true" />
+      <div className={styles.wave} aria-hidden="true">
+        <SilkWave mirror={!isEn} />
+      </div>
 
       <div className={styles.container}>
         <div className={styles.layout}>
@@ -158,7 +160,7 @@ export default function Hero() {
               <Button href={`/${locale}/register`} variant="primary" size="lg" className={styles.btn}>
                 {isEn ? "Get Started" : "شروع ثبت‌نام"}
               </Button>
-              <Button href={whatsappUrl} variant="secondary" size="lg" className={styles.btn} target="_blank" rel="noopener noreferrer">
+              <Button href={whatsappUrl} variant="secondary" size="lg" className={`${styles.btn} ${styles.btnSecondary}`} target="_blank" rel="noopener noreferrer">
                 {isEn ? "Contact Us" : "تماس با ما"}
               </Button>
             </div>
@@ -183,7 +185,7 @@ export default function Hero() {
           </div>
 
           <div className={styles.stripContainer}>
-            <MessageStrip />
+            <MessageStrip variant="light" />
           </div>
 
           <div className={styles.visual}>
