@@ -221,7 +221,7 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
     if (!formData.postalCode) newErrors.postalCode = "Postal Code is required.";
 
 
-    Object.assign(newErrors, validateKycEvidence(formData.docType, evidence));
+    Object.assign(newErrors, validateKycEvidence(formData.docType, evidence, undefined, formData.country));
     Object.assign(newErrors, validateKycIdentityDetails(formData.docType, {
       country: formData.country,
       license_number: formData.licenseNumber, card_number: formData.cardNumber,
@@ -424,7 +424,7 @@ export function DashboardProfile({ profile, motionEnabled = true }: { profile: D
         {verificationStep === 2 && <>
           <KycDocumentEvidence country={formData.country} documentType={formData.docType} evidence={evidence} errors={errors}
             disabled={isSubmitting || uploadingEvidence} motionEnabled={motionEnabled} onBusyChange={setUploadingEvidence}
-            onChange={value => { setEvidence(value); setErrors(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !key.startsWith("evidence-") && !["addressType","addressDate","documentNumber","documentIssuer","medicareIRN","medicareColour","medicareExpiry","identityUpload"].includes(key)))); }}
+            onChange={value => { setEvidence(value); setErrors(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !key.startsWith("evidence-") && !["addressType","addressDate","addressIssuer","addressReference","documentNumber","documentIssuer","medicareIRN","medicareColour","medicareExpiry","identityUpload"].includes(key)))); }}
             onDocumentTypeChange={value => {
               if (isIranCountry(formData.country) && value !== "foreign_passport") return;
               if (value === formData.docType) return;

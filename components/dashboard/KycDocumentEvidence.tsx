@@ -7,7 +7,7 @@ import { SelectBox } from "@/components/ui/SelectBox/SelectBox";
 import CustomDatePicker from "@/components/ui/DatePicker/CustomDatePicker";
 import { DashboardLottieScene } from "@/components/dashboard/DashboardLottieScene";
 import { dashboardInputClass } from "@/components/dashboard/dashboard-ui";
-import { KYC_ID_DOCUMENTS, KYC_ADDRESS_DOCUMENTS, KYC_FILE_ACCEPT, isIranCountry, kycDocument, requiredKycUploads, validateKycFile, type KycEvidenceDraft, type KycUploadRole } from "@/lib/kyc/evidence";
+import { KYC_ID_DOCUMENTS, KYC_ADDRESS_DOCUMENTS, KYC_FILE_ACCEPT, isIranCountry, kycDocument, kycRequiresAddress, requiredKycUploads, validateKycFile, type KycEvidenceDraft, type KycUploadRole } from "@/lib/kyc/evidence";
 import styles from "@/styles/dashboard/KycDocumentEvidence.module.css";
 import flow from "@/styles/dashboard/DashboardProfileFlow.module.css";
 import { useLocale } from "@/context/LocaleContext";
@@ -30,6 +30,7 @@ export function KycDocumentEvidence({ country, documentType, onDocumentTypeChang
   const iranResident = isIranCountry(country);
   const documentOptions = iranResident ? [{value:"foreign_passport",label:"Iranian passport"}] : KYC_ID_DOCUMENTS.map(({value,label}) => ({value,label}));
   const addressDoc = KYC_ADDRESS_DOCUMENTS.find(item => item.value === evidence.addressType);
+  const needsAddress = kycRequiresAddress(documentType, country);
   const locked = disabled || busy !== null;
   const error = (key: string) => errors[key] ? <p id={`kyc-${key}-error`} role="alert" className={styles.error}>{errors[key]}</p> : null;
 
@@ -97,9 +98,9 @@ export function KycDocumentEvidence({ country, documentType, onDocumentTypeChang
       {error("identityUpload")}
       {doc.back && <p className={styles.instruction}>Both the front and back are required. Upload a separate file for each side.</p>}
       {!doc.textOnly && <div className={styles.files}>{requiredKycUploads(documentType).filter(role => role !== "address").map(role => fileSlot(role))}</div>}
-      {doc.address && <section className={styles.address} aria-label="Proof of address">
+      {needsAddress && <section className={styles.address} aria-label="Proof of address">
         <h3>Additional proof of residential address</h3>
-        <p className={styles.note}>This document type also requires separate proof of your current residential address. A PO box is not a residential address.</p>
+        <p className={styles.note}>{doc.address ? "This document type also requires separate proof of your current residential address." : "Australian residents verifying with a foreign passport must also provide proof of their current Australian residential address."} A PO box is not a residential address.</p>
         <div className={styles.fields}>
           <div><label className={styles.label}>Proof of address document</label><SelectBox value={evidence.addressType} onChange={value => {
             setAddressSelection(previous => previous + 1);
@@ -109,6 +110,8 @@ export function KycDocumentEvidence({ country, documentType, onDocumentTypeChang
             }
           }} labeledOptions={KYC_ADDRESS_DOCUMENTS.map(({value,label}) => ({value,label}))} placeholder="Choose proof of address" dir="ltr" disabled={locked} className={flow.control}/>{error("addressType")}</div>
           <div><label className={styles.label}>Document issue date</label><CustomDatePicker value={evidence.addressDate} onChange={value => onChange({...evidence,addressDate:value})} years="issue" disabled={locked || !addressDoc} className={flow.control}/>{error("addressDate")}</div>
+          <div><label htmlFor="kyc-address-issuer" className={styles.label}>Issued by (bank, utility company or agency)</label><input id="kyc-address-issuer" className={dashboardInputClass} value={evidence.addressIssuer || ""} maxLength={200} disabled={locked} onChange={event => onChange({...evidence,addressIssuer:event.target.value})} aria-invalid={!!errors.addressIssuer}/>{error("addressIssuer")}</div>
+          <div><label htmlFor="kyc-address-reference" className={styles.label}>Account / reference number on the document</label><input id="kyc-address-reference" className={dashboardInputClass} value={evidence.addressReference || ""} maxLength={200} disabled={locked} onChange={event => onChange({...evidence,addressReference:event.target.value})} aria-invalid={!!errors.addressReference}/>{error("addressReference")}</div>
         </div>
         {addressDoc && <p className={styles.note}>Use a {addressDoc.label.toLowerCase()} issued within the last {addressDoc.maxAgeDays} days. The name and address must match your account details.</p>}
         {fileSlot("address")}

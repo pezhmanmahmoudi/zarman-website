@@ -149,6 +149,7 @@ if (HEADER_ROW.length !== TEMPLATE_COLUMN_COUNT) {
 
 export type IftiSourceRecord = {
   id: string;
+  user_id?: string | null;
   type: "buy_aud" | "sell_aud" | string;
   amount_aud: number | string | null;
   status: string | null;
@@ -209,7 +210,76 @@ export type IftiSourceRecord = {
     bank_name?: string | null;
     bank_city?: string | null;
   } | null;
+  /**
+   * Customer's latest KYC submission (customer_kyc_submissions.details). Used only
+   * when the reviewer has not recorded the document in the verified profile fields.
+   */
+  kyc_submission?: { document_type?: string | null; details?: Record<string, unknown> | null } | null;
 };
+
+type IdDocument = { type: string; other: string; number: string; issuer: string };
+
+// Labels for customer document types whose AUSTRAC code is "Other (provide description)".
+const SUBMISSION_ID_LABELS: Record<string, string> = {
+  citizenship_certificate: "Citizenship certificate",
+  certified_copy: "Certified copies",
+  utility_bill: "Utility bill",
+  council_rates: "Council rates notice",
+  government_notice: "Government-issued address notice",
+};
+const OTHER_ID_TYPE = "Other (provide description)";
+
+function primaryIdDocument(record: IftiSourceRecord): IdDocument {
+  const profile = record.profiles ?? null;
+  if (profile?.document_type === "driver_license") {
+    return { type: "Driver's licence", other: "", number: asString(profile.license_number), issuer: asString(profile.state_of_issue) };
+  }
+  if (profile?.document_type === "passport") {
+    return { type: "Passport", other: "", number: asString(profile.passport_number), issuer: "" };
+  }
+  // Reviewer-verified alternative document takes precedence over the customer's declaration.
+  if (asString(profile?.compliance_dvs_alt_id_type)) {
+    return {
+      type: asString(profile?.compliance_dvs_alt_id_type),
+      other: asString(profile?.compliance_dvs_alt_id_type_other),
+      number: asString(profile?.compliance_dvs_alt_id_number),
+      issuer: asString(profile?.compliance_dvs_alt_id_issuer),
+    };
+  }
+  const details = record.kyc_submission?.details ?? null;
+  const type = asString(details?.report_type);
+  if (!details || !type) return { type: "", other: "", number: "", issuer: "" };
+  const docType = asString(details.document_type) || asString(record.kyc_submission?.document_type);
+  return {
+    type,
+    other: type === OTHER_ID_TYPE ? SUBMISSION_ID_LABELS[docType] ?? docType : "",
+    number: asString(details.document_number),
+    issuer: asString(details.document_issuer),
+  };
+}
+
+// AUSTRAC "ID type (2)": the proof-of-residential-address document.
+function additionalIdDocument(record: IftiSourceRecord): IdDocument {
+  const profile = record.profiles ?? null;
+  if (asString(profile?.compliance_dvs_alt_address_type)) {
+    return {
+      type: asString(profile?.compliance_dvs_alt_address_type),
+      other: asString(profile?.compliance_dvs_alt_address_type_other),
+      number: asString(profile?.compliance_dvs_alt_address_reference),
+      issuer: asString(profile?.compliance_dvs_alt_address_issuer),
+    };
+  }
+  const details = record.kyc_submission?.details ?? null;
+  const type = asString(details?.address_report_type);
+  if (!details || !type) return { type: "", other: "", number: "", issuer: "" };
+  const addressType = asString(details.address_type);
+  return {
+    type,
+    other: type === OTHER_ID_TYPE ? SUBMISSION_ID_LABELS[addressType] ?? (asString(details.address_label) || addressType) : "",
+    number: asString(details.address_reference),
+    issuer: asString(details.address_issuer),
+  };
+}
 
 function normalizeDate(value?: string | null): Date | null {
   if (!value) return null;
@@ -245,12 +315,6 @@ function asString(value: unknown): string {
 
 function fullName(first?: string | null, last?: string | null): string {
   return [first, last].map((v) => asString(v)).filter(Boolean).join(" ");
-}
-
-function resolveIdType(documentType?: string | null, altIdType?: string | null): string {
-  if (documentType === "driver_license") return "Driver's licence";
-  if (documentType === "passport") return "Passport";
-  return altIdType ?? "";
 }
 
 function createDataRow(record: IftiSourceRecord): Array<string | number> {
@@ -297,26 +361,18 @@ function createDataRow(record: IftiSourceRecord): Array<string | number> {
   row[20] = asString(profile?.mobile_number);
   row[21] = asString(profile?.email);
   row[24] = asString(profile?.customer_code);
-  row[27] = resolveIdType(profile?.document_type, profile?.compliance_dvs_alt_id_type);
-  row[28] = profile?.document_type === "driver_license" || profile?.document_type === "passport"
-    ? ""
-    : asString(profile?.compliance_dvs_alt_id_type_other);
-  row[29] = asString(
-    profile?.document_type === "driver_license" ? profile?.license_number
-      : profile?.document_type === "passport" ? profile?.passport_number
-      : profile?.compliance_dvs_alt_id_number
-  );
-  row[30] = asString(
-    profile?.document_type === "driver_license" ? profile?.state_of_issue
-      : profile?.document_type !== "passport" ? profile?.compliance_dvs_alt_id_issuer
-      : ""
-  );
-  // Second identification/verification document (AUSTRAC "ID type (2)") — used
-  // for the residential-address document recorded during alternative DVS review.
-  row[31] = asString(profile?.compliance_dvs_alt_address_type);
-  row[32] = asString(profile?.compliance_dvs_alt_address_type_other);
-  row[33] = asString(profile?.compliance_dvs_alt_address_reference);
-  row[34] = asString(profile?.compliance_dvs_alt_address_issuer);
+  const primaryId = primaryIdDocument(record);
+  row[27] = primaryId.type;
+  row[28] = primaryId.other;
+  row[29] = primaryId.number;
+  row[30] = primaryId.issuer;
+  // Second identification/verification document (AUSTRAC "ID type (2)") — the
+  // residential-address document, from the reviewer's record or the submission.
+  const additionalId = additionalIdDocument(record);
+  row[31] = additionalId.type;
+  row[32] = additionalId.other;
+  row[33] = additionalId.number;
+  row[34] = additionalId.issuer;
   row[35] = asString(profile?.compliance_dvs_method);
 
   row[36] = beneficiaryName;

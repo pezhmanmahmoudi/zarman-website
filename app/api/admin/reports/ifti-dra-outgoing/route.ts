@@ -117,6 +117,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "No matching transactions were found." }, { status: 404 });
   }
 
+  // Customers verified with a foreign passport or another alternative document keep
+  // their document details in customer_kyc_submissions, not in the profile columns.
+  // Attach each customer's latest submission so the ID (1) / ID (2) columns can fall
+  // back to it when the reviewer has not recorded the document manually.
+  const userIds = [...new Set(orderedRows.map((row) => row.user_id).filter((id): id is string => !!id))];
+  if (userIds.length > 0) {
+    const { data: submissions, error: submissionError } = await db
+      .from("customer_kyc_submissions")
+      .select("user_id, document_type, details, created_at")
+      .in("user_id", userIds)
+      .order("created_at", { ascending: false });
+    if (submissionError) {
+      return NextResponse.json({ message: "Could not load customer identity documents." }, { status: 500 });
+    }
+    const latestByUser = new Map<string, { document_type: string | null; details: Record<string, unknown> | null }>();
+    for (const submission of submissions ?? []) {
+      if (!latestByUser.has(submission.user_id)) latestByUser.set(submission.user_id, submission);
+    }
+    for (const row of orderedRows) {
+      row.kyc_submission = row.user_id ? latestByUser.get(row.user_id) ?? null : null;
+    }
+  }
+
   // IFTI-DRA Outgoing covers buy_aud transactions only (AUD exits Australia → paid overseas).
   // sell_aud = Zarman sells AUD to customer = money enters Australia = AUSTRAC incoming (different report).
   const nonApproved = orderedRows.filter((row) => (row.status ?? "").toLowerCase() !== "approved");

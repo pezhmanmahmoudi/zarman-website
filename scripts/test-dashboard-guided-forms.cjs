@@ -215,7 +215,7 @@ test("alternative ID requires both sides and a separately selected proof of addr
   h.documents().props.onChange({...h.documents().props.evidence,front:{id:"front",name:"front.jpg"},documentNumber:"12345",documentIssuer:"NSW"});
   await h.button("Submit verification").props.onClick();assert.equal(calls.length,0);
   assert.ok(h.documents().props.errors["evidence-back"]);assert.ok(h.documents().props.errors["evidence-address"]);assert.ok(h.documents().props.errors.addressType);
-  h.documents().props.onChange({...h.documents().props.evidence,back:{id:"back",name:"back.jpg"},address:{id:"address",name:"bill.pdf"},addressType:"utility_bill",addressDate:today});
+  h.documents().props.onChange({...h.documents().props.evidence,back:{id:"back",name:"back.jpg"},address:{id:"address",name:"bill.pdf"},addressType:"utility_bill",addressDate:today,addressIssuer:"Ausgrid",addressReference:"ACC-1"});
   h.documents().props.onBusyChange(true);assert.equal(h.button("Submit verification").props.disabled,true);assert.equal(h.button("Back").props.disabled,true);
   h.documents().props.onBusyChange(false);
   h.documents().props.onDocumentTypeChange("proof_of_age");

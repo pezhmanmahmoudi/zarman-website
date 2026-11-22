@@ -74,6 +74,8 @@ export function CustomerKycEvidence({ userId, profile }: { userId: string; profi
       ["Reporting category", text(details.report_type)],
       ["Proof of address", KYC_ADDRESS_DOCUMENTS.find(item => item.value === details.address_type)?.label],
       ["Address document date", text(details.address_date)],
+      ["Address document issuer", text(details.address_issuer)],
+      ["Address account / reference number", text(details.address_reference)],
     ];
     rows.push(...additional.filter(([, value]) => !!value));
   }

@@ -3,7 +3,7 @@
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerActionClient } from "@/lib/supabase-server";
-import { KYC_ADDRESS_DOCUMENTS, allowedKycUploads, emptyKycEvidence, isIranCountry, kycDocument, kycToday, matchesKycFileSignature, requiredKycUploads, validIsoDate, validateKycEvidence, validateKycIdentityDetails, validateKycFile, type KycEvidenceDraft, type KycUploadRole } from "@/lib/kyc/evidence";
+import { KYC_ADDRESS_DOCUMENTS, allowedKycUploads, emptyKycEvidence, isIranCountry, kycDocument, kycRequiresAddress, kycToday, matchesKycFileSignature, requiredKycUploads, validIsoDate, validateKycEvidence, validateKycIdentityDetails, validateKycFile, type KycEvidenceDraft, type KycUploadRole } from "@/lib/kyc/evidence";
 import { KYC_CONSENT_VERSION, KYC_DVS_CONSENT_STATEMENT } from "@/lib/kyc/consent";
 
 const BUCKET = "customer-kyc-evidence";
@@ -87,7 +87,7 @@ function validPepDeclaration(input: CustomerKycSubmission["pep_declaration"]) {
 export async function submitCustomerKycEvidence(payload: CustomerKycSubmission) {
   const user = await identity();
   const doc = kycDocument(payload.document_type);
-  const errors = { ...validateKycEvidence(payload.document_type, payload.evidence), ...validateKycIdentityDetails(payload.document_type, payload) };
+  const errors = { ...validateKycEvidence(payload.document_type, payload.evidence, undefined, payload.country), ...validateKycIdentityDetails(payload.document_type, payload) };
   if (!doc || Object.keys(errors).length) return { error: Object.values(errors)[0] || "Choose a document." };
   for (const key of ["first_name", "last_name", "mobile_number", "country", "address", "city", "state", "postcode"] as const) {
     if (typeof payload[key] !== "string" || !payload[key]?.trim() || payload[key]!.length > 500) return { error: "Complete your personal details and residential address." };
@@ -98,7 +98,8 @@ export async function submitCustomerKycEvidence(payload: CustomerKycSubmission) 
   const pep = validPepDeclaration(payload.pep_declaration);
   if ("error" in pep) return { error: pep.error };
   const evidence = payload.evidence ?? emptyKycEvidence();
-  const roles = [...requiredKycUploads(doc.value), ...(evidence.source_of_funds ? ["source_of_funds" as const] : [])];
+  const needsAddress = kycRequiresAddress(doc.value, payload.country);
+  const roles = [...requiredKycUploads(doc.value, payload.country), ...(evidence.source_of_funds ? ["source_of_funds" as const] : [])];
   const ids = roles.map(role => evidence[role]!.id);
   if (!ids.every(uuid) || new Set(ids).size !== ids.length) return { error: "Each required side needs its own uploaded file." };
   const db = service();
@@ -123,9 +124,12 @@ export async function submitCustomerKycEvidence(payload: CustomerKycSubmission) 
     medicare_irn: doc.value === "medicare" ? evidence.medicareIRN : null,
     medicare_colour: doc.value === "medicare" ? evidence.medicareColour : null,
     medicare_expiry: doc.value === "medicare" ? evidence.medicareExpiry : null,
-    address_type: doc.address ? evidence.addressType : null,
-    address_report_type: doc.address ? addressDoc?.reportType : null,
-    address_date: doc.address ? evidence.addressDate : null,
+    address_type: needsAddress ? evidence.addressType : null,
+    address_report_type: needsAddress ? addressDoc?.reportType : null,
+    address_label: needsAddress ? addressDoc?.label : null,
+    address_date: needsAddress ? evidence.addressDate : null,
+    address_issuer: needsAddress ? evidence.addressIssuer!.trim() : null,
+    address_reference: needsAddress ? evidence.addressReference!.trim() : null,
     consent_notice: true, consent_dvs: true, consent_version: KYC_CONSENT_VERSION, consent_statement: KYC_DVS_CONSENT_STATEMENT,
   };
   const { data, error } = await db.rpc("submit_customer_kyc_evidence", { p_user_id: user.id, p_details: details, p_upload_ids: ids });

@@ -34,18 +34,34 @@ export type KycUploadedFile = { id: string; name: string };
 export type KycEvidenceDraft = {
   front?: KycUploadedFile; back?: KycUploadedFile; address?: KycUploadedFile; source_of_funds?: KycUploadedFile;
   addressType: string; addressDate: string; documentNumber: string; documentIssuer: string;
+  /** Proof-of-address issuer (bank, energy/water company or agency) and its account/reference number — reported to AUSTRAC as the additional ID document. */
+  addressIssuer?: string; addressReference?: string;
   medicareIRN?: string; medicareColour?: string; medicareExpiry?: string;
 };
-export const emptyKycEvidence = (): KycEvidenceDraft => ({ addressType: "", addressDate: "", documentNumber: "", documentIssuer: "" });
+export const emptyKycEvidence = (): KycEvidenceDraft => ({ addressType: "", addressDate: "", documentNumber: "", documentIssuer: "", addressIssuer: "", addressReference: "" });
 // Zarman requires an Iranian passport for customers whose residence is Iran.
 export const isIranCountry = (country: unknown): boolean => typeof country === "string" && ["iran", "ir", "irn", "ایران", "iran (islamic republic of)"].includes(country.trim().toLowerCase());
+export const isAustraliaCountry = (country: unknown): boolean => typeof country === "string" && ["australia", "au", "aus"].includes(country.trim().toLowerCase());
 export const kycDocument = (type: string) => KYC_ID_DOCUMENTS.find(doc => doc.value === type);
-export function requiredKycUploads(type: string): KycUploadRole[] {
+// Zarman intake policy: an Australian resident verifying with a foreign passport
+// must also prove their Australian residential address. Mirrored by the
+// submit_customer_kyc_evidence RPC (migration _73).
+export function kycRequiresAddress(type: string, country?: string | null): boolean {
   const doc = kycDocument(type);
-  return doc ? [...(doc.textOnly ? [] : ["front" as const]), ...(doc.back ? ["back" as const] : []), ...(doc.address ? ["address" as const] : [])] : [];
+  if (!doc) return false;
+  return doc.address || (type === "foreign_passport" && isAustraliaCountry(country));
 }
+export function requiredKycUploads(type: string, country?: string | null): KycUploadRole[] {
+  const doc = kycDocument(type);
+  return doc ? [...(doc.textOnly ? [] : ["front" as const]), ...(doc.back ? ["back" as const] : []), ...(kycRequiresAddress(type, country) ? ["address" as const] : [])] : [];
+}
+// Upload slots do not know the residence country, so a foreign passport may
+// always carry an address file; submission decides whether it is required.
 export function allowedKycUploads(type: string): KycUploadRole[] {
-  return kycDocument(type) ? [...requiredKycUploads(type), "source_of_funds"] : [];
+  if (!kycDocument(type)) return [];
+  const roles = requiredKycUploads(type);
+  if (type === "foreign_passport" && !roles.includes("address")) roles.push("address");
+  return [...roles, "source_of_funds"];
 }
 export function validIsoDate(value: string): boolean {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
@@ -55,12 +71,12 @@ export function kycToday(now = new Date()): string {
   const get = (type: string) => parts.find(part => part.type === type)!.value;
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
-export function validateKycEvidence(type: string, evidence: KycEvidenceDraft | undefined, now = new Date()): Record<string, string> {
+export function validateKycEvidence(type: string, evidence: KycEvidenceDraft | undefined, now = new Date(), country?: string | null): Record<string, string> {
   const errors: Record<string, string> = {};
   const doc = kycDocument(type);
   if (!doc) return { docType: "Choose an identity document. Contact support if you cannot provide a listed document." };
   const data = evidence ?? emptyKycEvidence();
-  for (const role of requiredKycUploads(type)) {
+  for (const role of requiredKycUploads(type, country)) {
     if (!data[role]?.id) errors[`evidence-${role}`] = `Upload ${role === "front" ? "the identity document" : role === "back" ? "the back of your identity document" : "your proof of residential address"}.`;
   }
   if (doc.textOnly && (data.front || data.back)) errors.identityUpload = "Enter your identity document details instead of uploading an image.";
@@ -68,7 +84,7 @@ export function validateKycEvidence(type: string, evidence: KycEvidenceDraft | u
     if (!boundedKycText(data.documentNumber)) errors.documentNumber = "Enter the document number or registration number.";
     if (!doc.textOnly && !boundedKycText(data.documentIssuer)) errors.documentIssuer = "Enter the issuing country and authority.";
   }
-  if (doc.address) {
+  if (kycRequiresAddress(type, country)) {
     const address = KYC_ADDRESS_DOCUMENTS.find(item => item.value === data.addressType);
     if (!address) errors.addressType = "Choose a proof of address document.";
     const today = Date.parse(kycToday(now));
@@ -76,6 +92,8 @@ export function validateKycEvidence(type: string, evidence: KycEvidenceDraft | u
     if (!validIsoDate(data.addressDate) || age < 0 || (address && age > address.maxAgeDays)) {
       errors.addressDate = address ? `Use a document issued within the last ${address.maxAgeDays} days, not a future date.` : "Enter the document issue date.";
     }
+    if (!boundedKycText(data.addressIssuer)) errors.addressIssuer = "Enter who issued the document (bank, utility company or agency).";
+    if (!boundedKycText(data.addressReference)) errors.addressReference = "Enter the account or reference number shown on the document.";
   }
   return errors;
 }

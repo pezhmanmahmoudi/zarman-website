@@ -9,7 +9,7 @@ const OWNER="11111111-1111-4111-8111-111111111111";
 const FRONT="22222222-2222-4222-8222-222222222222";
 const BACK="33333333-3333-4333-8333-333333333333";
 const ADDRESS="44444444-4444-4444-8444-444444444444";
-const draft=()=>({front:{id:FRONT,name:"front.jpg"},back:{id:BACK,name:"back.jpg"},address:{id:ADDRESS,name:"address.pdf"},addressType:"utility_bill",addressDate:"2026-09-01",documentNumber:"ID100",documentIssuer:"NSW"});
+const draft=()=>({front:{id:FRONT,name:"front.jpg"},back:{id:BACK,name:"back.jpg"},address:{id:ADDRESS,name:"address.pdf"},addressType:"utility_bill",addressDate:"2026-09-01",addressIssuer:"Ausgrid",addressReference:"ACC-1",documentNumber:"ID100",documentIssuer:"NSW"});
 test("each supported document has the required sides and maps to the existing admin reporting vocabulary",()=>{
   const types=dashboardHarness().load("lib/compliance/austrac-id-types.ts").AUSTRAC_ID_TYPES;
   for(const doc of policy.KYC_ID_DOCUMENTS){
