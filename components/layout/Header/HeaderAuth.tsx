@@ -14,7 +14,7 @@ export default function HeaderAuth({ className = "" }: { className?: string }) {
   const { signOut, signingOut, signOutError } = useSignOut();
 
   return (
-    <header className={`h-header ${className}`} role="banner">
+    <header className={`h-header ${className}`} role="banner" data-site-header="">
       <a className="h-skip" href="#main-content">
         {t.nav.skipToContent}
       </a>
@@ -33,9 +33,9 @@ export default function HeaderAuth({ className = "" }: { className?: string }) {
         </nav>
 
         <div className="h-auth" aria-label={t.auth.logout}>
-          <LanguageSwitcher variant="pill" />
-          {signOutError && <span role="alert">{locale === "fa" ? "خروج تأیید نشد؛ ارتباط را بررسی و دوباره تلاش کنید." : "Sign out was not confirmed. Check your connection and retry."}</span>}
-          <Button variant="secondary" size="sm" className="hBtnTight" onClick={signOut} disabled={signingOut} aria-busy={signingOut}>
+          <LanguageSwitcher variant="pill" tone="light" />
+          {signOutError && <span role="alert" style={{ color: "#b91c1c" }}>{locale === "fa" ? "خروج تأیید نشد؛ ارتباط را بررسی و دوباره تلاش کنید." : "Sign out was not confirmed. Check your connection and retry."}</span>}
+          <Button variant="secondary" size="sm" className="hBtnTight h-btn-light" onClick={signOut} disabled={signingOut} aria-busy={signingOut}>
             {t.auth.logout}
           </Button>
         </div>

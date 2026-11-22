@@ -6,6 +6,7 @@ import { useHydrated } from "./useHydrated";
 import HeaderPublic from "./HeaderPublic";
 import HeaderAuth from "./HeaderAuth";
 import MobHeader from "./MobHeader";
+import { useHeaderTone } from "./useHeaderTone";
 
 // 👈 ایمپورت به صورت گلوبال و معمولی انجام شد
 import "./Header.css"; 
@@ -20,6 +21,7 @@ export default function Header({
   isReady = true,
 }: HeaderProps) {
   const mounted = useHydrated();
+  useHeaderTone();
 
   // Keep navigation in the initial HTML; CSS selects the viewport layout.
   // Portals preserve the existing stacking behavior after hydration.

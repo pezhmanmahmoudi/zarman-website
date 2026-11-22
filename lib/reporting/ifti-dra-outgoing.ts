@@ -235,7 +235,8 @@ function primaryIdDocument(record: IftiSourceRecord): IdDocument {
     return { type: "Driver's licence", other: "", number: asString(profile.license_number), issuer: asString(profile.state_of_issue) };
   }
   if (profile?.document_type === "passport") {
-    return { type: "Passport", other: "", number: asString(profile.passport_number), issuer: "" };
+    // profiles.document_type "passport" is only ever the Australian passport.
+    return { type: "Passport", other: "", number: asString(profile.passport_number), issuer: "Australia" };
   }
   // Reviewer-verified alternative document takes precedence over the customer's declaration.
   if (asString(profile?.compliance_dvs_alt_id_type)) {

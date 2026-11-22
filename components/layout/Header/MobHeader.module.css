@@ -8,13 +8,14 @@
   height: 60px; /* ارتفاع ثابت برای هدر ساختاری مجاز است */
   z-index: 10000;
   
-  background: color-mix(in srgb, var(--color-bg-surface) 75%, transparent);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  /* Light frosted glass, matching the desktop header (Header.css). */
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
 
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.08); 
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), var(--highlight-top);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 30px -12px rgba(56, 72, 245, 0.25), 0 1px 2px rgba(30, 37, 80, 0.06), inset 0 1px 0 #fff;
   
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -74,7 +75,7 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1px solid var(--color-border-ghost);
+  border: 1px solid rgba(30, 37, 80, 0.12);
   background: transparent;
   display: inline-flex;
   flex-direction: column;
@@ -89,13 +90,13 @@
 
 .burger:active {
   transform: scale(0.9);
-  background: var(--color-border-ghost);
+  background: rgba(56, 72, 245, 0.08);
 }
 
 .burgerLine {
   width: 22px;
   height: 2px;
-  background-color: var(--color-text-primary);
+  background-color: #1E2550; /* navy on the light bar; the open X stays white over the dark drawer */
   border-radius: var(--radius-pill);
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
   transform-origin: center;
@@ -330,7 +331,7 @@
     left: var(--space-4);
     right: var(--space-4);
     border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border-ghost);
+    border: 1px solid rgba(255, 255, 255, 0.9);
   }
 }
 
@@ -365,4 +366,32 @@
   .bigLink {
     transition: none;
   }
+}
+
+/* Secondary button (Dashboard) on the light bar — scoped to beat Button's .secondary */
+:global(html:not([data-header-tone="dark"])) .headerPill .pillSecondary {
+  color: #1E2550;
+  background: #ffffff;
+  border: 1px solid rgba(30, 37, 80, 0.12);
+  box-shadow: 0 4px 12px -6px rgba(30, 37, 80, 0.18);
+  backdrop-filter: none;
+}
+:global(html:not([data-header-tone="dark"])) .headerPill .pillSecondary:hover {
+  color: #3848f5;
+  background: #ffffff;
+  border-color: rgba(56, 72, 245, 0.35);
+  filter: none;
+}
+
+/* Over dark sections (useHeaderTone): dark navy glass, as before. */
+:global(html[data-header-tone="dark"]) .headerPill {
+  background: rgba(17, 22, 34, 0.82);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), var(--highlight-top);
+}
+:global(html[data-header-tone="dark"]) .burger {
+  border-color: var(--color-border-ghost);
+}
+:global(html[data-header-tone="dark"]) .burgerLine {
+  background-color: var(--color-text-primary);
 }

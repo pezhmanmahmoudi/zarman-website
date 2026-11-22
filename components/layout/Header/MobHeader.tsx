@@ -161,7 +161,7 @@ export default function MobHeader({
 
   const header = (
     <>
-      <div ref={rootRef} className={`${styles.headerPill} ${open ? styles.headerPillActive : ""}`}>
+      <div ref={rootRef} data-site-header="" className={`${styles.headerPill} ${open ? styles.headerPillActive : ""}`}>
         <a className="h-skip" href="#main-content">{t.nav.skipToContent}</a>
         <div className={`${styles.headerContent} ${isEn ? styles.headerContentLtr : styles.headerContentRtl}`}>
           <button
@@ -191,7 +191,7 @@ export default function MobHeader({
           </Link>
 
           {isAuthenticated ? (
-            <Button href={`/${locale}/dashboard`} variant="secondary" size="sm" onClick={close}>
+            <Button href={`/${locale}/dashboard`} variant="secondary" size="sm" className={styles.pillSecondary} onClick={close}>
               {t.dashboard.tabs.hub}
             </Button>
           ) : (

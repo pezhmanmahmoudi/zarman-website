@@ -45,25 +45,25 @@
   gap: var(--space-6);
   padding: 0 var(--space-6);
   
-  /* ۱. افزایش غلظت شیشه (۸۵٪) تا روی پس‌زمینه سفید کدر و چرک نشود */
-  background: linear-gradient(
-    135deg, 
-    color-mix(in srgb, var(--color-bg-surface) 85%, rgba(255,255,255,0.04)) 0%, 
-    color-mix(in srgb, var(--color-bg-surface) 75%, transparent) 100%
-  );
-  
-  /* ۲. کاهش ملایم اشباع رنگ (Saturate) تا رنگ‌های زیرین بیش از حد جیغ نشوند */
-  backdrop-filter: blur(24px) saturate(120%);
-  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  /* Light frosted glass: the home page is light (white sections, pastel waves),
+     so the header uses the same material as the rate card instead of the dark
+     surface token. Colours are scoped here; the global dark tokens are untouched. */
+  --hdr-text: #1E2550;         /* same navy as the hero headline */
+  --hdr-muted: #4B5578;
+  --hdr-accent: #3848f5;
+  --hdr-glass: 0.74;
+  background: rgba(255, 255, 255, var(--hdr-glass));
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
 
-  /* ۳. حاشیه ظریف و هماهنگ شدن گوشه‌ها با دکمه‌ها (12px) */
-  border: 1px solid rgba(255, 255, 255, 0.08); 
+  border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: var(--radius-lg);
-  
-  box-shadow: 
-    0 12px 32px -8px rgba(0, 0, 0, 0.15), /* سایه بیرونی بسیار نرمال و پخش شده */
-    inset 0 1px 1px rgba(255, 255, 255, 0.12); /* فقط بازتاب نور سفید در لبه بالا */
-    
+
+  box-shadow:
+    0 10px 30px -12px rgba(56, 72, 245, 0.25), /* soft indigo-tinted lift, not black */
+    0 1px 2px rgba(30, 37, 80, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+
   transition: background 0.4s cubic-bezier(0.16, 1, 0.3, 1),
               border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -71,17 +71,74 @@
   will-change: backdrop-filter;
 }
 
-/* افکت هاور */
+/* Browsers without backdrop-filter get a near-solid white bar so text stays legible. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .h-inner { --hdr-glass: 0.95; }
+}
+
+/* Denser glass once the page scrolls past the hero, so content under the bar
+   does not show through behind the links (progressive enhancement). */
+/* Registered so the glass opacity can be animated smoothly (top level only). */
+@property --hdr-glass {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0.74;
+}
+
+@supports (animation-timeline: scroll()) {
+  @keyframes h-glass-densify {
+    from { --hdr-glass: 0.74; }
+    to { --hdr-glass: 0.92; }
+  }
+  .h-inner {
+    animation: h-glass-densify linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 480px;
+  }
+}
+
 .h-inner:hover {
-  background: linear-gradient(
-    135deg, 
-    color-mix(in srgb, var(--color-bg-surface) 92%, rgba(255,255,255,0.06)) 0%, 
-    color-mix(in srgb, var(--color-bg-surface) 85%, transparent) 100%
-  );
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow:
+    0 16px 40px -12px rgba(56, 72, 245, 0.3),
+    0 1px 2px rgba(30, 37, 80, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+/* Over dark sections (set by useHeaderTone): dark navy glass, as before the
+   light redesign. Background colour (not a gradient) so the switch animates. */
+html[data-header-tone="dark"] .h-inner {
+  --hdr-text: #ffffff;
+  --hdr-muted: #94A3B8;
+  --hdr-accent: #ffffff;
+  background: rgba(17, 22, 34, 0.82);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 12px 32px -8px rgba(0, 0, 0, 0.35),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+html[data-header-tone="dark"] .h-inner:hover {
   border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 
-    0 16px 40px -10px rgba(0, 0, 0, 0.2), 
-    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+html[data-header-tone="dark"] .h-logo-img {
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+}
+
+/* Secondary button (Login / Logout) on the light glass; over dark sections
+   the Button's own dark-glass .secondary style applies unchanged. */
+html:not([data-header-tone="dark"]) .h-inner .h-btn-light {
+  color: var(--hdr-text);
+  background: #ffffff;
+  border: 1px solid rgba(30, 37, 80, 0.12);
+  box-shadow: 0 4px 12px -6px rgba(30, 37, 80, 0.18);
+  backdrop-filter: none;
+}
+html:not([data-header-tone="dark"]) .h-inner .h-btn-light:hover {
+  color: var(--hdr-accent);
+  background: #ffffff;
+  border-color: rgba(56, 72, 245, 0.35);
+  filter: none;
+  box-shadow: 0 8px 18px -8px rgba(56, 72, 245, 0.35);
 }
 
 /* Logo */
@@ -98,12 +155,12 @@
   width: auto;
   display: block;
   object-fit: contain;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2)); /* برجسته کردن لوگو */
+  filter: drop-shadow(0 4px 10px rgba(56, 72, 245, 0.18));
 }
 
 /* Auth title (dashboard) */
 .h-authTitle {
-  color: var(--color-text-primary);
+  color: var(--hdr-text);
   font-weight: var(--font-weight-bold);
   font-size: var(--text-body-md);
   letter-spacing: 1px;
@@ -123,7 +180,7 @@
   font-family: var(--font-primary);
   font-size: var(--text-body-sm);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text-secondary);
+  color: var(--hdr-muted);
   text-decoration: none;
   position: relative;
   padding: var(--space-2) 0;
@@ -150,8 +207,7 @@
 
 .h-link:hover,
 .h-link[aria-current="page"] {
-  color: var(--color-text-primary);
-  text-shadow: 0 0 16px rgba(255, 255, 255, 0.1); /* درخشش ملایم متن */
+  color: var(--hdr-accent);
 }
 
 .h-link:hover::after,

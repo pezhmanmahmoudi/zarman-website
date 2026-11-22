@@ -22,7 +22,7 @@ export default function HeaderPublic({
   const navItems = getCrawlablePublicNavItems(locale);
 
   return (
-    <header className={className} role="banner">
+    <header className={className} role="banner" data-site-header="">
       <a className="h-skip" href="#main-content">
         {t.nav.skipToContent}
       </a>
@@ -58,8 +58,8 @@ export default function HeaderPublic({
         </nav>
 
         <div className="h-auth" aria-label={t.header.loginRegister}>
-          <LanguageSwitcher variant="pill" />
-          <Button href={`/${locale}/login`} variant="secondary" size="sm">
+          <LanguageSwitcher variant="pill" tone="light" />
+          <Button href={`/${locale}/login`} variant="secondary" size="sm" className="h-btn-light">
             {t.auth.login}
           </Button>
           <Button href={`/${locale}/register`} variant="primary" size="sm">

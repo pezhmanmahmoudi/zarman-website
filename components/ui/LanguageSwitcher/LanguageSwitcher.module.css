@@ -1,71 +1,188 @@
-/* LanguageSwitcher — segmented control showing both languages.
-   English sits left and Persian right on every page, so the control never
-   changes shape between locales; the current language is the filled segment. */
+/* LanguageSwitcher — the "language coin".
+   A single round coin shows the language you can switch to. It leans on hover
+   (a hint that it turns over), and flips to its brand-gradient face with an
+   exchange arrow when clicked, while the other-language page loads.
 
-.segmented {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  white-space: nowrap;
-  user-select: none;
+   Colours are variables: dark tone by default, light tone via .light. */
+
+.pill,
+.menuLink {
+  --coin-size: 44px;
+  --coin-ring: linear-gradient(135deg, #3848f5 0%, #8b5cf6 48%, #22d3ee 100%);
+  --coin-face: #141a2b;
+  --coin-text: #ffffff;
+  --coin-rim: rgba(0, 0, 0, 0.55);
+  --coin-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.55);
+  --coin-shadow-hover: 0 10px 22px -8px rgba(56, 72, 245, 0.6);
+  --coin-sheen: rgba(255, 255, 255, 0.22);
+  --coin-focus: rgba(129, 140, 248, 0.95);
+  --menu-text: var(--color-text-primary);
+  --menu-muted: var(--color-text-tertiary);
 }
 
-.globe {
+:global(html:not([data-header-tone="dark"])) .light {
+  --coin-face: #ffffff;
+  --coin-text: #1E2550;
+  --coin-rim: rgba(30, 37, 80, 0.55);
+  --coin-shadow: 0 4px 12px -4px rgba(30, 37, 80, 0.22);
+  --coin-shadow-hover: 0 10px 22px -8px rgba(56, 72, 245, 0.45);
+  --coin-sheen: rgba(255, 255, 255, 0.9);
+  --coin-focus: #3848f5;
+}
+
+/* ---------- link wrappers ---------- */
+
+.pill {
+  display: inline-flex;
   flex: none;
-  margin-inline: 7px 3px;
-  color: rgba(148, 163, 184, 0.85);
-}
-
-.option {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-family: var(--font-en-stack);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  color: rgba(148, 163, 184, 0.95);
+  border-radius: 50%;
   text-decoration: none;
-  transition: color 0.2s ease, background-color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Hard-coded: on English pages --font-fa-stack is remapped to the Latin stack.
-   IRANSansX sits high at line-height 1; the top padding re-centres it optically. */
-.optionFa {
-  font-family: "IRANSansX", "Peyda", system-ui, sans-serif;
+.pill:focus-visible,
+.menuLink:focus-visible {
+  outline: 2px solid var(--coin-focus);
+  outline-offset: 3px;
+}
+
+/* ---------- the coin ---------- */
+
+.coin {
+  display: inline-block;
+  width: var(--coin-size);
+  height: var(--coin-size);
+  perspective: 240px;
+  flex: none;
+}
+
+.coinInner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.3, 1.25, 0.45, 1);
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+
+/* Front: the target language inside a single fine ring. */
+.front {
+  border: 1px solid var(--coin-rim);
+  background: var(--coin-face);
+  box-shadow: var(--coin-shadow);
+  color: var(--coin-text);
+  font-family: var(--font-en-stack);
   font-size: 0.8125rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  transition: box-shadow 0.35s ease, color 0.4s ease;
+}
+
+.front::after {
+  /* light sheen that sweeps across on hover */
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(115deg, transparent 40%, var(--coin-sheen) 50%, transparent 60%);
+  transform: translateX(-70%);
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+
+/* IRANSansX sits high at line-height 1; the top padding re-centres it optically. */
+.faceFa {
+  font-family: "IRANSansX", "Peyda", system-ui, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 800;
   letter-spacing: 0;
   padding-top: 3px;
 }
 
-a.option:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+/* Back: brand gradient with the exchange arrow, revealed by the flip. */
+.back {
+  background: var(--coin-ring);
+  color: #ffffff;
+  transform: rotateY(180deg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 8px 20px -8px rgba(56, 72, 245, 0.7);
 }
 
-a.option:focus-visible {
-  outline: 2px solid rgba(129, 140, 248, 0.95);
-  outline-offset: 2px;
+/* ---------- motion ---------- */
+
+@media (hover: hover) {
+  .pill:hover .coinInner,
+  .menuLink:hover .coinInner {
+    transform: rotateY(-28deg);
+  }
+
+  .pill:hover .front,
+  .menuLink:hover .front {
+    box-shadow: var(--coin-shadow-hover);
+  }
+
+  .pill:hover .front::after,
+  .menuLink:hover .front::after {
+    transform: translateX(70%);
+  }
 }
 
-.option[aria-current="true"] {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.13);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 1px 2px rgba(0, 0, 0, 0.35);
-  cursor: default;
+.pill:active .coinInner,
+.menuLink:active .coinInner {
+  transform: rotateY(-28deg) scale(0.94);
 }
+
+.pill[data-flipped] .coinInner,
+.menuLink[data-flipped] .coinInner {
+  transform: rotateY(180deg);
+}
+
+/* ---------- menu-item variant (mobile drawer) ---------- */
+
+.menuLink {
+  --coin-size: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--menu-text);
+  transition: background-color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.menuLink:active {
+  background-color: var(--color-border-ghost);
+}
+
+.menuText {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menuGlobe {
+  color: var(--menu-muted);
+}
+
+.menuName {
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ---------- utilities ---------- */
 
 .srOnly {
   position: absolute;
@@ -79,41 +196,33 @@ a.option:focus-visible {
   border: 0;
 }
 
-/* menu-item variant (mobile drawer): labelled row, full language names */
+@media (prefers-reduced-motion: reduce) {
+  .coinInner,
+  .front,
+  .front::after {
+    transition: none;
+  }
 
-.menuRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding-inline: var(--space-2);
-}
+  .pill:hover .coinInner,
+  .menuLink:hover .coinInner,
+  .pill:active .coinInner,
+  .menuLink:active .coinInner {
+    transform: none;
+  }
 
-.menuLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--color-text-secondary);
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
+  /* No flip: just show the gradient face. */
+  .pill[data-flipped] .coinInner,
+  .menuLink[data-flipped] .coinInner {
+    transform: none;
+  }
 
-.menuLabel svg {
-  color: var(--color-text-tertiary);
-}
+  .pill[data-flipped] .front,
+  .menuLink[data-flipped] .front {
+    visibility: hidden;
+  }
 
-.menuRow .segmented {
-  padding: 4px;
-}
-
-.menuRow .option {
-  height: 36px;
-  padding: 0 14px;
-  font-size: 0.875rem;
-  letter-spacing: 0;
-}
-
-.menuRow .optionFa {
-  font-size: 0.9375rem;
-  padding-top: 3px;
+  .pill[data-flipped] .back,
+  .menuLink[data-flipped] .back {
+    transform: none;
+  }
 }
