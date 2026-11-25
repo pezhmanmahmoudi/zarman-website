@@ -4,6 +4,7 @@ type Locale = "fa" | "en";
 export const blogLanguagePaths: ReadonlyArray<Record<Locale, string>> = [
   { en: "aud-to-irt-exchange-rate-guide", fa: "rahnamaye-nerkh-aud-irt" },
   { en: "send-money-australia-to-iran", fa: "havaleh-az-australia-be-iran" },
+  { en: "send-money-iran-to-australia", fa: "enteghal-pool-az-iran-be-australia" },
 ];
 
 export function getAlternateLanguagePath(pathname: string, targetLocale: Locale): string {

@@ -1,0 +1,149 @@
+.header {
+  max-width: 1010px;
+  margin: 28px auto 32px;
+}
+
+.updated {
+  margin: 14px 0 0;
+  color: #8f9bb0;
+  font-size: 0.92rem;
+}
+
+.rateCards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 1010px;
+  margin: 0 auto 48px;
+}
+
+.rateCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px 24px;
+  border: 1px solid var(--color-border-ghost);
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(127, 140, 247, 0.12), rgba(49, 166, 160, 0.06));
+}
+
+.direction {
+  color: #aeb8ff;
+  font-size: 0.95rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+.rateValue {
+  color: var(--color-text-primary);
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.rateUnit {
+  color: #b8c2d2;
+  font-size: 0.95rem;
+}
+
+.tableSection {
+  max-width: 1010px;
+  margin: 0 auto 44px;
+  color: #b8c2d2;
+}
+
+.tableSection h2,
+.faq h2 {
+  margin: 0 0 10px;
+  color: var(--color-text-primary);
+  font-size: 1.5rem;
+  line-height: 1.5;
+}
+
+.tableSection p,
+.faq p {
+  margin: 0 0 16px;
+  line-height: 1.9;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border-ghost);
+  border-radius: 14px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-ghost);
+  text-align: start;
+}
+
+.table th {
+  background: rgba(127, 140, 247, 0.1);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table td:nth-child(2) {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.note {
+  margin-top: 14px;
+  font-size: 0.95rem;
+}
+
+.note a {
+  color: #aeb8ff;
+  font-weight: var(--font-weight-semibold);
+  text-underline-offset: 4px;
+}
+
+.faq {
+  max-width: 1010px;
+  margin: 56px auto 40px;
+  color: #b8c2d2;
+}
+
+.faqItem {
+  border-bottom: 1px solid var(--color-border-ghost);
+  padding: 16px 0;
+}
+
+.faqItem summary {
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.7;
+}
+
+.faqItem p {
+  margin: 12px 0 0;
+}
+
+@media (max-width: 700px) {
+  .rateCards {
+    grid-template-columns: 1fr;
+  }
+
+  .table {
+    font-size: 0.9rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 10px 10px;
+  }
+}

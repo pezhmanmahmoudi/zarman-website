@@ -5,7 +5,7 @@ import { languageAlternates, locales, localizedUrl } from "@/lib/seo";
 
 // Only canonical, indexable URLs. A build date is not a content update.
 export default function sitemap(): MetadataRoute.Sitemap {
-  const pages: MetadataRoute.Sitemap = ["", "/services", "/about", "/blog", "/register"]
+  const pages: MetadataRoute.Sitemap = ["", "/rates", "/services", "/about", "/blog", "/register"]
     .flatMap((path) => locales.map((locale) => ({
       url: localizedUrl(locale, path),
       alternates: { languages: languageAlternates(path) },

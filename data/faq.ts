@@ -11,6 +11,7 @@ const faqsFa: FaqItem[] = [
     id: "aud-rate",
     question: "نرخ دلار استرالیا به تومان را از کجا ببینم؟",
     answer: "نرخ خرید و فروش دلار استرالیا (AUD) به تومان در تابلوی نرخ و ماشین‌حساب همین صفحه نمایش داده می‌شود. تاریخ آخرین به‌روزرسانی را بررسی کنید؛ نرخ نمایش‌داده‌شده ممکن است تا زمان ثبت درخواست تغییر کند. نرخ و مبلغ نهایی را پیش از تأیید سفارش در پنل کاربری بررسی کنید.",
+    link: { href: "/fa/rates", label: "قیمت امروز دلار استرالیا به تومان" },
   },
   {
     id: "transfer-request",
@@ -57,6 +58,7 @@ const faqsEn: FaqItem[] = [
     id: "aud-rate",
     question: "Where can I see the AUD to Iranian toman exchange rate?",
     answer: "The rate board and calculator on this page show the buying and selling rates for Australian dollars (AUD) in Iranian toman. Check the last updated date: a displayed rate may change before you submit a request. Review the final rate and amount in your dashboard before confirming an order.",
+    link: { href: "/en/rates", label: "Today's AUD to toman rate" },
   },
   {
     id: "transfer-request",
