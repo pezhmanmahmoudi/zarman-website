@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import ContentNavigation from "@/components/layout/ContentNavigation";
+import Header from "@/components/layout/Header/Header";
+import Footer from "@/components/layout/Footer/Footer";
+import SilkWave from "@/components/ui/SilkWave/SilkWave";
 import MarketProviders from "@/components/providers/MarketProviders";
 import RateSection from "@/components/sections/RateSection/RateSection";
 import articleStyles from "@/styles/BlogArticle.module.css";
@@ -162,45 +164,53 @@ export default async function RatesPage({ params }: { params: Promise<{ locale: 
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
       />
-      <div className={articleStyles.pageWrapper}>
-        <div className={articleStyles.backgroundGrid} aria-hidden="true" />
-        <div className={articleStyles.shell}>
-          <ContentNavigation locale={locale} currentPath="/rates" />
-
-          <header className={styles.header}>
-            <span className={articleStyles.categoryBadge}>{isEn ? "Live rate" : "نرخ لحظه‌ای"}</span>
-            <h1 className={articleStyles.articleTitle}>{copy.title}</h1>
-            <p className={articleStyles.articleSummary}>
-              {isEn
-                ? "The latest Australian dollar to Iranian toman rates published by Zarman for transfers in both directions. Rates are in toman, not rial."
-                : "آخرین نرخ دلار استرالیا به تومان در صرافی زرمان، برای حواله در هر دو جهت. همهٔ مبلغ‌ها به تومان است، نه ریال."}
-            </p>
-            {updatedText && (
-              <p className={styles.updated}>
-                {isEn ? "Last updated: " : "آخرین به‌روزرسانی: "}
-                <time dateTime={lastUpdated ?? undefined}>{updatedText}</time>
-                {isEn ? " (Sydney time)" : " (به وقت سیدنی)"}
+      <Header />
+      <div className={styles.page}>
+        <section className={styles.hero} aria-labelledby="rates-title">
+          <div className={styles.wave} aria-hidden="true">
+            <SilkWave mirror={!isEn} narrowShift={-0.24} />
+          </div>
+          <div className={styles.heroInner}>
+            <div className={styles.heroContent}>
+              <span className={styles.eyebrow}>{isEn ? "Live rate" : "نرخ لحظه‌ای"}</span>
+              <h1 id="rates-title" className={styles.title}>{copy.title}</h1>
+              <p className={styles.summary}>
+                {isEn
+                  ? "The latest Australian dollar to Iranian toman rates published by Zarman for transfers in both directions. Rates are in toman, not rial."
+                  : "آخرین نرخ دلار استرالیا به تومان در صرافی زرمان، برای حواله در هر دو جهت. همهٔ مبلغ‌ها به تومان است، نه ریال."}
               </p>
-            )}
-          </header>
+              {updatedText && (
+                <p className={styles.updated}>
+                  <span className={styles.pulse} aria-hidden="true" />
+                  <span>
+                    {isEn ? "Last updated: " : "آخرین به‌روزرسانی: "}
+                    <time dateTime={lastUpdated ?? undefined}>{updatedText}</time>
+                    {isEn ? " (Sydney time)" : " (به وقت سیدنی)"}
+                  </span>
+                </p>
+              )}
 
-          <section className={styles.rateCards} aria-label={isEn ? "Today's rates" : "نرخ‌های امروز"}>
-            <div className={styles.rateCard}>
-              <span className={styles.direction}>{isEn ? "Australia → Iran" : "حواله استرالیا ← ایران"}</span>
-              <strong className={styles.rateValue}>{buyAUD ? num(buyAUD) : "—"}</strong>
-              <span className={styles.rateUnit}>
-                {isEn ? "toman received for 1 AUD you send" : "تومان دریافتی به ازای هر ۱ دلار استرالیا"}
-              </span>
+              <div className={styles.rateCards} role="group" aria-label={isEn ? "Today's rates" : "نرخ‌های امروز"}>
+                <div className={styles.rateCard}>
+                  <span className={styles.direction}>{isEn ? "Australia → Iran" : "حواله استرالیا ← ایران"}</span>
+                  <strong className={styles.rateValue}>{buyAUD ? num(buyAUD) : "—"}</strong>
+                  <span className={styles.rateUnit}>
+                    {isEn ? "toman received for 1 AUD you send" : "تومان دریافتی به ازای هر ۱ دلار استرالیا"}
+                  </span>
+                </div>
+                <div className={styles.rateCard}>
+                  <span className={styles.direction}>{isEn ? "Iran → Australia" : "حواله ایران ← استرالیا"}</span>
+                  <strong className={styles.rateValue}>{sellAUD ? num(sellAUD) : "—"}</strong>
+                  <span className={styles.rateUnit}>
+                    {isEn ? "toman you pay for 1 AUD received" : "تومان پرداختی به ازای هر ۱ دلار استرالیا"}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className={styles.rateCard}>
-              <span className={styles.direction}>{isEn ? "Iran → Australia" : "حواله ایران ← استرالیا"}</span>
-              <strong className={styles.rateValue}>{sellAUD ? num(sellAUD) : "—"}</strong>
-              <span className={styles.rateUnit}>
-                {isEn ? "toman you pay for 1 AUD received" : "تومان پرداختی به ازای هر ۱ دلار استرالیا"}
-              </span>
-            </div>
-          </section>
+          </div>
+        </section>
 
+        <div className={styles.tables}>
           {buyAUD && (
             <section className={styles.tableSection} aria-labelledby="aud-to-toman-table">
               <h2 id="aud-to-toman-table">
@@ -280,9 +290,11 @@ export default async function RatesPage({ params }: { params: Promise<{ locale: 
             </section>
           )}
         </div>
+      </div>
 
-        <RateSection />
+      <RateSection />
 
+      <div className={styles.faqArea}>
         <div className={articleStyles.shell}>
           <section className={styles.faq} aria-labelledby="rates-faq">
             <h2 id="rates-faq">{isEn ? "Common questions about the AUD rate" : "سؤال‌های رایج دربارهٔ نرخ دلار استرالیا"}</h2>
@@ -317,6 +329,7 @@ export default async function RatesPage({ params }: { params: Promise<{ locale: 
           </div>
         </div>
       </div>
+      <Footer />
     </MarketProviders>
   );
 }
