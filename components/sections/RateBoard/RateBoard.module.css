@@ -1,0 +1,292 @@
+.board {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  width: 100%;
+  max-width: 500px;
+  margin-inline: auto;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: center;
+  padding: 8px 18px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px -10px rgba(15, 23, 42, 0.35), 0 2px 6px rgba(15, 23, 42, 0.08);
+  color: #047857;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.pulse {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.pulse::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* Silk-gradient ring around a white card, echoing the hero wave. */
+.card {
+  display: flex;
+  overflow: hidden;
+  border: 1.5px solid transparent;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 70% 15%, rgba(124, 58, 237, 0.05) 0%, transparent 60%) padding-box,
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(135deg, rgba(6, 182, 212, 0.7), rgba(79, 70, 229, 0.7) 40%, rgba(192, 38, 211, 0.6) 75%, rgba(253, 164, 175, 0.7)) border-box;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 30px 60px -30px rgba(30, 41, 99, 0.4), 0 18px 36px -18px rgba(15, 23, 42, 0.12);
+}
+
+.logoPanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 132px;
+  flex: none;
+  overflow: hidden;
+  padding: 16px;
+  border-inline-end: 1px solid rgba(15, 23, 42, 0.06);
+  background: linear-gradient(160deg, #eef0ff 0%, #e0e7ff 55%, #f5e8ff 100%);
+}
+
+.sheen {
+  position: absolute;
+  inset: -40% -60%;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.75) 50%, transparent 60%);
+  transform: translateX(-60%);
+  animation: sheen 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sheen {
+  0%, 55% { transform: translateX(-60%); }
+  85%, 100% { transform: translateX(60%); }
+}
+
+.logo {
+  position: relative;
+  width: 84px;
+  height: auto;
+  filter: drop-shadow(0 6px 14px rgba(79, 70, 229, 0.28));
+}
+
+.pair {
+  position: relative;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  color: #4338ca;
+  font-family: var(--font-en-stack, var(--font-primary));
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  direction: ltr;
+}
+
+.rates {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  padding: 22px 24px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.label {
+  color: #0a1a3f;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.change {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.change[data-dir="up"] {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.change[data-dir="down"] {
+  background: rgba(244, 63, 94, 0.12);
+  color: #be123c;
+}
+
+.change[data-dir="flat"] {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+}
+
+.hint {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+  color: #0a1a3f;
+  font-family: "IRANSansX", var(--font-primary);
+  font-size: clamp(2.1rem, 4vw, 2.7rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.currency {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.sparkWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.sparkBox {
+  position: relative;
+  height: 46px;
+}
+
+.spark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.endDot {
+  position: absolute;
+  left: calc(100% - 4px);
+  width: 8px;
+  height: 8px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #fb7185;
+  box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.2);
+}
+
+.range {
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.range b {
+  color: #475569;
+  font-weight: 600;
+}
+
+.rangeSep {
+  margin-inline: 6px;
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.12), transparent);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 20px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.footer time {
+  color: #047857;
+  font-weight: 700;
+}
+
+.clock {
+  color: #94a3b8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse::after,
+  .sheen {
+    animation: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .logoPanel {
+    width: 76px;
+    padding: 10px;
+  }
+
+  .logo {
+    width: 52px;
+  }
+
+  .pair {
+    display: none;
+  }
+
+  .rates {
+    padding: 18px 16px;
+  }
+}

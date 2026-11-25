@@ -7,6 +7,8 @@ import Footer from "@/components/layout/Footer/Footer";
 import SilkWave from "@/components/ui/SilkWave/SilkWave";
 import MarketProviders from "@/components/providers/MarketProviders";
 import RateSection from "@/components/sections/RateSection/RateSection";
+import RateBoard from "@/components/sections/RateBoard/RateBoard";
+import Button from "@/components/ui/Button/Button";
 import articleStyles from "@/styles/BlogArticle.module.css";
 import styles from "@/styles/RatesPage.module.css";
 import { getRatesSnapshot } from "@/lib/rates";
@@ -179,33 +181,41 @@ export default async function RatesPage({ params }: { params: Promise<{ locale: 
                   ? "The latest Australian dollar to Iranian toman rates published by Zarman for transfers in both directions. Rates are in toman, not rial."
                   : "آخرین نرخ دلار استرالیا به تومان در صرافی زرمان، برای حواله در هر دو جهت. همهٔ مبلغ‌ها به تومان است، نه ریال."}
               </p>
-              {updatedText && (
-                <p className={styles.updated}>
-                  <span className={styles.pulse} aria-hidden="true" />
-                  <span>
-                    {isEn ? "Last updated: " : "آخرین به‌روزرسانی: "}
-                    <time dateTime={lastUpdated ?? undefined}>{updatedText}</time>
-                    {isEn ? " (Sydney time)" : " (به وقت سیدنی)"}
-                  </span>
-                </p>
+
+              {buyAUD && (
+                <ul className={styles.quick} aria-label={isEn ? "Quick conversions, Australia to Iran" : "تبدیل سریع، حواله استرالیا به ایران"}>
+                  {[100, 500, 1000].map((amount) => {
+                    const row = audToToman(amount, buyAUD, financeConfig);
+                    return row ? (
+                      <li key={amount}>
+                        <span className={styles.quickFrom}>{isEn ? `${num(amount)} AUD` : `${num(amount)} دلار`}</span>
+                        <span className={styles.quickArrow} aria-hidden="true">{isEn ? "→" : "←"}</span>
+                        <span className={styles.quickTo}>{num(row.toman)} {isEn ? "toman" : "تومان"}</span>
+                      </li>
+                    ) : null;
+                  })}
+                </ul>
               )}
 
-              <div className={styles.rateCards} role="group" aria-label={isEn ? "Today's rates" : "نرخ‌های امروز"}>
-                <div className={styles.rateCard}>
-                  <span className={styles.direction}>{isEn ? "Australia → Iran" : "حواله استرالیا ← ایران"}</span>
-                  <strong className={styles.rateValue}>{buyAUD ? num(buyAUD) : "—"}</strong>
-                  <span className={styles.rateUnit}>
-                    {isEn ? "toman received for 1 AUD you send" : "تومان دریافتی به ازای هر ۱ دلار استرالیا"}
-                  </span>
-                </div>
-                <div className={styles.rateCard}>
-                  <span className={styles.direction}>{isEn ? "Iran → Australia" : "حواله ایران ← استرالیا"}</span>
-                  <strong className={styles.rateValue}>{sellAUD ? num(sellAUD) : "—"}</strong>
-                  <span className={styles.rateUnit}>
-                    {isEn ? "toman you pay for 1 AUD received" : "تومان پرداختی به ازای هر ۱ دلار استرالیا"}
-                  </span>
-                </div>
+              <div className={styles.actions}>
+                <Button href={`/${locale}/register`} variant="primary" size="md">
+                  {isEn ? "Request a transfer" : "ثبت درخواست حواله"}
+                </Button>
+                <Button href="#rates" variant="secondary" size="md" className={styles.btnSecondary}>
+                  {isEn ? "Open the calculator" : "محاسبهٔ مبلغ دلخواه"}
+                </Button>
               </div>
+            </div>
+
+            <div className={styles.boardSlot}>
+              <RateBoard
+                locale={locale}
+                buyAUD={buyAUD}
+                sellAUD={sellAUD}
+                lastUpdated={lastUpdated}
+                updatedText={updatedText ? `${updatedText}${isEn ? " (Sydney)" : " (سیدنی)"}` : null}
+                history={snapshot.chartDataDaily}
+              />
             </div>
           </div>
         </section>

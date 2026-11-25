@@ -34,8 +34,67 @@
   padding: clamp(140px, 15vh, 160px) clamp(20px, 4vw, 32px) clamp(48px, 7vw, 88px);
 }
 
+.heroInner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 72px);
+}
+
 .heroContent {
-  max-width: 640px;
+  max-width: 600px;
+}
+
+.boardSlot {
+  min-width: 0;
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 26px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quick li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid rgba(79, 70, 229, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 10px 24px -18px rgba(30, 41, 99, 0.45);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.quickFrom {
+  color: var(--color-text-secondary);
+}
+
+.quickArrow {
+  color: #a5b4fc;
+}
+
+.quickTo {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.btnSecondary {
+  color: #4338ca;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(79, 70, 229, 0.28);
 }
 
 .eyebrow {
@@ -68,62 +127,12 @@
   line-height: 1.9;
 }
 
-.updated {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 16px 0 0;
-  color: var(--color-text-tertiary);
-  font-size: 0.9rem;
-}
 
-.pulse {
-  width: 8px;
-  height: 8px;
-  flex: none;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.16);
-}
 
-.rateCards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 30px;
-}
 
-.rateCard {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 20px 22px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 18px 40px -24px rgba(30, 41, 99, 0.35);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
 
-.direction {
-  color: #4f46e5;
-  font-size: 0.92rem;
-  font-weight: var(--font-weight-semibold);
-}
 
-.rateValue {
-  color: var(--color-text-primary);
-  font-size: clamp(1.9rem, 4.4vw, 2.6rem);
-  font-weight: 800;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
 
-.rateUnit {
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
-}
 
 .tables {
   width: min(100%, 1180px);
@@ -250,18 +259,27 @@
     mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
   }
 
-  .heroContent {
-    max-width: none;
+  .heroInner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
   }
+
+  /* Single column: show the rate board right after the intro, before the shortcuts. */
+  .heroContent {
+    display: contents;
+  }
+
+  .eyebrow { order: 1; justify-self: start; }
+  .title { order: 2; }
+  .summary { order: 3; max-width: none; }
+  .boardSlot { order: 4; margin-top: 28px; }
+  .quick { order: 5; }
+  .actions { order: 6; }
 }
 
 @media (max-width: 700px) {
   .heroInner {
     padding-top: 130px;
-  }
-
-  .rateCards {
-    grid-template-columns: 1fr;
   }
 
   .table {
