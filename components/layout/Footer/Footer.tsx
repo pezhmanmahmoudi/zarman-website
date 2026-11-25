@@ -43,6 +43,7 @@ export default function Footer() {
           <div className={styles.linkCol}>
             <h2 className={styles.colTitle}>{isEn ? "Quick Access" : "دسترسی سریع"}</h2>
             <ul className={styles.linkList}>
+              <li><Link href={`/${locale}/rates`}>{isEn ? "AUD to Toman Rate Today" : "قیمت دلار استرالیا امروز"}</Link></li>
               <li><Link href={`/${locale}#rates`}>{isEn ? "Rate Calculator" : "ماشین‌حساب نرخ"}</Link></li>
               <li><Link href={`/${locale}/services`}>{isEn ? "Our Services" : "خدمات ما"}</Link></li>
               <li><Link href={`/${locale}/about`}>{isEn ? "About Zarman" : "درباره زرمان"}</Link></li>

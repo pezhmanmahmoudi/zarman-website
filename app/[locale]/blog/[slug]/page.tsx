@@ -8,6 +8,11 @@ import { ArrowLeft, ArrowRight, Building2, CalendarDays, Clock, ExternalLink } f
 import articleStyles from "@/styles/BlogArticle.module.css";
 import { blogPosts, getBlogAlternatePaths } from "@/data/blog-posts";
 import { SITE_URL as PRODUCTION_URL, getPageMetadata, organizationId, serializeJsonLd } from "@/lib/seo";
+import { getFinanceConfig } from "@/lib/finance-config";
+import { fillLiveValues, hasLiveValues } from "@/lib/blog-live-values";
+
+// Articles that quote the live fee rule refresh with the pricing settings.
+export const revalidate = 300;
 
 export async function generateStaticParams() {
   return blogPosts.map((post) => ({
@@ -51,6 +56,9 @@ export default async function BlogArticlePage({
 
   const post = blogPosts.find((p) => p.locale === locale && p.slug === slug);
   if (!post) notFound();
+  const articleHtml = hasLiveValues(post.content)
+    ? fillLiveValues(post.content, locale, await getFinanceConfig())
+    : post.content;
 
   const articleSchema = {
     "@context": "https://schema.org",
@@ -211,7 +219,7 @@ export default async function BlogArticlePage({
               <div className={articleStyles.readingColumn}>
                 <div
                   className={articleStyles.articleContent}
-                  dangerouslySetInnerHTML={{ __html: post.content }}
+                  dangerouslySetInnerHTML={{ __html: articleHtml }}
                 />
 
                 <section className={articleStyles.sourcesSection} aria-labelledby="article-sources">

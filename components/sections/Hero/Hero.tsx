@@ -5,10 +5,11 @@ import { formatLocalizedNumber } from "@/lib/numbers";
 import { useRef } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
-import { Info, Clock } from "lucide-react";
+import { Info, Clock, ArrowLeft, ArrowRight } from "lucide-react";
 import styles from "./Hero.module.css";
 import { useRates } from "@/context/RateContext";
 import {
@@ -252,6 +253,11 @@ export default function Hero() {
                   <time className={styles.lastUpdatedTime} dateTime={currentRates.lastUpdated ?? undefined} dir={isEn ? "ltr" : "rtl"}>{formattedLastUpdated}</time>
                 </div>
               )}
+
+              <Link href={`/${locale}/rates`} className={styles.detailsLink}>
+                {isEn ? "Rate chart and details" : "نمودار و جزئیات نرخ"}
+                {isEn ? <ArrowRight size={15} strokeWidth={2.4} aria-hidden="true" /> : <ArrowLeft size={15} strokeWidth={2.4} aria-hidden="true" />}
+              </Link>
             </div>
           </div>
         </div>

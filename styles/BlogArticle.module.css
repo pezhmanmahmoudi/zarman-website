@@ -359,6 +359,18 @@
   padding-inline-start: 25px;
 }
 
+.articleContent ul {
+  list-style: disc;
+}
+
+.articleContent ol {
+  list-style: decimal;
+}
+
+:global(html[dir="rtl"]) .articleContent ol {
+  list-style-type: persian;
+}
+
 .articleContent li {
   margin-bottom: 11px;
   padding-inline-start: 5px;
@@ -367,6 +379,35 @@
 .articleContent li::marker {
   color: #7f8cf7;
   font-weight: 700;
+}
+
+.articleContent table {
+  width: 100%;
+  margin: 0 0 30px;
+  border-collapse: collapse;
+  border: 1px solid var(--color-border-ghost);
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.articleContent th,
+.articleContent td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-ghost);
+  text-align: start;
+  vertical-align: top;
+}
+
+.articleContent th {
+  background: rgba(127, 140, 247, 0.1);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.articleContent tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 .sourcesSection,
