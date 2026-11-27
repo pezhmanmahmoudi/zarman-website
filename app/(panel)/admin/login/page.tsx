@@ -84,7 +84,10 @@ export default function AdminLoginPage() {
 
     // With two-factor on, an enrolled admin must enter the code before reaching the panel.
     if (await continueWithSecondFactor()) { setLoading(false); return; }
-    router.push("/admin/dashboard");
+    // Full page load, not router.push: when two-factor is enforced and this admin has not set it up yet,
+    // the proxy redirects back to /admin/login?mfa=1. A client-side push lands on this same mounted page,
+    // so the ?mfa=1 check never re-runs and the button stays on "Authenticating..." forever.
+    window.location.assign("/admin/dashboard");
   };
 
   return (
